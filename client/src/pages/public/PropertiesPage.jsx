@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { getProperties } from '../../services/propertyService';
@@ -11,14 +10,13 @@ const TYPES = [{ value: '', label: 'Todos los tipos' }, { value: 'casa', label: 
 const STATUS = [{ value: '', label: 'Todos los estatus' }, { value: 'disponible', label: 'Disponible' }, { value: 'apartado', label: 'Apartado' }];
 
 export default function PropertiesPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState({
-    city: searchParams.get('city') || '',
-    type: searchParams.get('type') || '',
-    status: searchParams.get('status') || '',
-    minPrice: searchParams.get('minPrice') || '',
-    maxPrice: searchParams.get('maxPrice') || '',
-    search: searchParams.get('search') || '',
+    city: '',
+    type: '',
+    status: '',
+    minPrice: '',
+    maxPrice: '',
+    search: '',
     page: 1,
   });
   const [showFilters, setShowFilters] = useState(false);
