@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Upload, X, Star, ArrowLeft } from 'lucide-react';
@@ -24,7 +24,22 @@ const FIELDS = [
   { key: 'description', label: 'Descripción', type: 'textarea', col: 2 },
 ];
 
-const emptyForm = { title: '', price: '', city: 'juarez', type: 'casa', status: 'disponible', squareMeters: '', bedrooms: '', bathrooms: '', address: '', bank: '', loanNumber: '', description: '', isFeatured: false };
+const emptyForm = {
+  title: '', price: '', city: 'juarez', type: 'casa', status: 'disponible',
+  squareMeters: '', bedrooms: '', bathrooms: '', address: '',
+  bank: '', loanNumber: '', description: '', isFeatured: false,
+};
+
+function toForm(p) {
+  return {
+    title: p.title || '', price: p.price || '', city: p.city || 'juarez',
+    type: p.type || 'casa', status: p.status || 'disponible',
+    squareMeters: p.squareMeters || '', bedrooms: p.bedrooms || '',
+    bathrooms: p.bathrooms || '', address: p.address || '',
+    bank: p.bank || '', loanNumber: p.loanNumber || '',
+    description: p.description || '', isFeatured: p.isFeatured || false,
+  };
+}
 
 export default function PropertyFormPage() {
   const { id } = useParams();
@@ -32,7 +47,6 @@ export default function PropertyFormPage() {
   const queryClient = useQueryClient();
   const isEdit = !!id;
 
-  const [form, setForm] = useState(emptyForm);
   const [newFiles, setNewFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
 
@@ -42,19 +56,16 @@ export default function PropertyFormPage() {
     enabled: isEdit,
   });
 
-  useEffect(() => {
-    if (data?.data) {
-      const p = data.data;
-      setForm({
-        title: p.title || '', price: p.price || '', city: p.city || 'juarez',
-        type: p.type || 'casa', status: p.status || 'disponible',
-        squareMeters: p.squareMeters || '', bedrooms: p.bedrooms || '',
-        bathrooms: p.bathrooms || '', address: p.address || '',
-        bank: p.bank || '', loanNumber: p.loanNumber || '',
-        description: p.description || '', isFeatured: p.isFeatured || false,
-      });
-    }
-  }, [data]);
+  // Derivar el form de los datos de la query — sin useEffect
+  const propertyData = data?.data;
+  const [form, setForm] = useState(emptyForm);
+
+  // Sincronizar cuando lleguen los datos por primera vez (solo en edición)
+  const [synced, setSynced] = useState(false);
+  if (isEdit && propertyData && !synced) {
+    setForm(toForm(propertyData));
+    setSynced(true);
+  }
 
   const saveMutation = useMutation({
     mutationFn: async (formData) => {
