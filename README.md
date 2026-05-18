@@ -2,7 +2,7 @@
 
 > Sistema web de remates bancarios — Triomphe Bienes Raíces
 
-Un platform moderno para gestionar subastas de propiedades bancarias con una interfaz intuitiva y backend robusto.
+Una platforma moderna para gestionar subastas de propiedades bancarias con una interfaz intuitiva y backend robusto.
 
 ---
 
