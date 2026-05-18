@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, LogOut,
-  Menu, X, ChevronRight
+  Menu, ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -35,7 +35,6 @@ export default function AdminLayout() {
         </div>
         <p className="text-blue-300 text-xs mt-1">{user?.name}</p>
       </div>
-
       <nav className="flex-1 p-4 space-y-1">
         {links.map(({ to, icon, label }) => (
           <NavLink
@@ -54,7 +53,6 @@ export default function AdminLayout() {
           </NavLink>
         ))}
       </nav>
-
       <div className="p-4 border-t border-blue-800">
         <button
           onClick={handleLogout}

@@ -1,22 +1,23 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Eye, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, Search, FileSpreadsheet, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getProperties, deleteProperty, updateProperty } from '../../services/propertyService';
-import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
+import useAuthStore from '../../store/authStore';
 
-const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
 const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 
 export default function AdminPropertiesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { token } = useAuthStore();
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-properties', search, city, status, page],
@@ -46,6 +47,32 @@ export default function AdminPropertiesPage() {
     }
   };
 
+  const handleExport = async (format) => {
+    try {
+      setExporting(format);
+      const params = new URLSearchParams();
+      if (city) params.set('city', city);
+      if (status) params.set('status', status);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/export/${format}?${params.toString()}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error('Error al exportar');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `triomphe-inventario-${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Inventario exportado a ${format === 'excel' ? 'Excel' : 'PDF'}`);
+    } catch {
+      toast.error('Error al exportar');
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const formatPrice = (price) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
 
@@ -56,12 +83,30 @@ export default function AdminPropertiesPage() {
           <h1 className="text-2xl font-bold text-gray-800">Propiedades</h1>
           <p className="text-gray-500 text-sm mt-1">{data?.pagination?.total ?? 0} propiedades en total</p>
         </div>
-        <button
-          onClick={() => navigate('/admin/propiedades/nueva')}
-          className="flex items-center gap-2 bg-blue-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={18} /> Nueva propiedad
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleExport('excel')}
+            disabled={exporting === 'excel'}
+            className="flex items-center gap-2 px-3 py-2.5 border border-green-200 text-green-700 rounded-xl text-sm font-medium hover:bg-green-50 transition-colors disabled:opacity-50"
+          >
+            <FileSpreadsheet size={16} />
+            {exporting === 'excel' ? 'Generando...' : 'Excel'}
+          </button>
+          <button
+            onClick={() => handleExport('pdf')}
+            disabled={exporting === 'pdf'}
+            className="flex items-center gap-2 px-3 py-2.5 border border-red-200 text-red-700 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            <FileText size={16} />
+            {exporting === 'pdf' ? 'Generando...' : 'PDF'}
+          </button>
+          <button
+            onClick={() => navigate('/admin/propiedades/nueva')}
+            className="flex items-center gap-2 bg-blue-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} /> Nueva propiedad
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -134,21 +179,18 @@ export default function AdminPropertiesPage() {
                         <button
                           onClick={() => window.open(`/propiedades/${property.slug}`, '_blank')}
                           className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Ver en sitio"
                         >
                           <Eye size={16} />
                         </button>
                         <button
                           onClick={() => navigate(`/admin/propiedades/${property.id}/editar`)}
                           className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                          title="Editar"
                         >
                           <Pencil size={16} />
                         </button>
                         <button
                           onClick={() => confirmDelete(property.id, property.title)}
                           className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Eliminar"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -158,7 +200,6 @@ export default function AdminPropertiesPage() {
                 ))}
               </tbody>
             </table>
-
             {data?.data?.length === 0 && (
               <div className="text-center py-16 text-gray-400">
                 <p>No se encontraron propiedades</p>
@@ -166,8 +207,6 @@ export default function AdminPropertiesPage() {
             )}
           </div>
         )}
-
-        {/* Paginación */}
         {data?.pagination?.totalPages > 1 && (
           <div className="flex justify-center gap-2 p-4 border-t border-gray-100">
             {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((p) => (

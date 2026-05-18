@@ -12,8 +12,6 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
 
-  if (isAuthenticated) return <Navigate to="/admin/dashboard" replace />;
-
   const { mutate, isPending } = useMutation({
     mutationFn: ({ email, password }) => login(email, password),
     onSuccess: ({ token, user }) => {
@@ -23,6 +21,8 @@ export default function LoginPage() {
     },
     onError: () => toast.error('Credenciales incorrectas'),
   });
+
+  if (isAuthenticated) return <Navigate to="/admin/dashboard" replace />;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -40,7 +40,6 @@ export default function LoginPage() {
           </div>
           <p className="text-gray-500 text-sm">Panel de administración</p>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -52,7 +51,6 @@ export default function LoginPage() {
               className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
             <div className="relative">
@@ -72,7 +70,6 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
-
           <button
             type="submit"
             disabled={isPending}
