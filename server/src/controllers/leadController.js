@@ -1,5 +1,6 @@
 const { Lead, Property } = require('../models/index');
 const { Op } = require('sequelize');
+const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 
 // POST /api/leads
 const createLead = async (req, res) => {
@@ -15,8 +16,9 @@ const createLead = async (req, res) => {
       return res.status(400).json({ error: 'Email inválido' });
     }
 
+    let property = null;
     if (propertyId) {
-      const property = await Property.findByPk(propertyId);
+      property = await Property.findByPk(propertyId);
       if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
     }
 
@@ -26,6 +28,12 @@ const createLead = async (req, res) => {
       propertyId: propertyId || null,
       appointmentDate: appointmentDate || null,
     });
+
+    // Enviar emails en background sin bloquear la respuesta
+    Promise.all([
+      sendNewLeadNotification(lead, property).catch((e) => console.error('Error email notificación:', e)),
+      sendLeadConfirmation(lead).catch((e) => console.error('Error email confirmación:', e)),
+    ]);
 
     return res.status(201).json({
       message: 'Mensaje enviado exitosamente. Un asesor se pondrá en contacto contigo pronto.',
@@ -37,7 +45,7 @@ const createLead = async (req, res) => {
   }
 };
 
-// GET /api/leads — solo admin/editor
+// GET /api/leads
 const getLeads = async (req, res) => {
   try {
     const { page = 1, limit = 20, status, type, propertyId } = req.query;
@@ -97,20 +105,16 @@ const getLeadById = async (req, res) => {
   }
 };
 
-// PUT /api/leads/:id — actualizar status y notas
+// PUT /api/leads/:id
 const updateLead = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     const { status, notes, appointmentDate } = req.body;
-
     await lead.update({ status, notes, appointmentDate });
 
-    return res.json({
-      message: 'Lead actualizado exitosamente',
-      data: lead,
-    });
+    return res.json({ message: 'Lead actualizado exitosamente', data: lead });
   } catch (error) {
     console.error('Error en updateLead:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
@@ -124,7 +128,6 @@ const deleteLead = async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     await lead.destroy();
-
     return res.json({ message: 'Lead eliminado exitosamente' });
   } catch (error) {
     console.error('Error en deleteLead:', error);
