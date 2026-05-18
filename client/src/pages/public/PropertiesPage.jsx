@@ -4,6 +4,7 @@ import { SlidersHorizontal, X } from 'lucide-react';
 import { getProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
 import Spinner from '../../components/ui/Spinner';
+import SEO from '../../components/ui/SEO';
 
 const CITIES = [{ value: '', label: 'Todas las ciudades' }, { value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }];
 const TYPES = [{ value: '', label: 'Todos los tipos' }, { value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }, { value: 'terreno', label: 'Terreno' }, { value: 'local', label: 'Local' }, { value: 'bodega', label: 'Bodega' }];
@@ -35,6 +36,11 @@ export default function PropertiesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
+      <SEO
+        title="Propiedades en Remate"
+        description="Explora nuestro inventario de remates bancarios en Chihuahua, Ciudad Juárez y Querétaro. Filtra por ciudad, tipo y precio."
+        url="/propiedades"
+      />
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900">Propiedades en Remate</h1>
         <p className="text-gray-500 mt-1">

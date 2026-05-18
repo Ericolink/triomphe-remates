@@ -1,9 +1,15 @@
 import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import ContactForm from '../../components/ui/ContactForm';
+import SEO from '../../components/ui/SEO';
 
 export default function ContactPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-16">
+      <SEO
+        title="Contacto"
+        description="Contáctanos para más información sobre nuestros remates bancarios. Asesores disponibles en Chihuahua, Ciudad Juárez y Querétaro."
+        url="/contacto"
+      />
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-blue-900 mb-3">Contáctanos</h1>
         <p className="text-gray-500 max-w-xl mx-auto">

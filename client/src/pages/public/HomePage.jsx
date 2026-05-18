@@ -5,6 +5,7 @@ import { Search, Building2, TrendingDown, Shield, ChevronRight, MapPin } from 'l
 import { getProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
 import Spinner from '../../components/ui/Spinner';
+import SEO from '../../components/ui/SEO';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -26,6 +27,12 @@ export default function HomePage() {
 
   return (
     <div>
+      <SEO
+        title="Remates Bancarios en México"
+        description="Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos hasta 40% por debajo del valor comercial."
+        url="/"
+      />
+
       {/* Hero */}
       <section className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10"
@@ -45,7 +52,6 @@ export default function HomePage() {
             La mejor inversión al mejor precio.
           </p>
 
-          {/* Buscador */}
           <form onSubmit={handleSearch} className="bg-white rounded-2xl p-3 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 shadow-2xl">
             <select
               value={city}

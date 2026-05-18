@@ -6,15 +6,18 @@ import { getPropertyBySlug } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
+import SEO from '../../components/ui/SEO';
 
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
 const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
+const typeLabel = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
 
 export default function PropertyDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [imgIndex, setImgIndex] = useState(0);
+  const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '');
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['property', slug],
@@ -23,14 +26,28 @@ export default function PropertyDetailPage() {
 
   const property = data?.data;
   const images = property?.images || [];
-  const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '');
+  const coverImage = images.find((i) => i.isCover) || images[0];
+  const coverUrl = coverImage ? `${apiBase}${coverImage.url}` : null;
 
   const formatPrice = (price) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
 
+  const buildDescription = (p) => {
+    const parts = [
+      `${typeLabel[p.type] || p.type} en remate bancario`,
+      p.price ? `a ${formatPrice(p.price)}` : '',
+      p.city ? `en ${cityLabel[p.city]}` : '',
+      p.squareMeters ? `· ${p.squareMeters} m²` : '',
+      p.bedrooms ? `· ${p.bedrooms} recámaras` : '',
+      p.bank ? `· Banco: ${p.bank}` : '',
+    ];
+    return parts.filter(Boolean).join(' ');
+  };
+
   if (isLoading) return <Spinner size="lg" className="py-40" />;
   if (isError || !property) return (
     <div className="text-center py-40">
+      <SEO title="Propiedad no encontrada" />
       <p className="text-xl text-gray-500">Propiedad no encontrada</p>
       <button onClick={() => navigate('/propiedades')} className="mt-4 text-blue-600 hover:underline">
         Ver todas las propiedades
@@ -40,6 +57,15 @@ export default function PropertyDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
+      <SEO
+        title={property.title}
+        description={buildDescription(property)}
+        image={coverUrl}
+        url={`/propiedades/${property.slug}`}
+        type="article"
+        property={property}
+      />
+
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-blue-900 mb-6 transition-colors">
         <ChevronLeft size={18} /> Regresar
       </button>
@@ -53,7 +79,7 @@ export default function PropertyDetailPage() {
               <>
                 <img
                   src={`${apiBase}${images[imgIndex]?.url}`}
-                  alt={property.title}
+                  alt={`${property.title} - imagen ${imgIndex + 1}`}
                   className="w-full h-full object-cover"
                 />
                 {images.length > 1 && (
@@ -99,7 +125,7 @@ export default function PropertyDetailPage() {
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <Badge variant={statusVariant[property.status]}>{statusLabel[property.status]}</Badge>
             {property.isFeatured && <Badge variant="primary">Destacado</Badge>}
-            <span className="text-gray-400 text-sm capitalize">{property.type}</span>
+            <span className="text-gray-400 text-sm capitalize">{typeLabel[property.type] || property.type}</span>
           </div>
 
           <h1 className="text-2xl md:text-3xl font-bold text-blue-900 mb-2">{property.title}</h1>
@@ -111,9 +137,15 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="flex flex-wrap gap-6 text-gray-600 mb-6 p-4 bg-gray-50 rounded-xl">
-            {property.squareMeters && <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" /> {property.squareMeters} m²</span>}
-            {property.bedrooms && <span className="flex items-center gap-2"><Bed size={18} className="text-blue-700" /> {property.bedrooms} recámaras</span>}
-            {property.bathrooms && <span className="flex items-center gap-2"><Bath size={18} className="text-blue-700" /> {property.bathrooms} baños</span>}
+            {property.squareMeters && (
+              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" /> {property.squareMeters} m²</span>
+            )}
+            {property.bedrooms && (
+              <span className="flex items-center gap-2"><Bed size={18} className="text-blue-700" /> {property.bedrooms} recámaras</span>
+            )}
+            {property.bathrooms && (
+              <span className="flex items-center gap-2"><Bath size={18} className="text-blue-700" /> {property.bathrooms} baños</span>
+            )}
           </div>
 
           {property.description && (
