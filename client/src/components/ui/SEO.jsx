@@ -16,13 +16,6 @@ export default function SEO({
   const fullTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
   const fullUrl = url ? `${SITE_URL}${url}` : SITE_URL;
 
-  const formatPrice = (price) =>
-    new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-      maximumFractionDigits: 0,
-    }).format(price);
-
   return (
     <Helmet>
       {/* Básico */}
