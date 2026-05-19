@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { SlidersHorizontal, X } from 'lucide-react';
@@ -14,44 +14,43 @@ const STATUS = [{ value: '', label: 'Todos los estatus' }, { value: 'disponible'
 export default function PropertiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const [filters, setFilters] = useState({
+  // Derivar filtros directamente de la URL — sin useEffect ni useState extra
+  const filters = {
     city: searchParams.get('city') || '',
     type: searchParams.get('type') || '',
     status: searchParams.get('status') || '',
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
     search: searchParams.get('search') || '',
-    page: 1,
-  });
+  };
 
-  // Reaccionar cuando cambian los searchParams (viene del buscador del home)
-  useEffect(() => {
-    setFilters({
-      city: searchParams.get('city') || '',
-      type: searchParams.get('type') || '',
-      status: searchParams.get('status') || '',
-      minPrice: searchParams.get('minPrice') || '',
-      maxPrice: searchParams.get('maxPrice') || '',
-      search: searchParams.get('search') || '',
-      page: 1,
+  const setFilter = (key, value) => {
+    setPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      return next;
     });
-  }, [searchParams.toString()]);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['properties', filters],
-    queryFn: () => getProperties({ ...filters, limit: 12 }),
-    keepPreviousData: true,
-  });
-
-  const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value, page: 1 }));
+  };
 
   const clearFilters = () => {
-    setFilters({ city: '', type: '', status: '', minPrice: '', maxPrice: '', search: '', page: 1 });
+    setPage(1);
     setSearchParams({});
   };
 
   const hasFilters = filters.city || filters.type || filters.status || filters.minPrice || filters.maxPrice || filters.search;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['properties', filters, page],
+    queryFn: () => getProperties({ ...filters, page, limit: 12 }),
+    keepPreviousData: true,
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -157,9 +156,9 @@ export default function PropertiesPage() {
               {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((p) => (
                 <button
                   key={p}
-                  onClick={() => setFilters((f) => ({ ...f, page: p }))}
+                  onClick={() => setPage(p)}
                   className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                    filters.page === p ? 'bg-blue-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    page === p ? 'bg-blue-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   {p}
