@@ -17,11 +17,27 @@ function Sidebar({ mobile = false, user, onClose, onLogout }) {
   return (
     <div className="flex flex-col h-full bg-blue-900 text-white w-64">
       <div className="p-6 border-b border-blue-800">
-        <div className="flex items-center gap-2 font-bold text-lg">
-          <Building2 size={22} className="text-yellow-400" />
-          <span>Triomphe <span className="text-yellow-400">Admin</span></span>
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Triomphe Bienes Raíces"
+            className="h-12 w-auto brightness-0 invert"
+          />
+
+          <div className="flex flex-col leading-tight">
+            <span className="font-bold text-lg text-white">
+              Triomphe
+            </span>
+
+            <span className="text-sm font-semibold text-yellow-400">
+              Admin
+            </span>
+          </div>
         </div>
-        <p className="text-blue-300 text-xs mt-1">{user?.name}</p>
+
+        <p className="text-blue-300 text-xs mt-3">
+          {user?.name}
+        </p>
       </div>
       <nav className="flex-1 p-4 space-y-1">
         {links.map(({ to, icon, label }) => (

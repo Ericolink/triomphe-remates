@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { getProperties } from '../../services/propertyService';
@@ -11,16 +12,31 @@ const TYPES = [{ value: '', label: 'Todos los tipos' }, { value: 'casa', label: 
 const STATUS = [{ value: '', label: 'Todos los estatus' }, { value: 'disponible', label: 'Disponible' }, { value: 'apartado', label: 'Apartado' }];
 
 export default function PropertiesPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showFilters, setShowFilters] = useState(false);
+
   const [filters, setFilters] = useState({
-    city: '',
-    type: '',
-    status: '',
-    minPrice: '',
-    maxPrice: '',
-    search: '',
+    city: searchParams.get('city') || '',
+    type: searchParams.get('type') || '',
+    status: searchParams.get('status') || '',
+    minPrice: searchParams.get('minPrice') || '',
+    maxPrice: searchParams.get('maxPrice') || '',
+    search: searchParams.get('search') || '',
     page: 1,
   });
-  const [showFilters, setShowFilters] = useState(false);
+
+  // Reaccionar cuando cambian los searchParams (viene del buscador del home)
+  useEffect(() => {
+    setFilters({
+      city: searchParams.get('city') || '',
+      type: searchParams.get('type') || '',
+      status: searchParams.get('status') || '',
+      minPrice: searchParams.get('minPrice') || '',
+      maxPrice: searchParams.get('maxPrice') || '',
+      search: searchParams.get('search') || '',
+      page: 1,
+    });
+  }, [searchParams.toString()]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['properties', filters],
@@ -30,7 +46,10 @@ export default function PropertiesPage() {
 
   const setFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value, page: 1 }));
 
-  const clearFilters = () => setFilters({ city: '', type: '', status: '', minPrice: '', maxPrice: '', search: '', page: 1 });
+  const clearFilters = () => {
+    setFilters({ city: '', type: '', status: '', minPrice: '', maxPrice: '', search: '', page: 1 });
+    setSearchParams({});
+  };
 
   const hasFilters = filters.city || filters.type || filters.status || filters.minPrice || filters.maxPrice || filters.search;
 
@@ -41,10 +60,12 @@ export default function PropertiesPage() {
         description="Explora nuestro inventario de remates bancarios en Chihuahua, Ciudad Juárez y Querétaro. Filtra por ciudad, tipo y precio."
         url="/propiedades"
       />
+
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-900">Propiedades en Remate</h1>
+        <h1 className="text-3xl font-bold text-blue-900 dark:text-white">Propiedades en Remate</h1>
         <p className="text-gray-500 mt-1">
           {data?.pagination?.total ?? '...'} propiedades disponibles
+          {filters.search && <span className="ml-2 text-blue-600 font-medium">· Buscando: "{filters.search}"</span>}
         </p>
       </div>
 
@@ -94,12 +115,20 @@ export default function PropertiesPage() {
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Precio máx.</label>
             <input
-              type="number"
-              placeholder="Ej: 1000000"
-              value={filters.maxPrice}
-              onChange={(e) => setFilter('maxPrice', e.target.value)}
+              type="text"
+              placeholder="Ej: 1,000,000"
+              value={filters.maxPrice ? Number(filters.maxPrice).toLocaleString('es-MX') : ''}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, '');
+                setFilter('maxPrice', raw);
+              }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {filters.maxPrice && (
+              <p className="text-xs text-blue-600 mt-1">
+                $ {Number(filters.maxPrice).toLocaleString('es-MX')} MXN
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -111,6 +140,9 @@ export default function PropertiesPage() {
         <div className="text-center py-20 text-gray-400">
           <p className="text-xl font-medium">No se encontraron propiedades</p>
           <p className="text-sm mt-2">Intenta con otros filtros</p>
+          <button onClick={clearFilters} className="mt-4 text-blue-600 hover:underline text-sm">
+            Limpiar filtros
+          </button>
         </div>
       ) : (
         <>
@@ -120,7 +152,6 @@ export default function PropertiesPage() {
             ))}
           </div>
 
-          {/* Paginación */}
           {data?.pagination?.totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-10">
               {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((p) => (
