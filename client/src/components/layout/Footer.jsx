@@ -1,4 +1,4 @@
-import { Building2, Phone, Mail, MapPin } from 'lucide-react';
+import { Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const FacebookIcon = () => (
@@ -22,7 +22,6 @@ const WhatsAppIcon = () => (
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
-
   const socialLinks = [
     { icon: <FacebookIcon />, href: 'https://facebook.com/triomphebienes', label: 'Facebook' },
     { icon: <InstagramIcon />, href: 'https://instagram.com/triomphebienes', label: 'Instagram' },
@@ -32,7 +31,6 @@ export default function Footer() {
   return (
     <footer className="bg-blue-900 text-white mt-20">
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
-
         <div className="md:col-span-1">
           <img src="/logo.png" alt="Triomphe Bienes Raíces" className="h-12 w-auto mb-4 brightness-0 invert" />
           <p className="text-gray-300 text-sm leading-relaxed">
@@ -48,7 +46,6 @@ export default function Footer() {
             ))}
           </div>
         </div>
-
         <div>
           <h4 className="font-semibold text-yellow-400 mb-4">Navegación</h4>
           <ul className="space-y-2 text-gray-300 text-sm">
@@ -64,7 +61,6 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-
         <div>
           <h4 className="font-semibold text-yellow-400 mb-4">Ciudades</h4>
           <ul className="space-y-2 text-gray-300 text-sm">
@@ -82,7 +78,6 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-
         <div>
           <h4 className="font-semibold text-yellow-400 mb-4">Contacto</h4>
           <ul className="space-y-3 text-gray-300 text-sm">
@@ -103,7 +98,6 @@ export default function Footer() {
           </ul>
         </div>
       </div>
-
       <div className="border-t border-blue-800 py-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
           <p>© {currentYear} Triomphe Bienes Raíces. Todos los derechos reservados.</p>
