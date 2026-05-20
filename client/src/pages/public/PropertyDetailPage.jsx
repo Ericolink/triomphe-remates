@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Maximize2, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
+import { MapPin, Maximize2, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone, ZoomIn } from 'lucide-react';
 import { getPropertyBySlug } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
 import SEO from '../../components/ui/SEO';
+import ShareButton from '../../components/ui/ShareButton';
+import Lightbox from '../../components/ui/Lightbox';
 
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
@@ -17,6 +19,7 @@ export default function PropertyDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [imgIndex, setImgIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '');
 
   const { data, isLoading, isError } = useQuery({
@@ -66,34 +69,49 @@ export default function PropertyDetailPage() {
         property={property}
       />
 
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-blue-900 mb-6 transition-colors">
-        <ChevronLeft size={18} /> Regresar
-      </button>
+      {lightboxOpen && (
+        <Lightbox
+          images={images}
+          currentIndex={imgIndex}
+          apiBase={apiBase}
+          onClose={() => setLightboxOpen(false)}
+          onPrev={() => setImgIndex((i) => (i - 1 + images.length) % images.length)}
+          onNext={() => setImgIndex((i) => (i + 1) % images.length)}
+        />
+      )}
+
+      <div className="flex items-center justify-between mb-6">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors">
+          <ChevronLeft size={18} /> Regresar
+        </button>
+        <ShareButton title={property.title} url={`/propiedades/${property.slug}`} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Columna izquierda */}
         <div className="lg:col-span-2">
-          {/* Galería */}
-          <div className="relative bg-gray-100 rounded-2xl overflow-hidden h-80 md:h-96 mb-3">
+          {/* Galería con lightbox */}
+          <div
+            className="relative bg-gray-100 rounded-2xl overflow-hidden h-80 md:h-96 mb-3 cursor-zoom-in group"
+            onClick={() => images.length > 0 && setLightboxOpen(true)}
+          >
             {images.length > 0 ? (
               <>
                 <img
                   src={`${apiBase}${images[imgIndex]?.url}`}
                   alt={`${property.title} - imagen ${imgIndex + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <ZoomIn size={32} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
                 {images.length > 1 && (
                   <>
-                    <button
-                      onClick={() => setImgIndex((i) => (i - 1 + images.length) % images.length)}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow transition-colors"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); setImgIndex((i) => (i - 1 + images.length) % images.length); }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow transition-colors">
                       <ChevronLeft size={20} />
                     </button>
-                    <button
-                      onClick={() => setImgIndex((i) => (i + 1) % images.length)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow transition-colors"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); setImgIndex((i) => (i + 1) % images.length); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow transition-colors">
                       <ChevronRight size={20} />
                     </button>
                     <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
@@ -114,14 +132,13 @@ export default function PropertyDetailPage() {
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
               {images.map((img, i) => (
                 <button key={img.id} onClick={() => setImgIndex(i)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${i === imgIndex ? 'border-blue-600' : 'border-transparent'}`}>
+                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${i === imgIndex ? 'border-blue-600' : 'border-transparent hover:border-gray-300'}`}>
                   <img src={`${apiBase}${img.url}`} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
           )}
 
-          {/* Info */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <Badge variant={statusVariant[property.status]}>{statusLabel[property.status]}</Badge>
             {property.isFeatured && <Badge variant="primary">Destacado</Badge>}
@@ -137,15 +154,9 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="flex flex-wrap gap-6 text-gray-600 mb-6 p-4 bg-gray-50 rounded-xl">
-            {property.squareMeters && (
-              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" /> {property.squareMeters} m²</span>
-            )}
-            {property.bedrooms && (
-              <span className="flex items-center gap-2"><Bed size={18} className="text-blue-700" /> {property.bedrooms} recámaras</span>
-            )}
-            {property.bathrooms && (
-              <span className="flex items-center gap-2"><Bath size={18} className="text-blue-700" /> {property.bathrooms} baños</span>
-            )}
+            {property.squareMeters && <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" /> {property.squareMeters} m²</span>}
+            {property.bedrooms && <span className="flex items-center gap-2"><Bed size={18} className="text-blue-700" /> {property.bedrooms} recámaras</span>}
+            {property.bathrooms && <span className="flex items-center gap-2"><Bath size={18} className="text-blue-700" /> {property.bathrooms} baños</span>}
           </div>
 
           {property.description && (
@@ -166,7 +177,6 @@ export default function PropertyDetailPage() {
           )}
         </div>
 
-        {/* Columna derecha */}
         <div className="space-y-6">
           <div className="bg-blue-900 text-white rounded-2xl p-6">
             <p className="text-sm text-blue-200 mb-1">Precio de remate</p>

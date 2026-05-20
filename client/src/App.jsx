@@ -1,20 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 
-// Páginas públicas
 import HomePage from './pages/public/HomePage';
 import PropertiesPage from './pages/public/PropertiesPage';
 import PropertyDetailPage from './pages/public/PropertyDetailPage';
 import ContactPage from './pages/public/ContactPage';
+import AboutPage from './pages/public/AboutPage';
 
-// Páginas admin
 import LoginPage from './pages/admin/LoginPage';
 import DashboardPage from './pages/admin/DashboardPage';
 import AdminPropertiesPage from './pages/admin/AdminPropertiesPage';
 import PropertyFormPage from './pages/admin/PropertyFormPage';
 import LeadsPage from './pages/admin/LeadsPage';
 
-// Layouts
 import PublicLayout from './components/layout/PublicLayout';
 import AdminLayout from './components/layout/AdminLayout';
 
@@ -27,15 +25,14 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rutas públicas */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/propiedades" element={<PropertiesPage />} />
           <Route path="/propiedades/:slug" element={<PropertyDetailPage />} />
           <Route path="/contacto" element={<ContactPage />} />
+          <Route path="/nosotros" element={<AboutPage />} />
         </Route>
 
-        {/* Rutas admin */}
         <Route path="/admin/login" element={<LoginPage />} />
         <Route path="/admin" element={
           <ProtectedRoute>

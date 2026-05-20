@@ -126,3 +126,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+// componente ya actualizado — el badge viene del NotificationBell en el header
