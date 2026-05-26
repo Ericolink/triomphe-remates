@@ -20,15 +20,13 @@ const FIELDS = [
   { key: 'bedrooms', label: 'Recámaras', type: 'number', col: 1 },
   { key: 'bathrooms', label: 'Baños', type: 'number', col: 1 },
   { key: 'address', label: 'Dirección', type: 'text', col: 2 },
-  { key: 'bank', label: 'Banco', type: 'text', col: 1 },
-  { key: 'loanNumber', label: 'No. Crédito', type: 'text', col: 1 },
   { key: 'description', label: 'Descripción', type: 'textarea', col: 2 },
 ];
 
 const emptyForm = {
   title: '', price: '', city: 'juarez', type: 'casa', status: 'disponible',
   squareMeters: '', bedrooms: '', bathrooms: '', address: '',
-  bank: '', loanNumber: '', description: '', isFeatured: false,
+  description: '', isFeatured: false,
 };
 
 const propertyToForm = (p) => ({
@@ -36,7 +34,7 @@ const propertyToForm = (p) => ({
   type: p.type || 'casa', status: p.status || 'disponible',
   squareMeters: p.squareMeters || '', bedrooms: p.bedrooms || '',
   bathrooms: p.bathrooms || '', address: p.address || '',
-  bank: p.bank || '', loanNumber: p.loanNumber || '',
+  
   description: p.description || '', isFeatured: p.isFeatured || false,
 });
 

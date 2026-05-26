@@ -47,16 +47,6 @@ const Property = sequelize.define('Property', {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
-  loanNumber: {
-    type: DataTypes.STRING(100),
-    allowNull: true,
-    comment: 'Número de crédito bancario del remate',
-  },
-  bank: {
-    type: DataTypes.STRING(100),
-    allowNull: true,
-    comment: 'Banco que ejecuta el remate',
-  },
   auctionDate: {
     type: DataTypes.DATE,
     allowNull: true,
