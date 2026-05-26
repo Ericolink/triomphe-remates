@@ -12,8 +12,6 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
 
-  if (isAuthenticated) return <Navigate to="/admin/dashboard" replace />;
-
   const { mutate, isPending } = useMutation({
     mutationFn: ({ email, password }) => login(email, password),
     onSuccess: ({ token, user }) => {
@@ -24,6 +22,8 @@ export default function LoginPage() {
     onError: () => toast.error('Credenciales incorrectas'),
   });
 
+  if (isAuthenticated) return <Navigate to="/admin/dashboard" replace />;
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.email || !form.password) return toast.error('Completa todos los campos');
@@ -31,7 +31,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#1a1f2e] dark:to-[#242938] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#242938] flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl w-full max-w-md p-8 border border-transparent dark:border-[#2e3650]">
         <div className="text-center mb-8">
           <img src="/logo.png" alt="Triomphe" className="h-16 w-auto mx-auto mb-4 dark:brightness-0 dark:invert" />
