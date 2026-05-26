@@ -1,0 +1,30 @@
+name: Security — Audit de dependencias
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1'
+
+jobs:
+  audit-server:
+    name: Audit servidor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm audit --audit-level=high
+        working-directory: server
+
+  audit-client:
+    name: Audit cliente
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm audit --audit-level=high
+        working-directory: client
