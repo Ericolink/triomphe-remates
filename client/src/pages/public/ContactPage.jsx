@@ -34,10 +34,10 @@ export default function ContactPage() {
             Información de contacto
           </motion.h2>
           {[
-            { icon: <Phone size={20} className="text-yellow-500" />, title: 'Teléfono', lines: ['+52 (614) 000-0000', '+52 (656) 000-0000'] },
-            { icon: <Mail size={20} className="text-yellow-500" />, title: 'Email', lines: ['contacto@triomphe.com', 'ventas@triomphe.com'] },
+            { icon: <Phone size={20} className="text-yellow-500" />, title: 'Teléfono', lines: ['+52 (656) 579-2750'] },
+            { icon: <Mail size={20} className="text-yellow-500" />, title: 'Email', lines: ['t.bienesraicesmx@gmail.com', 'TriompheSistemas@gmail.com'] },
             { icon: <MapPin size={20} className="text-yellow-500" />, title: 'Ciudades', lines: ['Cd. Juárez, Chihuahua', 'Chihuahua, Chih.', 'Querétaro, Qro.'] },
-            { icon: <Clock size={20} className="text-yellow-500" />, title: 'Horario', lines: ['Lun - Vie: 9:00 - 18:00', 'Sáb: 9:00 - 14:00'] },
+            { icon: <Clock size={20} className="text-yellow-500" />, title: 'Horario', lines: ['Lun - Vie: 9:00 AM - 6:00 PM'] },
           ].map(({ icon, title, lines }) => (
             <motion.div key={title} variants={fadeInRight}
               whileHover={{ x: 4, transition: { duration: 0.2 } }}

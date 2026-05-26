@@ -45,7 +45,6 @@ const getProperties = async (req, res) => {
       where[Op.or] = [
         { title: { [Op.like]: `%${search}%` } },
         { address: { [Op.like]: `%${search}%` } },
-        { bank: { [Op.like]: `%${search}%` } },
       ];
     }
 
@@ -134,7 +133,7 @@ const createProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, bedrooms, bathrooms,
-      address, loanNumber, bank, auctionDate, isFeatured,
+      address,  auctionDate, isFeatured,
     } = req.body;
 
     if (!title || !price || !city || !type) {
@@ -151,7 +150,7 @@ const createProperty = async (req, res) => {
       title, description, price, city, type,
       status: status || 'disponible',
       squareMeters, bedrooms, bathrooms,
-      address, loanNumber, bank, auctionDate,
+      address,  auctionDate,
       isFeatured: isFeatured || false,
       slug,
     });
@@ -175,7 +174,7 @@ const updateProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, bedrooms, bathrooms,
-      address, loanNumber, bank, auctionDate, isFeatured,
+      address,  auctionDate, isFeatured,
     } = req.body;
 
     if (title && title !== property.title) {
@@ -188,7 +187,7 @@ const updateProperty = async (req, res) => {
     await property.update({
       title, description, price, city, type,
       status, squareMeters, bedrooms, bathrooms,
-      address, loanNumber, bank, auctionDate,
+      address,  auctionDate,
       isFeatured, slug: req.body.slug,
     });
 
