@@ -5,14 +5,12 @@ const useThemeStore = create((set) => ({
   toggleTheme: () =>
     set((state) => {
       const next = state.theme === 'light' ? 'dark' : 'light';
-      try {
-        localStorage.setItem('theme', next);
-        if (next === 'dark') {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      } catch {}
+      localStorage.setItem('theme', next);
+      if (next === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
       return { theme: next };
     }),
   initTheme: (theme) => set({ theme }),

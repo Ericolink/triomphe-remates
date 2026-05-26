@@ -21,17 +21,15 @@ export default function ThemeToggle({ className = '' }) {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch {}
+    localStorage.setItem('theme', next ? 'dark' : 'light');
     setIsDark(next);
   };
 
   return (
-    <button
-      onClick={toggle}
+    <button onClick={toggle}
       className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${className}`}
       title={isDark ? 'Modo claro' : 'Modo oscuro'}
-      aria-label="Cambiar tema"
-    >
+      aria-label="Cambiar tema">
       {isDark ? (
         <Sun size={18} className="text-yellow-400" />
       ) : (

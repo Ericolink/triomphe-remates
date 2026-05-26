@@ -1,5 +1,5 @@
 const { Lead, Property } = require('../models/index');
-const { Op } = require('sequelize');
+
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 
 // POST /api/leads

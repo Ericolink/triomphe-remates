@@ -12,6 +12,40 @@ const links = [
   { to: '/admin/leads', icon: <Users size={18} />, label: 'Leads' },
 ];
 
+function Sidebar({ user, onClose, onLogout }) {
+  return (
+    <div className="flex flex-col h-full bg-blue-900 text-white w-64">
+      <div className="p-6 border-b border-blue-800">
+        <img src="/logo.png" alt="Triomphe" className="h-8 w-auto brightness-0 invert" />
+        <p className="text-blue-300 text-xs mt-2">{user?.name}</p>
+        <span className="inline-block mt-1 text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold capitalize">
+          {user?.role}
+        </span>
+      </div>
+
+      <nav className="flex-1 p-4 space-y-1">
+        {links.map(({ to, icon, label }) => (
+          <NavLink key={to} to={to} onClick={onClose}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive ? 'bg-yellow-400 text-blue-900' : 'text-blue-200 hover:bg-blue-800 hover:text-white'
+              }`
+            }>
+            {icon} {label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="p-4 border-t border-blue-800">
+        <button onClick={onLogout}
+          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-sm font-medium text-blue-200 hover:bg-blue-800 hover:text-white transition-colors">
+          <LogOut size={18} /> Cerrar sesión
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminLayout() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -25,45 +59,17 @@ export default function AdminLayout() {
     navigate('/admin/login');
   };
 
-  const Sidebar = ({ mobile = false }) => (
-    <div className="flex flex-col h-full bg-blue-900 text-white w-64">
-      <div className="p-6 border-b border-blue-800">
-        <img src="/logo.png" alt="Triomphe" className="h-8 w-auto brightness-0 invert" />
-        <p className="text-blue-300 text-xs mt-2">{user?.name}</p>
-        <span className="inline-block mt-1 text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold capitalize">
-          {user?.role}
-        </span>
-      </div>
-
-      <nav className="flex-1 p-4 space-y-1">
-        {links.map(({ to, icon, label }) => (
-          <NavLink key={to} to={to} onClick={() => mobile && setOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                isActive ? 'bg-yellow-400 text-blue-900' : 'text-blue-200 hover:bg-blue-800 hover:text-white'
-              }`
-            }>
-            {icon} {label}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="p-4 border-t border-blue-800">
-        <button onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-sm font-medium text-blue-200 hover:bg-blue-800 hover:text-white transition-colors">
-          <LogOut size={18} /> Cerrar sesión
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-[#1a1f2e] overflow-hidden">
-      <div className="hidden md:flex flex-shrink-0"><Sidebar /></div>
+      <div className="hidden md:flex flex-shrink-0">
+        <Sidebar user={user} onClose={() => {}} onLogout={handleLogout} />
+      </div>
 
       {open && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          <div className="flex-shrink-0"><Sidebar mobile /></div>
+          <div className="flex-shrink-0">
+            <Sidebar user={user} onClose={() => setOpen(false)} onLogout={handleLogout} />
+          </div>
           <div className="flex-1 bg-black/50" onClick={() => setOpen(false)} />
         </div>
       )}

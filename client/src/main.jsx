@@ -6,13 +6,10 @@ import { Toaster } from 'react-hot-toast';
 import App from './App.jsx';
 import './index.css';
 
-// Aplicar tema ANTES de renderizar — evita flash y errores de hooks
-try {
-  const saved = localStorage.getItem('theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = saved || (prefersDark ? 'dark' : 'light');
-  if (theme === 'dark') document.documentElement.classList.add('dark');
-} catch {}
+const savedTheme = localStorage.getItem('theme');
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+if (theme === 'dark') document.documentElement.classList.add('dark');
 
 const queryClient = new QueryClient({
   defaultOptions: {
