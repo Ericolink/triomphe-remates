@@ -2,7 +2,7 @@ import { Shield, Users, Building2, TrendingDown, Award, MapPin } from 'lucide-re
 import { motion } from 'framer-motion';
 import SEO from '../../components/ui/SEO';
 import AnimatedSection from '../../components/ui/AnimatedSection';
-import { fadeInUp, fadeInLeft, fadeInRight, staggerContainer } from '../../utils/animations';
+import { fadeInUp, fadeInLeft, staggerContainer } from '../../utils/animations';
 
 export default function AboutPage() {
   return (
