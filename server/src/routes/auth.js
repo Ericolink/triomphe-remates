@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { register, login, getMe, changePassword } = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
+const { authLimiter, apiLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
  * @swagger
@@ -32,7 +33,7 @@ const { authenticate } = require('../middleware/authMiddleware');
  *       400: { description: Datos inválidos }
  *       409: { description: Email ya registrado }
  */
-router.post('/register', register);
+router.post('/register', authLimiter, register);
 
 /**
  * @swagger
@@ -54,7 +55,7 @@ router.post('/register', register);
  *       200: { description: Login exitoso con token JWT }
  *       401: { description: Credenciales inválidas }
  */
-router.post('/login', login);
+router.post('/login', authLimiter, login);
 
 /**
  * @swagger
@@ -68,7 +69,7 @@ router.post('/login', login);
  *       200: { description: Datos del usuario }
  *       401: { description: No autenticado }
  */
-router.get('/me', authenticate, getMe);
+router.get('/me', apiLimiter, authenticate, getMe);
 
 /**
  * @swagger
@@ -81,6 +82,6 @@ router.get('/me', authenticate, getMe);
  *     responses:
  *       200: { description: Contraseña actualizada }
  */
-router.put('/change-password', authenticate, changePassword);
+router.put('/change-password', authLimiter, authenticate, changePassword);
 
 module.exports = router;

@@ -5,12 +5,26 @@ const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Token no proporcionado' });
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const token = authHeader.slice(7);
+
+    if (!token || token.length === 0) {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+
+    if (!decoded.id || typeof decoded.id !== 'number') {
+      return res.status(401).json({ error: 'Token malformado' });
+    }
 
     const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ['password'] },
@@ -21,9 +35,9 @@ const authenticate = async (req, res, next) => {
     }
 
     req.user = user;
-    next();
+    return next();
   } catch {
-    return res.status(401).json({ error: 'Token inválido o expirado' });
+    return res.status(401).json({ error: 'Error de autenticación' });
   }
 };
 
