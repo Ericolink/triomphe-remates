@@ -8,6 +8,7 @@ import {
   uploadImages, deleteImage, setCoverImage
 } from '../../services/propertyService';
 import Spinner from '../../components/ui/Spinner';
+import { safeBlobUrl } from '../../utils/sanitize';
 
 const FIELDS = [
   { key: 'title', label: 'Título *', type: 'text', col: 2 },
@@ -232,7 +233,7 @@ export default function PropertyFormPage() {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mt-4">
               {previews.map(({ url }, i) => (
                 <div key={url} className="relative group">
-                  <img src={url} alt="Vista previa"
+                  <img src={safeBlobUrl(url)} alt="Vista previa"
                     className="w-full aspect-square object-cover rounded-xl border border-gray-200" />
                   <button type="button" onClick={() => removeNewFile(i)}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
