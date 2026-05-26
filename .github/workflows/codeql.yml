@@ -16,6 +16,8 @@ jobs:
       security-events: write
       actions: read
       contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout código
