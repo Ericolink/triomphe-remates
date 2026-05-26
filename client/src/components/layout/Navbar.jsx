@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import ThemeToggle from '../ui/ThemeToggle';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -17,15 +18,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="Triomphe Bienes Raíces"
-              className="h-14 w-auto brightness-0 invert"
-            />
-
-            <span className="text-xl font-bold text-white">
-              Triomphe <span className="text-yellow-400">Bienes Raíces</span>
-            </span>
+            <img src="/logo.png" alt="Triomphe Bienes Raíces" className="h-10 w-auto brightness-0 invert" />
           </Link>
 
           {/* Desktop */}
@@ -38,15 +31,22 @@ export default function Navbar() {
                 {label}
               </NavLink>
             ))}
+          </div>
+
+          <div className="hidden md:flex items-center gap-2">
+            <ThemeToggle />
             <Link to="/admin/login"
               className="text-sm font-medium bg-yellow-400 text-blue-900 px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors">
               Acceso Admin
             </Link>
           </div>
 
-          <button className="md:hidden p-2" onClick={() => setOpen(!open)}>
-            {open ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <ThemeToggle />
+            <button className="p-2" onClick={() => setOpen(!open)}>
+              {open ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </div>
 

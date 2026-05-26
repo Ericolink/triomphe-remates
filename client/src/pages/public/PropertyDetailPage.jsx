@@ -59,7 +59,7 @@ export default function PropertyDetailPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10">
+    <div className="max-w-7xl mx-auto px-4 py-10 dark:bg-[#1a1f2e]">
       <SEO
         title={property.title}
         description={buildDescription(property)}
@@ -91,7 +91,7 @@ export default function PropertyDetailPage() {
         <div className="lg:col-span-2">
           {/* Galería con lightbox */}
           <div
-            className="relative bg-gray-100 rounded-2xl overflow-hidden h-80 md:h-96 mb-3 cursor-zoom-in group"
+            className="relative bg-gray-100 dark:bg-[#242938] rounded-2xl overflow-hidden h-80 md:h-96 mb-3 cursor-zoom-in group"
             onClick={() => images.length > 0 && setLightboxOpen(true)}
           >
             {images.length > 0 ? (
@@ -153,7 +153,7 @@ export default function PropertyDetailPage() {
             </p>
           )}
 
-          <div className="flex flex-wrap gap-6 text-gray-600 mb-6 p-4 bg-gray-50 rounded-xl">
+          <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-4 bg-gray-50 dark:bg-[#242938] rounded-xl">
             {property.squareMeters && <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" /> {property.squareMeters} m²</span>}
             {property.bedrooms && <span className="flex items-center gap-2"><Bed size={18} className="text-blue-700" /> {property.bedrooms} recámaras</span>}
             {property.bathrooms && <span className="flex items-center gap-2"><Bath size={18} className="text-blue-700" /> {property.bathrooms} baños</span>}
@@ -167,7 +167,7 @@ export default function PropertyDetailPage() {
           )}
 
           {(property.bank || property.loanNumber) && (
-            <div className="p-4 bg-blue-50 rounded-xl">
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
               <h2 className="text-sm font-semibold text-blue-900 mb-2">Datos del remate</h2>
               <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
                 {property.bank && <span><strong>Banco:</strong> {property.bank}</span>}
@@ -184,7 +184,7 @@ export default function PropertyDetailPage() {
             <p className="text-xs text-blue-300 mt-1">{cityLabel[property.city]}</p>
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-md">
+          <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
             <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
               <Phone size={18} /> Contactar asesor
             </h3>

@@ -23,9 +23,9 @@ const WhatsAppIcon = () => (
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const socialLinks = [
-    { icon: <FacebookIcon />, href: 'https://facebook.com/triomphebienes', label: 'Facebook' },
-    { icon: <InstagramIcon />, href: 'https://instagram.com/triomphebienes', label: 'Instagram' },
-    { icon: <WhatsAppIcon />, href: 'https://wa.me/526141234567', label: 'WhatsApp' },
+    { icon: <FacebookIcon />, href: 'https://www.facebook.com/TriomphePagOficial', label: 'Facebook' },
+    { icon: <InstagramIcon />, href: 'https://www.instagram.com/triomphejrz', label: 'Instagram' },
+    { icon: <WhatsAppIcon />, href: 'https://wa.me/526565792750', label: 'WhatsApp' },
   ];
 
   return (
@@ -83,7 +83,7 @@ export default function Footer() {
           <ul className="space-y-3 text-gray-300 text-sm">
             <li className="flex items-center gap-2">
               <Phone size={14} className="flex-shrink-0" />
-              <span>+52 (614) 000-0000</span>
+              <span>+52 (656) 579-2750</span>
             </li>
             <li className="flex items-center gap-2">
               <Mail size={14} className="flex-shrink-0" />
@@ -93,7 +93,11 @@ export default function Footer() {
             </li>
             <li className="flex items-start gap-2">
               <MapPin size={14} className="flex-shrink-0 mt-0.5" />
-              <span>Chihuahua, México</span>
+              <span>Ciudad Juarez, Chihuahua, México</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <MapPin size={14} className="flex-shrink-0 mt-0.5" />
+              <span>Av. Paseo Triunfo de la República 215-INT 24, San Lorenzo, 32320 Juárez, Chih.</span>
             </li>
           </ul>
         </div>
