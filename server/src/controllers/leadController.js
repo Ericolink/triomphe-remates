@@ -1,5 +1,5 @@
 const { Lead, Property } = require('../models/index');
-
+const { validateEmail } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 
 // POST /api/leads
@@ -11,8 +11,7 @@ const createLead = async (req, res) => {
       return res.status(400).json({ error: 'Nombre y email son requeridos' });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!validateEmail(email)) {
       return res.status(400).json({ error: 'Email inválido' });
     }
 
@@ -29,7 +28,6 @@ const createLead = async (req, res) => {
       appointmentDate: appointmentDate || null,
     });
 
-    // Enviar emails en background sin bloquear la respuesta
     Promise.all([
       sendNewLeadNotification(lead, property).catch((e) => console.error('Error email notificación:', e)),
       sendLeadConfirmation(lead).catch((e) => console.error('Error email confirmación:', e)),
@@ -97,7 +95,6 @@ const getLeadById = async (req, res) => {
     });
 
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-
     return res.json({ data: lead });
   } catch (error) {
     console.error('Error en getLeadById:', error);
