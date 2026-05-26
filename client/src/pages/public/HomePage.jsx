@@ -8,7 +8,7 @@ import PropertyCard from '../../components/ui/PropertyCard';
 import Spinner from '../../components/ui/Spinner';
 import SEO from '../../components/ui/SEO';
 import AnimatedSection from '../../components/ui/AnimatedSection';
-import { fadeInUp, staggerContainer, fadeIn, buttonHover, buttonTap } from '../../utils/animations';
+import { fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 
 export default function HomePage() {
   const navigate = useNavigate();
