@@ -6,15 +6,18 @@ on:
   schedule:
     - cron: '0 9 * * 1'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   audit-server:
     name: Audit servidor
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: '24'
       - run: npm audit --audit-level=high
         working-directory: server
 
@@ -22,9 +25,9 @@ jobs:
     name: Audit cliente
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "24"
+          node-version: '24'
       - run: npm audit --audit-level=high
         working-directory: client

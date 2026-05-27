@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
+const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro', otra: 'Otra ciudad' };
 const typeLabel = { contacto: 'Solicitud de información', cita: 'Agendar visita', informacion: 'Información del remate' };
 
 // Email al equipo cuando llega un lead nuevo
@@ -166,4 +166,79 @@ const verifyConnection = async () => {
   }
 };
 
-module.exports = { sendNewLeadNotification, sendLeadConfirmation, verifyConnection };
+
+const expLabel = { sin_experiencia: 'Sin experiencia', 'menos_1_año': 'Menos de 1 año', '1_3_años': '1 a 3 años', 'mas_3_años': 'Más de 3 años' };
+
+const sendJobApplicationNotification = async (application, position) => {
+  const html = `
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+      <div style="max-width:580px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+        <div style="background:#1a3a5c;padding:28px 32px">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700">👤 Nueva postulación recibida</h1>
+          <p style="margin:6px 0 0;color:#93c5fd;font-size:13px">Bolsa de trabajo — Triomphe Bienes Raíces</p>
+        </div>
+        ${position ? `<div style="background:#fef3c7;padding:12px 32px;border-bottom:1px solid #fde68a"><span style="color:#92400e;font-size:13px;font-weight:600">📋 Vacante: ${position.title}</span></div>` : '<div style="background:#e0f2fe;padding:12px 32px;border-bottom:1px solid #bae6fd"><span style="color:#0c4a6e;font-size:13px;font-weight:600">📋 Postulación general</span></div>'}
+        <div style="padding:28px 32px">
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280;font-size:13px;width:130px">Nombre</td><td style="padding:8px 0;font-size:13px;font-weight:600">${application.name}</td></tr>
+            <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280;font-size:13px">Email</td><td style="padding:8px 0;font-size:13px"><a href="mailto:${application.email}" style="color:#1a3a5c">${application.email}</a></td></tr>
+            <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280;font-size:13px">Teléfono</td><td style="padding:8px 0;font-size:13px"><a href="tel:${application.phone}" style="color:#1a3a5c">${application.phone}</a></td></tr>
+            <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280;font-size:13px">Ciudad</td><td style="padding:8px 0;font-size:13px">${cityLabel[application.city] || application.city}</td></tr>
+            <tr style="border-bottom:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280;font-size:13px">Experiencia</td><td style="padding:8px 0;font-size:13px">${expLabel[application.experience] || application.experience}</td></tr>
+            <tr><td style="padding:8px 0;color:#6b7280;font-size:13px">Vehículo propio</td><td style="padding:8px 0;font-size:13px">${application.hasVehicle ? '✅ Sí' : '❌ No'}</td></tr>
+          </table>
+          ${application.motivation ? `<div style="margin-top:20px;background:#f8f9fa;border-radius:10px;padding:16px"><p style="margin:0 0 6px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase">Motivación</p><p style="margin:0;color:#374151;font-size:13px;line-height:1.6">${application.motivation}</p></div>` : ''}
+        </div>
+        <div style="padding:0 32px 28px">
+          <a href="${process.env.CLIENT_URL}/admin/jobs" style="display:inline-block;background:#1a3a5c;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600">Ver en el panel admin →</a>
+        </div>
+        <div style="background:#f8f9fa;padding:16px 32px;border-top:1px solid #e5e7eb">
+          <p style="margin:0;color:#9ca3af;font-size:11px">Postulación recibida el ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+        </div>
+      </div>
+    </body></html>
+  `;
+  await transporter.sendMail({
+    from: `"Triomphe Remates" <${process.env.EMAIL_USER}>`,
+    to: process.env.EMAIL_TO,
+    subject: `👤 Nueva postulación: ${application.name}${position ? ` — ${position.title}` : ' (General)'}`,
+    html,
+  });
+};
+
+const sendJobApplicationConfirmation = async (application, position) => {
+  const html = `
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+      <div style="max-width:580px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+        <div style="background:#1a3a5c;padding:28px 32px">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700">¡Gracias por postularte, ${application.name}!</h1>
+          <p style="margin:6px 0 0;color:#93c5fd;font-size:13px">Triomphe Bienes Raíces — Bolsa de trabajo</p>
+        </div>
+        <div style="padding:28px 32px">
+          <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px">
+            Hemos recibido tu postulación${position ? ` para el puesto de <strong>${position.title}</strong>` : ''}. Nuestro equipo la revisará y se pondrá en contacto contigo a la brevedad posible.
+          </p>
+          <div style="background:#eff6ff;border-left:4px solid #1a3a5c;border-radius:6px;padding:16px;margin:20px 0">
+            <p style="margin:0;color:#1a3a5c;font-size:13px;font-weight:600">¿Qué sigue?</p>
+            <p style="margin:6px 0 0;color:#374151;font-size:13px">Si tu perfil es de interés para nosotros, te contactaremos para agendar una entrevista.</p>
+          </div>
+        </div>
+        <div style="background:#f8f9fa;padding:20px 32px;border-top:1px solid #e5e7eb;text-align:center">
+          <p style="margin:0;color:#9ca3af;font-size:11px">© ${new Date().getFullYear()} Triomphe Bienes Raíces</p>
+        </div>
+      </div>
+    </body></html>
+  `;
+  await transporter.sendMail({
+    from: `"Triomphe Bienes Raíces" <${process.env.EMAIL_USER}>`,
+    to: application.email,
+    subject: `✅ Postulación recibida — Triomphe Bienes Raíces`,
+    html,
+  });
+};
+
+module.exports = { sendNewLeadNotification, sendLeadConfirmation, sendJobApplicationNotification, sendJobApplicationConfirmation, verifyConnection };

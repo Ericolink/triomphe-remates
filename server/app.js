@@ -21,6 +21,7 @@ app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/properties', require('./src/routes/properties'));
 app.use('/api/leads', require('./src/routes/leads'));
 app.use('/sitemap.xml', require('./src/routes/sitemap'));
+app.use('/api/jobs', require('./src/routes/jobs'));
 app.use('/api/export', require('./src/routes/export'));
 app.use('/api/analytics', require('./src/routes/analytics'));
 

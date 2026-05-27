@@ -87,8 +87,8 @@ export default function Footer() {
             </li>
             <li className="flex items-center gap-2">
               <Mail size={14} className="flex-shrink-0" />
-              <a href="mailto:contacto@triomphe.com" className="hover:text-yellow-400 transition-colors">
-                contacto@triomphe.com
+              <a href="mailto:t.bienesraicesmx@gmail.com" className="hover:text-yellow-400 transition-colors">
+                t.bienesraicesmx@gmail.com
               </a>
             </li>
             <li className="flex items-start gap-2">

@@ -42,7 +42,6 @@ export default function PropertyDetailPage() {
       p.city ? `en ${cityLabel[p.city]}` : '',
       p.squareMeters ? `· ${p.squareMeters} m²` : '',
       p.bedrooms ? `· ${p.bedrooms} recámaras` : '',
-      p.bank ? `· Banco: ${p.bank}` : '',
     ];
     return parts.filter(Boolean).join(' ');
   };
@@ -89,6 +88,7 @@ export default function PropertyDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2">
+
           {/* Galería con lightbox */}
           <div
             className="relative bg-gray-100 dark:bg-[#242938] rounded-2xl overflow-hidden h-80 md:h-96 mb-3 cursor-zoom-in group"
@@ -166,15 +166,6 @@ export default function PropertyDetailPage() {
             </div>
           )}
 
-          {(property.bank || property.loanNumber) && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-              <h2 className="text-sm font-semibold text-blue-900 mb-2">Datos del remate</h2>
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                {property.bank && <span><strong>Banco:</strong> {property.bank}</span>}
-                {property.loanNumber && <span><strong>No. crédito:</strong> {property.loanNumber}</span>}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="space-y-6">
