@@ -20,15 +20,13 @@ const FIELDS = [
   { key: 'bedrooms', label: 'Recámaras', type: 'number', col: 1 },
   { key: 'bathrooms', label: 'Baños', type: 'number', col: 1 },
   { key: 'address', label: 'Dirección', type: 'text', col: 2 },
-  { key: 'bank', label: 'Banco', type: 'text', col: 1 },
-  { key: 'loanNumber', label: 'No. Crédito', type: 'text', col: 1 },
   { key: 'description', label: 'Descripción', type: 'textarea', col: 2 },
 ];
 
 const emptyForm = {
   title: '', price: '', city: 'juarez', type: 'casa', status: 'disponible',
   squareMeters: '', bedrooms: '', bathrooms: '', address: '',
-  bank: '', loanNumber: '', description: '', isFeatured: false,
+  description: '', isFeatured: false,
 };
 
 const propertyToForm = (p) => ({
@@ -36,7 +34,7 @@ const propertyToForm = (p) => ({
   type: p.type || 'casa', status: p.status || 'disponible',
   squareMeters: p.squareMeters || '', bedrooms: p.bedrooms || '',
   bathrooms: p.bathrooms || '', address: p.address || '',
-  bank: p.bank || '', loanNumber: p.loanNumber || '',
+  
   description: p.description || '', isFeatured: p.isFeatured || false,
 });
 
@@ -199,11 +197,11 @@ export default function PropertyFormPage() {
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
                     <button type="button" onClick={() => coverMutation.mutate(img.id)}
                       className="p-1 bg-yellow-400 rounded-lg" title="Hacer portada">
-                      <Star size={12} className="text-blue-900" />
+                      <Star size={16} className="text-blue-900" />
                     </button>
                     <button type="button" onClick={() => deleteImgMutation.mutate({ imgId: img.id })}
                       className="p-1 bg-red-500 rounded-lg" title="Eliminar">
-                      <X size={12} className="text-white" />
+                      <X size={16} className="text-white" />
                     </button>
                   </div>
                   {img.isCover && (
@@ -237,7 +235,7 @@ export default function PropertyFormPage() {
                     className="w-full aspect-square object-cover rounded-xl border border-gray-200" />
                   <button type="button" onClick={() => removeNewFile(i)}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X size={10} />
+                    <X size={14} />
                   </button>
                 </div>
               ))}

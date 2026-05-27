@@ -6,27 +6,23 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   server-lint:
     name: Lint servidor
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "24.x"
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: server/package-lock.json
-
-      - name: Instalar dependencias
-        run: npm ci
+      - run: npm ci
         working-directory: server
-
-      - name: Correr ESLint
-        run: npm run lint
+      - run: npm run lint
         working-directory: server
 
   server-test:
@@ -35,31 +31,23 @@ jobs:
     needs: server-lint
     services:
       mysql:
-        image: mysql:8.0.36   # ✅ versión fija
+        image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}   # ✅ secreto
+          MYSQL_ROOT_PASSWORD: triomphe2024
           MYSQL_DATABASE: triomphe_test
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "24.x"
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: server/package-lock.json
-
-      - name: Instalar dependencias
-        run: npm ci
+      - run: npm ci
         working-directory: server
-
-      - name: Correr tests
-        run: npm test
+      - run: npm test
         working-directory: server
         env:
           NODE_ENV: test
@@ -68,8 +56,8 @@ jobs:
           DB_PORT: 3306
           DB_NAME: triomphe_test
           DB_USER: root
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}      # ✅ secreto
-          JWT_SECRET: ${{ secrets.JWT_SECRET_TEST }}   # ✅ secreto
+          DB_PASSWORD: triomphe2024
+          JWT_SECRET: test_secret_key
           JWT_EXPIRES_IN: 7d
           CLIENT_URL: http://localhost:5173
 
@@ -77,22 +65,15 @@ jobs:
     name: Lint cliente
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "24.x"
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
-
-      - name: Instalar dependencias
-        run: npm ci
+      - run: npm ci
         working-directory: client
-
-      - name: Correr ESLint
-        run: npm run lint
+      - run: npm run lint
         working-directory: client
 
   client-build:
@@ -100,22 +81,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: client-lint
     steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: "24.x"
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: client/package-lock.json
-
-      - name: Instalar dependencias
-        run: npm ci
+      - run: npm ci
         working-directory: client
-
-      - name: Build producción
-        run: npm run build
+      - run: npm run build
         working-directory: client
         env:
           VITE_API_URL: http://localhost:3001/api
