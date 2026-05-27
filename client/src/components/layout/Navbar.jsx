@@ -12,6 +12,7 @@ export default function Navbar() {
     { to: '/propiedades', label: 'Propiedades' },
     { to: '/nosotros', label: 'Sobre Nosotros' },
     { to: '/contacto', label: 'Contacto' },
+    { to: '/trabaja-con-nosotros', label: 'Trabaja con nosotros' },
   ];
 
   return (

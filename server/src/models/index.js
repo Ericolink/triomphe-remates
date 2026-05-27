@@ -4,17 +4,21 @@ const Property = require('./Property');
 const Image = require('./Image');
 const Lead = require('./Lead');
 const Analytics = require('./Analytics');
+const JobPosition = require('./JobPosition');
+const JobApplication = require('./JobApplication');
 
-// Una propiedad tiene muchas imágenes
+// Propiedades
 Property.hasMany(Image, { foreignKey: 'propertyId', as: 'images', onDelete: 'CASCADE' });
 Image.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
-// Una propiedad tiene muchos leads
 Property.hasMany(Lead, { foreignKey: 'propertyId', as: 'leads' });
 Lead.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
-// Una propiedad tiene muchos registros de analytics
 Property.hasMany(Analytics, { foreignKey: 'propertyId', as: 'analytics', onDelete: 'CASCADE' });
 Analytics.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
-module.exports = { sequelize, User, Property, Image, Lead, Analytics };
+// Bolsa de trabajo
+JobPosition.hasMany(JobApplication, { foreignKey: 'jobPositionId', as: 'applications', onDelete: 'SET NULL' });
+JobApplication.belongsTo(JobPosition, { foreignKey: 'jobPositionId', as: 'position' });
+
+module.exports = { sequelize, User, Property, Image, Lead, Analytics, JobPosition, JobApplication };

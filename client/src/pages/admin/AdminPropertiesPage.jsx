@@ -162,9 +162,9 @@ export default function AdminPropertiesPage() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           {[
-                            { icon: <Eye size={15} />, color: 'hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20', action: () => window.open(`/propiedades/${property.slug}`, '_blank') },
-                            { icon: <Pencil size={15} />, color: 'hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20', action: () => navigate(`/admin/propiedades/${property.id}/editar`) },
-                            { icon: <Trash2 size={15} />, color: 'hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20', action: () => confirmDelete(property.id, property.title) },
+                            { icon: <Eye size={20} />, color: 'hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20', action: () => window.open(`/propiedades/${property.slug}`, '_blank') },
+                            { icon: <Pencil size={20} />, color: 'hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20', action: () => navigate(`/admin/propiedades/${property.id}/editar`) },
+                            { icon: <Trash2 size={20} />, color: 'hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20', action: () => confirmDelete(property.id, property.title) },
                           ].map(({ icon, color, action }, i) => (
                             <motion.button key={i} onClick={action}
                               whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}

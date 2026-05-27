@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, LogOut, Menu, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, LogOut, Menu, ChevronRight, Briefcase, UserCheck } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -10,13 +10,17 @@ const links = [
   { to: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
   { to: '/admin/propiedades', icon: <Building2 size={18} />, label: 'Propiedades' },
   { to: '/admin/leads', icon: <Users size={18} />, label: 'Leads' },
+  { to: '/admin/vacantes', icon: <Briefcase size={18} />, label: 'Vacantes' },
+  { to: '/admin/postulaciones', icon: <UserCheck size={18} />, label: 'Postulaciones' },
 ];
 
 function Sidebar({ user, onClose, onLogout }) {
   return (
     <div className="flex flex-col h-full bg-blue-900 text-white w-64">
       <div className="p-6 border-b border-blue-800">
-        <img src="/logo.png" alt="Triomphe" className="h-8 w-auto brightness-0 invert" />
+        <a href="/" target="_blank" rel="noopener noreferrer" title="Ver sitio público">
+        <img src="/logo.png" alt="Triomphe" className="h-12 w-auto brightness-0 invert hover:opacity-80 transition-opacity" />
+      </a>
         <p className="text-blue-300 text-xs mt-2">{user?.name}</p>
         <span className="inline-block mt-1 text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold capitalize">
           {user?.role}
