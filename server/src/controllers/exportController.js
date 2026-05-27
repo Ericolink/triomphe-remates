@@ -22,7 +22,7 @@ const getFilteredProperties = async (query) => {
     attributes: [
       'id', 'title', 'city', 'type', 'status', 'price',
       'squareMeters', 'bedrooms', 'bathrooms', 'address',
-      'bank', 'loanNumber', 'views', 'createdAt',
+      'views', 'createdAt',
     ],
   });
 };
@@ -67,8 +67,6 @@ const exportExcel = async (req, res) => {
       { header: 'Recámaras', key: 'bedrooms', width: 12 },
       { header: 'Baños', key: 'bathrooms', width: 10 },
       { header: 'Dirección', key: 'address', width: 30 },
-      { header: 'Banco', key: 'bank', width: 14 },
-      { header: 'No. Crédito', key: 'loanNumber', width: 16 },
       { header: 'Vistas', key: 'views', width: 9 },
       { header: 'Fecha alta', key: 'createdAt', width: 14 },
     ];
@@ -102,8 +100,6 @@ const exportExcel = async (req, res) => {
         bedrooms: p.bedrooms || '—',
         bathrooms: p.bathrooms || '—',
         address: p.address || '—',
-        bank: p.bank || '—',
-        loanNumber: p.loanNumber || '—',
         views: p.views,
         createdAt: new Date(p.createdAt).toLocaleDateString('es-MX'),
       });
@@ -237,8 +233,6 @@ const exportPDF = async (req, res) => {
         statusLabel[p.status] || p.status,
         formatPrice(p.price),
         p.squareMeters ? `${p.squareMeters}` : '—',
-        p.bank || '—',
-        p.loanNumber || '—',
       ];
 
       let rx = 40;
