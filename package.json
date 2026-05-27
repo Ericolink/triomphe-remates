@@ -1,0 +1,8 @@
+{
+  "name": "triomphe-remates",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server/server.js",
+    "install-server": "cd server && npm install"
+  }
+}
