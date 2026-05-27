@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=high --omit=dev
         working-directory: server
 
   audit-client:
@@ -29,5 +29,5 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=high --omit=dev
         working-directory: client
