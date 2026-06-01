@@ -33,7 +33,7 @@ app.get('/api/health', (req, res) => {
 module.exports = app;
 
 // Servir el frontend compilado
-const clientBuildPath = path.join(__dirname, 'client/dist');
+const clientBuildPath = path.join(__dirname, 'client');
 app.use(express.static(clientBuildPath));
 app.get('*path', (req, res) => {
   res.sendFile(path.join(clientBuildPath, 'index.html'));
