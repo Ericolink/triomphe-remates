@@ -1,0 +1,43 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+require('dotenv').config();
+
+const app = express();
+
+// Middlewares
+app.use(cors({
+  origin: process.env.CLIENT_URL || '*',
+  credentials: true,
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Swagger docs
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Rutas API
+app.use('/sitemap.xml', require('./src/routes/sitemap'));
+app.use('/api/export', require('./src/routes/export'));
+app.use('/api/auth', require('./src/routes/auth'));
+app.use('/api/properties', require('./src/routes/properties'));
+app.use('/api/leads', require('./src/routes/leads'));
+app.use('/api/analytics', require('./src/routes/analytics'));
+app.use('/api/jobs', require('./src/routes/jobs'));
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Triomphe API corriendo' });
+});
+
+// Servir el frontend compilado
+const clientBuildPath = path.join(__dirname, 'client');
+app.use(express.static(clientBuildPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
+});
+
+module.exports = app;
