@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 
 const SITE_NAME = 'Triomphe Remates Bancarios';
-const SITE_URL = 'https://rematesbancarios.net';
+const SITE_URL = import.meta.env.VITE_SITE_URL || window.location.origin;
 const DEFAULT_DESCRIPTION = 'Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos hasta 40% por debajo del valor comercial.';
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
 
