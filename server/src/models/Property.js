@@ -17,7 +17,7 @@ const Property = sequelize.define('Property', {
   },
   price: {
     type: DataTypes.DECIMAL(12, 2),
-    allowNull: false,
+    allowNull: true,
   },
   city: {
     type: DataTypes.ENUM('juarez', 'chihuahua', 'queretaro'),
@@ -32,6 +32,14 @@ const Property = sequelize.define('Property', {
     defaultValue: 'disponible',
   },
   squareMeters: {
+    type: DataTypes.DECIMAL(8, 2),
+    allowNull: true,
+  },
+  terrainMeters: {
+    type: DataTypes.DECIMAL(8, 2),
+    allowNull: true,
+  },
+  constructionMeters: {
     type: DataTypes.DECIMAL(8, 2),
     allowNull: true,
   },
