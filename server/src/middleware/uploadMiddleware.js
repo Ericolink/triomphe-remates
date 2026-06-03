@@ -1,5 +1,4 @@
 const multer = require('multer');
-const { storage } = require('../config/cloudinary');
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|webp/;
@@ -13,8 +12,9 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// Usar memoria en vez de disco — Cloudinary recibe el buffer
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 },
 });
