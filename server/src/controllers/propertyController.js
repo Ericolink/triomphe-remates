@@ -1,8 +1,10 @@
 const { Op } = require('sequelize');
+const { cloudinary } = require('../config/cloudinary');
 const { Property, Image, Analytics } = require('../models/index');
 const { generateSlug } = require('../utils/helpers');
-const path = require('path');
-const fs = require('fs');
+
+// Convierte string vacío a null para campos numéricos
+const nullIfEmpty = (val) => (val === '' || val === undefined) ? null : val;
 
 // GET /api/properties
 const getProperties = async (req, res) => {
@@ -147,10 +149,16 @@ const createProperty = async (req, res) => {
     if (existing) slug = `${slug}-${Date.now()}`;
 
     const property = await Property.create({
-      title, description, price, city, type,
+      title, description,
+      price: nullIfEmpty(price),
+      city, type,
       status: status || 'disponible',
-      squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address,  auctionDate,
+      squareMeters: nullIfEmpty(squareMeters),
+      terrainMeters: nullIfEmpty(terrainMeters),
+      constructionMeters: nullIfEmpty(constructionMeters),
+      bedrooms: nullIfEmpty(bedrooms),
+      bathrooms: nullIfEmpty(bathrooms),
+      address, auctionDate,
       isFeatured: isFeatured || false,
       slug,
     });
@@ -185,9 +193,15 @@ const updateProperty = async (req, res) => {
     }
 
     await property.update({
-      title, description, price, city, type,
-      status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address,  auctionDate,
+      title, description,
+      price: nullIfEmpty(price),
+      city, type, status,
+      squareMeters: nullIfEmpty(squareMeters),
+      terrainMeters: nullIfEmpty(terrainMeters),
+      constructionMeters: nullIfEmpty(constructionMeters),
+      bedrooms: nullIfEmpty(bedrooms),
+      bathrooms: nullIfEmpty(bathrooms),
+      address, auctionDate,
       isFeatured, slug: req.body.slug,
     });
 
@@ -210,10 +224,11 @@ const deleteProperty = async (req, res) => {
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
-    // Eliminar imágenes del disco
+    // Eliminar imágenes de Cloudinary
     for (const image of property.images) {
-      const filePath = path.join(__dirname, '../../uploads/properties', image.filename);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      if (image.filename) {
+        try { await cloudinary.uploader.destroy(image.filename); } catch { /* ignorado */ }
+      }
     }
 
     await property.destroy();
@@ -241,7 +256,7 @@ const uploadImages = async (req, res) => {
       req.files.map((file, index) =>
         Image.create({
           propertyId: property.id,
-          url: `/uploads/properties/${file.filename}`,
+          url: file.path,
           filename: file.filename,
           order: existingImages + index,
           isCover: existingImages === 0 && index === 0,
@@ -268,8 +283,10 @@ const deleteImage = async (req, res) => {
 
     if (!image) return res.status(404).json({ error: 'Imagen no encontrada' });
 
-    const filePath = path.join(__dirname, '../../uploads/properties', image.filename);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    // Eliminar de Cloudinary si tiene public_id
+    if (image.filename) {
+      try { await cloudinary.uploader.destroy(image.filename); } catch { /* ignorado */ }
+    }
 
     await image.destroy();
 
