@@ -12,18 +12,28 @@ import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../.
 const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 const statusColors = {
   disponible: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  apartado: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  vendido: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  apartado:   'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  vendido:    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
+
+const formatPrice = (price) => {
+  if (price === null || price === undefined || price === '') return 'PENDIENTE';
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
+};
+
+const formatDate = (date) => {
+  if (!date) return '—';
+  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 export default function AdminPropertiesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { token } = useAuthStore();
-  const [search, setSearch] = useState('');
-  const [city, setCity] = useState('');
-  const [status, setStatus] = useState('');
-  const [page, setPage] = useState(1);
+  const [search, setSearch]   = useState('');
+  const [city, setCity]       = useState('');
+  const [status, setStatus]   = useState('');
+  const [page, setPage]       = useState(1);
   const [exporting, setExporting] = useState(null);
 
   const { data, isLoading } = useQuery({
@@ -50,7 +60,7 @@ export default function AdminPropertiesPage() {
     try {
       setExporting(format);
       const params = new URLSearchParams();
-      if (city) params.set('city', city);
+      if (city)   params.set('city', city);
       if (status) params.set('status', status);
       const res = await fetch(`${import.meta.env.VITE_API_URL}/export/${format}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -67,9 +77,6 @@ export default function AdminPropertiesPage() {
     } catch { toast.error('Error al exportar'); }
     finally { setExporting(null); }
   };
-
-  const formatPrice = (price) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
 
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
@@ -109,7 +116,7 @@ export default function AdminPropertiesPage() {
             className="flex-1 min-w-0 text-sm focus:outline-none bg-transparent dark:text-gray-100 dark:placeholder-gray-500" />
         </div>
         {[
-          { value: city, onChange: setCity, options: [['', 'Todas las ciudades'], ['juarez', 'Cd. Juárez'], ['chihuahua', 'Chihuahua'], ['queretaro', 'Querétaro']] },
+          { value: city,   onChange: setCity,   options: [['', 'Todas las ciudades'], ['juarez', 'Cd. Juárez'], ['chihuahua', 'Chihuahua'], ['queretaro', 'Querétaro']] },
           { value: status, onChange: setStatus, options: [['', 'Todos'], ['disponible', 'Disponible'], ['apartado', 'Apartado'], ['vendido', 'Vendido']] },
         ].map((sel, i) => (
           <select key={i} value={sel.value} onChange={(e) => { sel.onChange(e.target.value); setPage(1); }}
@@ -124,10 +131,10 @@ export default function AdminPropertiesPage() {
         className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] overflow-hidden">
         {isLoading ? <Spinner size="lg" className="py-16" /> : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 dark:bg-[#1a1f2e] border-b border-gray-100 dark:border-[#2e3650]">
                 <tr>
-                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Vistas', 'Acciones'].map((h) => (
+                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Fecha alta', 'Última modif.', 'Acciones'].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -147,8 +154,14 @@ export default function AdminPropertiesPage() {
                         <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{property.title}</p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">{property.type}</p>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{cityLabel[property.city]}</td>
-                      <td className="px-4 py-3 font-semibold text-blue-900 dark:text-yellow-400 whitespace-nowrap">{formatPrice(property.price)}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                        {cityLabel[property.city]}
+                      </td>
+                      <td className="px-4 py-3 font-semibold whitespace-nowrap"
+                        style={{ color: property.price ? undefined : '#f59e0b' }}
+                        className={property.price ? 'text-blue-900 dark:text-yellow-400' : 'text-yellow-500 dark:text-yellow-400'}>
+                        {formatPrice(property.price)}
+                      </td>
                       <td className="px-4 py-3">
                         <select value={property.status}
                           onChange={(e) => statusMutation.mutate({ id: property.id, status: e.target.value })}
@@ -158,13 +171,21 @@ export default function AdminPropertiesPage() {
                           <option value="vendido">Vendido</option>
                         </select>
                       </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{property.views}</td>
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
+                        {property.views ?? 0}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                        {formatDate(property.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                        {formatDate(property.updatedAt)}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           {[
-                            { icon: <Eye size={20} />, color: 'hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20', action: () => window.open(`/propiedades/${property.slug}`, '_blank') },
+                            { icon: <Eye size={20} />,    color: 'hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20',     action: () => window.open(`/propiedades/${property.slug}`, '_blank') },
                             { icon: <Pencil size={20} />, color: 'hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20', action: () => navigate(`/admin/propiedades/${property.id}/editar`) },
-                            { icon: <Trash2 size={20} />, color: 'hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20', action: () => confirmDelete(property.id, property.title) },
+                            { icon: <Trash2 size={20} />, color: 'hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20',          action: () => confirmDelete(property.id, property.title) },
                           ].map(({ icon, color, action }, i) => (
                             <motion.button key={i} onClick={action}
                               whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
