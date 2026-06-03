@@ -5,8 +5,6 @@ const { generateSlug } = require('../utils/helpers');
 
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined) ? null : val;
-const path = require('path');
-const fs = require('fs');
 
 // GET /api/properties
 const getProperties = async (req, res) => {
