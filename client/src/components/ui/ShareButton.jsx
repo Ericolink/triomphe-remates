@@ -18,7 +18,7 @@ export default function ShareButton({ title, url }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const fullUrl = `https://rematesbancarios.net${url}`;
+  const fullUrl = `${import.meta.env.VITE_SITE_URL || window.location.origin}${url}`;
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(fullUrl);
