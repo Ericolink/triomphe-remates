@@ -132,11 +132,11 @@ const createProperty = async (req, res) => {
   try {
     const {
       title, description, price, city, type,
-      status, squareMeters, bedrooms, bathrooms,
+      status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
       address,  auctionDate, isFeatured,
     } = req.body;
 
-    if (!title || !price || !city || !type) {
+    if (!title || !city || !type) {
       return res.status(400).json({ error: 'Título, precio, ciudad y tipo son requeridos' });
     }
 
@@ -149,7 +149,7 @@ const createProperty = async (req, res) => {
     const property = await Property.create({
       title, description, price, city, type,
       status: status || 'disponible',
-      squareMeters, bedrooms, bathrooms,
+      squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
       address,  auctionDate,
       isFeatured: isFeatured || false,
       slug,
@@ -173,7 +173,7 @@ const updateProperty = async (req, res) => {
 
     const {
       title, description, price, city, type,
-      status, squareMeters, bedrooms, bathrooms,
+      status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
       address,  auctionDate, isFeatured,
     } = req.body;
 
@@ -186,7 +186,7 @@ const updateProperty = async (req, res) => {
 
     await property.update({
       title, description, price, city, type,
-      status, squareMeters, bedrooms, bathrooms,
+      status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
       address,  auctionDate,
       isFeatured, slug: req.body.slug,
     });

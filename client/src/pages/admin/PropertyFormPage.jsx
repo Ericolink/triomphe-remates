@@ -12,11 +12,12 @@ import { safeBlobUrl } from '../../utils/sanitize';
 
 const FIELDS = [
   { key: 'title', label: 'Título *', type: 'text', col: 2 },
-  { key: 'price', label: 'Precio *', type: 'number', col: 1 },
+  { key: 'price', label: 'Precio', type: 'price', col: 1 },
   { key: 'city', label: 'Ciudad *', type: 'select', col: 1, options: [{ value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }] },
   { key: 'type', label: 'Tipo *', type: 'select', col: 1, options: [{ value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }, { value: 'terreno', label: 'Terreno' }, { value: 'local', label: 'Local' }, { value: 'bodega', label: 'Bodega' }] },
   { key: 'status', label: 'Estatus', type: 'select', col: 1, options: [{ value: 'disponible', label: 'Disponible' }, { value: 'apartado', label: 'Apartado' }, { value: 'vendido', label: 'Vendido' }] },
-  { key: 'squareMeters', label: 'M²', type: 'number', col: 1 },
+  { key: 'terrainMeters', label: 'M² Terreno', type: 'number', col: 1 },
+  { key: 'constructionMeters', label: 'M² Construcción', type: 'number', col: 1 },
   { key: 'bedrooms', label: 'Recámaras', type: 'number', col: 1 },
   { key: 'bathrooms', label: 'Baños', type: 'number', col: 1 },
   { key: 'address', label: 'Dirección', type: 'text', col: 2 },
@@ -25,18 +26,20 @@ const FIELDS = [
 
 const emptyForm = {
   title: '', price: '', city: 'juarez', type: 'casa', status: 'disponible',
-  squareMeters: '', bedrooms: '', bathrooms: '', address: '',
-  description: '', isFeatured: false,
+  squareMeters: '', terrainMeters: '', constructionMeters: '',
+  bedrooms: '', bathrooms: '', address: '', description: '', isFeatured: false,
 };
 
 const propertyToForm = (p) => ({
   title: p.title || '', price: p.price || '', city: p.city || 'juarez',
   type: p.type || 'casa', status: p.status || 'disponible',
-  squareMeters: p.squareMeters || '', bedrooms: p.bedrooms || '',
+  squareMeters: p.squareMeters || '', terrainMeters: p.terrainMeters || '',
+  constructionMeters: p.constructionMeters || '', bedrooms: p.bedrooms || '',
   bathrooms: p.bathrooms || '', address: p.address || '',
-  
   description: p.description || '', isFeatured: p.isFeatured || false,
 });
+
+const inputClass = 'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
 export default function PropertyFormPage() {
   const { id } = useParams();
@@ -45,6 +48,7 @@ export default function PropertyFormPage() {
   const isEdit = !!id;
 
   const [newFiles, setNewFiles] = useState([]);
+  const [priceDisplay, setPriceDisplay] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['property', id],
@@ -52,7 +56,6 @@ export default function PropertyFormPage() {
     enabled: isEdit,
   });
 
-  // Deriva el form de los datos del servidor — sin useEffect
   const serverForm = useMemo(
     () => (data?.data ? propertyToForm(data.data) : null),
     [data]
@@ -61,17 +64,49 @@ export default function PropertyFormPage() {
   const [form, setForm] = useState(emptyForm);
   const [formLoaded, setFormLoaded] = useState(false);
 
-  // Actualiza el form solo la primera vez que llegan los datos
   if (serverForm && !formLoaded) {
     setFormLoaded(true);
     setForm(serverForm);
+    // Formatear precio al cargar
+    const p = serverForm.price;
+    if (p === null || p === '') {
+      setPriceDisplay('PENDIENTE');
+    } else {
+      setPriceDisplay(Number(p).toLocaleString('es-MX'));
+    }
   }
 
-  // Genera previews de archivos nuevos con useMemo — sin useEffect
   const previews = useMemo(
     () => newFiles.map((file) => ({ file, url: URL.createObjectURL(file) })),
     [newFiles]
   );
+
+  const handlePriceChange = (e) => {
+    const raw = e.target.value;
+    const upper = raw.toUpperCase().trim();
+
+    // Permite vacío
+    if (raw === '') {
+      setPriceDisplay('');
+      setForm((f) => ({ ...f, price: '' }));
+      return;
+    }
+
+    // Permite "PENDIENTE"
+    if (upper === 'PENDIENTE' || 'PENDIENTE'.startsWith(upper)) {
+      setPriceDisplay(raw);
+      setForm((f) => ({ ...f, price: upper === 'PENDIENTE' ? null : '' }));
+      return;
+    }
+
+    // Solo números
+    const digits = raw.replace(/,/g, '').replace(/[^0-9]/g, '');
+    if (digits === '') return;
+
+    const num = parseInt(digits, 10);
+    setPriceDisplay(num.toLocaleString('es-MX'));
+    setForm((f) => ({ ...f, price: num }));
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (formData) => {
@@ -122,8 +157,8 @@ export default function PropertyFormPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.title || !form.price || !form.city || !form.type) {
-      return toast.error('Título, precio, ciudad y tipo son requeridos');
+    if (!form.title || !form.city || !form.type) {
+      return toast.error('Título, ciudad y tipo son requeridos');
     }
     saveMutation.mutate(form);
   };
@@ -157,21 +192,34 @@ export default function PropertyFormPage() {
             {FIELDS.map(({ key, label, type, col, options }) => (
               <div key={key} className={col === 2 ? 'md:col-span-2' : ''}>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-                {type === 'textarea' ? (
+                {type === 'price' ? (
+                  <div>
+                    <input
+                      type="text"
+                      placeholder='Ej: 1,500,000 o "PENDIENTE"'
+                      value={priceDisplay}
+                      onChange={handlePriceChange}
+                      className={inputClass}
+                    />
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      Escribe el monto o "PENDIENTE" si aún no está definido
+                    </p>
+                  </div>
+                ) : type === 'textarea' ? (
                   <textarea value={form[key]}
                     onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                     rows={3}
-                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-[#1a1f2e] dark:text-gray-100" />
+                    className={`${inputClass} resize-none`} />
                 ) : type === 'select' ? (
                   <select value={form[key]}
                     onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100">
+                    className={inputClass}>
                     {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 ) : (
                   <input type={type} value={form[key]}
                     onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100" />
+                    className={inputClass} />
                 )}
               </div>
             ))}
