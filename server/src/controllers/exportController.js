@@ -1,6 +1,5 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
-const Jimp = require('jimp');
 const path = require('path');
 const fs = require('fs');
 const { Property, Image } = require('../models/index');
@@ -164,7 +163,7 @@ const exportExcel = async (req, res) => {
           const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
           sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
         }
-      } catch (_) {}
+      } catch (e) { /* ignorado */ }
     }
 
     // Fila 2: subtítulo
@@ -265,7 +264,7 @@ const drawPDFHeader = async (doc, properties, generatedAt, logoPath) => {
       if (whiteBuf) {
         doc.image(whiteBuf, 40, 12, { height: 48 });
       }
-    } catch (_) {}
+    } catch (e) { /* ignorado */ }
   }
 
   doc.fillColor('white').fontSize(15).font('Helvetica-Bold')
@@ -344,7 +343,7 @@ const exportPDF = async (req, res) => {
           doc.image(imgPath, xPositions[0] + 2, y + 1.5, { width: thumbSize, height: thumbSize });
           titleX = xPositions[0] + 2 + thumbSize + 2;
           titleW = PDF_COLS[0].width - thumbSize - 8;
-        } catch (_) {}
+        } catch (e) { /* ignorado */ }
       }
 
       const rowData = [
