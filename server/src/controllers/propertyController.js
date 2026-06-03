@@ -252,16 +252,29 @@ const uploadImages = async (req, res) => {
 
     const existingImages = await Image.count({ where: { propertyId: property.id } });
 
+    const uploadToCloudinary = (buffer) =>
+      new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'triomphe/properties', transformation: [{ quality: 'auto', fetch_format: 'auto' }] },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(buffer);
+      });
+
     const images = await Promise.all(
-      req.files.map((file, index) =>
-        Image.create({
+      req.files.map(async (file, index) => {
+        const result = await uploadToCloudinary(file.buffer);
+        return Image.create({
           propertyId: property.id,
-          url: file.path,
-          filename: file.filename,
+          url: result.secure_url,
+          filename: result.public_id,
           order: existingImages + index,
           isCover: existingImages === 0 && index === 0,
-        })
-      )
+        });
+      })
     );
 
     return res.status(201).json({
