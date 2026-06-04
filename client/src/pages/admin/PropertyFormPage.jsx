@@ -164,6 +164,11 @@ export default function PropertyFormPage() {
   };
 
   const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '');
+  const buildImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${apiBase}${url}`;
+  };
   const existingImages = data?.data?.images || [];
 
   if (isEdit && isLoading) return <Spinner size="lg" className="py-20" />;
@@ -240,7 +245,7 @@ export default function PropertyFormPage() {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {existingImages.map((img) => (
                 <div key={img.id} className="relative group">
-                  <img src={`${apiBase}${img.url}`} alt="Imagen de propiedad"
+                  <img src={buildImageUrl(img.url)} alt="Imagen de propiedad"
                     className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
                     <button type="button" onClick={() => coverMutation.mutate(img.id)}
