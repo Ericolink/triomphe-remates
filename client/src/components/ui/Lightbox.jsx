@@ -44,7 +44,7 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
       )}
 
       <img
-        src={`${apiBase}${images[currentIndex].url}`}
+        src={images[currentIndex].url?.startsWith('http') ? images[currentIndex].url : `${apiBase}${images[currentIndex].url}`}
         alt={`Imagen ${currentIndex + 1}`}
         className="max-h-[90vh] max-w-[90vw] object-contain"
         onClick={(e) => e.stopPropagation()}
