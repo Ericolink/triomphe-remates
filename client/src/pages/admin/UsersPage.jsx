@@ -22,7 +22,7 @@ const formatDate = (date) => {
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'editor', currentPassword: '', newPassword: '' };
 const EMPTY_SHOW = { password: false, currentPassword: false, newPassword: false };
 
-function PasswordInput({ value, onChange, placeholder, required, name, showPass, onToggle, ...props }) {
+function PasswordInput({ value, onChange, placeholder, required, showPass, onToggle, ...props }) {
   return (
     <div className="relative">
       <input
