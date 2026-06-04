@@ -342,6 +342,42 @@ const setCoverImage = async (req, res) => {
   }
 };
 
+// GET /api/properties/promoted
+const getPromotedProperty = async (req, res) => {
+  try {
+    const property = await Property.findOne({
+      where: { isPromoted: true },
+      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+    });
+    return res.json({ data: property || null });
+  } catch (error) {
+    console.error('Error en getPromotedProperty:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// PUT /api/properties/:id/promote
+const promoteProperty = async (req, res) => {
+  try {
+    const property = await Property.findByPk(req.params.id);
+    if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+    if (property.isPromoted) {
+      await property.update({ isPromoted: false });
+      return res.json({ message: 'Propiedad quitada de promoción', data: property });
+    }
+
+    // Quitar la promoción a cualquier otra propiedad y activar esta
+    await Property.update({ isPromoted: false }, { where: { isPromoted: true } });
+    await property.update({ isPromoted: true });
+
+    return res.json({ message: 'Propiedad promocionada exitosamente', data: property });
+  } catch (error) {
+    console.error('Error en promoteProperty:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 module.exports = {
   getProperties,
   getPropertyById,
@@ -352,4 +388,6 @@ module.exports = {
   uploadImages,
   deleteImage,
   setCoverImage,
+  getPromotedProperty,
+  promoteProperty,
 };

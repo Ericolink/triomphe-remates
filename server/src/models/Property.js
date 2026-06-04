@@ -69,6 +69,11 @@ const Property = sequelize.define('Property', {
     defaultValue: false,
     comment: 'Destacar en el sitio público',
   },
+  isPromoted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'Propiedad estrella — solo una activa a la vez',
+  },
   slug: {
     type: DataTypes.STRING(255),
     allowNull: true,

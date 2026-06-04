@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { getLeads, updateLead, deleteLead } from '../../services/leadService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 
 const statusVariant = { nuevo: 'primary', contactado: 'warning', cerrado: 'success', descartado: 'default' };
@@ -15,6 +16,7 @@ export default function LeadsPage() {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState(null);
+  const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['leads', status],
@@ -108,7 +110,7 @@ export default function LeadsPage() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-bold text-gray-800 dark:text-gray-100">Detalle del lead</h2>
                   <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                    onClick={() => { if (window.confirm('¿Eliminar este lead?')) deleteMutation.mutate(selected.id); }}
+                    onClick={() => setConfirm({ title: '¿Eliminar este lead?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })}
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                     <Trash2 size={20} />
                   </motion.button>
@@ -179,6 +181,14 @@ export default function LeadsPage() {
           </AnimatePresence>
         </div>
       </div>
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title}
+        message={confirm?.message}
+        confirmLabel="Eliminar"
+        onConfirm={confirm?.onConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </motion.div>
   );
 }

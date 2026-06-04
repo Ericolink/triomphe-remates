@@ -59,8 +59,10 @@ export default function PropertyCard({ property }) {
             <MapPin size={14} />
             <span>{cityLabel[property.city]}</span>
           </div>
-          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-[#2e3650] pt-3">
-            {property.squareMeters && <span className="flex items-center gap-1"><Maximize2 size={14} />{property.squareMeters} m²</span>}
+          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-[#2e3650] pt-3">
+            {property.constructionMeters && <span className="flex items-center gap-1"><Maximize2 size={14} />{property.constructionMeters} m² const.</span>}
+            {property.terrainMeters && <span className="flex items-center gap-1"><Maximize2 size={14} />{property.terrainMeters} m² ter.</span>}
+            {!property.constructionMeters && !property.terrainMeters && property.squareMeters && <span className="flex items-center gap-1"><Maximize2 size={14} />{property.squareMeters} m²</span>}
             {property.bedrooms && <span className="flex items-center gap-1"><Bed size={14} />{property.bedrooms} rec</span>}
             {property.bathrooms && <span className="flex items-center gap-1"><Bath size={14} />{property.bathrooms} baños</span>}
           </div>

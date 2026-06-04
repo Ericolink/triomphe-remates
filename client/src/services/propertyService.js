@@ -48,3 +48,13 @@ export const setCoverImage = async (propertyId, imageId) => {
   const { data } = await api.put(`/properties/${propertyId}/images/${imageId}/cover`);
   return data;
 };
+
+export const getPromotedProperty = async () => {
+  const { data } = await api.get('/properties/promoted');
+  return data;
+};
+
+export const promoteProperty = async (id) => {
+  const { data } = await api.put(`/properties/${id}/promote`);
+  return data;
+};

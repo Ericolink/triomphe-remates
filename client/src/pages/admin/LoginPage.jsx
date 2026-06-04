@@ -2,27 +2,29 @@ import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { login } from '../../services/authService';
 import useAuthStore from '../../store/authStore';
+import WelcomeScreen from '../../components/ui/WelcomeScreen';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, setAuth } = useAuthStore();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [welcome, setWelcome] = useState(null); // nombre del usuario
 
   const { mutate, isPending } = useMutation({
     mutationFn: ({ email, password }) => login(email, password),
     onSuccess: ({ token, user }) => {
       setAuth(user, token);
-      toast.success(`Bienvenido, ${user.name}`);
-      navigate('/admin/dashboard');
+      setWelcome(user.name);
     },
     onError: () => toast.error('Credenciales incorrectas'),
   });
 
-  if (isAuthenticated) return <Navigate to="/admin/dashboard" replace />;
+  if (isAuthenticated && !welcome) return <Navigate to="/admin/dashboard" replace />;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -31,6 +33,13 @@ export default function LoginPage() {
   };
 
   return (
+    <>
+    <AnimatePresence>
+      {welcome && (
+        <WelcomeScreen name={welcome} onDone={() => navigate('/admin/dashboard')} />
+      )}
+    </AnimatePresence>
+
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#242938] flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl w-full max-w-md p-8 border border-transparent dark:border-[#2e3650]">
         <div className="text-center mb-8">
@@ -68,5 +77,6 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+    </>
   );
 }

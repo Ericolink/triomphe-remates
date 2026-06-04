@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, LogOut, Menu, ChevronRight, Briefcase, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
 import toast from 'react-hot-toast';
 
-const links = [
+const baseLinks = [
   { to: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
   { to: '/admin/propiedades', icon: <Building2 size={18} />, label: 'Propiedades' },
   { to: '/admin/leads', icon: <Users size={18} />, label: 'Leads' },
@@ -14,17 +14,18 @@ const links = [
   { to: '/admin/postulaciones', icon: <UserCheck size={18} />, label: 'Postulaciones' },
 ];
 
+const adminLinks = [
+  { to: '/admin/usuarios', icon: <ShieldCheck size={18} />, label: 'Usuarios' },
+];
+
 function Sidebar({ user, onClose, onLogout }) {
+  const links = [...baseLinks, ...(user?.role === 'admin' ? adminLinks : [])];
   return (
     <div className="flex flex-col h-full bg-blue-900 text-white w-64">
       <div className="p-6 border-b border-blue-800">
         <a href="/" target="_blank" rel="noopener noreferrer" title="Ver sitio público">
-        <img src="/logo.png" alt="Triomphe" className="h-12 w-auto brightness-0 invert hover:opacity-80 transition-opacity" />
-      </a>
-        <p className="text-blue-300 text-xs mt-2">{user?.name}</p>
-        <span className="inline-block mt-1 text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold capitalize">
-          {user?.role}
-        </span>
+          <img src="/logo.png" alt="Triomphe" className="h-25 w-auto brightness-0 invert hover:opacity-80 transition-opacity" />
+        </a>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
@@ -84,19 +85,23 @@ export default function AdminLayout() {
             <button className="md:hidden p-1 text-gray-600 dark:text-gray-300" onClick={() => setOpen(true)}>
               <Menu size={22} />
             </button>
-            <div className="hidden md:flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-              <span>Admin</span>
-              <ChevronRight size={14} />
-            </div>
+            <span className="hidden md:inline-block text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold capitalize">
+              {user?.role}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
             <ThemeToggle className="hover:bg-gray-100 dark:hover:bg-[#2e3650] text-gray-600 dark:text-gray-300" />
             <NotificationBell />
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-              <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                {user?.name?.[0]?.toUpperCase()}
-              </div>
+              {user?.profilePhoto ? (
+                <img src={user.profilePhoto} alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900/40" />
+              ) : (
+                <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {user?.name?.[0]?.toUpperCase()}
+                </div>
+              )}
               <span className="hidden md:block font-medium">{user?.name}</span>
             </div>
           </div>
