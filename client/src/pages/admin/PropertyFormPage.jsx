@@ -25,14 +25,14 @@ const FIELDS = [
 ];
 
 const emptyForm = {
-  title: '', price: '', city: 'juarez', type: 'casa', status: 'disponible',
+  title: '', price: '', pricePending: false, city: 'juarez', type: 'casa', status: 'disponible',
   squareMeters: '', terrainMeters: '', constructionMeters: '',
   bedrooms: '', bathrooms: '', address: '', description: '', isFeatured: false,
 };
 
 const propertyToForm = (p) => ({
-  title: p.title || '', price: p.price || '', city: p.city || 'juarez',
-  type: p.type || 'casa', status: p.status || 'disponible',
+  title: p.title || '', price: p.price ?? '', pricePending: p.price === null || p.price === undefined,
+  city: p.city || 'juarez', type: p.type || 'casa', status: p.status || 'disponible',
   squareMeters: p.squareMeters || '', terrainMeters: p.terrainMeters || '',
   constructionMeters: p.constructionMeters || '', bedrooms: p.bedrooms || '',
   bathrooms: p.bathrooms || '', address: p.address || '',
@@ -48,7 +48,6 @@ export default function PropertyFormPage() {
   const isEdit = !!id;
 
   const [newFiles, setNewFiles] = useState([]);
-  const [priceDisplay, setPriceDisplay] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['property', id],
@@ -67,13 +66,6 @@ export default function PropertyFormPage() {
   if (serverForm && !formLoaded) {
     setFormLoaded(true);
     setForm(serverForm);
-    // Formatear precio al cargar
-    const p = serverForm.price;
-    if (p === null || p === '') {
-      setPriceDisplay('PENDIENTE');
-    } else {
-      setPriceDisplay(Number(p).toLocaleString('es-MX'));
-    }
   }
 
   const previews = useMemo(
@@ -81,32 +73,6 @@ export default function PropertyFormPage() {
     [newFiles]
   );
 
-  const handlePriceChange = (e) => {
-    const raw = e.target.value;
-    const upper = raw.toUpperCase().trim();
-
-    // Permite vacío
-    if (raw === '') {
-      setPriceDisplay('');
-      setForm((f) => ({ ...f, price: '' }));
-      return;
-    }
-
-    // Permite "PENDIENTE"
-    if (upper === 'PENDIENTE' || 'PENDIENTE'.startsWith(upper)) {
-      setPriceDisplay(raw);
-      setForm((f) => ({ ...f, price: upper === 'PENDIENTE' ? null : '' }));
-      return;
-    }
-
-    // Solo números
-    const digits = raw.replace(/,/g, '').replace(/[^0-9]/g, '');
-    if (digits === '') return;
-
-    const num = parseInt(digits, 10);
-    setPriceDisplay(num.toLocaleString('es-MX'));
-    setForm((f) => ({ ...f, price: num }));
-  };
 
   const saveMutation = useMutation({
     mutationFn: async (formData) => {
@@ -160,7 +126,8 @@ export default function PropertyFormPage() {
     if (!form.title || !form.city || !form.type) {
       return toast.error('Título, ciudad y tipo son requeridos');
     }
-    saveMutation.mutate(form);
+    const { pricePending, ...rest } = form;
+    saveMutation.mutate({ ...rest, price: pricePending ? null : form.price });
   };
 
   const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '');
@@ -198,17 +165,27 @@ export default function PropertyFormPage() {
               <div key={key} className={col === 2 ? 'md:col-span-2' : ''}>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
                 {type === 'price' ? (
-                  <div>
+                  <div className="space-y-2">
                     <input
-                      type="text"
-                      placeholder='Ej: 1,500,000 o "PENDIENTE"'
-                      value={priceDisplay}
-                      onChange={handlePriceChange}
-                      className={inputClass}
+                      type="number"
+                      min="0"
+                      placeholder="Ej: 1500000"
+                      value={form.pricePending ? '' : (form.price ?? '')}
+                      disabled={form.pricePending}
+                      onChange={(e) => setForm((f) => ({ ...f, price: e.target.value === '' ? '' : Number(e.target.value) }))}
+                      className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
                     />
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      Escribe el monto o "PENDIENTE" si aún no está definido
-                    </p>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={form.pricePending}
+                        onChange={(e) => setForm((f) => ({ ...f, pricePending: e.target.checked, price: e.target.checked ? '' : f.price }))}
+                        className="w-4 h-4 rounded accent-blue-900"
+                      />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Precio pendiente — se mostrará como <span className="font-semibold text-yellow-500">PENDIENTE</span>
+                      </span>
+                    </label>
                   </div>
                 ) : type === 'textarea' ? (
                   <textarea value={form[key]}

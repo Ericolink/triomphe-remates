@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Building2, TrendingDown, Shield, ChevronRight, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getProperties } from '../../services/propertyService';
+import { getProperties, getPromotedProperty } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
+import PromotedPropertyBanner from '../../components/ui/PromotedPropertyBanner';
 import Spinner from '../../components/ui/Spinner';
 import SEO from '../../components/ui/SEO';
 import AnimatedSection from '../../components/ui/AnimatedSection';
@@ -18,6 +19,11 @@ export default function HomePage() {
   const { data, isLoading } = useQuery({
     queryKey: ['properties', 'featured'],
     queryFn: () => getProperties({ featured: true, limit: 6 }),
+  });
+
+  const { data: promotedData } = useQuery({
+    queryKey: ['property', 'promoted'],
+    queryFn: getPromotedProperty,
   });
 
   const handleSearch = (e) => {
@@ -73,7 +79,7 @@ export default function HomePage() {
                 <option value="chihuahua">Chihuahua</option>
                 <option value="queretaro">Querétaro</option>
               </select>
-              <input type="text" placeholder="Buscar por colonia, banco, dirección..."
+              <input type="text" placeholder="Buscar por colonia, dirección..."
                 value={search} onChange={(e) => setSearch(e.target.value)}
                 className="flex-1 px-4 py-2.5 text-gray-700 dark:text-gray-200 text-sm focus:outline-none bg-transparent dark:placeholder-gray-500" />
               <motion.button type="submit" whileHover={buttonHover} whileTap={buttonTap}
@@ -113,6 +119,13 @@ export default function HomePage() {
           ))}
         </motion.div>
       </motion.section>
+
+      {/* Propiedad estrella */}
+      {promotedData?.data && (
+        <AnimatedSection>
+          <PromotedPropertyBanner property={promotedData.data} />
+        </AnimatedSection>
+      )}
 
       {/* Propiedades destacadas */}
       <section className="max-w-7xl mx-auto px-4 py-16">

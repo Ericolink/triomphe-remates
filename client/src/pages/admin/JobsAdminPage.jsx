@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { getAllPositions, createPosition, updatePosition, deletePosition } from '../../services/jobService';
 import Spinner from '../../components/ui/Spinner';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 
 const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro', todas: 'Todas' };
@@ -101,6 +102,7 @@ export default function JobsAdminPage() {
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-jobs'],
@@ -197,7 +199,7 @@ export default function JobsAdminPage() {
                         <Pencil size={20} />
                       </motion.button>
                       <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                        onClick={() => { if (window.confirm('¿Eliminar esta vacante?')) deleteMutation.mutate(position.id); }}
+                        onClick={() => setConfirm({ title: `¿Eliminar "${position.title}"?`, message: 'La vacante y sus postulaciones asociadas serán eliminadas permanentemente.', onConfirm: () => { deleteMutation.mutate(position.id); setConfirm(null); } })}
                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                         <Trash2 size={20} />
                       </motion.button>
@@ -214,6 +216,15 @@ export default function JobsAdminPage() {
           )}
         </motion.div>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title}
+        message={confirm?.message}
+        confirmLabel="Eliminar"
+        onConfirm={confirm?.onConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </motion.div>
   );
 }

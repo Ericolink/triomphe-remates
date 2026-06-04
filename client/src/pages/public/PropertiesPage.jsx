@@ -76,7 +76,7 @@ export default function PropertiesPage() {
         variants={fadeInUp} initial="hidden" animate="visible"
         className="flex flex-col sm:flex-row gap-3 mb-6"
       >
-        <input type="text" placeholder="Buscar por título, banco, dirección..."
+        <input type="text" placeholder="Buscar por título, dirección..."
           value={filters.search} onChange={(e) => setFilter('search', e.target.value)}
           className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#242938] dark:text-white dark:placeholder-gray-500" />
         <motion.button whileHover={buttonHover} whileTap={buttonTap}
