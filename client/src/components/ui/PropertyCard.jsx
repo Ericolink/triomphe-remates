@@ -7,14 +7,20 @@ const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'da
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
 const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 
+const buildUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${import.meta.env.VITE_API_URL?.replace('/api', '')}${url}`;
+};
+
 export default function PropertyCard({ property }) {
   const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
-  const imageUrl = coverImage
-    ? `${import.meta.env.VITE_API_URL?.replace('/api', '')}${coverImage.url}`
-    : null;
+  const imageUrl = buildUrl(coverImage?.url);
 
-  const formatPrice = (price) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
+  const formatPrice = (price) => {
+    if (price === null || price === undefined || price === '') return 'PENDIENTE';
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
+  };
 
   return (
     <Link to={`/propiedades/${property.slug}`} className="block">
@@ -46,16 +52,12 @@ export default function PropertyCard({ property }) {
             </div>
           )}
         </div>
-
         <div className="p-5">
           <p className="text-2xl font-bold text-blue-900 dark:text-yellow-400 mb-1">{formatPrice(property.price)}</p>
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2 line-clamp-2">
-            {property.title}
-          </h3>
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2 line-clamp-2">{property.title}</h3>
           <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm mb-4">
             <MapPin size={14} />
             <span>{cityLabel[property.city]}</span>
-            {property.bank && <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{property.bank}</span>}
           </div>
           <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-[#2e3650] pt-3">
             {property.squareMeters && <span className="flex items-center gap-1"><Maximize2 size={14} />{property.squareMeters} m²</span>}
