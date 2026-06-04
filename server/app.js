@@ -13,6 +13,7 @@ const app = express();
 const allowedOrigins = [
   ...(process.env.CLIENT_URLS ? process.env.CLIENT_URLS.split(',').map((u) => u.trim()) : []),
   process.env.CLIENT_URL,
+  'https://triomphedemo.netlify.app',
   'http://localhost:5173',
   'http://localhost:4173',
 ].filter(Boolean);
