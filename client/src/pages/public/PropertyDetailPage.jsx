@@ -21,6 +21,11 @@ export default function PropertyDetailPage() {
   const [imgIndex, setImgIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '');
+  const buildImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${apiBase}${url}`;
+  };
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['property', slug],
@@ -30,7 +35,7 @@ export default function PropertyDetailPage() {
   const property = data?.data;
   const images = property?.images || [];
   const coverImage = images.find((i) => i.isCover) || images[0];
-  const coverUrl = coverImage ? `${apiBase}${coverImage.url}` : null;
+  const coverUrl = coverImage ? buildImageUrl(coverImage.url) : null;
 
   const formatPrice = (price) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
@@ -97,7 +102,7 @@ export default function PropertyDetailPage() {
             {images.length > 0 ? (
               <>
                 <img
-                  src={`${apiBase}${images[imgIndex]?.url}`}
+                  src={buildImageUrl(images[imgIndex]?.url)}
                   alt={`${property.title} - imagen ${imgIndex + 1}`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
@@ -133,7 +138,7 @@ export default function PropertyDetailPage() {
               {images.map((img, i) => (
                 <button key={img.id} onClick={() => setImgIndex(i)}
                   className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${i === imgIndex ? 'border-blue-600' : 'border-transparent hover:border-gray-300'}`}>
-                  <img src={`${apiBase}${img.url}`} alt="" className="w-full h-full object-cover" />
+                  <img src={buildImageUrl(img.url)} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
