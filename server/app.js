@@ -9,7 +9,9 @@ require('dotenv').config();
 const app = express();
 
 // CORS primero — así las respuestas de rate limit también llevan los headers correctos
+// CLIENT_URLS acepta múltiples orígenes separados por coma
 const allowedOrigins = [
+  ...(process.env.CLIENT_URLS ? process.env.CLIENT_URLS.split(',').map((u) => u.trim()) : []),
   process.env.CLIENT_URL,
   'http://localhost:5173',
   'http://localhost:4173',
