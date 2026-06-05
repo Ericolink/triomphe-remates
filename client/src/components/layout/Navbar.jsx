@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThemeToggle from '../ui/ThemeToggle';
+import useFavorites from '../../hooks/useFavorites';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const { count } = useFavorites();
 
   const links = [
     { to: '/', label: 'Inicio' },
@@ -55,6 +57,15 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-2">
             <ThemeToggle />
+            <Link to="/favoritos" title="Mis favoritos"
+              className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-blue-800 transition-colors">
+              <Heart size={18} className="text-gray-200" />
+              {count > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                  {count > 9 ? '9+' : count}
+                </span>
+              )}
+            </Link>
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}

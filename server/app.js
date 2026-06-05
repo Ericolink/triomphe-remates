@@ -55,6 +55,7 @@ app.use('/api/jobs',       require('./src/routes/jobs'));
 app.use('/api/export',     require('./src/routes/export'));
 app.use('/api/analytics',  require('./src/routes/analytics'));
 app.use('/api/users',      require('./src/routes/users'));
+app.use('/api/feedback',   require('./src/routes/feedback'));
 
 // Health check
 app.get('/api/health', (req, res) => {

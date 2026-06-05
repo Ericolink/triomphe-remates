@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck, MessageSquare } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -12,6 +12,7 @@ const baseLinks = [
   { to: '/admin/leads', icon: <Users size={18} />, label: 'Leads' },
   { to: '/admin/vacantes', icon: <Briefcase size={18} />, label: 'Vacantes' },
   { to: '/admin/postulaciones', icon: <UserCheck size={18} />, label: 'Postulaciones' },
+  { to: '/admin/buzon', icon: <MessageSquare size={18} />, label: 'Buzón' },
 ];
 
 const adminLinks = [

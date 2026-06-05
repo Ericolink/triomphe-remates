@@ -8,6 +8,7 @@ import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
 import SEO from '../../components/ui/SEO';
 import ShareButton from '../../components/ui/ShareButton';
+import FavoriteButton from '../../components/ui/FavoriteButton';
 import Lightbox from '../../components/ui/Lightbox';
 
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
@@ -90,7 +91,10 @@ export default function PropertyDetailPage() {
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors">
           <ChevronLeft size={18} /> Regresar
         </button>
-        <ShareButton title={property.title} url={`/propiedades/${property.slug}`} />
+        <div className="flex items-center gap-2">
+          <FavoriteButton property={property} size={18} className="w-10 h-10" />
+          <ShareButton title={property.title} url={`/propiedades/${property.slug}`} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">

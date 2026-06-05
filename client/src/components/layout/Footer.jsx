@@ -54,6 +54,7 @@ export default function Footer() {
               { to: '/propiedades', label: 'Propiedades' },
               { to: '/nosotros', label: 'Sobre Nosotros' },
               { to: '/contacto', label: 'Contacto' },
+              { to: '/buzon', label: 'Buzón de opiniones' },
             ].map(({ to, label }) => (
               <li key={to}>
                 <Link to={to} className="hover:text-yellow-400 transition-colors">{label}</Link>

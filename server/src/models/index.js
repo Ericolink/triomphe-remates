@@ -6,6 +6,7 @@ const Lead = require('./Lead');
 const Analytics = require('./Analytics');
 const JobPosition = require('./JobPosition');
 const JobApplication = require('./JobApplication');
+const Feedback = require('./Feedback');
 
 // Propiedades
 Property.hasMany(Image, { foreignKey: 'propertyId', as: 'images', onDelete: 'CASCADE' });
@@ -21,4 +22,4 @@ Analytics.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 JobPosition.hasMany(JobApplication, { foreignKey: 'jobPositionId', as: 'applications', onDelete: 'SET NULL' });
 JobApplication.belongsTo(JobPosition, { foreignKey: 'jobPositionId', as: 'position' });
 
-module.exports = { sequelize, User, Property, Image, Lead, Analytics, JobPosition, JobApplication };
+module.exports = { sequelize, User, Property, Image, Lead, Analytics, JobPosition, JobApplication, Feedback };
