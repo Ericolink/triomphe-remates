@@ -8,19 +8,12 @@ require('dotenv').config();
 
 const app = express();
 
-// Rate limiting global
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Demasiadas solicitudes, intenta más tarde.' },
-});
-app.use(limiter);
-
-// CORS restringido al dominio del cliente
+// CORS primero — así las respuestas de rate limit también llevan los headers correctos
+// CLIENT_URLS acepta múltiples orígenes separados por coma
 const allowedOrigins = [
+  ...(process.env.CLIENT_URLS ? process.env.CLIENT_URLS.split(',').map((u) => u.trim()) : []),
   process.env.CLIENT_URL,
+  'https://triomphedemo.netlify.app',
   'http://localhost:5173',
   'http://localhost:4173',
 ].filter(Boolean);
@@ -35,6 +28,16 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Rate limiting global
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'development' ? 2000 : 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes, intenta más tarde.' },
+});
+app.use(limiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -51,6 +54,7 @@ app.use('/sitemap.xml',    require('./src/routes/sitemap'));
 app.use('/api/jobs',       require('./src/routes/jobs'));
 app.use('/api/export',     require('./src/routes/export'));
 app.use('/api/analytics',  require('./src/routes/analytics'));
+app.use('/api/users',      require('./src/routes/users'));
 
 // Health check
 app.get('/api/health', (req, res) => {

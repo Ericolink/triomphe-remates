@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Eye, Search, FileSpreadsheet, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, Search, FileSpreadsheet, FileText, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { getProperties, deleteProperty, updateProperty } from '../../services/propertyService';
+import { getProperties, deleteProperty, updateProperty, promoteProperty } from '../../services/propertyService';
 import Spinner from '../../components/ui/Spinner';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 
@@ -35,6 +36,7 @@ export default function AdminPropertiesPage() {
   const [status, setStatus]   = useState('');
   const [page, setPage]       = useState(1);
   const [exporting, setExporting] = useState(null);
+  const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-properties', search, city, status, page],
@@ -52,8 +54,22 @@ export default function AdminPropertiesPage() {
     onSuccess: () => { toast.success('Estatus actualizado'); queryClient.invalidateQueries(['admin-properties']); },
   });
 
+  const promoteMutation = useMutation({
+    mutationFn: (id) => promoteProperty(id),
+    onSuccess: (res) => {
+      toast.success(res.message);
+      queryClient.invalidateQueries(['admin-properties']);
+      queryClient.invalidateQueries(['property', 'promoted']);
+    },
+    onError: () => toast.error('Error al cambiar promoción'),
+  });
+
   const confirmDelete = (id, title) => {
-    if (window.confirm(`¿Eliminar "${title}"?`)) deleteMutation.mutate(id);
+    setConfirm({
+      title: `¿Eliminar "${title}"?`,
+      message: 'La propiedad y sus imágenes serán eliminadas permanentemente.',
+      onConfirm: () => { deleteMutation.mutate(id); setConfirm(null); },
+    });
   };
 
   const handleExport = async (format) => {
@@ -134,7 +150,7 @@ export default function AdminPropertiesPage() {
             <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 dark:bg-[#1a1f2e] border-b border-gray-100 dark:border-[#2e3650]">
                 <tr>
-                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Fecha alta', 'Última modif.', 'Acciones'].map((h) => (
+                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Fecha alta', 'Última modif.', 'Promo', 'Acciones'].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -180,6 +196,19 @@ export default function AdminPropertiesPage() {
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
                         {formatDate(property.updatedAt)}
                       </td>
+                      <td className="px-4 py-3 text-center">
+                        <motion.button
+                          onClick={() => promoteMutation.mutate(property.id)}
+                          disabled={promoteMutation.isPending}
+                          whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.85 }}
+                          title={property.isPromoted ? 'Quitar promoción' : 'Promover como estrella'}
+                          className="p-1.5 rounded-lg transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/20 disabled:opacity-50">
+                          <Star
+                            size={18}
+                            className={property.isPromoted ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-600'}
+                          />
+                        </motion.button>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           {[
@@ -222,6 +251,14 @@ export default function AdminPropertiesPage() {
           </div>
         )}
       </motion.div>
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title}
+        message={confirm?.message}
+        confirmLabel="Eliminar"
+        onConfirm={confirm?.onConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </motion.div>
   );
 }

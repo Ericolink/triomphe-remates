@@ -15,6 +15,7 @@ import PropertyFormPage from './pages/admin/PropertyFormPage';
 import LeadsPage from './pages/admin/LeadsPage';
 import JobsAdminPage from './pages/admin/JobsAdminPage';
 import ApplicationsPage from './pages/admin/ApplicationsPage';
+import UsersPage from './pages/admin/UsersPage';
 
 import PublicLayout from './components/layout/PublicLayout';
 import AdminLayout from './components/layout/AdminLayout';
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="leads" element={<LeadsPage />} />
           <Route path="vacantes" element={<JobsAdminPage />} />
           <Route path="postulaciones" element={<ApplicationsPage />} />
+          <Route path="usuarios" element={<UsersPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

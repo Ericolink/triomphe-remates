@@ -29,6 +29,11 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
   },
+  profilePhoto: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    comment: 'URL de foto de perfil en Cloudinary',
+  },
   lastLogin: {
     type: DataTypes.DATE,
     allowNull: true,

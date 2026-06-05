@@ -37,8 +37,10 @@ export default function PropertyDetailPage() {
   const coverImage = images.find((i) => i.isCover) || images[0];
   const coverUrl = coverImage ? buildImageUrl(coverImage.url) : null;
 
-  const formatPrice = (price) =>
-    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
+  const formatPrice = (price) => {
+    if (price === null || price === undefined || price === '') return 'PENDIENTE';
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
+  };
 
   const buildDescription = (p) => {
     const parts = [
@@ -159,7 +161,19 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-4 bg-gray-50 dark:bg-[#242938] rounded-xl">
-            {property.squareMeters && <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" /> {property.squareMeters} m²</span>}
+            {property.constructionMeters && (
+              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" />
+                <span><span className="font-medium">{property.constructionMeters}</span> m² construcción</span>
+              </span>
+            )}
+            {property.terrainMeters && (
+              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" />
+                <span><span className="font-medium">{property.terrainMeters}</span> m² terreno</span>
+              </span>
+            )}
+            {!property.constructionMeters && !property.terrainMeters && property.squareMeters && (
+              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" /> {property.squareMeters} m²</span>
+            )}
             {property.bedrooms && <span className="flex items-center gap-2"><Bed size={18} className="text-blue-700" /> {property.bedrooms} recámaras</span>}
             {property.bathrooms && <span className="flex items-center gap-2"><Bath size={18} className="text-blue-700" /> {property.bathrooms} baños</span>}
           </div>
@@ -176,7 +190,9 @@ export default function PropertyDetailPage() {
         <div className="space-y-6">
           <div className="bg-blue-900 text-white rounded-2xl p-6">
             <p className="text-sm text-blue-200 mb-1">Precio de remate</p>
-            <p className="text-3xl font-bold text-yellow-400">{formatPrice(property.price)}</p>
+            <p className={`text-3xl font-bold ${property.price ? 'text-yellow-400' : 'text-yellow-300'}`}>
+              {formatPrice(property.price)}
+            </p>
             <p className="text-xs text-blue-300 mt-1">{cityLabel[property.city]}</p>
           </div>
 
