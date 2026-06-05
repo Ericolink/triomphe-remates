@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { createFeedback } from '../../services/feedbackService';
 import SEO from '../../components/ui/SEO';
 import { fadeInUp, staggerContainer } from '../../utils/animations';
-import { sanitizeText } from '../../utils/sanitize';
 
 const categories = [
   { value: 'queja',      label: 'Queja',      description: 'Algo no salió bien', color: 'border-red-300 text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700' },
@@ -41,12 +40,7 @@ export default function BuzonPage() {
       toast.error('Completa todos los campos');
       return;
     }
-    mutation.mutate({
-      ...form,
-      name: sanitizeText(form.name),
-      subject: sanitizeText(form.subject),
-      message: sanitizeText(form.message),
-    });
+    mutation.mutate(form);
   };
 
   if (sent) {
