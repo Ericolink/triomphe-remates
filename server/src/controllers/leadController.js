@@ -109,7 +109,11 @@ const updateLead = async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     const { status, notes, appointmentDate } = req.body;
-    await lead.update({ status, notes, appointmentDate });
+    const updates = {};
+    if (status !== undefined) updates.status = status;
+    if (notes !== undefined) updates.notes = notes;
+    if (appointmentDate !== undefined) updates.appointmentDate = appointmentDate;
+    await lead.update(updates);
 
     return res.json({ message: 'Lead actualizado exitosamente', data: lead });
   } catch (error) {

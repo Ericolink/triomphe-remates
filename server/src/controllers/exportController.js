@@ -2,7 +2,7 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
-const { Property, Image } = require('../models/index');
+const { Property, Image, Feedback } = require('../models/index');
 
 const cityLabel   = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 const typeLabel   = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
@@ -388,4 +388,136 @@ const exportPDF = async (req, res) => {
   }
 };
 
-module.exports = { exportExcel, exportPDF };
+// ─────────────────────────────────────────────────────────────────────────────
+// EXCEL — Buzón de feedback
+// ─────────────────────────────────────────────────────────────────────────────
+const categoryLabel = { queja: 'Queja', comentario: 'Comentario', sugerencia: 'Sugerencia' };
+const feedbackStatusLabel = { nuevo: 'Nuevo', leido: 'Leído', archivado: 'Archivado' };
+
+const exportFeedbackExcel = async (req, res) => {
+  try {
+    const { status, category } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (category) where.category = category;
+
+    const items = await Feedback.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+    });
+
+    const generatedAt = new Date().toLocaleDateString('es-MX', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Triomphe Bienes Raíces';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Buzón', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+
+    const headers = [
+      { header: '#',          key: 'num',       width: 5  },
+      { header: 'Categoría',  key: 'category',  width: 13 },
+      { header: 'Nombre',     key: 'name',      width: 22 },
+      { header: 'Email',      key: 'email',     width: 28 },
+      { header: 'Asunto',     key: 'subject',   width: 36 },
+      { header: 'Mensaje',    key: 'message',   width: 50 },
+      { header: 'Estatus',    key: 'status',    width: 12 },
+      { header: 'Notas',      key: 'notes',     width: 30 },
+      { header: 'Fecha',      key: 'createdAt', width: 16 },
+    ];
+    sheet.columns = headers;
+
+    const LAST_COL = String.fromCharCode(64 + headers.length);
+
+    // Fila 1: header azul con título
+    sheet.mergeCells(`A1:${LAST_COL}1`);
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = '                                         TRIOMPHE BIENES RAÍCES — Buzón de Opiniones';
+    titleCell.font  = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+    titleCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(1).height = 42;
+
+    const logoPath = getLogoPath();
+    if (logoPath) {
+      try {
+        const whiteBuf = await getWhiteLogoBuffer(logoPath);
+        if (whiteBuf) {
+          const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
+          sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
+        }
+      } catch { /* ignorado */ }
+    }
+
+    // Fila 2: subtítulo
+    sheet.mergeCells(`A2:${LAST_COL}2`);
+    const subCell = sheet.getCell('A2');
+    subCell.value = `Generado el ${generatedAt}   ·   Total: ${items.length} mensajes`;
+    subCell.font  = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+    subCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(2).height = 18;
+
+    // Fila 3: encabezados
+    const headerRow = sheet.getRow(3);
+    headerRow.values = headers.map((h) => h.header);
+    headerRow.height = 22;
+    headerRow.eachCell((cell) => {
+      cell.font      = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border    = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+    });
+
+    const categoryArgb = { queja: 'FFEF4444', comentario: 'FF3B82F6', sugerencia: 'FF10B981' };
+    const statusArgbFeedback = { nuevo: 'FF3B82F6', leido: ST_YELLOW_ARGB, archivado: 'FF9CA3AF' };
+
+    items.forEach((item, i) => {
+      const isAlt = i % 2 === 0;
+      const row = sheet.addRow({
+        num:       i + 1,
+        category:  categoryLabel[item.category] || item.category,
+        name:      dash(item.name),
+        email:     dash(item.email),
+        subject:   dash(item.subject),
+        message:   item.message ? item.message.slice(0, 200) : '—',
+        status:    feedbackStatusLabel[item.status] || item.status,
+        notes:     dash(item.notes),
+        createdAt: formatDate(item.createdAt),
+      });
+
+      row.height = 18;
+      row.eachCell((cell) => {
+        cell.font      = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.alignment = { vertical: 'middle', wrapText: false };
+        cell.border    = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+      });
+
+      row.getCell(2).font = { bold: true, size: 9, color: { argb: categoryArgb[item.category] || TEXT_ARGB } };
+      row.getCell(7).font = { bold: true, size: 9, color: { argb: statusArgbFeedback[item.status] || TEXT_ARGB } };
+    });
+
+    // Fila total
+    const totalRow = sheet.addRow({ num: '', name: `TOTAL: ${items.length} mensajes` });
+    totalRow.height = 20;
+    totalRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
+    });
+    totalRow.getCell(3).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=triomphe-buzon-${Date.now()}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error en exportFeedbackExcel:', error);
+    res.status(500).json({ error: 'Error al generar Excel del buzón' });
+  }
+};
+
+module.exports = { exportExcel, exportPDF, exportFeedbackExcel };

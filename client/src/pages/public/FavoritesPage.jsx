@@ -1,0 +1,78 @@
+import { motion } from 'framer-motion';
+import { Heart, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import useFavorites from '../../hooks/useFavorites';
+import PropertyCard from '../../components/ui/PropertyCard';
+import SEO from '../../components/ui/SEO';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import { useState } from 'react';
+import { fadeInUp, staggerContainer } from '../../utils/animations';
+
+export default function FavoritesPage() {
+  const { favorites, clear, count } = useFavorites();
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-16">
+      <SEO title="Mis favoritos" description="Propiedades guardadas en tu lista de favoritos." url="/favoritos" />
+
+      <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="mb-10">
+        <motion.div variants={fadeInUp} className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-blue-900 dark:text-white flex items-center gap-3">
+              <Heart size={28} className="text-red-500" fill="currentColor" />
+              Mis favoritos
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+              {count === 0 ? 'No tienes propiedades guardadas' : `${count} propiedad${count !== 1 ? 'es' : ''} guardada${count !== 1 ? 's' : ''}`}
+            </p>
+          </div>
+          {count > 0 && (
+            <motion.button
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={() => setConfirmClear(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              <Trash2 size={16} /> Limpiar lista
+            </motion.button>
+          )}
+        </motion.div>
+      </motion.div>
+
+      {count === 0 ? (
+        <motion.div variants={fadeInUp} initial="hidden" animate="visible"
+          className="text-center py-24 text-gray-400 dark:text-gray-500">
+          <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 2.5, repeat: Infinity }}>
+            <Heart size={56} className="mx-auto mb-4 opacity-20" />
+          </motion.div>
+          <p className="text-lg font-medium mb-2">Aún no guardas ninguna propiedad</p>
+          <p className="text-sm mb-8">Presiona el ícono <Heart size={14} className="inline" /> en cualquier propiedad para guardarla aquí.</p>
+          <Link to="/propiedades"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors">
+            Ver propiedades
+          </Link>
+        </motion.div>
+      ) : (
+        <motion.div
+          variants={staggerContainer} initial="hidden" animate="visible"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+        >
+          {favorites.map((property) => (
+            <motion.div key={property.id} variants={fadeInUp}>
+              <PropertyCard property={property} />
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="¿Limpiar lista de favoritos?"
+        message="Se eliminarán todas las propiedades guardadas. Esta acción no se puede deshacer."
+        confirmLabel="Limpiar"
+        onConfirm={() => { clear(); setConfirmClear(false); }}
+        onCancel={() => setConfirmClear(false)}
+      />
+    </div>
+  );
+}
