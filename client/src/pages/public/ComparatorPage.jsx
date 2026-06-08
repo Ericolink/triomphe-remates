@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GitCompare, Check, X, Bed, Bath, Maximize2, MapPin, Building } from 'lucide-react';
+import { GitCompare, X, MapPin, Building } from 'lucide-react';
 import useComparator from '../../hooks/useComparator';
 import SEO from '../../components/ui/SEO';
 import Badge from '../../components/ui/Badge';

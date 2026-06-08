@@ -3,7 +3,7 @@ import { Bell, CheckCircle } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { subscribe } from '../../services/alertService';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { fadeInUp } from '../../utils/animations';
 
 const CITIES = [{ value: '', label: 'Cualquier ciudad' }, { value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }];
