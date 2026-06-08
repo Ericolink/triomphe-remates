@@ -1,4 +1,4 @@
-const { Analytics, Property } = require('../models/index');
+const { Analytics, Property, Lead } = require('../models/index');
 const { Op, fn, col, literal } = require('sequelize');
 
 // GET /api/analytics/dashboard
@@ -37,9 +37,69 @@ const getDashboard = async (req, res) => {
       },
     });
 
-    const { Lead } = require('../models/index');
     const totalLeads = await Lead.count();
     const newLeads = await Lead.count({ where: { status: 'nuevo' } });
+
+    // Leads por semana — últimas 8 semanas
+    const eightWeeksAgo = new Date();
+    eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+
+    const leadsRaw = await Lead.findAll({
+      attributes: [
+        [fn('DATE', col('createdAt')), 'date'],
+        [fn('COUNT', col('id')), 'count'],
+      ],
+      where: { createdAt: { [Op.gte]: eightWeeksAgo } },
+      group: [literal('DATE(createdAt)')],
+      order: [[literal('DATE(createdAt)'), 'ASC']],
+      raw: true,
+    });
+
+    // Agrupar por semana (ISO week label: "Sem N")
+    const weekMap = {};
+    leadsRaw.forEach(({ date, count }) => {
+      const d = new Date(date);
+      const startOfWeek = new Date(d);
+      startOfWeek.setDate(d.getDate() - d.getDay() + 1); // lunes
+      const key = startOfWeek.toISOString().slice(0, 10);
+      weekMap[key] = (weekMap[key] || 0) + parseInt(count);
+    });
+    const leadsOverTime = Object.entries(weekMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-8)
+      .map(([date, count]) => {
+        const d = new Date(date + 'T12:00:00');
+        const label = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+        return { date, label, count };
+      });
+
+    // Vistas por semana — últimas 8 semanas
+    const viewsRaw = await Analytics.findAll({
+      attributes: [
+        [fn('DATE', col('createdAt')), 'date'],
+        [fn('COUNT', col('id')), 'count'],
+      ],
+      where: { event: 'view', createdAt: { [Op.gte]: eightWeeksAgo } },
+      group: [literal('DATE(createdAt)')],
+      order: [[literal('DATE(createdAt)'), 'ASC']],
+      raw: true,
+    });
+    const viewWeekMap = {};
+    viewsRaw.forEach(({ date, count }) => {
+      const d = new Date(date);
+      const startOfWeek = new Date(d);
+      startOfWeek.setDate(d.getDate() - d.getDay() + 1);
+      const key = startOfWeek.toISOString().slice(0, 10);
+      viewWeekMap[key] = (viewWeekMap[key] || 0) + parseInt(count);
+    });
+    const viewsOverTime = Object.entries(viewWeekMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-8)
+      .map(([date, count]) => {
+        const d = new Date(date + 'T12:00:00');
+        const label = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+        return { date, label, count };
+      });
 
     return res.json({
       data: {
@@ -54,6 +114,8 @@ const getDashboard = async (req, res) => {
         topProperties,
         views: { last30Days: totalViews },
         leads: { total: totalLeads, new: newLeads },
+        leadsOverTime,
+        viewsOverTime,
       },
     });
   } catch (error) {

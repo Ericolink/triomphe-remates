@@ -19,3 +19,13 @@ export const deleteFeedback = async (id) => {
   const { data } = await api.delete(`/feedback/${id}`);
   return data;
 };
+
+export const batchUpdateFeedback = async (ids, status) => {
+  const { data } = await api.patch('/feedback/batch', { ids, status });
+  return data;
+};
+
+export const batchDeleteFeedback = async (ids) => {
+  const { data } = await api.delete('/feedback/batch', { data: { ids } });
+  return data;
+};

@@ -1,7 +1,9 @@
 const { Op } = require('sequelize');
 const { cloudinary } = require('../config/cloudinary');
-const { Property, Image, Analytics } = require('../models/index');
+const { Property, Image, Analytics, PropertyAlert } = require('../models/index');
 const { generateSlug } = require('../utils/helpers');
+const { sendPropertyAlertNotification } = require('../services/emailService');
+const { logAudit } = require('../utils/audit');
 
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined) ? null : val;
@@ -163,6 +165,35 @@ const createProperty = async (req, res) => {
       slug,
     });
 
+    // Notificar a suscriptores con alertas coincidentes (sin bloquear la respuesta)
+    if ((status || 'disponible') === 'disponible') {
+      const alertWhere = { isActive: true };
+      if (city) alertWhere[Op.or] = [{ city: null }, { city }];
+      if (type) {
+        const typeFilter = [{ type: null }, { type }];
+        alertWhere[Op.or] = alertWhere[Op.or]
+          ? alertWhere[Op.or].concat(typeFilter)
+          : typeFilter;
+      }
+
+      PropertyAlert.findAll({ where: alertWhere }).then((alerts) => {
+        const parsedPrice = price ? parseFloat(price) : null;
+        const matching = alerts.filter((a) => {
+          if (a.city && a.city !== city) return false;
+          if (a.type && a.type !== type) return false;
+          if (a.maxPrice && parsedPrice && parsedPrice > parseFloat(a.maxPrice)) return false;
+          return true;
+        });
+        matching.forEach((a) => {
+          sendPropertyAlertNotification(a, property).catch((e) =>
+            console.error('Error enviando alerta de propiedad:', e)
+          );
+        });
+      }).catch((e) => console.error('Error buscando alertas:', e));
+    }
+
+    logAudit(req, 'create', 'property', property.id, { title: property.title, city, type });
+
     return res.status(201).json({
       message: 'Propiedad creada exitosamente',
       data: property,
@@ -205,6 +236,8 @@ const updateProperty = async (req, res) => {
       isFeatured, slug: req.body.slug,
     });
 
+    logAudit(req, 'update', 'property', property.id, { title: property.title });
+
     return res.json({
       message: 'Propiedad actualizada exitosamente',
       data: property,
@@ -231,6 +264,7 @@ const deleteProperty = async (req, res) => {
       }
     }
 
+    logAudit(req, 'delete', 'property', property.id, { title: property.title });
     await property.destroy();
 
     return res.json({ message: 'Propiedad eliminada exitosamente' });

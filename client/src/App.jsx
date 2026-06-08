@@ -9,6 +9,7 @@ import AboutPage from './pages/public/AboutPage';
 import JobsPage from './pages/public/JobsPage';
 import BuzonPage from './pages/public/BuzonPage';
 import FavoritesPage from './pages/public/FavoritesPage';
+import ComparatorPage from './pages/public/ComparatorPage';
 
 import LoginPage from './pages/admin/LoginPage';
 import DashboardPage from './pages/admin/DashboardPage';
@@ -19,6 +20,8 @@ import JobsAdminPage from './pages/admin/JobsAdminPage';
 import ApplicationsPage from './pages/admin/ApplicationsPage';
 import UsersPage from './pages/admin/UsersPage';
 import BuzonAdminPage from './pages/admin/BuzonAdminPage';
+import AlertsAdminPage from './pages/admin/AlertsAdminPage';
+import AuditPage from './pages/admin/AuditPage';
 
 import PublicLayout from './components/layout/PublicLayout';
 import AdminLayout from './components/layout/AdminLayout';
@@ -41,6 +44,7 @@ export default function App() {
           <Route path="/trabaja-con-nosotros" element={<JobsPage />} />
           <Route path="/buzon" element={<BuzonPage />} />
           <Route path="/favoritos" element={<FavoritesPage />} />
+          <Route path="/comparar" element={<ComparatorPage />} />
         </Route>
 
         <Route path="/admin/login" element={<LoginPage />} />
@@ -59,6 +63,8 @@ export default function App() {
           <Route path="postulaciones" element={<ApplicationsPage />} />
           <Route path="usuarios" element={<UsersPage />} />
           <Route path="buzon" element={<BuzonAdminPage />} />
+          <Route path="alertas" element={<AlertsAdminPage />} />
+          <Route path="auditoria" element={<AuditPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
