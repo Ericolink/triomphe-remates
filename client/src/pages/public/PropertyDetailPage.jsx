@@ -8,6 +8,8 @@ import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
 import SEO from '../../components/ui/SEO';
 import ShareButton from '../../components/ui/ShareButton';
+import WhatsAppButton from '../../components/ui/WhatsAppButton';
+import DownloadQuoteButton from '../../components/ui/DownloadQuoteButton';
 import FavoriteButton from '../../components/ui/FavoriteButton';
 import ComparatorButton from '../../components/ui/ComparatorButton';
 import Lightbox from '../../components/ui/Lightbox';
@@ -95,7 +97,7 @@ export default function PropertyDetailPage() {
         <div className="flex items-center gap-2">
           <ComparatorButton property={property} size={18} className="w-10 h-10" />
           <FavoriteButton property={property} size={18} className="w-10 h-10" />
-          <ShareButton title={property.title} url={`/propiedades/${property.slug}`} />
+          <ShareButton title={property.title} subtitle={`${formatPrice(property.price)} · ${cityLabel[property.city]}`} url={`/propiedades/${property.slug}`} />
         </div>
       </div>
 
@@ -201,6 +203,10 @@ export default function PropertyDetailPage() {
             </p>
             <p className="text-xs text-blue-300 mt-1">{cityLabel[property.city]}</p>
           </div>
+
+          <WhatsAppButton title={property.title} priceLabel={formatPrice(property.price)} url={`/propiedades/${property.slug}`} />
+
+          <DownloadQuoteButton propertyId={property.id} slug={property.slug} />
 
           <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
             <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">

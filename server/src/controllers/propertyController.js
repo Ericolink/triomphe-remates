@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const { cloudinary } = require('../config/cloudinary');
-const { Property, Image, Analytics, PropertyAlert } = require('../models/index');
+const { Property, Image, Analytics, PropertyAlert, PropertyStatusHistory } = require('../models/index');
 const { generateSlug } = require('../utils/helpers');
 const { sendPropertyAlertNotification } = require('../services/emailService');
 const { logAudit } = require('../utils/audit');
@@ -56,6 +56,7 @@ const getProperties = async (req, res) => {
 
     const { count, rows } = await Property.findAndCountAll({
       where,
+      attributes: { exclude: ['internalNotes'] },
       include: [{ model: Image, as: 'images', where: { isCover: true }, required: false }],
       order: [['isFeatured', 'DESC'], ['createdAt', 'DESC']],
       limit: parseInt(limit),
@@ -80,7 +81,9 @@ const getProperties = async (req, res) => {
 // GET /api/properties/:id
 const getPropertyById = async (req, res) => {
   try {
+    const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
     const property = await Property.findByPk(req.params.id, {
+      attributes: isStaff ? undefined : { exclude: ['internalNotes'] },
       include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
     });
 
@@ -109,6 +112,7 @@ const getPropertyBySlug = async (req, res) => {
   try {
     const property = await Property.findOne({
       where: { slug: req.params.slug },
+      attributes: { exclude: ['internalNotes'] },
       include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
     });
 
@@ -137,7 +141,7 @@ const createProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address,  auctionDate, isFeatured,
+      address,  auctionDate, isFeatured, internalNotes,
     } = req.body;
 
     if (!title || !city || !type) {
@@ -162,8 +166,16 @@ const createProperty = async (req, res) => {
       bathrooms: nullIfEmpty(bathrooms),
       address, auctionDate,
       isFeatured: isFeatured || false,
+      internalNotes: internalNotes || null,
       slug,
     });
+
+    PropertyStatusHistory.create({
+      propertyId: property.id,
+      fromStatus: null,
+      toStatus: property.status,
+      userName: req.user?.name || null,
+    }).catch((e) => console.error('Error registrando historial de estatus:', e));
 
     // Notificar a suscriptores con alertas coincidentes (sin bloquear la respuesta)
     if ((status || 'disponible') === 'disponible') {
@@ -213,7 +225,7 @@ const updateProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address,  auctionDate, isFeatured,
+      address,  auctionDate, isFeatured, internalNotes,
     } = req.body;
 
     if (title && title !== property.title) {
@@ -222,6 +234,8 @@ const updateProperty = async (req, res) => {
       if (existing && existing.id !== property.id) slug = `${slug}-${Date.now()}`;
       req.body.slug = slug;
     }
+
+    const previousStatus = property.status;
 
     await property.update({
       title, description,
@@ -233,8 +247,18 @@ const updateProperty = async (req, res) => {
       bedrooms: nullIfEmpty(bedrooms),
       bathrooms: nullIfEmpty(bathrooms),
       address, auctionDate,
-      isFeatured, slug: req.body.slug,
+      isFeatured, internalNotes: internalNotes || null,
+      slug: req.body.slug,
     });
+
+    if (status && status !== previousStatus) {
+      PropertyStatusHistory.create({
+        propertyId: property.id,
+        fromStatus: previousStatus,
+        toStatus: status,
+        userName: req.user?.name || null,
+      }).catch((e) => console.error('Error registrando historial de estatus:', e));
+    }
 
     logAudit(req, 'update', 'property', property.id, { title: property.title });
 
@@ -376,6 +400,28 @@ const setCoverImage = async (req, res) => {
   }
 };
 
+// PUT /api/properties/:id/images/reorder — recibe { imageIds: [id1, id2, ...] } en el orden deseado
+const reorderImages = async (req, res) => {
+  try {
+    const { imageIds } = req.body;
+    if (!Array.isArray(imageIds) || imageIds.length === 0) {
+      return res.status(400).json({ error: 'imageIds debe ser un arreglo no vacío' });
+    }
+
+    const images = await Image.findAll({ where: { propertyId: req.params.id } });
+    if (images.length !== imageIds.length || !images.every((img) => imageIds.includes(img.id))) {
+      return res.status(400).json({ error: 'El listado de imágenes no coincide con la propiedad' });
+    }
+
+    await Promise.all(imageIds.map((imgId, index) => Image.update({ order: index }, { where: { id: imgId, propertyId: req.params.id } })));
+
+    return res.json({ message: 'Orden de imágenes actualizado' });
+  } catch (error) {
+    console.error('Error en reorderImages:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 // GET /api/properties/promoted
 const getPromotedProperty = async (req, res) => {
   try {
@@ -412,6 +458,20 @@ const promoteProperty = async (req, res) => {
   }
 };
 
+// GET /api/properties/:id/status-history
+const getStatusHistory = async (req, res) => {
+  try {
+    const history = await PropertyStatusHistory.findAll({
+      where: { propertyId: req.params.id },
+      order: [['createdAt', 'DESC']],
+    });
+    return res.json({ data: history });
+  } catch (error) {
+    console.error('Error en getStatusHistory:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 module.exports = {
   getProperties,
   getPropertyById,
@@ -422,6 +482,8 @@ module.exports = {
   uploadImages,
   deleteImage,
   setCoverImage,
+  reorderImages,
   getPromotedProperty,
   promoteProperty,
+  getStatusHistory,
 };

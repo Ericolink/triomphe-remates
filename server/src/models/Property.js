@@ -80,6 +80,11 @@ const Property = sequelize.define('Property', {
     unique: true,
     comment: 'URL amigable para SEO',
   },
+  internalNotes: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Notas internas — solo visibles para administradores',
+  },
 }, {
   tableName: 'properties',
   timestamps: true,

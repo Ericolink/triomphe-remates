@@ -10,6 +10,7 @@ import JobsPage from './pages/public/JobsPage';
 import BuzonPage from './pages/public/BuzonPage';
 import FavoritesPage from './pages/public/FavoritesPage';
 import ComparatorPage from './pages/public/ComparatorPage';
+import UnsubscribeAlertPage from './pages/public/UnsubscribeAlertPage';
 
 import LoginPage from './pages/admin/LoginPage';
 import DashboardPage from './pages/admin/DashboardPage';
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/buzon" element={<BuzonPage />} />
           <Route path="/favoritos" element={<FavoritesPage />} />
           <Route path="/comparar" element={<ComparatorPage />} />
+          <Route path="/cancelar-alerta" element={<UnsubscribeAlertPage />} />
         </Route>
 
         <Route path="/admin/login" element={<LoginPage />} />

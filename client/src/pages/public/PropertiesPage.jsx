@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { SlidersHorizontal, X, Bell, ChevronDown } from 'lucide-react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { SlidersHorizontal, X, Bell, ChevronDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
-import Spinner from '../../components/ui/Spinner';
+import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkeleton';
 import SEO from '../../components/ui/SEO';
 import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
@@ -18,10 +18,10 @@ export default function PropertiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [showAlertForm, setShowAlertForm] = useState(false);
-  const [page, setPage] = useState(1);
   const [localFilters, setLocalFilters] = useState({
     city: '', type: '', status: '', maxPrice: '', search: '',
   });
+  const sentinelRef = useRef(null);
 
   const filters = {
     city: searchParams.get('city') || localFilters.city,
@@ -29,18 +29,35 @@ export default function PropertiesPage() {
     status: localFilters.status,
     maxPrice: localFilters.maxPrice,
     search: searchParams.get('search') || localFilters.search,
-    page,
   };
 
-  const { data, isLoading } = useQuery({
+  const {
+    data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['properties', filters],
-    queryFn: () => getProperties({ ...filters, limit: 12 }),
-    keepPreviousData: true,
+    queryFn: ({ pageParam }) => getProperties({ ...filters, page: pageParam, limit: 12 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.pagination;
+      return page < totalPages ? page + 1 : undefined;
+    },
   });
+
+  const properties = data?.pages?.flatMap((p) => p.data) ?? [];
+  const total = data?.pages?.[0]?.pagination?.total ?? 0;
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return undefined;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    }, { rootMargin: '400px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const setFilter = (key, value) => {
     setLocalFilters((f) => ({ ...f, [key]: value }));
-    setPage(1);
     if (searchParams.has(key)) {
       const next = new URLSearchParams(searchParams);
       next.delete(key);
@@ -51,7 +68,6 @@ export default function PropertiesPage() {
   const clearFilters = () => {
     setLocalFilters({ city: '', type: '', status: '', maxPrice: '', search: '' });
     setSearchParams({});
-    setPage(1);
   };
 
   const hasFilters = filters.city || filters.type || filters.status || filters.maxPrice || filters.search;
@@ -68,7 +84,7 @@ export default function PropertiesPage() {
       <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 dark:text-white">Propiedades en Remate</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          {data?.pagination?.total ?? '...'} propiedades disponibles
+          {total || '...'} propiedades disponibles
           {filters.search && <span className="ml-2 text-blue-600 font-medium">· Buscando: &quot;{filters.search}&quot;</span>}
         </p>
       </motion.div>
@@ -167,8 +183,8 @@ export default function PropertiesPage() {
 
       {/* Grid */}
       {isLoading ? (
-        <Spinner size="lg" className="py-20" />
-      ) : data?.data?.length === 0 ? (
+        <PropertyCardSkeletonGrid count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" />
+      ) : properties.length === 0 ? (
         <motion.div variants={fadeIn} initial="hidden" animate="visible" className="text-center py-20 text-gray-400">
           <p className="text-xl font-medium">No se encontraron propiedades</p>
           <p className="text-sm mt-2">Intenta con otros filtros</p>
@@ -185,28 +201,26 @@ export default function PropertiesPage() {
             initial="hidden"
             animate="visible"
           >
-            {data?.data?.map((property) => (
+            {properties.map((property) => (
               <motion.div key={property.id} variants={fadeInUp}>
                 <PropertyCard property={property} />
               </motion.div>
             ))}
           </motion.div>
 
-          {data?.pagination?.totalPages > 1 && (
-            <motion.div
-              variants={fadeIn} initial="hidden" animate="visible"
-              className="flex justify-center gap-2 mt-10"
-            >
-              {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((p) => (
-                <motion.button key={p} onClick={() => setPage(p)}
-                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
-                  className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                    page === p ? 'bg-blue-900 text-white' : 'bg-gray-100 dark:bg-[#242938] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#2e3650]'
-                  }`}>
-                  {p}
-                </motion.button>
-              ))}
+          {/* Disparador de scroll infinito */}
+          <div ref={sentinelRef} className="h-1" />
+
+          {isFetchingNextPage && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center items-center gap-2 mt-10 text-gray-400 text-sm">
+              <Loader2 size={18} className="animate-spin" /> Cargando más propiedades…
             </motion.div>
+          )}
+
+          {!hasNextPage && properties.length > 0 && (
+            <p className="text-center text-gray-400 dark:text-gray-500 text-sm mt-10">
+              Has llegado al final · {properties.length} de {total} propiedades
+            </p>
           )}
         </>
       )}

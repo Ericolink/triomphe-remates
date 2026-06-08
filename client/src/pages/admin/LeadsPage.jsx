@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, Building2, Calendar, Trash2 } from 'lucide-react';
+import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 import { getLeads, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads } from '../../services/leadService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
@@ -63,6 +64,22 @@ export default function LeadsPage() {
   const formatDate = (date) =>
     date ? new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      const response = await api.get(`/export/leads/excel?${params}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `triomphe-leads-${Date.now()}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Error al exportar');
+    }
+  };
+
   const leads = data?.data ?? [];
   const allChecked = leads.length > 0 && checked.length === leads.length;
 
@@ -74,14 +91,20 @@ export default function LeadsPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Leads</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{data?.pagination?.total ?? 0} contactos registrados</p>
         </div>
-        <select value={status} onChange={(e) => { setStatus(e.target.value); setChecked([]); }}
-          className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none">
-          <option value="">Todos</option>
-          <option value="nuevo">Nuevos</option>
-          <option value="contactado">Contactados</option>
-          <option value="cerrado">Cerrados</option>
-          <option value="descartado">Descartados</option>
-        </select>
+        <div className="flex gap-2">
+          <button onClick={handleExport}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors">
+            <FileSpreadsheet size={16} className="text-green-600" /> Excel
+          </button>
+          <select value={status} onChange={(e) => { setStatus(e.target.value); setChecked([]); }}
+            className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none">
+            <option value="">Todos</option>
+            <option value="nuevo">Nuevos</option>
+            <option value="contactado">Contactados</option>
+            <option value="cerrado">Cerrados</option>
+            <option value="descartado">Descartados</option>
+          </select>
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

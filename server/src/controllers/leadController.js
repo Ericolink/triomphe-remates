@@ -1,6 +1,7 @@
 const { Lead, Property } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
+const leadEvents = require('../utils/leadEvents');
 
 // POST /api/leads
 const createLead = async (req, res) => {
@@ -32,6 +33,16 @@ const createLead = async (req, res) => {
       sendNewLeadNotification(lead, property).catch((e) => console.error('Error email notificación:', e)),
       sendLeadConfirmation(lead).catch((e) => console.error('Error email confirmación:', e)),
     ]);
+
+    leadEvents.emit('new-lead', {
+      id: lead.id,
+      name: lead.name,
+      email: lead.email,
+      type: lead.type,
+      status: lead.status,
+      createdAt: lead.createdAt,
+      property: property ? { id: property.id, title: property.title } : null,
+    });
 
     return res.status(201).json({
       message: 'Mensaje enviado exitosamente. Un asesor se pondrá en contacto contigo pronto.',
@@ -163,4 +174,27 @@ const batchDeleteLeads = async (req, res) => {
   }
 };
 
-module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads };
+// GET /api/leads/stream — notificaciones en tiempo real vía Server-Sent Events
+const streamLeads = (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  res.write(': conectado\n\n');
+
+  const onNewLead = (lead) => {
+    res.write(`event: new-lead\ndata: ${JSON.stringify(lead)}\n\n`);
+  };
+  leadEvents.on('new-lead', onNewLead);
+
+  // Mantiene viva la conexión a través de proxies/balanceadores
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 30000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    leadEvents.off('new-lead', onNewLead);
+  });
+};
+
+module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads };

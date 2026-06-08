@@ -14,6 +14,10 @@ module.exports = [
         __filename: 'readonly',
         process: 'readonly',
         console: 'readonly',
+        fetch: 'readonly',
+        Buffer: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
       },
     },
     rules: {

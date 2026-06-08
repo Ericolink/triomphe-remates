@@ -115,10 +115,16 @@ export function AreaChart({ data = [], color = '#7c3aed' }) {
       {data.map((d, i) => {
         const x = xPos(i), y = yPos(d.count);
         const isHovered = hover === i;
+        // La primera y última etiqueta se alinean hacia adentro para no chocar
+        // con el eje Y (el "0") ni desbordarse del borde derecho
+        const isFirst = i === 0;
+        const isLast = i === data.length - 1;
+        const anchor = isFirst ? 'start' : isLast ? 'end' : 'middle';
+        const labelX = isFirst ? x + 6 : isLast ? x - 6 : x;
         return (
           <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} style={{ cursor: 'default' }}>
             <circle cx={x} cy={y} r={isHovered ? 5 : 3.5} fill={color} stroke="white" strokeWidth={1.5} style={{ transition: 'r 0.15s' }} />
-            <text x={x} y={H - PAD.bottom + 11} textAnchor="middle" fontSize={9} fill="#9ca3af">{d.label}</text>
+            <text x={labelX} y={H - PAD.bottom + 11} textAnchor={anchor} fontSize={9} fill="#9ca3af">{d.label}</text>
             {isHovered && <Tooltip x={x} y={y} label={d.label} value={d.count} color={color} />}
           </g>
         );
