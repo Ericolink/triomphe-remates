@@ -2,7 +2,11 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
-const { Property, Image, Feedback } = require('../models/index');
+const { Property, Image, Feedback, Lead } = require('../models/index');
+
+const COMPANY_PHONE = '+52 (656) 579-2750';
+const COMPANY_WHATSAPP = '526565792750';
+const COMPANY_EMAIL = 't.bienesraicesmx@gmail.com';
 
 const cityLabel   = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 const typeLabel   = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
@@ -105,6 +109,22 @@ const getFirstImagePath = (property) => {
   const base = path.join(__dirname, '../../../');
   const p = path.join(base, img.url);
   return fs.existsSync(p) ? p : null;
+};
+
+// Devuelve un buffer de imagen ya sea de una URL remota (Cloudinary) o un archivo local
+const getImageBuffer = async (url) => {
+  if (!url) return null;
+  try {
+    if (url.startsWith('http')) {
+      const response = await fetch(url);
+      if (!response.ok) return null;
+      return Buffer.from(await response.arrayBuffer());
+    }
+    const localPath = path.join(__dirname, '../../../', url);
+    return fs.existsSync(localPath) ? fs.readFileSync(localPath) : null;
+  } catch {
+    return null;
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -520,4 +540,271 @@ const exportFeedbackExcel = async (req, res) => {
   }
 };
 
-module.exports = { exportExcel, exportPDF, exportFeedbackExcel };
+// ─────────────────────────────────────────────────────────────────────────────
+// EXCEL — Leads
+// ─────────────────────────────────────────────────────────────────────────────
+const leadTypeLabel   = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
+const leadStatusLabel = { nuevo: 'Nuevo', contactado: 'Contactado', cerrado: 'Cerrado', descartado: 'Descartado' };
+const leadStatusArgb  = { nuevo: 'FF3B82F6', contactado: ST_YELLOW_ARGB, cerrado: ST_GREEN_ARGB, descartado: 'FF9CA3AF' };
+
+const exportLeadsExcel = async (req, res) => {
+  try {
+    const { status, type } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (type)   where.type   = type;
+
+    const leads = await Lead.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      include: [{ model: Property, as: 'property', attributes: ['title'] }],
+    });
+
+    const generatedAt = new Date().toLocaleDateString('es-MX', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Triomphe Bienes Raíces';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Leads', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+
+    const headers = [
+      { header: '#',               key: 'num',             width: 5  },
+      { header: 'Nombre',          key: 'name',            width: 22 },
+      { header: 'Email',           key: 'email',           width: 28 },
+      { header: 'Teléfono',        key: 'phone',           width: 16 },
+      { header: 'Propiedad',       key: 'property',        width: 30 },
+      { header: 'Tipo',            key: 'type',            width: 13 },
+      { header: 'Estatus',         key: 'status',          width: 13 },
+      { header: 'Fecha de cita',   key: 'appointmentDate', width: 16 },
+      { header: 'Mensaje',         key: 'message',         width: 40 },
+      { header: 'Notas',           key: 'notes',           width: 30 },
+      { header: 'Fecha',           key: 'createdAt',       width: 16 },
+    ];
+    sheet.columns = headers;
+
+    const LAST_COL = String.fromCharCode(64 + headers.length);
+
+    // Fila 1: header azul con título
+    sheet.mergeCells(`A1:${LAST_COL}1`);
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = '                                         TRIOMPHE BIENES RAÍCES — Leads';
+    titleCell.font  = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+    titleCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(1).height = 42;
+
+    const logoPath = getLogoPath();
+    if (logoPath) {
+      try {
+        const whiteBuf = await getWhiteLogoBuffer(logoPath);
+        if (whiteBuf) {
+          const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
+          sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
+        }
+      } catch { /* ignorado */ }
+    }
+
+    // Fila 2: subtítulo
+    sheet.mergeCells(`A2:${LAST_COL}2`);
+    const subCell = sheet.getCell('A2');
+    subCell.value = `Generado el ${generatedAt}   ·   Total: ${leads.length} leads`;
+    subCell.font  = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+    subCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(2).height = 18;
+
+    // Fila 3: encabezados
+    const headerRow = sheet.getRow(3);
+    headerRow.values = headers.map((h) => h.header);
+    headerRow.height = 22;
+    headerRow.eachCell((cell) => {
+      cell.font      = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border    = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+    });
+
+    leads.forEach((lead, i) => {
+      const isAlt = i % 2 === 0;
+      const row = sheet.addRow({
+        num:             i + 1,
+        name:            dash(lead.name),
+        email:           dash(lead.email),
+        phone:           dash(lead.phone),
+        property:        dash(lead.property?.title),
+        type:            leadTypeLabel[lead.type]     || lead.type,
+        status:          leadStatusLabel[lead.status] || lead.status,
+        appointmentDate: lead.appointmentDate ? formatDate(lead.appointmentDate) : '—',
+        message:         lead.message ? lead.message.slice(0, 200) : '—',
+        notes:           dash(lead.notes),
+        createdAt:       formatDate(lead.createdAt),
+      });
+
+      row.height = 18;
+      row.eachCell((cell) => {
+        cell.font      = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.alignment = { vertical: 'middle', wrapText: false };
+        cell.border    = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+      });
+
+      row.getCell(7).font = { bold: true, size: 9, color: { argb: leadStatusArgb[lead.status] || TEXT_ARGB } };
+    });
+
+    // Fila total
+    const totalRow = sheet.addRow({ num: '', name: `TOTAL: ${leads.length} leads` });
+    totalRow.height = 20;
+    totalRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
+    });
+    totalRow.getCell(2).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=triomphe-leads-${Date.now()}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error en exportLeadsExcel:', error);
+    res.status(500).json({ error: 'Error al generar Excel de leads' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PDF — Cotización / ficha de propiedad
+// ─────────────────────────────────────────────────────────────────────────────
+const exportPropertyQuotePDF = async (req, res) => {
+  try {
+    const property = await Property.findByPk(req.params.id, {
+      attributes: { exclude: ['internalNotes'] },
+      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+    });
+    if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+    const generatedAt = new Date().toLocaleDateString('es-MX', {
+      day: '2-digit', month: 'long', year: 'numeric',
+    });
+
+    const doc = new PDFDocument({ margin: 0, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=ficha-${property.slug || property.id}-${Date.now()}.pdf`);
+    doc.pipe(res);
+
+    const PW = doc.page.width;
+    const MX = 40;
+
+    // Encabezado
+    doc.rect(0, 0, PW, 88).fill(PRIMARY);
+    const logoPath = getLogoPath();
+    if (logoPath) {
+      try {
+        const whiteBuf = await getWhiteLogoBuffer(logoPath);
+        if (whiteBuf) doc.image(whiteBuf, MX, 22, { height: 44 });
+      } catch { /* ignorado */ }
+    }
+    doc.fillColor(ACCENT).fontSize(10).font('Helvetica-Bold')
+      .text('FICHA DE PROPIEDAD EN REMATE', PW - 240, 38, { width: 200, align: 'right' });
+    doc.fillColor('white').fontSize(8).font('Helvetica')
+      .text(`Generado el ${generatedAt}`, PW - 240, 54, { width: 200, align: 'right' });
+
+    // Imagen principal
+    let y = 88;
+    const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
+    const coverUrl = coverImage?.url;
+    const imgBuf = await getImageBuffer(coverUrl);
+    const IMG_H = 240;
+    if (imgBuf) {
+      try {
+        // doc.image con `cover` solo calcula el escalado, no recorta — hay que
+        // limitar el área dibujable o la imagen se desborda sobre el contenido siguiente
+        doc.save();
+        doc.rect(0, y, PW, IMG_H).clip();
+        doc.image(imgBuf, 0, y, { width: PW, height: IMG_H, cover: [PW, IMG_H], align: 'center', valign: 'center' });
+        doc.restore();
+      } catch { /* ignorado */ }
+    } else {
+      doc.rect(0, y, PW, IMG_H).fill(BG_ALT);
+      doc.fillColor('#9ca3af').fontSize(11).font('Helvetica')
+        .text('Sin imagen disponible', 0, y + IMG_H / 2 - 6, { width: PW, align: 'center' });
+    }
+    y += IMG_H + 24;
+
+    // Estatus + título + precio
+    doc.roundedRect(MX, y, 90, 22, 11).fill(statusHex[property.status] || PRIMARY);
+    doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
+      .text(statusLabel[property.status] || property.status, MX, y + 6, { width: 90, align: 'center' });
+
+    doc.fillColor(PRIMARY).fontSize(20).font('Helvetica-Bold')
+      .text(property.title, MX, y + 34, { width: PW - MX * 2 });
+
+    const titleHeight = doc.heightOfString(property.title, { width: PW - MX * 2, fontSize: 20 });
+    y += 34 + titleHeight + 10;
+
+    doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
+      .text(`${cityLabel[property.city] || property.city}  ·  ${typeLabel[property.type] || property.type}${property.address ? `  ·  ${property.address}` : ''}`,
+        MX, y, { width: PW - MX * 2 });
+    y += 22;
+
+    doc.fillColor(ACCENT).fontSize(26).font('Helvetica-Bold')
+      .text(formatPrice(property.price), MX, y);
+    y += 44;
+
+    // Características
+    const features = [
+      property.terrainMeters      ? `${property.terrainMeters} m² de terreno`      : null,
+      property.constructionMeters ? `${property.constructionMeters} m² de construcción` : null,
+      (!property.terrainMeters && !property.constructionMeters && property.squareMeters) ? `${property.squareMeters} m²` : null,
+      property.bedrooms  ? `${property.bedrooms} recámaras` : null,
+      property.bathrooms ? `${property.bathrooms} baños`    : null,
+    ].filter(Boolean);
+
+    if (features.length) {
+      doc.moveTo(MX, y).lineTo(PW - MX, y).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      y += 16;
+      let fx = MX;
+      features.forEach((f) => {
+        const w = doc.widthOfString(f, { fontSize: 10 }) + 28;
+        doc.roundedRect(fx, y, w, 24, 12).fill(BG_ALT);
+        doc.fillColor(TEXT).fontSize(10).font('Helvetica')
+          .text(f, fx + 14, y + 7);
+        fx += w + 10;
+        if (fx > PW - MX - 100) { fx = MX; y += 32; }
+      });
+      y += 40;
+    }
+
+    // Descripción
+    if (property.description) {
+      doc.moveTo(MX, y).lineTo(PW - MX, y).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      y += 16;
+      doc.fillColor(PRIMARY).fontSize(12).font('Helvetica-Bold').text('Descripción', MX, y);
+      y += 18;
+      doc.fillColor(TEXT).fontSize(10).font('Helvetica')
+        .text(property.description, MX, y, { width: PW - MX * 2, align: 'justify', lineGap: 2 });
+    }
+
+    // Pie de página — contacto
+    const FOOTER_H = 86;
+    doc.rect(0, doc.page.height - FOOTER_H, PW, FOOTER_H).fill(PRIMARY);
+    doc.fillColor(ACCENT).fontSize(11).font('Helvetica-Bold')
+      .text('¿Te interesa esta propiedad? Contáctanos:', MX, doc.page.height - FOOTER_H + 16);
+    doc.fillColor('white').fontSize(9.5).font('Helvetica')
+      .text(`Tel / WhatsApp: ${COMPANY_PHONE}`, MX, doc.page.height - FOOTER_H + 38)
+      .text(`Email: ${COMPANY_EMAIL}`, MX, doc.page.height - FOOTER_H + 54)
+      .text(`https://wa.me/${COMPANY_WHATSAPP}`, MX, doc.page.height - FOOTER_H + 70);
+    doc.fillColor(ACCENT).fontSize(7).font('Helvetica')
+      .text('© Triomphe Bienes Raíces — Documento informativo. Precio e información sujetos a cambios sin previo aviso.',
+        MX, doc.page.height - 16, { width: PW - MX * 2, align: 'right' });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error en exportPropertyQuotePDF:', error);
+    res.status(500).json({ error: 'Error al generar la cotización' });
+  }
+};
+
+module.exports = { exportExcel, exportPDF, exportFeedbackExcel, exportLeadsExcel, exportPropertyQuotePDF };

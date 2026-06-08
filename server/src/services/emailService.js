@@ -211,7 +211,7 @@ const typeLabel2 = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terre
 
 const sendPropertyAlertNotification = async (alert, property) => {
   const formatPrice = (p) => p ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(p) : 'Consultar';
-  const unsubscribeUrl = `${process.env.CLIENT_URL}/api/alerts/unsubscribe?token=${alert.token}`;
+  const unsubscribeUrl = `${process.env.CLIENT_URL}/cancelar-alerta?token=${alert.token}`;
   const propertyUrl = `${process.env.CLIENT_URL}/propiedades/${property.slug}`;
 
   const html = buildEmail({

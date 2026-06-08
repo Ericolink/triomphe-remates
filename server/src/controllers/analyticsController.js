@@ -39,6 +39,33 @@ const getDashboard = async (req, res) => {
 
     const totalLeads = await Lead.count();
     const newLeads = await Lead.count({ where: { status: 'nuevo' } });
+    const closedLeads = await Lead.count({ where: { status: 'cerrado' } });
+
+    const leadsByStatusRaw = await Lead.findAll({
+      attributes: ['status', [fn('COUNT', col('id')), 'total']],
+      group: ['status'],
+      raw: true,
+    });
+    const leadsByStatus = ['nuevo', 'contactado', 'cerrado', 'descartado'].map((status) => ({
+      status,
+      total: parseInt(leadsByStatusRaw.find((r) => r.status === status)?.total || 0),
+    }));
+
+    const leadsByTypeRaw = await Lead.findAll({
+      attributes: ['type', [fn('COUNT', col('id')), 'total']],
+      group: ['type'],
+      raw: true,
+    });
+    const leadsByType = ['contacto', 'cita', 'informacion'].map((type) => ({
+      type,
+      total: parseInt(leadsByTypeRaw.find((r) => r.type === type)?.total || 0),
+    }));
+
+    // Embudo de conversión (últimos 30 días): vistas → leads → cerrados
+    const recentLeads = await Lead.count({ where: { createdAt: { [Op.gte]: thirtyDaysAgo } } });
+    const recentClosedLeads = await Lead.count({ where: { status: 'cerrado', createdAt: { [Op.gte]: thirtyDaysAgo } } });
+    const conversionRate = totalLeads > 0 ? (closedLeads / totalLeads) * 100 : 0;
+    const viewToLeadRate = totalViews > 0 ? (recentLeads / totalViews) * 100 : 0;
 
     // Leads por semana — últimas 8 semanas
     const eightWeeksAgo = new Date();
@@ -113,7 +140,14 @@ const getDashboard = async (req, res) => {
         byType: propertiesByType,
         topProperties,
         views: { last30Days: totalViews },
-        leads: { total: totalLeads, new: newLeads },
+        leads: { total: totalLeads, new: newLeads, closed: closedLeads },
+        leadsByStatus,
+        leadsByType,
+        conversion: {
+          rate: Math.round(conversionRate * 10) / 10,
+          viewToLeadRate: Math.round(viewToLeadRate * 10) / 10,
+          funnel: { views: totalViews, leads: recentLeads, closed: recentClosedLeads },
+        },
         leadsOverTime,
         viewsOverTime,
       },

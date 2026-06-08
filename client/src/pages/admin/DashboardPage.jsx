@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Users, Eye, TrendingUp, MapPin, Home } from 'lucide-react';
+import { Building2, Users, Eye, TrendingUp, MapPin, Home, Target, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BarChart, AreaChart } from '../../components/ui/MiniChart';
 import { getDashboard } from '../../services/analyticsService';
@@ -8,6 +8,9 @@ import { staggerContainer, fadeInUp, fadeIn } from '../../utils/animations';
 
 const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 const typeLabel = { casa: 'Casa', departamento: 'Depto.', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
+
+const leadStatusLabel = { nuevo: 'Nuevos', contactado: 'Contactados', cerrado: 'Cerrados', descartado: 'Descartados' };
+const leadTypeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
 
 
 export default function DashboardPage() {
@@ -127,24 +130,95 @@ export default function DashboardPage() {
         </motion.div>
       </motion.div>
 
+      {/* Conversión de leads */}
+      <motion.div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
+        <motion.div variants={fadeInUp} className="lg:col-span-1 bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <Target size={16} className="text-green-600" /> Embudo de conversión (30 días)
+          </h2>
+          <div className="flex items-center justify-between gap-2 mb-5">
+            {[
+              { label: 'Vistas', value: d?.conversion?.funnel?.views ?? 0 },
+              { label: 'Leads', value: d?.conversion?.funnel?.leads ?? 0 },
+              { label: 'Cerrados', value: d?.conversion?.funnel?.closed ?? 0 },
+            ].map(({ label, value }, i, arr) => (
+              <div key={label} className="flex items-center gap-2 flex-1">
+                <motion.div className="text-center flex-1"
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 + i * 0.1, duration: 0.3 }}>
+                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{label}</p>
+                </motion.div>
+                {i < arr.length - 1 && <ArrowRight size={16} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />}
+              </div>
+            ))}
+          </div>
+          <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-[#2e3650]">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-500 dark:text-gray-400">Tasa de vista → lead</span>
+              <span className="font-semibold text-blue-700 dark:text-blue-400">{d?.conversion?.viewToLeadRate ?? 0}%</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-500 dark:text-gray-400">Tasa de cierre (lead → cerrado)</span>
+              <span className="font-semibold text-green-600 dark:text-green-400">{d?.conversion?.rate ?? 0}%</span>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div variants={fadeInUp} className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <Users size={16} className="text-yellow-500" /> Leads por estatus
+          </h2>
+          <div className="space-y-3">
+            {d?.leadsByStatus?.map(({ status, total }, i) => (
+              <div key={status}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600 dark:text-gray-300">{leadStatusLabel[status] || status}</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">{total}</span>
+                </div>
+                <div className="h-2 bg-gray-100 dark:bg-[#2e3650] rounded-full overflow-hidden">
+                  <motion.div className="h-full bg-blue-900 dark:bg-blue-500 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${d.leads.total > 0 ? (total / d.leads.total) * 100 : 0}%` }}
+                    transition={{ duration: 0.8, delay: 0.3 + i * 0.1, ease: 'easeOut' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div variants={fadeInUp} className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <Users size={16} className="text-blue-700 dark:text-blue-400" /> Leads por tipo
+          </h2>
+          <div className="space-y-3">
+            {d?.leadsByType?.map(({ type, total }) => (
+              <motion.div key={type} className="flex justify-between items-center" whileHover={{ x: 4 }} transition={{ duration: 0.15 }}>
+                <span className="text-sm text-gray-600 dark:text-gray-300">{leadTypeLabel[type] || type}</span>
+                <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full">{total}</span>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
+
       {/* Estatus inventario */}
       <motion.div variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
         className="mt-6 bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
         <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Estatus del inventario</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <motion.div className="grid grid-cols-3 gap-4" variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
           {[
             { label: 'Disponibles', value: d?.properties?.disponible, color: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400' },
             { label: 'Apartadas',   value: d?.properties?.apartado,   color: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400' },
             { label: 'Vendidas',    value: d?.properties?.vendido,    color: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400' },
-          ].map(({ label, value, color }, i) => (
-            <motion.div key={label} className={`rounded-xl p-4 text-center ${color}`}
-              initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 + i * 0.1, duration: 0.3 }} whileHover={{ scale: 1.04 }}>
+          ].map(({ label, value, color }) => (
+            <motion.div key={label} variants={fadeInUp} whileHover={{ scale: 1.04 }}
+              className={`rounded-xl p-4 text-center ${color}`}>
               <p className="text-2xl font-bold">{value ?? 0}</p>
               <p className="text-sm font-medium mt-1">{label}</p>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );

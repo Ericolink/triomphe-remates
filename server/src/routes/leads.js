@@ -1,6 +1,6 @@
 const router = require('express').Router();
-const { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads } = require('../controllers/leadController');
-const { authenticate } = require('../middleware/authMiddleware');
+const { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads } = require('../controllers/leadController');
+const { authenticate, authenticateSSE } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { apiLimiter, authLimiter } = require('../middleware/rateLimitMiddleware');
 
@@ -12,6 +12,7 @@ const { apiLimiter, authLimiter } = require('../middleware/rateLimitMiddleware')
  */
 
 router.post('/',          authLimiter, createLead);
+router.get('/stream',     apiLimiter, authenticateSSE, authorize('admin', 'editor'), streamLeads);
 router.get('/',           apiLimiter, authenticate, authorize('admin', 'editor'), getLeads);
 router.patch('/batch',    apiLimiter, authenticate, authorize('admin', 'editor'), batchUpdateLeads);
 router.delete('/batch',   apiLimiter, authenticate, authorize('admin'), batchDeleteLeads);

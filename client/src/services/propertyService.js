@@ -49,6 +49,11 @@ export const setCoverImage = async (propertyId, imageId) => {
   return data;
 };
 
+export const reorderImages = async (propertyId, imageIds) => {
+  const { data } = await api.put(`/properties/${propertyId}/images/reorder`, { imageIds });
+  return data;
+};
+
 export const getPromotedProperty = async () => {
   const { data } = await api.get('/properties/promoted');
   return data;
@@ -57,4 +62,19 @@ export const getPromotedProperty = async () => {
 export const promoteProperty = async (id) => {
   const { data } = await api.put(`/properties/${id}/promote`);
   return data;
+};
+
+export const getStatusHistory = async (id) => {
+  const { data } = await api.get(`/properties/${id}/status-history`);
+  return data;
+};
+
+export const downloadPropertyQuotePDF = async (id, filename) => {
+  const response = await api.get(`/export/property/${id}/pdf`, { responseType: 'blob' });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  window.URL.revokeObjectURL(url);
 };

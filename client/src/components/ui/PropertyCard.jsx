@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Maximize2, Bed, Bath, Building } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -16,6 +17,7 @@ const buildUrl = (url) => {
 };
 
 export default function PropertyCard({ property }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
   const imageUrl = buildUrl(coverImage?.url);
 
@@ -33,13 +35,19 @@ export default function PropertyCard({ property }) {
       >
         <div className="relative h-52 bg-gray-100 dark:bg-[#2e3650] overflow-hidden">
           {imageUrl ? (
-            <motion.img
-              src={imageUrl}
-              alt={property.title}
-              className="w-full h-full object-cover"
-              whileHover={{ scale: 1.07 }}
-              transition={{ duration: 0.4 }}
-            />
+            <>
+              {!imageLoaded && <div className="absolute inset-0 animate-pulse bg-gray-200 dark:bg-[#2e3650]" />}
+              <motion.img
+                src={imageUrl}
+                alt={property.title}
+                onLoad={() => setImageLoaded(true)}
+                className="w-full h-full object-cover"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: imageLoaded ? 1 : 0 }}
+                whileHover={{ scale: 1.07 }}
+                transition={{ duration: 0.4 }}
+              />
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
               <Building size={48} />

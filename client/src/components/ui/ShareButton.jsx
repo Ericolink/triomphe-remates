@@ -14,11 +14,12 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
-export default function ShareButton({ title, url }) {
+export default function ShareButton({ title, subtitle, url }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const fullUrl = `${import.meta.env.VITE_SITE_URL || window.location.origin}${url}`;
+  const shareText = subtitle ? `${title} — ${subtitle}` : title;
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(fullUrl);
@@ -31,7 +32,7 @@ export default function ShareButton({ title, url }) {
       label: 'WhatsApp',
       icon: <WhatsAppIcon />,
       color: 'hover:bg-green-50 hover:text-green-600',
-      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(`${title} — ${fullUrl}`)}`, '_blank'),
+      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(`${shareText}\n${fullUrl}`)}`, '_blank'),
     },
     {
       label: 'Facebook',

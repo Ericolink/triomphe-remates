@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Upload, X, Star, ArrowLeft } from 'lucide-react';
+import { Reorder } from 'framer-motion';
+import { Upload, X, Star, ArrowLeft, Lock, History, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   getPropertyById, createProperty, updateProperty,
-  uploadImages, deleteImage, setCoverImage
+  uploadImages, deleteImage, setCoverImage, reorderImages, getStatusHistory
 } from '../../services/propertyService';
 import Spinner from '../../components/ui/Spinner';
 import { safeBlobUrl } from '../../utils/sanitize';
@@ -27,7 +28,7 @@ const FIELDS = [
 const emptyForm = {
   title: '', price: '', pricePending: false, city: 'juarez', type: 'casa', status: 'disponible',
   squareMeters: '', terrainMeters: '', constructionMeters: '',
-  bedrooms: '', bathrooms: '', address: '', description: '', isFeatured: false,
+  bedrooms: '', bathrooms: '', address: '', description: '', isFeatured: false, internalNotes: '',
 };
 
 const propertyToForm = (p) => ({
@@ -37,9 +38,13 @@ const propertyToForm = (p) => ({
   constructionMeters: p.constructionMeters || '', bedrooms: p.bedrooms || '',
   bathrooms: p.bathrooms || '', address: p.address || '',
   description: p.description || '', isFeatured: p.isFeatured || false,
+  internalNotes: p.internalNotes || '',
 });
 
-const inputClass = 'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
+const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
+const statusDot = { disponible: 'bg-green-500', apartado: 'bg-yellow-500', vendido: 'bg-red-500' };
+
+const inputClass ='w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
 export default function PropertyFormPage() {
   const { id } = useParams();
@@ -48,12 +53,21 @@ export default function PropertyFormPage() {
   const isEdit = !!id;
 
   const [newFiles, setNewFiles] = useState([]);
+  const [imageOrder, setImageOrder] = useState([]);
+  const [loadedImagesKey, setLoadedImagesKey] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['property', id],
     queryFn: () => getPropertyById(id),
     enabled: isEdit,
   });
+
+  const { data: historyData } = useQuery({
+    queryKey: ['property-status-history', id],
+    queryFn: () => getStatusHistory(id),
+    enabled: isEdit,
+  });
+  const statusHistory = historyData?.data ?? [];
 
   const serverForm = useMemo(
     () => (data?.data ? propertyToForm(data.data) : null),
@@ -112,6 +126,15 @@ export default function PropertyFormPage() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: (imageIds) => reorderImages(id, imageIds),
+    onSuccess: () => {
+      toast.success('Orden de imágenes actualizado');
+      queryClient.invalidateQueries(['property', id]);
+    },
+    onError: () => toast.error('Error al actualizar el orden'),
+  });
+
   const handleFiles = (e) => {
     const files = Array.from(e.target.files);
     setNewFiles((f) => [...f, ...files]);
@@ -137,6 +160,16 @@ export default function PropertyFormPage() {
     return `${apiBase}${url}`;
   };
   const existingImages = data?.data?.images || [];
+  const imagesKey = existingImages.map((img) => img.id).join(',');
+  if (existingImages.length > 0 && imagesKey !== loadedImagesKey) {
+    setLoadedImagesKey(imagesKey);
+    setImageOrder(existingImages);
+  }
+
+  const handleReorder = (newOrder) => {
+    setImageOrder(newOrder);
+    reorderMutation.mutate(newOrder.map((img) => img.id));
+  };
 
   if (isEdit && isLoading) return <Spinner size="lg" className="py-20" />;
 
@@ -216,14 +249,63 @@ export default function PropertyFormPage() {
           </div>
         </div>
 
+        <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+            <Lock size={15} className="text-gray-400" /> Notas internas
+          </h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+            Privadas — solo visibles para administradores y editores. No aparecen en el sitio público.
+          </p>
+          <textarea value={form.internalNotes}
+            onChange={(e) => setForm((f) => ({ ...f, internalNotes: e.target.value }))}
+            rows={4} placeholder="Ej: contacto del banco, precio mínimo aceptable, observaciones legales..."
+            className={`${inputClass} resize-none`} />
+        </div>
+
+        {isEdit && statusHistory.length > 0 && (
+          <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+            <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+              <History size={15} className="text-gray-400" /> Historial de estatus
+            </h2>
+            <div className="space-y-3">
+              {statusHistory.map((h) => (
+                <div key={h.id} className="flex items-center gap-3 text-sm">
+                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusDot[h.toStatus]}`} />
+                  <span className="text-gray-600 dark:text-gray-300">
+                    {h.fromStatus ? (
+                      <>
+                        <span className="text-gray-400 dark:text-gray-500">{statusLabel[h.fromStatus]}</span>
+                        {' → '}
+                        <span className="font-medium text-gray-800 dark:text-gray-100">{statusLabel[h.toStatus]}</span>
+                      </>
+                    ) : (
+                      <>Publicada como <span className="font-medium text-gray-800 dark:text-gray-100">{statusLabel[h.toStatus]}</span></>
+                    )}
+                  </span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
+                    {new Date(h.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {h.userName ? ` · ${h.userName}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isEdit && existingImages.length > 0 && (
           <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
             <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">Imágenes actuales</h2>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {existingImages.map((img) => (
-                <div key={img.id} className="relative group">
-                  <img src={buildImageUrl(img.url)} alt="Imagen de propiedad"
-                    className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Arrastra las imágenes para cambiar el orden en que aparecen en la galería.</p>
+            <Reorder.Group axis="y" values={imageOrder} onReorder={handleReorder}
+              className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {imageOrder.map((img) => (
+                <Reorder.Item key={img.id} value={img} dragListener
+                  className="relative group cursor-grab active:cursor-grabbing">
+                  <img src={buildImageUrl(img.url)} alt="Imagen de propiedad" draggable={false}
+                    className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
+                  <div className="absolute top-1 right-1 p-1 bg-white/80 dark:bg-[#1a1f2e]/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical size={14} className="text-gray-500 dark:text-gray-300" />
+                  </div>
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
                     <button type="button" onClick={() => coverMutation.mutate(img.id)}
                       className="p-1 bg-yellow-400 rounded-lg" title="Hacer portada">
@@ -239,9 +321,9 @@ export default function PropertyFormPage() {
                       Portada
                     </span>
                   )}
-                </div>
+                </Reorder.Item>
               ))}
-            </div>
+            </Reorder.Group>
           </div>
         )}
 
