@@ -57,7 +57,7 @@ export default function DashboardPage() {
           <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
             <Users size={16} className="text-yellow-500" /> Leads por semana
           </h2>
-          <BarChart data={d?.leadsOverTime ?? []} color="#f59e0b" label="Leads" />
+          <BarChart data={d?.leadsOverTime ?? []} color="#f59e0b" />
         </motion.div>
 
         {/* Vistas por semana */}
@@ -66,7 +66,7 @@ export default function DashboardPage() {
           <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
             <Eye size={16} className="text-purple-500" /> Vistas por semana
           </h2>
-          <AreaChart data={d?.viewsOverTime ?? []} color="#7c3aed" label="Vistas" />
+          <AreaChart data={d?.viewsOverTime ?? []} color="#7c3aed" />
         </motion.div>
       </motion.div>
 

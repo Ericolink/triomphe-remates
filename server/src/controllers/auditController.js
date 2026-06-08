@@ -1,5 +1,4 @@
 const { AuditLog } = require('../models/index');
-const { Op } = require('sequelize');
 
 // GET /api/audit
 const getAuditLogs = async (req, res) => {

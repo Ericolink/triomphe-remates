@@ -26,7 +26,7 @@ function Tooltip({ x, y, label, value, color }) {
   );
 }
 
-export function BarChart({ data = [], color = '#1a3a5c', label = 'Valor' }) {
+export function BarChart({ data = [], color = '#1a3a5c' }) {
   const [hover, setHover] = useState(null);
   if (!data.length) return <EmptyChart />;
 
@@ -66,7 +66,7 @@ export function BarChart({ data = [], color = '#1a3a5c', label = 'Valor' }) {
   );
 }
 
-export function AreaChart({ data = [], color = '#7c3aed', label = 'Valor' }) {
+export function AreaChart({ data = [], color = '#7c3aed' }) {
   const [hover, setHover] = useState(null);
   if (!data.length) return <EmptyChart />;
 
