@@ -1,6 +1,7 @@
 const { User } = require('../models/index');
 const { generateToken, hashPassword, comparePassword } = require('../utils/helpers');
 const { validateRegister, validateLogin } = require('../utils/validators');
+const { logAudit } = require('../utils/audit');
 
 // POST /api/auth/register
 const register = async (req, res) => {
@@ -56,6 +57,7 @@ const login = async (req, res) => {
     }
 
     await user.update({ lastLogin: new Date() });
+    logAudit({ user, ip: req.ip }, 'login', 'user', user.id, { email: user.email });
 
     const token = generateToken({ id: user.id, role: user.role });
 

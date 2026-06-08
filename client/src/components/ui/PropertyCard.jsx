@@ -3,6 +3,7 @@ import { MapPin, Maximize2, Bed, Bath, Building } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Badge from './Badge';
 import FavoriteButton from './FavoriteButton';
+import ComparatorButton from './ComparatorButton';
 
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
@@ -52,11 +53,8 @@ export default function PropertyCard({ property }) {
               <Badge variant="primary">Destacado</Badge>
             </div>
           )}
-          <FavoriteButton
-            property={property}
-            size={15}
-            className="absolute bottom-3 right-3 w-8 h-8"
-          />
+          <FavoriteButton property={property} size={15} className="absolute bottom-3 right-3 w-8 h-8" />
+          <ComparatorButton property={property} size={14} className="absolute bottom-3 left-3 w-8 h-8" />
         </div>
         <div className="p-5">
           <p className="text-2xl font-bold text-blue-900 dark:text-yellow-400 mb-1">{formatPrice(property.price)}</p>

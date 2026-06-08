@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X, Bell, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
 import Spinner from '../../components/ui/Spinner';
 import SEO from '../../components/ui/SEO';
+import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 
 const CITIES = [{ value: '', label: 'Todas las ciudades' }, { value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }];
@@ -16,6 +17,7 @@ const STATUS = [{ value: '', label: 'Todos los estatus' }, { value: 'disponible'
 export default function PropertiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
+  const [showAlertForm, setShowAlertForm] = useState(false);
   const [page, setPage] = useState(1);
   const [localFilters, setLocalFilters] = useState({
     city: '', type: '', status: '', maxPrice: '', search: '',
@@ -140,6 +142,28 @@ export default function PropertiesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Alertas por email */}
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-6">
+        <button onClick={() => setShowAlertForm((v) => !v)}
+          className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400 font-medium hover:underline">
+          <Bell size={15} /> Recibir alerta cuando llegue una propiedad
+          <ChevronDown size={14} className={`transition-transform ${showAlertForm ? 'rotate-180' : ''}`} />
+        </button>
+        <AnimatePresence>
+          {showAlertForm && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }} className="overflow-hidden mt-4">
+              <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 shadow-sm max-w-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Te notificaremos por email cuando publiquemos una propiedad que coincida con tu búsqueda.
+                </p>
+                <AlertSubscriptionForm />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Grid */}
       {isLoading ? (

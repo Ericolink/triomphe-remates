@@ -9,6 +9,7 @@ import ContactForm from '../../components/ui/ContactForm';
 import SEO from '../../components/ui/SEO';
 import ShareButton from '../../components/ui/ShareButton';
 import FavoriteButton from '../../components/ui/FavoriteButton';
+import ComparatorButton from '../../components/ui/ComparatorButton';
 import Lightbox from '../../components/ui/Lightbox';
 
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
@@ -92,6 +93,7 @@ export default function PropertyDetailPage() {
           <ChevronLeft size={18} /> Regresar
         </button>
         <div className="flex items-center gap-2">
+          <ComparatorButton property={property} size={18} className="w-10 h-10" />
           <FavoriteButton property={property} size={18} className="w-10 h-10" />
           <ShareButton title={property.title} url={`/propiedades/${property.slug}`} />
         </div>

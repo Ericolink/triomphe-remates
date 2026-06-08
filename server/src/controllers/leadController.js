@@ -136,4 +136,31 @@ const deleteLead = async (req, res) => {
   }
 };
 
-module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead };
+// PATCH /api/leads/batch
+const batchUpdateLeads = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
+    if (!status) return res.status(400).json({ error: 'status requerido' });
+    await Lead.update({ status }, { where: { id: ids } });
+    return res.json({ message: `${ids.length} lead(s) actualizados` });
+  } catch (error) {
+    console.error('Error en batchUpdateLeads:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// DELETE /api/leads/batch
+const batchDeleteLeads = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
+    await Lead.destroy({ where: { id: ids } });
+    return res.json({ message: `${ids.length} lead(s) eliminados` });
+  } catch (error) {
+    console.error('Error en batchDeleteLeads:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads };

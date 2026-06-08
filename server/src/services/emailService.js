@@ -207,4 +207,42 @@ const sendFeedbackNotification = async (feedback) => {
   });
 };
 
-module.exports = { sendNewLeadNotification, sendLeadConfirmation, sendJobApplicationNotification, sendJobApplicationConfirmation, sendFeedbackNotification, verifyConnection };
+const typeLabel2 = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
+
+const sendPropertyAlertNotification = async (alert, property) => {
+  const formatPrice = (p) => p ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(p) : 'Consultar';
+  const unsubscribeUrl = `${process.env.CLIENT_URL}/api/alerts/unsubscribe?token=${alert.token}`;
+  const propertyUrl = `${process.env.CLIENT_URL}/propiedades/${property.slug}`;
+
+  const html = buildEmail({
+    title: '🏠 Nueva propiedad que podría interesarte',
+    subtitle: 'Triomphe Bienes Raíces — Alertas de propiedades',
+    body: `
+      <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px">
+        Hola <strong>${alert.name}</strong>, encontramos una nueva propiedad que coincide con tus criterios de búsqueda.
+      </p>
+      <div style="background:#eff6ff;border-left:4px solid #1a3a5c;border-radius:6px;padding:16px;margin:16px 0">
+        <p style="margin:0 0 4px;color:#1a3a5c;font-size:15px;font-weight:700">${property.title}</p>
+        <p style="margin:0;color:#374151;font-size:13px">${cityLabel[property.city] || property.city} · ${typeLabel2[property.type] || property.type}</p>
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        ${tableRow('Precio', `<strong style="color:#1a3a5c">${formatPrice(property.price)}</strong>`)}
+        ${property.constructionMeters ? tableRow('Construcción', `${property.constructionMeters} m²`) : ''}
+        ${property.terrainMeters ? tableRow('Terreno', `${property.terrainMeters} m²`) : ''}
+        ${property.bedrooms ? tableRow('Recámaras', property.bedrooms) : ''}
+        ${tableRow('Estatus', 'Disponible', true)}
+      </table>
+    `,
+    cta: ctaButton(propertyUrl, 'Ver propiedad →'),
+    footerNote: `Recibiste este correo porque configuraste una alerta en Triomphe Bienes Raíces. <a href="${unsubscribeUrl}" style="color:#6b7280">Cancelar alerta</a>`,
+  });
+
+  await transporter.sendMail({
+    from: `"Triomphe Bienes Raíces" <${process.env.EMAIL_USER}>`,
+    to: alert.email,
+    subject: `🏠 Nueva propiedad en ${cityLabel[property.city] || property.city}: ${property.title}`,
+    html,
+  });
+};
+
+module.exports = { sendNewLeadNotification, sendLeadConfirmation, sendJobApplicationNotification, sendJobApplicationConfirmation, sendFeedbackNotification, sendPropertyAlertNotification, verifyConnection };

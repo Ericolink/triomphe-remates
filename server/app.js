@@ -56,6 +56,8 @@ app.use('/api/export',     require('./src/routes/export'));
 app.use('/api/analytics',  require('./src/routes/analytics'));
 app.use('/api/users',      require('./src/routes/users'));
 app.use('/api/feedback',   require('./src/routes/feedback'));
+app.use('/api/alerts',     require('./src/routes/alerts'));
+app.use('/api/audit',      require('./src/routes/audit'));
 
 // Health check
 app.get('/api/health', (req, res) => {

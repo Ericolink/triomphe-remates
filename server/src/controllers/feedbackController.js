@@ -107,4 +107,31 @@ const deleteFeedback = async (req, res) => {
   }
 };
 
-module.exports = { createFeedback, getFeedbacks, updateFeedback, deleteFeedback };
+// PATCH /api/feedback/batch
+const batchUpdateFeedback = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
+    if (!status) return res.status(400).json({ error: 'status requerido' });
+    await Feedback.update({ status }, { where: { id: ids } });
+    return res.json({ message: `${ids.length} mensaje(s) actualizados` });
+  } catch (error) {
+    console.error('Error en batchUpdateFeedback:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// DELETE /api/feedback/batch
+const batchDeleteFeedback = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
+    await Feedback.destroy({ where: { id: ids } });
+    return res.json({ message: `${ids.length} mensaje(s) eliminados` });
+  } catch (error) {
+    console.error('Error en batchDeleteFeedback:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+module.exports = { createFeedback, getFeedbacks, updateFeedback, deleteFeedback, batchUpdateFeedback, batchDeleteFeedback };
