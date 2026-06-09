@@ -1,4 +1,4 @@
-const { Lead, Property } = require('../models/index');
+const { Lead, LeadNote, Property } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 const leadEvents = require('../utils/leadEvents');
@@ -176,9 +176,17 @@ const batchDeleteLeads = async (req, res) => {
 
 // GET /api/leads/stream — notificaciones en tiempo real vía Server-Sent Events
 const streamLeads = (req, res) => {
+  // CORS headers must be set explicitly here — the cors() middleware may not flush
+  // them before flushHeaders() is called for long-lived SSE connections.
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
   res.write(': conectado\n\n');
@@ -197,4 +205,60 @@ const streamLeads = (req, res) => {
   });
 };
 
-module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads };
+// GET /api/leads/:id/notes
+const getLeadNotes = async (req, res) => {
+  try {
+    const lead = await Lead.findByPk(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    const notes = await LeadNote.findAll({
+      where: { leadId: req.params.id },
+      order: [['createdAt', 'DESC']],
+    });
+
+    return res.json({ data: notes });
+  } catch (error) {
+    console.error('Error en getLeadNotes:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// POST /api/leads/:id/notes
+const addLeadNote = async (req, res) => {
+  try {
+    const lead = await Lead.findByPk(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    const { content } = req.body;
+    if (!content || !content.trim()) return res.status(400).json({ error: 'Contenido requerido' });
+
+    const note = await LeadNote.create({
+      leadId: lead.id,
+      content: content.trim(),
+      authorName: req.user?.name || null,
+    });
+
+    return res.status(201).json({ data: note });
+  } catch (error) {
+    console.error('Error en addLeadNote:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// DELETE /api/leads/:id/notes/:noteId
+const deleteLeadNote = async (req, res) => {
+  try {
+    const note = await LeadNote.findOne({
+      where: { id: req.params.noteId, leadId: req.params.id },
+    });
+    if (!note) return res.status(404).json({ error: 'Nota no encontrada' });
+
+    await note.destroy();
+    return res.json({ message: 'Nota eliminada' });
+  } catch (error) {
+    console.error('Error en deleteLeadNote:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads, getLeadNotes, addLeadNote, deleteLeadNote };

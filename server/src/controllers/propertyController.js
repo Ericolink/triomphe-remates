@@ -21,6 +21,8 @@ const getProperties = async (req, res) => {
       maxPrice,
       minM2,
       maxM2,
+      minBedrooms,
+      minBathrooms,
       featured,
       search,
     } = req.query;
@@ -44,6 +46,9 @@ const getProperties = async (req, res) => {
       if (minM2) where.squareMeters[Op.gte] = parseFloat(minM2);
       if (maxM2) where.squareMeters[Op.lte] = parseFloat(maxM2);
     }
+
+    if (minBedrooms) where.bedrooms = { [Op.gte]: parseInt(minBedrooms) };
+    if (minBathrooms) where.bathrooms = { [Op.gte]: parseInt(minBathrooms) };
 
     if (search) {
       where[Op.or] = [
@@ -141,7 +146,7 @@ const createProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address,  auctionDate, isFeatured, internalNotes,
+      address, auctionDate, acquisitionStage, isFeatured, internalNotes,
     } = req.body;
 
     if (!title || !city || !type) {
@@ -164,7 +169,8 @@ const createProperty = async (req, res) => {
       constructionMeters: nullIfEmpty(constructionMeters),
       bedrooms: nullIfEmpty(bedrooms),
       bathrooms: nullIfEmpty(bathrooms),
-      address, auctionDate,
+      address, auctionDate: auctionDate || null,
+      acquisitionStage: acquisitionStage || 'sin_proceso',
       isFeatured: isFeatured || false,
       internalNotes: internalNotes || null,
       slug,
@@ -225,7 +231,7 @@ const updateProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address,  auctionDate, isFeatured, internalNotes,
+      address, auctionDate, acquisitionStage, isFeatured, internalNotes,
     } = req.body;
 
     if (title && title !== property.title) {
@@ -246,7 +252,8 @@ const updateProperty = async (req, res) => {
       constructionMeters: nullIfEmpty(constructionMeters),
       bedrooms: nullIfEmpty(bedrooms),
       bathrooms: nullIfEmpty(bathrooms),
-      address, auctionDate,
+      address, auctionDate: auctionDate || null,
+      acquisitionStage: acquisitionStage || 'sin_proceso',
       isFeatured, internalNotes: internalNotes || null,
       slug: req.body.slug,
     });

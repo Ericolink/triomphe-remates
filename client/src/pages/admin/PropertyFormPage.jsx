@@ -22,6 +22,8 @@ const FIELDS = [
   { key: 'constructionMeters', label: 'M² Construcción', type: 'number', col: 1 },
   { key: 'bedrooms', label: 'Recámaras', type: 'number', col: 1 },
   { key: 'bathrooms', label: 'Baños', type: 'number', col: 1 },
+  { key: 'auctionDate', label: 'Fecha del remate', type: 'date', col: 1 },
+  { key: 'acquisitionStage', label: 'Etapa de adquisición', type: 'select', col: 1, options: [{ value: 'sin_proceso', label: 'Sin proceso' }, { value: 'documentacion', label: 'Documentación' }, { value: 'avaluo', label: 'Avalúo' }, { value: 'negociacion', label: 'Negociación' }, { value: 'firma', label: 'Firma' }, { value: 'entrega', label: 'Entrega' }] },
   { key: 'address', label: 'Dirección', type: 'text', col: 2 },
   { key: 'description', label: 'Descripción', type: 'textarea', col: 2 },
 ];
@@ -30,6 +32,7 @@ const emptyForm = {
   title: '', price: '', pricePending: false, city: 'juarez', type: 'casa', status: 'disponible',
   squareMeters: '', terrainMeters: '', constructionMeters: '',
   bedrooms: '', bathrooms: '', address: '', description: '', isFeatured: false, internalNotes: '',
+  auctionDate: '', acquisitionStage: 'sin_proceso',
 };
 
 const propertyToForm = (p) => ({
@@ -40,6 +43,8 @@ const propertyToForm = (p) => ({
   bathrooms: p.bathrooms || '', address: p.address || '',
   description: p.description || '', isFeatured: p.isFeatured || false,
   internalNotes: p.internalNotes || '',
+  auctionDate: p.auctionDate ? new Date(p.auctionDate).toISOString().split('T')[0] : '',
+  acquisitionStage: p.acquisitionStage || 'sin_proceso',
 });
 
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };

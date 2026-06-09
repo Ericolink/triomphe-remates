@@ -29,3 +29,18 @@ export const batchDeleteLeads = async (ids) => {
   const { data } = await api.delete('/leads/batch', { data: { ids } });
   return data;
 };
+
+export const getLeadNotes = async (leadId) => {
+  const { data } = await api.get(`/leads/${leadId}/notes`);
+  return data;
+};
+
+export const addLeadNote = async (leadId, content) => {
+  const { data } = await api.post(`/leads/${leadId}/notes`, { content });
+  return data;
+};
+
+export const deleteLeadNote = async (leadId, noteId) => {
+  const { data } = await api.delete(`/leads/${leadId}/notes/${noteId}`);
+  return data;
+};

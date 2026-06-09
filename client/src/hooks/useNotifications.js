@@ -6,8 +6,6 @@ import { getLeads } from '../services/leadService';
 import useAuthStore from '../store/authStore';
 import LeadToast from '../components/ui/LeadToast';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 export default function useNotifications() {
   const { isAuthenticated, token } = useAuthStore();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,24 +26,36 @@ export default function useNotifications() {
     setNotifications(data.data ?? []);
   }, [data]);
 
-  // Conexión en tiempo real — el servidor empuja un evento por cada lead nuevo
+  // Conexión en tiempo real — el servidor empuja un evento por cada lead nuevo.
+  // Se espera a que la página esté completamente cargada antes de abrir el EventSource
+  // para evitar el mensaje "interrupted while the page was loading" de Firefox.
   useEffect(() => {
     if (!isAuthenticated || !token) return undefined;
 
-    const source = new EventSource(`${API_URL}/leads/stream?token=${encodeURIComponent(token)}`);
+    let source = null;
 
-    const handleNewLead = (event) => {
-      const lead = JSON.parse(event.data);
-      setUnreadCount((count) => count + 1);
-      setNotifications((prev) => [lead, ...prev].slice(0, 10));
-      toast.custom((t) => createElement(LeadToast, { t, diff: 1, lead }), { duration: 5000 });
+    const connect = () => {
+      source = new EventSource(
+        `${window.location.origin}/api/leads/stream?token=${encodeURIComponent(token)}`
+      );
+
+      source.addEventListener('new-lead', (event) => {
+        const lead = JSON.parse(event.data);
+        setUnreadCount((count) => count + 1);
+        setNotifications((prev) => [lead, ...prev].slice(0, 10));
+        toast.custom((t) => createElement(LeadToast, { t, diff: 1, lead }), { duration: 5000 });
+      });
     };
 
-    source.addEventListener('new-lead', handleNewLead);
+    if (document.readyState === 'complete') {
+      connect();
+    } else {
+      window.addEventListener('load', connect, { once: true });
+    }
 
     return () => {
-      source.removeEventListener('new-lead', handleNewLead);
-      source.close();
+      window.removeEventListener('load', connect);
+      source?.close();
     };
   }, [isAuthenticated, token]);
 

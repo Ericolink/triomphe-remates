@@ -80,6 +80,12 @@ const Property = sequelize.define('Property', {
     unique: true,
     comment: 'URL amigable para SEO',
   },
+  acquisitionStage: {
+    type: DataTypes.ENUM('sin_proceso', 'documentacion', 'avaluo', 'negociacion', 'firma', 'entrega'),
+    defaultValue: 'sin_proceso',
+    allowNull: true,
+    comment: 'Etapa del proceso de adquisición visible al público',
+  },
   internalNotes: {
     type: DataTypes.TEXT,
     allowNull: true,
@@ -88,14 +94,6 @@ const Property = sequelize.define('Property', {
 }, {
   tableName: 'properties',
   timestamps: true,
-  indexes: [
-    { fields: ['status'] },
-    { fields: ['city'] },
-    { fields: ['type'] },
-    { fields: ['isFeatured'] },
-    { fields: ['isPromoted'] },
-    { fields: ['city', 'type', 'status'] },
-  ],
 });
 
 module.exports = Property;
