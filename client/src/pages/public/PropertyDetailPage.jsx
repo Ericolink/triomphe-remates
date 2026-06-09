@@ -14,11 +14,8 @@ import FavoriteButton from '../../components/ui/FavoriteButton';
 import ComparatorButton from '../../components/ui/ComparatorButton';
 import Lightbox from '../../components/ui/Lightbox';
 import { buildImageUrl } from '../../utils/images';
-
-const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
-const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
-const typeLabel = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
+import { formatPrice } from '../../utils/formatters';
+import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
 
 export default function PropertyDetailPage() {
   const { slug } = useParams();
@@ -35,16 +32,11 @@ export default function PropertyDetailPage() {
   const coverImage = images.find((i) => i.isCover) || images[0];
   const coverUrl = coverImage ? buildImageUrl(coverImage.url, 1200) : null;
 
-  const formatPrice = (price) => {
-    if (price === null || price === undefined || price === '') return 'PENDIENTE';
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
-  };
-
   const buildDescription = (p) => {
     const parts = [
-      `${typeLabel[p.type] || p.type} en remate bancario`,
+      `${TYPE_LABELS[p.type] || p.type} en remate bancario`,
       p.price ? `a ${formatPrice(p.price)}` : '',
-      p.city ? `en ${cityLabel[p.city]}` : '',
+      p.city ? `en ${CITY_LABELS[p.city]}` : '',
       p.squareMeters ? `· ${p.squareMeters} m²` : '',
       p.bedrooms ? `· ${p.bedrooms} recámaras` : '',
     ];
@@ -90,7 +82,7 @@ export default function PropertyDetailPage() {
         <div className="flex items-center gap-2">
           <ComparatorButton property={property} size={18} className="w-10 h-10" />
           <FavoriteButton property={property} size={18} className="w-10 h-10" />
-          <ShareButton title={property.title} subtitle={`${formatPrice(property.price)} · ${cityLabel[property.city]}`} url={`/propiedades/${property.slug}`} />
+          <ShareButton title={property.title} subtitle={`${formatPrice(property.price)} · ${CITY_LABELS[property.city]}`} url={`/propiedades/${property.slug}`} />
         </div>
       </div>
 
@@ -148,16 +140,16 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <Badge variant={statusVariant[property.status]}>{statusLabel[property.status]}</Badge>
+            <Badge variant={STATUS_VARIANTS[property.status]}>{STATUS_LABELS[property.status]}</Badge>
             {property.isFeatured && <Badge variant="primary">Destacado</Badge>}
-            <span className="text-gray-400 text-sm capitalize">{typeLabel[property.type] || property.type}</span>
+            <span className="text-gray-400 text-sm capitalize">{TYPE_LABELS[property.type] || property.type}</span>
           </div>
 
           <h1 className="text-2xl md:text-3xl font-bold text-blue-900 mb-2">{property.title}</h1>
 
           {property.address && (
             <p className="flex items-center gap-1 text-gray-500 mb-4">
-              <MapPin size={16} /> {property.address}, {cityLabel[property.city]}
+              <MapPin size={16} /> {property.address}, {CITY_LABELS[property.city]}
             </p>
           )}
 
@@ -194,7 +186,7 @@ export default function PropertyDetailPage() {
             <p className={`text-3xl font-bold ${property.price ? 'text-yellow-400' : 'text-yellow-300'}`}>
               {formatPrice(property.price)}
             </p>
-            <p className="text-xs text-blue-300 mt-1">{cityLabel[property.city]}</p>
+            <p className="text-xs text-blue-300 mt-1">{CITY_LABELS[property.city]}</p>
           </div>
 
           <WhatsAppButton title={property.title} priceLabel={formatPrice(property.price)} url={`/propiedades/${property.slug}`} />

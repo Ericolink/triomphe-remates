@@ -88,6 +88,14 @@ const Property = sequelize.define('Property', {
 }, {
   tableName: 'properties',
   timestamps: true,
+  indexes: [
+    { fields: ['status'] },
+    { fields: ['city'] },
+    { fields: ['type'] },
+    { fields: ['isFeatured'] },
+    { fields: ['isPromoted'] },
+    { fields: ['city', 'type', 'status'] },
+  ],
 });
 
 module.exports = Property;

@@ -6,22 +6,16 @@ import SEO from '../../components/ui/SEO';
 import Badge from '../../components/ui/Badge';
 import { fadeInUp, staggerContainer } from '../../utils/animations';
 import { buildImageUrl } from '../../utils/images';
-
-const cityLabel   = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
-const typeLabel   = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
-const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
-const statusLabel   = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
-
-const formatPrice = (p) =>
-  p ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(p) : 'PENDIENTE';
+import { formatPrice } from '../../utils/formatters';
+import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
 
 const val = (v, unit = '') => (v != null && v !== '') ? `${v}${unit}` : <span className="text-gray-300 dark:text-gray-600">—</span>;
 
 const ROWS = [
   { label: 'Precio',         render: (p) => <span className="font-bold text-blue-900 dark:text-yellow-400">{formatPrice(p.price)}</span> },
-  { label: 'Ciudad',         render: (p) => val(cityLabel[p.city] || p.city) },
-  { label: 'Tipo',           render: (p) => val(typeLabel[p.type] || p.type) },
-  { label: 'Estatus',        render: (p) => <Badge variant={statusVariant[p.status]}>{statusLabel[p.status] || p.status}</Badge> },
+  { label: 'Ciudad',         render: (p) => val(CITY_LABELS[p.city] || p.city) },
+  { label: 'Tipo',           render: (p) => val(TYPE_LABELS[p.type] || p.type) },
+  { label: 'Estatus',        render: (p) => <Badge variant={STATUS_VARIANTS[p.status]}>{STATUS_LABELS[p.status] || p.status}</Badge> },
   { label: 'Construcción',   render: (p) => val(p.constructionMeters, ' m²') },
   { label: 'Terreno',        render: (p) => val(p.terrainMeters, ' m²') },
   { label: 'Recámaras',      render: (p) => val(p.bedrooms) },
@@ -91,7 +85,7 @@ export default function ComparatorPage() {
                         {p.title}
                       </Link>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
-                        <MapPin size={10} className="flex-shrink-0" /> {cityLabel[p.city] || p.city}
+                        <MapPin size={10} className="flex-shrink-0" /> {CITY_LABELS[p.city] || p.city}
                       </p>
                     </div>
                   </div>

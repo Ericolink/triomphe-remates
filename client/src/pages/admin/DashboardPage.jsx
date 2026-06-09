@@ -5,9 +5,7 @@ import { BarChart, AreaChart } from '../../components/ui/MiniChart';
 import { getDashboard } from '../../services/analyticsService';
 import Spinner from '../../components/ui/Spinner';
 import { staggerContainer, fadeInUp, fadeIn } from '../../utils/animations';
-
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
-const typeLabel = { casa: 'Casa', departamento: 'Depto.', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
+import { CITY_LABELS, TYPE_LABELS_SHORT } from '../../utils/constants';
 
 const leadStatusLabel = { nuevo: 'Nuevos', contactado: 'Contactados', cerrado: 'Cerrados', descartado: 'Descartados' };
 const leadTypeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
@@ -83,7 +81,7 @@ export default function DashboardPage() {
             {d?.byCity?.map(({ city, total }, i) => (
               <div key={city}>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 dark:text-gray-300">{cityLabel[city] || city}</span>
+                  <span className="text-gray-600 dark:text-gray-300">{CITY_LABELS[city] || city}</span>
                   <span className="font-semibold text-gray-800 dark:text-gray-100">{total}</span>
                 </div>
                 <div className="h-2 bg-gray-100 dark:bg-[#2e3650] rounded-full overflow-hidden">
@@ -103,7 +101,7 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {d?.byType?.map(({ type, total }) => (
               <motion.div key={type} className="flex justify-between items-center" whileHover={{ x: 4 }} transition={{ duration: 0.15 }}>
-                <span className="text-sm text-gray-600 dark:text-gray-300">{typeLabel[type] || type}</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">{TYPE_LABELS_SHORT[type] || type}</span>
                 <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full">{total}</span>
               </motion.div>
             ))}
@@ -121,7 +119,7 @@ export default function DashboardPage() {
                 <span className="w-6 h-6 bg-gray-100 dark:bg-[#2e3650] rounded-full flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{p.title}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{cityLabel[p.city]}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{CITY_LABELS[p.city]}</p>
                 </div>
                 <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1"><Eye size={12} /> {p.views}</span>
               </motion.div>

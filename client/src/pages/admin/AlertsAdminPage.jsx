@@ -8,11 +8,8 @@ import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, staggerContainer } from '../../utils/animations';
-
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
-const typeLabel = { casa: 'Casa', departamento: 'Depto.', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
-const formatPrice = (p) => p ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(p) : null;
-const formatDate = (d) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+import { formatPrice, formatDate } from '../../utils/formatters';
+import { CITY_LABELS, TYPE_LABELS_SHORT } from '../../utils/constants';
 
 export default function AlertsAdminPage() {
   const queryClient = useQueryClient();
@@ -69,12 +66,12 @@ export default function AlertsAdminPage() {
               <div className="flex flex-wrap gap-2 mb-3">
                 {alert.city ? (
                   <span className="flex items-center gap-1 text-xs bg-gray-100 dark:bg-[#2e3650] text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full">
-                    <MapPin size={11} /> {cityLabel[alert.city]}
+                    <MapPin size={11} /> {CITY_LABELS[alert.city]}
                   </span>
                 ) : <span className="text-xs text-gray-400 dark:text-gray-500">Cualquier ciudad</span>}
                 {alert.type && (
                   <span className="flex items-center gap-1 text-xs bg-gray-100 dark:bg-[#2e3650] text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full">
-                    <Tag size={11} /> {typeLabel[alert.type]}
+                    <Tag size={11} /> {TYPE_LABELS_SHORT[alert.type]}
                   </span>
                 )}
                 {alert.maxPrice && (

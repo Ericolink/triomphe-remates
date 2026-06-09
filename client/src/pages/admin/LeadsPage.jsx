@@ -10,6 +10,7 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import BatchActionBar from '../../components/ui/BatchActionBar';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
+import { formatDate } from '../../utils/formatters';
 
 const statusVariant = { nuevo: 'primary', contactado: 'warning', cerrado: 'success', descartado: 'default' };
 const typeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
@@ -60,9 +61,6 @@ export default function LeadsPage() {
     const ids = data?.data?.map((l) => l.id) ?? [];
     setChecked(checked.length === ids.length ? [] : ids);
   };
-
-  const formatDate = (date) =>
-    date ? new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   const handleExport = async () => {
     try {

@@ -6,20 +6,13 @@ import Badge from './Badge';
 import FavoriteButton from './FavoriteButton';
 import ComparatorButton from './ComparatorButton';
 import { buildImageUrl } from '../../utils/images';
-
-const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
-const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
+import { formatPrice } from '../../utils/formatters';
+import { CITY_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
 
 export default function PropertyCard({ property }) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
   const imageUrl = buildImageUrl(coverImage?.url, 600);
-
-  const formatPrice = (price) => {
-    if (price === null || price === undefined || price === '') return 'PENDIENTE';
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
-  };
 
   return (
     <Link to={`/propiedades/${property.slug}`} className="block">
@@ -51,7 +44,7 @@ export default function PropertyCard({ property }) {
             </div>
           )}
           <div className="absolute top-3 left-3">
-            <Badge variant={statusVariant[property.status]}>{statusLabel[property.status]}</Badge>
+            <Badge variant={STATUS_VARIANTS[property.status]}>{STATUS_LABELS[property.status]}</Badge>
           </div>
           {property.isFeatured && (
             <div className="absolute top-3 right-3">
@@ -66,7 +59,7 @@ export default function PropertyCard({ property }) {
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2 line-clamp-2">{property.title}</h3>
           <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm mb-4">
             <MapPin size={14} />
-            <span>{cityLabel[property.city]}</span>
+            <span>{CITY_LABELS[property.city]}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-[#2e3650] pt-3">
             {property.constructionMeters && <span className="flex items-center gap-1"><Maximize2 size={14} />{property.constructionMeters} m² const.</span>}
