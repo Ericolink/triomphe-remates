@@ -174,12 +174,17 @@ const batchDeleteLeads = async (req, res) => {
   }
 };
 
+const SSE_ALLOWED_ORIGINS = new Set(
+  [process.env.CLIENT_URL, 'http://localhost:5173'].filter(Boolean)
+);
+
 // GET /api/leads/stream — notificaciones en tiempo real vía Server-Sent Events
 const streamLeads = (req, res) => {
   // CORS headers must be set explicitly here — the cors() middleware may not flush
   // them before flushHeaders() is called for long-lived SSE connections.
+  // Only reflect the origin if it's in the whitelist to prevent credential leaks.
   const origin = req.headers.origin;
-  if (origin) {
+  if (origin && SSE_ALLOWED_ORIGINS.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
