@@ -8,15 +8,11 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { formatDate } from '../../utils/formatters';
 
 const roleColors = {
   admin:  'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   editor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-};
-
-const formatDate = (date) => {
-  if (!date) return 'Nunca';
-  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'editor', currentPassword: '', newPassword: '' };
@@ -217,7 +213,7 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
-                      {formatDate(u.lastLogin)}
+                      {formatDate(u.lastLogin, 'Nunca')}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${

@@ -6,6 +6,7 @@ import { getAuditLogs } from '../../services/auditService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import { fadeIn, fadeInUp, staggerContainer } from '../../utils/animations';
+import { formatDateTime } from '../../utils/formatters';
 
 const actionVariant = { create: 'success', update: 'warning', delete: 'danger', login: 'primary', logout: 'default', export: 'default' };
 const actionLabel  = { create: 'Crear', update: 'Editar', delete: 'Eliminar', login: 'Login', logout: 'Logout', export: 'Exportar' };
@@ -14,8 +15,6 @@ const resourceIcon = {
   user: <User size={14} />, job: <Briefcase size={14} />, application: <Briefcase size={14} />, alert: <Bell size={14} />,
 };
 const resourceLabel = { property: 'Propiedad', lead: 'Lead', feedback: 'Buzón', user: 'Usuario', job: 'Vacante', application: 'Postulación', alert: 'Alerta' };
-
-const formatDate = (d) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 const ACTIONS   = ['', 'create', 'update', 'delete', 'login', 'export'];
 const RESOURCES = ['', 'property', 'lead', 'feedback', 'user', 'job', 'alert'];
@@ -67,7 +66,7 @@ export default function AuditPage() {
                 {detail?.title && <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">{detail.title}</span>}
                 <div className="ml-auto flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
                   {log.userName && <span className="font-medium text-gray-600 dark:text-gray-300">{log.userName}</span>}
-                  <span>{formatDate(log.createdAt)}</span>
+                  <span>{formatDateTime(log.createdAt)}</span>
                 </div>
               </motion.div>
             );

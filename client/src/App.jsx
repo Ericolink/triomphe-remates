@@ -1,74 +1,82 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
+import Spinner from './components/ui/Spinner';
 
-import HomePage from './pages/public/HomePage';
-import PropertiesPage from './pages/public/PropertiesPage';
-import PropertyDetailPage from './pages/public/PropertyDetailPage';
-import ContactPage from './pages/public/ContactPage';
-import AboutPage from './pages/public/AboutPage';
-import JobsPage from './pages/public/JobsPage';
-import BuzonPage from './pages/public/BuzonPage';
-import FavoritesPage from './pages/public/FavoritesPage';
-import ComparatorPage from './pages/public/ComparatorPage';
-import UnsubscribeAlertPage from './pages/public/UnsubscribeAlertPage';
+// Páginas públicas — cargadas de forma diferida para no bloquear el primer render
+const HomePage             = lazy(() => import('./pages/public/HomePage'));
+const PropertiesPage       = lazy(() => import('./pages/public/PropertiesPage'));
+const PropertyDetailPage   = lazy(() => import('./pages/public/PropertyDetailPage'));
+const ContactPage          = lazy(() => import('./pages/public/ContactPage'));
+const AboutPage            = lazy(() => import('./pages/public/AboutPage'));
+const JobsPage             = lazy(() => import('./pages/public/JobsPage'));
+const BuzonPage            = lazy(() => import('./pages/public/BuzonPage'));
+const FavoritesPage        = lazy(() => import('./pages/public/FavoritesPage'));
+const ComparatorPage       = lazy(() => import('./pages/public/ComparatorPage'));
+const UnsubscribeAlertPage = lazy(() => import('./pages/public/UnsubscribeAlertPage'));
 
-import LoginPage from './pages/admin/LoginPage';
-import DashboardPage from './pages/admin/DashboardPage';
-import AdminPropertiesPage from './pages/admin/AdminPropertiesPage';
-import PropertyFormPage from './pages/admin/PropertyFormPage';
-import LeadsPage from './pages/admin/LeadsPage';
-import JobsAdminPage from './pages/admin/JobsAdminPage';
-import ApplicationsPage from './pages/admin/ApplicationsPage';
-import UsersPage from './pages/admin/UsersPage';
-import BuzonAdminPage from './pages/admin/BuzonAdminPage';
-import AlertsAdminPage from './pages/admin/AlertsAdminPage';
-import AuditPage from './pages/admin/AuditPage';
+// Panel admin — en un chunk separado para que nunca llegue a visitantes anónimos
+const LoginPage            = lazy(() => import('./pages/admin/LoginPage'));
+const AdminLayout          = lazy(() => import('./components/layout/AdminLayout'));
+const DashboardPage        = lazy(() => import('./pages/admin/DashboardPage'));
+const AdminPropertiesPage  = lazy(() => import('./pages/admin/AdminPropertiesPage'));
+const PropertyFormPage     = lazy(() => import('./pages/admin/PropertyFormPage'));
+const LeadsPage            = lazy(() => import('./pages/admin/LeadsPage'));
+const JobsAdminPage        = lazy(() => import('./pages/admin/JobsAdminPage'));
+const ApplicationsPage     = lazy(() => import('./pages/admin/ApplicationsPage'));
+const UsersPage            = lazy(() => import('./pages/admin/UsersPage'));
+const BuzonAdminPage       = lazy(() => import('./pages/admin/BuzonAdminPage'));
+const AlertsAdminPage      = lazy(() => import('./pages/admin/AlertsAdminPage'));
+const AuditPage            = lazy(() => import('./pages/admin/AuditPage'));
 
 import PublicLayout from './components/layout/PublicLayout';
-import AdminLayout from './components/layout/AdminLayout';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
   return isAuthenticated ? children : <Navigate to="/admin/login" replace />;
 };
 
+const PageFallback = () => <Spinner size="lg" className="py-40" />;
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<PublicLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/propiedades" element={<PropertiesPage />} />
-          <Route path="/propiedades/:slug" element={<PropertyDetailPage />} />
-          <Route path="/contacto" element={<ContactPage />} />
-          <Route path="/nosotros" element={<AboutPage />} />
-          <Route path="/trabaja-con-nosotros" element={<JobsPage />} />
-          <Route path="/buzon" element={<BuzonPage />} />
-          <Route path="/favoritos" element={<FavoritesPage />} />
-          <Route path="/comparar" element={<ComparatorPage />} />
-          <Route path="/cancelar-alerta" element={<UnsubscribeAlertPage />} />
-        </Route>
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route path="/"                     element={<HomePage />} />
+            <Route path="/propiedades"          element={<PropertiesPage />} />
+            <Route path="/propiedades/:slug"    element={<PropertyDetailPage />} />
+            <Route path="/contacto"             element={<ContactPage />} />
+            <Route path="/nosotros"             element={<AboutPage />} />
+            <Route path="/trabaja-con-nosotros" element={<JobsPage />} />
+            <Route path="/buzon"                element={<BuzonPage />} />
+            <Route path="/favoritos"            element={<FavoritesPage />} />
+            <Route path="/comparar"             element={<ComparatorPage />} />
+            <Route path="/cancelar-alerta"      element={<UnsubscribeAlertPage />} />
+          </Route>
 
-        <Route path="/admin/login" element={<LoginPage />} />
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AdminLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="propiedades" element={<AdminPropertiesPage />} />
-          <Route path="propiedades/nueva" element={<PropertyFormPage />} />
-          <Route path="propiedades/:id/editar" element={<PropertyFormPage />} />
-          <Route path="leads" element={<LeadsPage />} />
-          <Route path="vacantes" element={<JobsAdminPage />} />
-          <Route path="postulaciones" element={<ApplicationsPage />} />
-          <Route path="usuarios" element={<UsersPage />} />
-          <Route path="buzon" element={<BuzonAdminPage />} />
-          <Route path="alertas" element={<AlertsAdminPage />} />
-          <Route path="auditoria" element={<AuditPage />} />
-        </Route>
-      </Routes>
+          <Route path="/admin/login" element={<LoginPage />} />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard"              element={<DashboardPage />} />
+            <Route path="propiedades"            element={<AdminPropertiesPage />} />
+            <Route path="propiedades/nueva"      element={<PropertyFormPage />} />
+            <Route path="propiedades/:id/editar" element={<PropertyFormPage />} />
+            <Route path="leads"                  element={<LeadsPage />} />
+            <Route path="vacantes"               element={<JobsAdminPage />} />
+            <Route path="postulaciones"          element={<ApplicationsPage />} />
+            <Route path="usuarios"               element={<UsersPage />} />
+            <Route path="buzon"                  element={<BuzonAdminPage />} />
+            <Route path="alertas"                element={<AlertsAdminPage />} />
+            <Route path="auditoria"              element={<AuditPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

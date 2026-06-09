@@ -10,6 +10,7 @@ import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
+import { formatDate } from '../../utils/formatters';
 
 const categoryVariant = { queja: 'danger', comentario: 'primary', sugerencia: 'success' };
 const categoryIcon = {
@@ -70,9 +71,6 @@ export default function BuzonAdminPage() {
       updateMutation.mutate({ id: item.id, data: { status: 'leido' } });
     }
   };
-
-  const formatDate = (date) =>
-    date ? new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   const handleExport = async () => {
     try {

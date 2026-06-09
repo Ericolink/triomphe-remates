@@ -9,22 +9,13 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { formatPrice, formatDate } from '../../utils/formatters';
+import { CITY_LABELS } from '../../utils/constants';
 
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 const statusColors = {
   disponible: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   apartado:   'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   vendido:    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-};
-
-const formatPrice = (price) => {
-  if (price === null || price === undefined || price === '') return 'PENDIENTE';
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
-};
-
-const formatDate = (date) => {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 export default function AdminPropertiesPage() {
@@ -171,7 +162,7 @@ export default function AdminPropertiesPage() {
                         <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">{property.type}</p>
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                        {cityLabel[property.city]}
+                        {CITY_LABELS[property.city]}
                       </td>
                       <td className="px-4 py-3 font-semibold whitespace-nowrap"
                         style={{ color: property.price ? undefined : '#f59e0b' }}

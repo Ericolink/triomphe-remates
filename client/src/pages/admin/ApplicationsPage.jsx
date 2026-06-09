@@ -8,10 +8,11 @@ import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
+import { formatDate } from '../../utils/formatters';
+import { CITY_LABELS } from '../../utils/constants';
 
 const statusVariant = { nueva: 'primary', en_revision: 'warning', entrevista: 'default', aceptada: 'success', rechazada: 'danger' };
 const expLabel = { sin_experiencia: 'Sin experiencia', 'menos_1_año': '< 1 año', '1_3_años': '1-3 años', 'mas_3_años': '3+ años' };
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro', otra: 'Otra' };
 
 export default function ApplicationsPage() {
   const queryClient = useQueryClient();
@@ -33,9 +34,6 @@ export default function ApplicationsPage() {
     mutationFn: deleteApplication,
     onSuccess: () => { toast.success('Postulación eliminada'); setSelected(null); queryClient.invalidateQueries(['applications']); },
   });
-
-  const formatDate = (date) =>
-    date ? new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
@@ -80,7 +78,7 @@ export default function ApplicationsPage() {
                     <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
                       <span className="flex items-center gap-1"><Mail size={12} /> {app.email}</span>
                       <span className="flex items-center gap-1"><Phone size={12} /> {app.phone}</span>
-                      <span className="flex items-center gap-1"><MapPin size={12} /> {cityLabel[app.city]}</span>
+                      <span className="flex items-center gap-1"><MapPin size={12} /> {CITY_LABELS[app.city]}</span>
                       {app.position && <span className="flex items-center gap-1"><Briefcase size={12} /> {app.position.title}</span>}
                     </div>
                   </motion.div>
@@ -113,7 +111,7 @@ export default function ApplicationsPage() {
                     { label: 'Nombre', value: selected.name },
                     { label: 'Email', value: selected.email },
                     { label: 'Teléfono', value: selected.phone },
-                    { label: 'Ciudad', value: cityLabel[selected.city] },
+                    { label: 'Ciudad', value: CITY_LABELS[selected.city] },
                     { label: 'Experiencia', value: expLabel[selected.experience] },
                     { label: 'Vacante', value: selected.position?.title || 'Postulación general' },
                   ].map(({ label, value }) => value && (
