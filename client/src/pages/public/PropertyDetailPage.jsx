@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Maximize2, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone, ZoomIn } from 'lucide-react';
-import { getPropertyBySlug } from '../../services/propertyService';
+import { MapPin, Maximize2, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone, ZoomIn, Clock, CheckCircle2 } from 'lucide-react';
+import { getPropertyBySlug, getProperties } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
@@ -12,10 +12,45 @@ import WhatsAppButton from '../../components/ui/WhatsAppButton';
 import DownloadQuoteButton from '../../components/ui/DownloadQuoteButton';
 import FavoriteButton from '../../components/ui/FavoriteButton';
 import ComparatorButton from '../../components/ui/ComparatorButton';
+import PropertyCard from '../../components/ui/PropertyCard';
 import Lightbox from '../../components/ui/Lightbox';
 import { buildImageUrl } from '../../utils/images';
 import { formatPrice } from '../../utils/formatters';
 import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
+
+const ACQUISITION_STAGES = [
+  { key: 'documentacion', label: 'Documentación' },
+  { key: 'avaluo', label: 'Avalúo' },
+  { key: 'negociacion', label: 'Negociación' },
+  { key: 'firma', label: 'Firma' },
+  { key: 'entrega', label: 'Entrega' },
+];
+
+function AcquisitionProgress({ stage }) {
+  const currentIdx = ACQUISITION_STAGES.findIndex((s) => s.key === stage);
+  if (currentIdx === -1) return null;
+  return (
+    <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
+      <h3 className="font-bold text-blue-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+        <CheckCircle2 size={18} className="text-yellow-500" /> Proceso de adquisición
+      </h3>
+      <div className="flex items-center gap-1">
+        {ACQUISITION_STAGES.map((s, i) => {
+          const done = i <= currentIdx;
+          const active = i === currentIdx;
+          return (
+            <div key={s.key} className="flex-1 flex flex-col items-center gap-1">
+              <div className={`w-full h-1.5 rounded-full ${i === 0 ? 'rounded-l-full' : ''} ${i === ACQUISITION_STAGES.length - 1 ? 'rounded-r-full' : ''} ${done ? 'bg-yellow-500' : 'bg-gray-200 dark:bg-[#2e3650]'}`} />
+              <span className={`text-[10px] font-medium text-center leading-tight ${active ? 'text-yellow-600 dark:text-yellow-400' : done ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'}`}>
+                {s.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function PropertyDetailPage() {
   const { slug } = useParams();
@@ -31,6 +66,18 @@ export default function PropertyDetailPage() {
   const images = property?.images || [];
   const coverImage = images.find((i) => i.isCover) || images[0];
   const coverUrl = coverImage ? buildImageUrl(coverImage.url, 1200) : null;
+
+  const { data: similarData } = useQuery({
+    queryKey: ['similar', property?.city, property?.type],
+    queryFn: () => getProperties({ city: property.city, type: property.type, limit: 6 }),
+    enabled: !!property,
+  });
+  const similar = similarData?.data?.filter((p) => p.id !== property?.id).slice(0, 3) ?? [];
+
+  const daysLeft = property?.auctionDate
+    ? Math.ceil((new Date(property.auctionDate) - new Date()) / 86400000)
+    : null;
+  const showCountdown = daysLeft !== null && daysLeft > 0;
 
   const buildDescription = (p) => {
     const parts = [
@@ -85,6 +132,18 @@ export default function PropertyDetailPage() {
           <ShareButton title={property.title} subtitle={`${formatPrice(property.price)} · ${CITY_LABELS[property.city]}`} url={`/propiedades/${property.slug}`} />
         </div>
       </div>
+
+      {showCountdown && (
+        <div className={`mb-6 rounded-xl px-5 py-3 flex items-center gap-3 ${daysLeft <= 7 ? 'bg-red-600 text-white' : daysLeft <= 14 ? 'bg-orange-500 text-white' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'}`}>
+          <Clock size={18} className="flex-shrink-0" />
+          <span className="font-semibold text-sm">
+            {daysLeft === 1 ? '¡El remate es mañana!' : `Remate en ${daysLeft} días`}
+          </span>
+          <span className="text-sm opacity-80">
+            — {new Date(property.auctionDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2">
@@ -193,6 +252,10 @@ export default function PropertyDetailPage() {
 
           <DownloadQuoteButton propertyId={property.id} slug={property.slug} />
 
+          {property.acquisitionStage && property.acquisitionStage !== 'sin_proceso' && (
+            <AcquisitionProgress stage={property.acquisitionStage} />
+          )}
+
           <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
             <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
               <Phone size={18} /> Contactar asesor
@@ -201,6 +264,15 @@ export default function PropertyDetailPage() {
           </div>
         </div>
       </div>
+
+      {similar.length > 0 && (
+        <div className="mt-14">
+          <h2 className="text-xl font-bold text-blue-900 dark:text-white mb-6">Propiedades similares</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {similar.map((p) => <PropertyCard key={p.id} property={p} />)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

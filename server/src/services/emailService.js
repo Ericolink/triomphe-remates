@@ -1,5 +1,36 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
+
+const getLogoAttachment = async () => {
+  const candidates = [
+    path.join(__dirname, '../../../client/public/logo.png'),
+    path.join(__dirname, '../../client/public/logo.png'),
+    path.join(__dirname, '../client/public/logo.png'),
+    path.join(__dirname, '../../public/logo.png'),
+  ];
+  const logoPath = candidates.find((p) => fs.existsSync(p));
+  if (!logoPath) return null;
+  try {
+    const { Jimp: JimpClass } = require('jimp');
+    const img = await JimpClass.read(logoPath);
+    for (let y = 0; y < img.height; y++) {
+      for (let x = 0; x < img.width; x++) {
+        const idx = (img.width * y + x) * 4;
+        if (img.bitmap.data[idx + 3] > 10) {
+          img.bitmap.data[idx]     = 255;
+          img.bitmap.data[idx + 1] = 255;
+          img.bitmap.data[idx + 2] = 255;
+        }
+      }
+    }
+    const buffer = await img.getBuffer('image/png');
+    return { filename: 'logo.png', content: buffer, cid: 'triomphe-logo' };
+  } catch {
+    return { filename: 'logo.png', path: logoPath, cid: 'triomphe-logo' };
+  }
+};
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -12,18 +43,21 @@ const transporter = nodemailer.createTransport({
 const buildEmail = ({ title, subtitle, badge = '', body, cta = '', footerNote = '' }) => `
   <!DOCTYPE html>
   <html>
-  <head><meta charset="utf-8"></head>
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
   <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
     <div style="max-width:580px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
-      <div style="background:#1a3a5c;padding:28px 32px">
+      <div style="background:#1a3a5c;padding:24px 32px;text-align:center">
+        <img src="cid:triomphe-logo" alt="Triomphe Bienes Raíces" style="height:52px;width:auto;display:block;margin:0 auto 16px" />
         <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700">${title}</h1>
-        <p style="margin:6px 0 0;color:#93c5fd;font-size:13px">${subtitle}</p>
+        ${subtitle ? `<p style="margin:6px 0 0;color:#93c5fd;font-size:13px">${subtitle}</p>` : ''}
       </div>
+      <div style="height:4px;background:linear-gradient(90deg,#c8a96e 0%,#e8c88e 50%,#c8a96e 100%)"></div>
       ${badge}
       <div style="padding:28px 32px">${body}</div>
-      ${cta ? `<div style="padding:0 32px 28px">${cta}</div>` : ''}
-      <div style="background:#f8f9fa;padding:16px 32px;border-top:1px solid #e5e7eb">
-        <p style="margin:0;color:#9ca3af;font-size:11px">${footerNote || `Este correo fue generado automáticamente por el sistema de Triomphe Bienes Raíces. Recibido el ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`}</p>
+      ${cta ? `<div style="padding:0 32px 28px;text-align:center">${cta}</div>` : ''}
+      <div style="background:#1a3a5c;padding:20px 32px;text-align:center">
+        <p style="margin:0 0 6px;color:#c8a96e;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Triomphe Bienes Raíces</p>
+        <p style="margin:0;color:#7da8cc;font-size:11px;line-height:1.6">${footerNote || `Este correo fue generado automáticamente. ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`}</p>
       </div>
     </div>
   </body>
@@ -35,7 +69,7 @@ const typeLabel = { contacto: 'Solicitud de información', cita: 'Agendar visita
 const expLabel = { sin_experiencia: 'Sin experiencia', 'menos_1_año': 'Menos de 1 año', '1_3_años': '1 a 3 años', 'mas_3_años': 'Más de 3 años' };
 
 const ctaButton = (href, label) =>
-  `<a href="${href}" style="display:inline-block;background:#1a3a5c;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600">${label}</a>`;
+  `<a href="${href}" style="display:inline-block;background:#c8a96e;color:#1a3a5c;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:13px;font-weight:700;letter-spacing:0.3px">${label}</a>`;
 
 const tableRow = (label, value, last = false) =>
   `<tr${last ? '' : ' style="border-bottom:1px solid #f3f4f6"'}><td style="padding:8px 0;color:#6b7280;font-size:13px;width:130px">${label}</td><td style="padding:8px 0;font-size:13px">${value}</td></tr>`;
@@ -44,7 +78,7 @@ const messageBlock = (text) =>
   `<div style="margin-top:20px;background:#f8f9fa;border-radius:10px;padding:16px"><p style="margin:0 0 6px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Mensaje</p><p style="margin:0;color:#374151;font-size:13px;line-height:1.6">${text}</p></div>`;
 
 const yellowBadge = (text) =>
-  `<div style="background:#fef3c7;padding:12px 32px;border-bottom:1px solid #fde68a"><span style="color:#92400e;font-size:13px;font-weight:600">${text}</span></div>`;
+  `<div style="background:#fdf8ef;padding:12px 32px;border-bottom:1px solid #e8c88e"><span style="color:#1a3a5c;font-size:13px;font-weight:700">${text}</span></div>`;
 
 const verifyConnection = async () => {
   try {
@@ -86,6 +120,7 @@ const sendNewLeadNotification = async (lead, property) => {
     to: process.env.EMAIL_TO,
     subject: `🔔 Nuevo lead: ${lead.name} — ${typeLabel[lead.type] || lead.type}`,
     html,
+    attachments: [await getLogoAttachment()].filter(Boolean),
   });
 };
 
@@ -113,6 +148,7 @@ const sendLeadConfirmation = async (lead) => {
     to: lead.email,
     subject: `✅ Recibimos tu mensaje — Triomphe Bienes Raíces`,
     html,
+    attachments: [await getLogoAttachment()].filter(Boolean),
   });
 };
 
@@ -145,6 +181,7 @@ const sendJobApplicationNotification = async (application, position) => {
     to: process.env.EMAIL_TO,
     subject: `👤 Nueva postulación: ${application.name}${position ? ` — ${position.title}` : ' (General)'}`,
     html,
+    attachments: [await getLogoAttachment()].filter(Boolean),
   });
 };
 
@@ -169,6 +206,7 @@ const sendJobApplicationConfirmation = async (application, position) => {
     to: application.email,
     subject: `✅ Postulación recibida — Triomphe Bienes Raíces`,
     html,
+    attachments: [await getLogoAttachment()].filter(Boolean),
   });
 };
 
@@ -204,6 +242,7 @@ const sendFeedbackNotification = async (feedback) => {
     to: process.env.EMAIL_TO,
     subject: `📬 ${categoryLabel[feedback.category] || feedback.category}: ${feedback.subject} — ${feedback.name}`,
     html,
+    attachments: [await getLogoAttachment()].filter(Boolean),
   });
 };
 
@@ -242,6 +281,7 @@ const sendPropertyAlertNotification = async (alert, property) => {
     to: alert.email,
     subject: `🏠 Nueva propiedad en ${cityLabel[property.city] || property.city}: ${property.title}`,
     html,
+    attachments: [await getLogoAttachment()].filter(Boolean),
   });
 };
 

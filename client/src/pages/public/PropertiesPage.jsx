@@ -13,6 +13,8 @@ import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../.
 const CITIES = [{ value: '', label: 'Todas las ciudades' }, { value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }];
 const TYPES = [{ value: '', label: 'Todos los tipos' }, { value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }, { value: 'terreno', label: 'Terreno' }, { value: 'local', label: 'Local' }, { value: 'bodega', label: 'Bodega' }];
 const STATUS = [{ value: '', label: 'Todos los estatus' }, { value: 'disponible', label: 'Disponible' }, { value: 'apartado', label: 'Apartado' }];
+const BEDROOMS = [{ value: '', label: 'Cualquier cantidad' }, { value: '1', label: '1+ recámara' }, { value: '2', label: '2+ recámaras' }, { value: '3', label: '3+ recámaras' }, { value: '4', label: '4+ recámaras' }];
+const BATHROOMS = [{ value: '', label: 'Cualquier cantidad' }, { value: '1', label: '1+ baño' }, { value: '2', label: '2+ baños' }, { value: '3', label: '3+ baños' }];
 
 export default function PropertiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,6 +22,7 @@ export default function PropertiesPage() {
   const [showAlertForm, setShowAlertForm] = useState(false);
   const [localFilters, setLocalFilters] = useState({
     city: '', type: '', status: '', maxPrice: '', search: '',
+    minBedrooms: '', minBathrooms: '', minM2: '', maxM2: '',
   });
   const sentinelRef = useRef(null);
 
@@ -29,6 +32,10 @@ export default function PropertiesPage() {
     status: localFilters.status,
     maxPrice: localFilters.maxPrice,
     search: searchParams.get('search') || localFilters.search,
+    minBedrooms: localFilters.minBedrooms,
+    minBathrooms: localFilters.minBathrooms,
+    minM2: localFilters.minM2,
+    maxM2: localFilters.maxM2,
   };
 
   const {
@@ -66,11 +73,12 @@ export default function PropertiesPage() {
   };
 
   const clearFilters = () => {
-    setLocalFilters({ city: '', type: '', status: '', maxPrice: '', search: '' });
+    setLocalFilters({ city: '', type: '', status: '', maxPrice: '', search: '', minBedrooms: '', minBathrooms: '', minM2: '', maxM2: '' });
     setSearchParams({});
   };
 
-  const hasFilters = filters.city || filters.type || filters.status || filters.maxPrice || filters.search;
+  const hasFilters = filters.city || filters.type || filters.status || filters.maxPrice || filters.search
+    || filters.minBedrooms || filters.minBathrooms || filters.minM2 || filters.maxM2;
 
   return (
     <motion.div
@@ -153,6 +161,32 @@ export default function PropertiesPage() {
                   onChange={(e) => { const raw = e.target.value.replace(/[^0-9]/g, ''); setFilter('maxPrice', raw); }}
                   className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
                 {filters.maxPrice && <p className="text-xs text-blue-600 mt-1">$ {Number(filters.maxPrice).toLocaleString('es-MX')} MXN</p>}
+              </div>
+              {[
+                { key: 'minBedrooms', options: BEDROOMS, label: 'Recámaras' },
+                { key: 'minBathrooms', options: BATHROOMS, label: 'Baños' },
+              ].map(({ key, options, label }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+                  <select value={filters[key]} onChange={(e) => setFilter(key, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white">
+                    {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">M² mín.</label>
+                <input type="number" placeholder="Ej: 80" min="0"
+                  value={filters.minM2}
+                  onChange={(e) => setFilter('minM2', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">M² máx.</label>
+                <input type="number" placeholder="Ej: 300" min="0"
+                  value={filters.maxM2}
+                  onChange={(e) => setFilter('maxM2', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
               </div>
             </div>
           </motion.div>

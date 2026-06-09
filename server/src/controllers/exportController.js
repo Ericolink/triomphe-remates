@@ -674,6 +674,18 @@ const exportLeadsExcel = async (req, res) => {
   }
 };
 
+// Removes emoji and non-Latin-1 characters that Helvetica can't render
+const stripUnsupported = (str) => {
+  if (!str) return str;
+  return str
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')   // Supplementary planes (emoji, symbols)
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')       // Misc symbols, dingbats
+    .replace(/️/gu, '')                     // Emoji variation selector
+    .replace(/‍/gu, '')                     // Zero-width joiner
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PDF — Cotización / ficha de propiedad
 // ─────────────────────────────────────────────────────────────────────────────
@@ -738,14 +750,15 @@ const exportPropertyQuotePDF = async (req, res) => {
     doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
       .text(statusLabel[property.status] || property.status, MX, y + 6, { width: 90, align: 'center' });
 
+    const cleanTitle = stripUnsupported(property.title);
     doc.fillColor(PRIMARY).fontSize(20).font('Helvetica-Bold')
-      .text(property.title, MX, y + 34, { width: PW - MX * 2 });
+      .text(cleanTitle, MX, y + 34, { width: PW - MX * 2 });
 
-    const titleHeight = doc.heightOfString(property.title, { width: PW - MX * 2, fontSize: 20 });
+    const titleHeight = doc.heightOfString(cleanTitle, { width: PW - MX * 2, fontSize: 20 });
     y += 34 + titleHeight + 10;
 
     doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
-      .text(`${cityLabel[property.city] || property.city}  ·  ${typeLabel[property.type] || property.type}${property.address ? `  ·  ${property.address}` : ''}`,
+      .text(`${cityLabel[property.city] || property.city}  ·  ${typeLabel[property.type] || property.type}${property.address ? `  ·  ${stripUnsupported(property.address)}` : ''}`,
         MX, y, { width: PW - MX * 2 });
     y += 22;
 
@@ -778,17 +791,31 @@ const exportPropertyQuotePDF = async (req, res) => {
     }
 
     // Descripción
+    const FOOTER_H = 86;
     if (property.description) {
+      const cleanDesc = stripUnsupported(property.description);
+      const descW = PW - MX * 2;
       doc.moveTo(MX, y).lineTo(PW - MX, y).strokeColor('#e5e7eb').lineWidth(1).stroke();
       y += 16;
       doc.fillColor(PRIMARY).fontSize(12).font('Helvetica-Bold').text('Descripción', MX, y);
       y += 18;
+
+      // Set the body font before measuring — heightOfString uses the current doc font
+      doc.font('Helvetica').fontSize(10);
+      const descH = doc.heightOfString(cleanDesc, { width: descW, lineGap: 2 });
+      if (y + descH + FOOTER_H + 12 > doc.page.height) {
+        doc.addPage({ size: 'A4', margin: 0 });
+        doc.rect(0, 0, PW, 32).fill(PRIMARY);
+        doc.fillColor('white').fontSize(7.5).font('Helvetica')
+          .text(cleanTitle, MX, 10, { width: PW - MX * 2, align: 'center' });
+        y = 48;
+      }
+
       doc.fillColor(TEXT).fontSize(10).font('Helvetica')
-        .text(property.description, MX, y, { width: PW - MX * 2, align: 'justify', lineGap: 2 });
+        .text(cleanDesc, MX, y, { width: descW, align: 'justify', lineGap: 2 });
     }
 
     // Pie de página — contacto
-    const FOOTER_H = 86;
     doc.rect(0, doc.page.height - FOOTER_H, PW, FOOTER_H).fill(PRIMARY);
     doc.fillColor(ACCENT).fontSize(11).font('Helvetica-Bold')
       .text('¿Te interesa esta propiedad? Contáctanos:', MX, doc.page.height - FOOTER_H + 16);
