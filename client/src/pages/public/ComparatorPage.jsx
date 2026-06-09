@@ -5,17 +5,12 @@ import useComparator from '../../hooks/useComparator';
 import SEO from '../../components/ui/SEO';
 import Badge from '../../components/ui/Badge';
 import { fadeInUp, staggerContainer } from '../../utils/animations';
+import { buildImageUrl } from '../../utils/images';
 
 const cityLabel   = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 const typeLabel   = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
 const statusLabel   = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
-
-const buildUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${import.meta.env.VITE_API_URL?.replace('/api', '')}${url}`;
-};
 
 const formatPrice = (p) =>
   p ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(p) : 'PENDIENTE';
@@ -80,7 +75,7 @@ export default function ComparatorPage() {
                   <div className="bg-white dark:bg-[#242938] rounded-2xl overflow-hidden border border-gray-100 dark:border-[#2e3650] shadow-sm">
                     <div className="relative h-24 sm:h-32 md:h-40 bg-gray-100 dark:bg-[#2e3650]">
                       {p.images?.[0] ? (
-                        <img src={buildUrl(p.images[0].url)} alt={p.title} className="w-full h-full object-cover" />
+                        <img src={buildImageUrl(p.images[0].url, 300)} alt={p.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
                           <Building size={36} />

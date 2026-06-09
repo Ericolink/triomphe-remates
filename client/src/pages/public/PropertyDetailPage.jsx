@@ -13,6 +13,7 @@ import DownloadQuoteButton from '../../components/ui/DownloadQuoteButton';
 import FavoriteButton from '../../components/ui/FavoriteButton';
 import ComparatorButton from '../../components/ui/ComparatorButton';
 import Lightbox from '../../components/ui/Lightbox';
+import { buildImageUrl } from '../../utils/images';
 
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
@@ -24,13 +25,6 @@ export default function PropertyDetailPage() {
   const navigate = useNavigate();
   const [imgIndex, setImgIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '');
-  const buildImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${apiBase}${url}`;
-  };
-
   const { data, isLoading, isError } = useQuery({
     queryKey: ['property', slug],
     queryFn: () => getPropertyBySlug(slug),
@@ -39,7 +33,7 @@ export default function PropertyDetailPage() {
   const property = data?.data;
   const images = property?.images || [];
   const coverImage = images.find((i) => i.isCover) || images[0];
-  const coverUrl = coverImage ? buildImageUrl(coverImage.url) : null;
+  const coverUrl = coverImage ? buildImageUrl(coverImage.url, 1200) : null;
 
   const formatPrice = (price) => {
     if (price === null || price === undefined || price === '') return 'PENDIENTE';
@@ -83,7 +77,6 @@ export default function PropertyDetailPage() {
         <Lightbox
           images={images}
           currentIndex={imgIndex}
-          apiBase={apiBase}
           onClose={() => setLightboxOpen(false)}
           onPrev={() => setImgIndex((i) => (i - 1 + images.length) % images.length)}
           onNext={() => setImgIndex((i) => (i + 1) % images.length)}
@@ -112,7 +105,7 @@ export default function PropertyDetailPage() {
             {images.length > 0 ? (
               <>
                 <img
-                  src={buildImageUrl(images[imgIndex]?.url)}
+                  src={buildImageUrl(images[imgIndex]?.url, 1000)}
                   alt={`${property.title} - imagen ${imgIndex + 1}`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
@@ -148,7 +141,7 @@ export default function PropertyDetailPage() {
               {images.map((img, i) => (
                 <button key={img.id} onClick={() => setImgIndex(i)}
                   className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${i === imgIndex ? 'border-blue-600' : 'border-transparent hover:border-gray-300'}`}>
-                  <img src={buildImageUrl(img.url)} alt="" className="w-full h-full object-cover" />
+                  <img src={buildImageUrl(img.url, 120)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

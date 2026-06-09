@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { buildImageUrl } from '../../utils/images';
 
-export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext, apiBase }) {
+export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext }) {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -44,7 +45,7 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
       )}
 
       <img
-        src={images[currentIndex].url?.startsWith('http') ? images[currentIndex].url : `${apiBase}${images[currentIndex].url}`}
+        src={buildImageUrl(images[currentIndex].url, 1600)}
         alt={`Imagen ${currentIndex + 1}`}
         className="max-h-[90vh] max-w-[90vw] object-contain"
         onClick={(e) => e.stopPropagation()}

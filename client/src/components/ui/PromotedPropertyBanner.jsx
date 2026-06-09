@@ -2,20 +2,15 @@ import { Link } from 'react-router-dom';
 import { MapPin, Maximize2, Bed, Bath, Star, ArrowRight, Building } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Badge from './Badge';
+import { buildImageUrl } from '../../utils/images';
 
 const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
 
-const buildUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${import.meta.env.VITE_API_URL?.replace('/api', '')}${url}`;
-};
-
 export default function PromotedPropertyBanner({ property }) {
   const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
-  const imageUrl = buildUrl(coverImage?.url);
+  const imageUrl = buildImageUrl(coverImage?.url, 800);
 
   const formatPrice = (price) => {
     if (price === null || price === undefined || price === '') return 'PENDIENTE';

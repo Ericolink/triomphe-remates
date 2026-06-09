@@ -2,12 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { GitCompare, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useComparator from '../../hooks/useComparator';
-
-const buildUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${import.meta.env.VITE_API_URL?.replace('/api', '')}${url}`;
-};
+import { buildImageUrl } from '../../utils/images';
 
 export default function ComparatorBar() {
   const { items, clear, toggle, count } = useComparator();
@@ -35,7 +30,7 @@ export default function ComparatorBar() {
             <div className="flex items-center gap-2">
               {items.map((p) => {
                 const img = p.images?.[0];
-                const imgUrl = img ? buildUrl(img.url) : null;
+                const imgUrl = img ? buildImageUrl(img.url, 80) : null;
                 return (
                   <div key={p.id} className="relative flex-shrink-0">
                     <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-[#2e3650]">

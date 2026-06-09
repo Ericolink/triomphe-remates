@@ -5,21 +5,16 @@ import { motion } from 'framer-motion';
 import Badge from './Badge';
 import FavoriteButton from './FavoriteButton';
 import ComparatorButton from './ComparatorButton';
+import { buildImageUrl } from '../../utils/images';
 
 const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
 const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 
-const buildUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${import.meta.env.VITE_API_URL?.replace('/api', '')}${url}`;
-};
-
 export default function PropertyCard({ property }) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
-  const imageUrl = buildUrl(coverImage?.url);
+  const imageUrl = buildImageUrl(coverImage?.url, 600);
 
   const formatPrice = (price) => {
     if (price === null || price === undefined || price === '') return 'PENDIENTE';
@@ -40,6 +35,8 @@ export default function PropertyCard({ property }) {
               <motion.img
                 src={imageUrl}
                 alt={property.title}
+                loading="lazy"
+                decoding="async"
                 onLoad={() => setImageLoaded(true)}
                 className="w-full h-full object-cover"
                 initial={{ opacity: 0 }}
