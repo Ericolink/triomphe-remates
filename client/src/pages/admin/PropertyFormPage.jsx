@@ -10,6 +10,7 @@ import {
 } from '../../services/propertyService';
 import Spinner from '../../components/ui/Spinner';
 import { safeBlobUrl } from '../../utils/sanitize';
+import { buildImageUrl } from '../../utils/images';
 
 const FIELDS = [
   { key: 'title', label: 'Título *', type: 'text', col: 2 },
@@ -153,12 +154,6 @@ export default function PropertyFormPage() {
     saveMutation.mutate({ ...rest, price: pricePending ? null : form.price });
   };
 
-  const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '');
-  const buildImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${apiBase}${url}`;
-  };
   const existingImages = data?.data?.images || [];
   const imagesKey = existingImages.map((img) => img.id).join(',');
   if (existingImages.length > 0 && imagesKey !== loadedImagesKey) {
@@ -301,7 +296,7 @@ export default function PropertyFormPage() {
               {imageOrder.map((img) => (
                 <Reorder.Item key={img.id} value={img} dragListener
                   className="relative group cursor-grab active:cursor-grabbing">
-                  <img src={buildImageUrl(img.url)} alt="Imagen de propiedad" draggable={false}
+                  <img src={buildImageUrl(img.url, 240)} alt="Imagen de propiedad" loading="lazy" decoding="async" draggable={false}
                     className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
                   <div className="absolute top-1 right-1 p-1 bg-white/80 dark:bg-[#1a1f2e]/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                     <GripVertical size={14} className="text-gray-500 dark:text-gray-300" />
