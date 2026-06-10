@@ -6,7 +6,7 @@ const leadEvents = require('../utils/leadEvents');
 // POST /api/leads
 const createLead = async (req, res) => {
   try {
-    const { name, email, phone, message, type, propertyId, appointmentDate } = req.body;
+    const { name, email, phone, message, type, propertyId, appointmentDate, source } = req.body;
 
     if (!name || !email) {
       return res.status(400).json({ error: 'Nombre y email son requeridos' });
@@ -25,6 +25,7 @@ const createLead = async (req, res) => {
     const lead = await Lead.create({
       name, email, phone, message,
       type: type || 'contacto',
+      source: source || 'directo',
       propertyId: propertyId || null,
       appointmentDate: appointmentDate || null,
     });
@@ -57,11 +58,12 @@ const createLead = async (req, res) => {
 // GET /api/leads
 const getLeads = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, type, propertyId } = req.query;
+    const { page = 1, limit = 20, status, type, propertyId, source } = req.query;
     const where = {};
 
     if (status) where.status = status;
     if (type) where.type = type;
+    if (source) where.source = source;
     if (propertyId) where.propertyId = propertyId;
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -119,11 +121,12 @@ const updateLead = async (req, res) => {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
-    const { status, notes, appointmentDate } = req.body;
+    const { status, notes, appointmentDate, source } = req.body;
     const updates = {};
     if (status !== undefined) updates.status = status;
     if (notes !== undefined) updates.notes = notes;
     if (appointmentDate !== undefined) updates.appointmentDate = appointmentDate;
+    if (source !== undefined) updates.source = source;
     await lead.update(updates);
 
     return res.json({ message: 'Lead actualizado exitosamente', data: lead });

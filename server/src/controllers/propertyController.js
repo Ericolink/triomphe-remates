@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
 const { cloudinary } = require('../config/cloudinary');
 const { Property, Image, Analytics, PropertyAlert, PropertyStatusHistory } = require('../models/index');
 const { generateSlug } = require('../utils/helpers');
@@ -41,21 +41,36 @@ const getProperties = async (req, res) => {
       if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
     }
 
+    const andConditions = [];
+
     if (minM2 || maxM2) {
-      where.squareMeters = {};
-      if (minM2) where.squareMeters[Op.gte] = parseFloat(minM2);
-      if (maxM2) where.squareMeters[Op.lte] = parseFloat(maxM2);
+      const m2Range = {};
+      if (minM2) m2Range[Op.gte] = parseFloat(minM2);
+      if (maxM2) m2Range[Op.lte] = parseFloat(maxM2);
+      // Una propiedad puede registrar sus m² en cualquiera de estos tres campos
+      andConditions.push({
+        [Op.or]: [
+          { squareMeters: m2Range },
+          { terrainMeters: m2Range },
+          { constructionMeters: m2Range },
+        ],
+      });
     }
 
     if (minBedrooms) where.bedrooms = { [Op.gte]: parseInt(minBedrooms) };
     if (minBathrooms) where.bathrooms = { [Op.gte]: parseInt(minBathrooms) };
 
     if (search) {
-      where[Op.or] = [
-        { title: { [Op.like]: `%${search}%` } },
-        { address: { [Op.like]: `%${search}%` } },
-      ];
+      andConditions.push({
+        [Op.or]: [
+          { title:       { [Op.like]: `%${search}%` } },
+          { address:     { [Op.like]: `%${search}%` } },
+          { description: { [Op.like]: `%${search}%` } },
+        ],
+      });
     }
+
+    if (andConditions.length > 0) where[Op.and] = andConditions;
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -79,6 +94,29 @@ const getProperties = async (req, res) => {
     });
   } catch (error) {
     console.error('Error en getProperties:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// GET /api/properties/stats
+const getPropertyStats = async (req, res) => {
+  try {
+    const where = { status: { [Op.ne]: 'vendido' } };
+
+    const total = await Property.count({ where });
+    const byCityRaw = await Property.findAll({
+      where,
+      attributes: ['city', [fn('COUNT', col('id')), 'total']],
+      group: ['city'],
+      raw: true,
+    });
+
+    const byCity = { juarez: 0, chihuahua: 0, queretaro: 0 };
+    byCityRaw.forEach((row) => { byCity[row.city] = parseInt(row.total); });
+
+    return res.json({ total, byCity });
+  } catch (error) {
+    console.error('Error en getPropertyStats:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -146,7 +184,7 @@ const createProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address, auctionDate, acquisitionStage, isFeatured, internalNotes,
+      address, auctionDate, acquisitionStage, isFeatured, internalNotes, code,
     } = req.body;
 
     if (!title || !city || !type) {
@@ -173,6 +211,7 @@ const createProperty = async (req, res) => {
       acquisitionStage: acquisitionStage || 'sin_proceso',
       isFeatured: isFeatured || false,
       internalNotes: internalNotes || null,
+      code: nullIfEmpty(code),
       slug,
     });
 
@@ -231,7 +270,7 @@ const updateProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address, auctionDate, acquisitionStage, isFeatured, internalNotes,
+      address, auctionDate, acquisitionStage, isFeatured, internalNotes, code,
     } = req.body;
 
     if (title && title !== property.title) {
@@ -242,6 +281,7 @@ const updateProperty = async (req, res) => {
     }
 
     const previousStatus = property.status;
+    const previousPrice  = property.price;
 
     await property.update({
       title, description,
@@ -255,16 +295,31 @@ const updateProperty = async (req, res) => {
       address, auctionDate: auctionDate || null,
       acquisitionStage: acquisitionStage || 'sin_proceso',
       isFeatured, internalNotes: internalNotes || null,
+      code: nullIfEmpty(code),
       slug: req.body.slug,
     });
 
     if (status && status !== previousStatus) {
       PropertyStatusHistory.create({
         propertyId: property.id,
+        changeType: 'status',
         fromStatus: previousStatus,
         toStatus: status,
         userName: req.user?.name || null,
       }).catch((e) => console.error('Error registrando historial de estatus:', e));
+    }
+
+    const newPrice = nullIfEmpty(price);
+    const prevPrice = previousPrice !== null && previousPrice !== undefined ? parseFloat(previousPrice) : null;
+    const nextPrice = newPrice !== null && newPrice !== undefined ? parseFloat(newPrice) : null;
+    if (price !== undefined && prevPrice !== nextPrice) {
+      PropertyStatusHistory.create({
+        propertyId: property.id,
+        changeType: 'price',
+        fromPrice: prevPrice,
+        toPrice: nextPrice,
+        userName: req.user?.name || null,
+      }).catch((e) => console.error('Error registrando historial de precio:', e));
     }
 
     logAudit(req, 'update', 'property', property.id, { title: property.title });
@@ -493,4 +548,5 @@ module.exports = {
   getPromotedProperty,
   promoteProperty,
   getStatusHistory,
+  getPropertyStats,
 };

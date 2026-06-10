@@ -54,6 +54,11 @@ export const reorderImages = async (propertyId, imageIds) => {
   return data;
 };
 
+export const getPropertyStats = async () => {
+  const { data } = await api.get('/properties/stats');
+  return data;
+};
+
 export const getPromotedProperty = async () => {
   const { data } = await api.get('/properties/promoted');
   return data;
@@ -66,6 +71,26 @@ export const promoteProperty = async (id) => {
 
 export const getStatusHistory = async (id) => {
   const { data } = await api.get(`/properties/${id}/status-history`);
+  return data;
+};
+
+export const getDocuments = async (id) => {
+  const { data } = await api.get(`/properties/${id}/documents`);
+  return data;
+};
+
+export const uploadDocument = async (id, file, name) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (name) formData.append('name', name);
+  const { data } = await api.post(`/properties/${id}/documents`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+};
+
+export const deleteDocument = async (propertyId, docId) => {
+  const { data } = await api.delete(`/properties/${propertyId}/documents/${docId}`);
   return data;
 };
 

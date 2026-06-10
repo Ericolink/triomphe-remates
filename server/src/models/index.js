@@ -11,6 +11,7 @@ const Feedback = require('./Feedback');
 const PropertyAlert = require('./PropertyAlert');
 const AuditLog = require('./AuditLog');
 const PropertyStatusHistory = require('./PropertyStatusHistory');
+const PropertyDocument = require('./PropertyDocument');
 
 // Propiedades
 Property.hasMany(Image, { foreignKey: 'propertyId', as: 'images', onDelete: 'CASCADE' });
@@ -28,8 +29,11 @@ Analytics.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 Property.hasMany(PropertyStatusHistory, { foreignKey: 'propertyId', as: 'statusHistory', onDelete: 'CASCADE' });
 PropertyStatusHistory.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
+Property.hasMany(PropertyDocument, { foreignKey: 'propertyId', as: 'documents', onDelete: 'CASCADE' });
+PropertyDocument.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
+
 // Bolsa de trabajo
 JobPosition.hasMany(JobApplication, { foreignKey: 'jobPositionId', as: 'applications', onDelete: 'SET NULL' });
 JobApplication.belongsTo(JobPosition, { foreignKey: 'jobPositionId', as: 'position' });
 
-module.exports = { sequelize, User, Property, Image, Lead, LeadNote, Analytics, JobPosition, JobApplication, Feedback, PropertyAlert, AuditLog, PropertyStatusHistory };
+module.exports = { sequelize, User, Property, Image, Lead, LeadNote, Analytics, JobPosition, JobApplication, Feedback, PropertyAlert, AuditLog, PropertyStatusHistory, PropertyDocument };

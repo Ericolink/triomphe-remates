@@ -159,7 +159,9 @@ export default function AdminPropertiesPage() {
                       className="hover:bg-gray-50 dark:hover:bg-[#2e3650]/40 transition-colors">
                       <td className="px-4 py-3 max-w-xs">
                         <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{property.title}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">{property.type}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+                          {property.type}{property.code ? ` · ${property.code}` : ''}
+                        </p>
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {CITY_LABELS[property.city]}

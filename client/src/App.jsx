@@ -28,6 +28,7 @@ const UsersPage            = lazy(() => import('./pages/admin/UsersPage'));
 const BuzonAdminPage       = lazy(() => import('./pages/admin/BuzonAdminPage'));
 const AlertsAdminPage      = lazy(() => import('./pages/admin/AlertsAdminPage'));
 const AuditPage            = lazy(() => import('./pages/admin/AuditPage'));
+const CalendarPage         = lazy(() => import('./pages/admin/CalendarPage'));
 
 import PublicLayout from './components/layout/PublicLayout';
 
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="buzon"                  element={<BuzonAdminPage />} />
             <Route path="alertas"                element={<AlertsAdminPage />} />
             <Route path="auditoria"              element={<AuditPage />} />
+            <Route path="calendario"             element={<CalendarPage />} />
           </Route>
         </Routes>
       </Suspense>

@@ -3,11 +3,13 @@ const {
   getProperties, getPropertyById, getPropertyBySlug,
   createProperty, updateProperty, deleteProperty,
   uploadImages, deleteImage, setCoverImage, reorderImages,
-  getPromotedProperty, promoteProperty, getStatusHistory,
+  getPromotedProperty, promoteProperty, getStatusHistory, getPropertyStats,
 } = require('../controllers/propertyController');
+const { getDocuments, uploadDocument, deleteDocument } = require('../controllers/documentController');
 const { authenticate, attachUserIfPresent } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const upload = require('../middleware/uploadMiddleware');
+const { uploadDoc } = require('../middleware/uploadMiddleware');
 const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -18,6 +20,7 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  */
 
 router.get('/', apiLimiter, getProperties);
+router.get('/stats', apiLimiter, getPropertyStats);
 router.get('/promoted', apiLimiter, getPromotedProperty);
 router.get('/slug/:slug', apiLimiter, getPropertyBySlug);
 router.get('/:id', apiLimiter, attachUserIfPresent, getPropertyById);
@@ -32,5 +35,9 @@ router.post('/:id/images', uploadLimiter, authenticate, authorize('admin', 'edit
 router.delete('/:id/images/:imageId', apiLimiter, authenticate, authorize('admin', 'editor'), deleteImage);
 router.put('/:id/images/:imageId/cover', apiLimiter, authenticate, authorize('admin', 'editor'), setCoverImage);
 router.put('/:id/images/reorder', apiLimiter, authenticate, authorize('admin', 'editor'), reorderImages);
+
+router.get('/:id/documents', apiLimiter, getDocuments);
+router.post('/:id/documents', uploadLimiter, authenticate, authorize('admin', 'editor'), uploadDoc.single('file'), uploadDocument);
+router.delete('/:id/documents/:docId', apiLimiter, authenticate, authorize('admin', 'editor'), deleteDocument);
 
 module.exports = router;

@@ -11,6 +11,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import BatchActionBar from '../../components/ui/BatchActionBar';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 import { formatDate, formatDateTime } from '../../utils/formatters';
+import { SOURCE_LABELS, SOURCE_COLORS } from '../../utils/constants';
 
 const statusVariant = { nuevo: 'primary', contactado: 'warning', cerrado: 'success', descartado: 'default' };
 const typeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
@@ -101,6 +102,14 @@ function LeadDetailPanel({ selected, onClose, updateMutation }) {
               <option value="contactado">Contactado</option>
               <option value="cerrado">Cerrado</option>
               <option value="descartado">Descartado</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fuente</label>
+            <select value={selected.source || 'directo'}
+              onChange={(e) => { updateMutation.mutate({ id: selected.id, data: { source: e.target.value } }); }}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none">
+              {Object.entries(SOURCE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div>
@@ -386,6 +395,11 @@ export default function LeadsPage() {
                             <div className="flex gap-2">
                               <Badge variant="default">{typeLabel[lead.type]}</Badge>
                               <Badge variant={statusVariant[lead.status]}>{lead.status}</Badge>
+                              {lead.source && lead.source !== 'directo' && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_COLORS[lead.source] || SOURCE_COLORS.otro}`}>
+                                  {SOURCE_LABELS[lead.source]}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">

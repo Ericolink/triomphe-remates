@@ -61,6 +61,16 @@ const getDashboard = async (req, res) => {
       total: parseInt(leadsByTypeRaw.find((r) => r.type === type)?.total || 0),
     }));
 
+    const leadsBySourceRaw = await Lead.findAll({
+      attributes: ['source', [fn('COUNT', col('id')), 'total']],
+      group: ['source'],
+      raw: true,
+    });
+    const leadsBySource = ['google', 'facebook', 'whatsapp', 'directo', 'referido', 'otro'].map((source) => ({
+      source,
+      total: parseInt(leadsBySourceRaw.find((r) => r.source === source)?.total || 0),
+    }));
+
     // Embudo de conversión (últimos 30 días): vistas → leads → cerrados
     const recentLeads = await Lead.count({ where: { createdAt: { [Op.gte]: thirtyDaysAgo } } });
     const recentClosedLeads = await Lead.count({ where: { status: 'cerrado', createdAt: { [Op.gte]: thirtyDaysAgo } } });
@@ -143,6 +153,7 @@ const getDashboard = async (req, res) => {
         leads: { total: totalLeads, new: newLeads, closed: closedLeads },
         leadsByStatus,
         leadsByType,
+        leadsBySource,
         conversion: {
           rate: Math.round(conversionRate * 10) / 10,
           viewToLeadRate: Math.round(viewToLeadRate * 10) / 10,

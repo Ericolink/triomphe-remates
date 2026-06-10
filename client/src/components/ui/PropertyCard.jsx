@@ -24,7 +24,8 @@ export default function PropertyCard({ property }) {
   const daysLeft = property.auctionDate
     ? Math.ceil((new Date(property.auctionDate) - new Date()) / 86400000)
     : null;
-  const showCountdown = daysLeft !== null && daysLeft > 0 && daysLeft <= 60;
+  const showCountdown = daysLeft !== null && daysLeft > 0;
+  const countdownLabel = daysLeft > 100 ? '+100' : `${daysLeft}d`;
 
   const waMessage = `Hola, me interesa esta propiedad: ${property.title}${property.price ? ` (${formatPrice(property.price)})` : ''}\n${window.location.origin}/propiedades/${property.slug}`;
   const waHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waMessage)}`;
@@ -62,7 +63,7 @@ export default function PropertyCard({ property }) {
             <Badge variant={STATUS_VARIANTS[property.status]}>{STATUS_LABELS[property.status]}</Badge>
             {showCountdown && (
               <span className="flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
-                <Clock size={10} /> {daysLeft}d
+                <Clock size={10} /> {countdownLabel}
               </span>
             )}
           </div>

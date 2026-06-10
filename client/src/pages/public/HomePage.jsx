@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Building2, TrendingDown, Shield, ChevronRight, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getProperties, getPromotedProperty } from '../../services/propertyService';
+import { getProperties, getPromotedProperty, getPropertyStats } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
 import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkeleton';
 import PromotedPropertyBanner from '../../components/ui/PromotedPropertyBanner';
@@ -24,6 +24,11 @@ export default function HomePage() {
   const { data: promotedData } = useQuery({
     queryKey: ['property', 'promoted'],
     queryFn: getPromotedProperty,
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['property-stats'],
+    queryFn: getPropertyStats,
   });
 
   const handleSearch = (e) => {
@@ -107,9 +112,9 @@ export default function HomePage() {
           viewport={{ once: true }}
         >
           {[
-            { label: 'Propiedades activas', value: '146+' },
+            { label: 'Propiedades activas', value: stats?.total ? `${stats.total}+` : '...' },
             { label: 'Ciudades', value: '3' },
-            { label: 'Años de experiencia', value: '10+' },
+            { label: 'Años de experiencia', value: '27+' },
             { label: 'Clientes satisfechos', value: '500+' },
           ].map(({ label, value }) => (
             <motion.div key={label} variants={fadeInUp} className="text-blue-900">

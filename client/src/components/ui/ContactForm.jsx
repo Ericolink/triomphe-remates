@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { createLead } from '../../services/leadService';
 
-export default function ContactForm({ propertyId, propertyTitle }) {
+export default function ContactForm({ propertyId, propertyTitle, defaultSource }) {
+  const [searchParams] = useSearchParams();
+  const source = defaultSource || searchParams.get('source') || searchParams.get('utm_source') || 'directo';
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '', type: 'contacto' });
 
   const { mutate, isPending } = useMutation({
@@ -18,7 +21,7 @@ export default function ContactForm({ propertyId, propertyTitle }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name || !form.email) return toast.error('Nombre y email son requeridos');
-    mutate({ ...form, propertyId });
+    mutate({ ...form, propertyId, source });
   };
 
   const inputClass = "w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500";

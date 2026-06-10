@@ -5,7 +5,7 @@ import { BarChart, AreaChart } from '../../components/ui/MiniChart';
 import { getDashboard } from '../../services/analyticsService';
 import Spinner from '../../components/ui/Spinner';
 import { staggerContainer, fadeInUp, fadeIn } from '../../utils/animations';
-import { CITY_LABELS, TYPE_LABELS_SHORT } from '../../utils/constants';
+import { CITY_LABELS, TYPE_LABELS_SHORT, SOURCE_LABELS, SOURCE_COLORS } from '../../utils/constants';
 
 const leadStatusLabel = { nuevo: 'Nuevos', contactado: 'Contactados', cerrado: 'Cerrados', descartado: 'Descartados' };
 const leadTypeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
@@ -198,6 +198,26 @@ export default function DashboardPage() {
             ))}
           </div>
         </motion.div>
+      </motion.div>
+
+      {/* Leads por fuente */}
+      <motion.div variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+        className="mt-6 bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <TrendingUp size={16} className="text-yellow-500" /> Leads por fuente
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {d?.leadsBySource?.filter(({ total }) => total > 0).map(({ source, total }) => (
+            <motion.div key={source} whileHover={{ y: -3 }} transition={{ duration: 0.15 }}
+              className={`rounded-xl p-3 text-center ${SOURCE_COLORS[source] || SOURCE_COLORS.otro}`}>
+              <p className="text-xl font-bold">{total}</p>
+              <p className="text-xs font-medium mt-0.5">{SOURCE_LABELS[source] || source}</p>
+            </motion.div>
+          ))}
+          {!d?.leadsBySource?.some(({ total }) => total > 0) && (
+            <p className="col-span-full text-sm text-gray-400 dark:text-gray-500 italic">Sin datos de fuente aún.</p>
+          )}
+        </div>
       </motion.div>
 
       {/* Estatus inventario */}

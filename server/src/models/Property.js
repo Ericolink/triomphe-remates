@@ -91,6 +91,11 @@ const Property = sequelize.define('Property', {
     allowNull: true,
     comment: 'Notas internas — solo visibles para administradores',
   },
+  code: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Código interno de Triomphe, ej. JRCH-0164',
+  },
 }, {
   tableName: 'properties',
   timestamps: true,

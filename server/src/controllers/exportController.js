@@ -750,6 +750,11 @@ const exportPropertyQuotePDF = async (req, res) => {
     doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
       .text(statusLabel[property.status] || property.status, MX, y + 6, { width: 90, align: 'center' });
 
+    if (property.code) {
+      doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
+        .text(stripUnsupported(property.code), MX + 100, y + 6, { width: PW - MX * 2 - 100, align: 'right' });
+    }
+
     const cleanTitle = stripUnsupported(property.title);
     doc.fillColor(PRIMARY).fontSize(20).font('Helvetica-Bold')
       .text(cleanTitle, MX, y + 34, { width: PW - MX * 2 });

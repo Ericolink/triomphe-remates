@@ -13,6 +13,13 @@ const PropertyStatusHistory = sequelize.define('PropertyStatusHistory', {
     allowNull: false,
   },
   userName: { type: DataTypes.STRING(100), allowNull: true },
+  changeType: {
+    type: DataTypes.ENUM('status', 'price'),
+    defaultValue: 'status',
+    allowNull: false,
+  },
+  fromPrice: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
+  toPrice:   { type: DataTypes.DECIMAL(15, 2), allowNull: true },
 }, {
   tableName: 'property_status_history',
   timestamps: true,

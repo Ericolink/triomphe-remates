@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Maximize2, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone, ZoomIn, Clock, CheckCircle2 } from 'lucide-react';
-import { getPropertyBySlug, getProperties } from '../../services/propertyService';
+import { MapPin, Maximize2, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone, ZoomIn, Clock, CheckCircle2, FileText, Download } from 'lucide-react';
+import { getPropertyBySlug, getProperties, getDocuments } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
@@ -29,10 +29,11 @@ const ACQUISITION_STAGES = [
 function AcquisitionProgress({ stage }) {
   const currentIdx = ACQUISITION_STAGES.findIndex((s) => s.key === stage);
   if (currentIdx === -1) return null;
+  const isComplete = stage === 'entrega';
   return (
     <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
       <h3 className="font-bold text-blue-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-        <CheckCircle2 size={18} className="text-yellow-500" /> Proceso de adquisición
+        <CheckCircle2 size={18} className={isComplete ? 'text-green-500' : 'text-yellow-500'} /> Proceso de adquisición
       </h3>
       <div className="flex items-center gap-1">
         {ACQUISITION_STAGES.map((s, i) => {
@@ -40,8 +41,8 @@ function AcquisitionProgress({ stage }) {
           const active = i === currentIdx;
           return (
             <div key={s.key} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`w-full h-1.5 rounded-full ${i === 0 ? 'rounded-l-full' : ''} ${i === ACQUISITION_STAGES.length - 1 ? 'rounded-r-full' : ''} ${done ? 'bg-yellow-500' : 'bg-gray-200 dark:bg-[#2e3650]'}`} />
-              <span className={`text-[10px] font-medium text-center leading-tight ${active ? 'text-yellow-600 dark:text-yellow-400' : done ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'}`}>
+              <div className={`w-full h-1.5 rounded-full ${i === 0 ? 'rounded-l-full' : ''} ${i === ACQUISITION_STAGES.length - 1 ? 'rounded-r-full' : ''} ${done ? (isComplete ? 'bg-green-500' : 'bg-yellow-500') : 'bg-gray-200 dark:bg-[#2e3650]'}`} />
+              <span className={`text-[10px] font-medium text-center leading-tight ${active ? (isComplete ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400') : done ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'}`}>
                 {s.label}
               </span>
             </div>
@@ -73,6 +74,12 @@ export default function PropertyDetailPage() {
     enabled: !!property,
   });
   const similar = similarData?.data?.filter((p) => p.id !== property?.id).slice(0, 3) ?? [];
+
+  const { data: documents } = useQuery({
+    queryKey: ['property-documents', property?.id],
+    queryFn: () => getDocuments(property.id),
+    enabled: !!property,
+  });
 
   const daysLeft = property?.auctionDate
     ? Math.ceil((new Date(property.auctionDate) - new Date()) / 86400000)
@@ -202,6 +209,9 @@ export default function PropertyDetailPage() {
             <Badge variant={STATUS_VARIANTS[property.status]}>{STATUS_LABELS[property.status]}</Badge>
             {property.isFeatured && <Badge variant="primary">Destacado</Badge>}
             <span className="text-gray-400 text-sm capitalize">{TYPE_LABELS[property.type] || property.type}</span>
+            {property.code && (
+              <span className="text-gray-400 text-sm font-mono">· {property.code}</span>
+            )}
           </div>
 
           <h1 className="text-2xl md:text-3xl font-bold text-blue-900 mb-2">{property.title}</h1>
@@ -234,6 +244,22 @@ export default function PropertyDetailPage() {
             <div className="mb-6">
               <h2 className="text-lg font-semibold text-blue-900 mb-2">Descripción</h2>
               <p className="text-gray-600 leading-relaxed">{property.description}</p>
+            </div>
+          )}
+
+          {documents?.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-blue-900 mb-2">Documentos</h2>
+              <div className="space-y-2">
+                {documents.map((doc) => (
+                  <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-100 dark:border-[#2e3650] rounded-xl px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#2e3650] transition-colors">
+                    <FileText size={18} className="text-blue-700 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">{doc.name}</span>
+                    <Download size={16} className="text-gray-400 flex-shrink-0" />
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 

@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Reorder } from 'framer-motion';
-import { Upload, X, Star, ArrowLeft, Lock, History, GripVertical } from 'lucide-react';
+import { Reorder, useDragControls } from 'framer-motion';
+import { Upload, X, Star, ArrowLeft, Lock, History, GripVertical, FileText, Trash2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   getPropertyById, createProperty, updateProperty,
-  uploadImages, deleteImage, setCoverImage, reorderImages, getStatusHistory
+  uploadImages, deleteImage, setCoverImage, reorderImages, getStatusHistory,
+  getDocuments, uploadDocument, deleteDocument,
 } from '../../services/propertyService';
 import Spinner from '../../components/ui/Spinner';
 import { safeBlobUrl } from '../../utils/sanitize';
@@ -28,11 +29,14 @@ const FIELDS = [
   { key: 'description', label: 'Descripción', type: 'textarea', col: 2 },
 ];
 
+const CITY_CODE_PREFIX = { juarez: 'JRCH-', chihuahua: 'CHCH-', queretaro: 'QRQR-' };
+
 const emptyForm = {
   title: '', price: '', pricePending: false, city: 'juarez', type: 'casa', status: 'disponible',
   squareMeters: '', terrainMeters: '', constructionMeters: '',
   bedrooms: '', bathrooms: '', address: '', description: '', isFeatured: false, internalNotes: '',
   auctionDate: '', acquisitionStage: 'sin_proceso',
+  code: CITY_CODE_PREFIX.juarez, noCode: false,
 };
 
 const propertyToForm = (p) => ({
@@ -45,12 +49,43 @@ const propertyToForm = (p) => ({
   internalNotes: p.internalNotes || '',
   auctionDate: p.auctionDate ? new Date(p.auctionDate).toISOString().split('T')[0] : '',
   acquisitionStage: p.acquisitionStage || 'sin_proceso',
+  code: p.code || '', noCode: !p.code,
 });
 
 const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
 const statusDot = { disponible: 'bg-green-500', apartado: 'bg-yellow-500', vendido: 'bg-red-500' };
 
 const inputClass ='w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
+
+function ImageThumb({ img, onSetCover, onDelete }) {
+  const dragControls = useDragControls();
+  return (
+    <Reorder.Item value={img} dragListener={false} dragControls={dragControls}
+      className="relative group">
+      <img src={buildImageUrl(img.url, 240)} alt="Imagen de propiedad" loading="lazy" decoding="async" draggable={false}
+        className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
+      <div onPointerDown={(e) => dragControls.start(e)}
+        className="absolute top-1 right-1 p-1 bg-white/80 dark:bg-[#1a1f2e]/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none">
+        <GripVertical size={14} className="text-gray-500 dark:text-gray-300" />
+      </div>
+      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
+        <button type="button" onClick={onSetCover}
+          className="p-1 bg-yellow-400 rounded-lg" title="Hacer portada">
+          <Star size={16} className="text-blue-900" />
+        </button>
+        <button type="button" onClick={onDelete}
+          className="p-1 bg-red-500 rounded-lg" title="Eliminar">
+          <X size={16} className="text-white" />
+        </button>
+      </div>
+      {img.isCover && (
+        <span className="absolute top-1 left-1 bg-yellow-400 text-blue-900 text-xs px-1.5 py-0.5 rounded-md font-medium">
+          Portada
+        </span>
+      )}
+    </Reorder.Item>
+  );
+}
 
 export default function PropertyFormPage() {
   const { id } = useParams();
@@ -74,6 +109,13 @@ export default function PropertyFormPage() {
     enabled: isEdit,
   });
   const statusHistory = historyData?.data ?? [];
+
+  const { data: documentsData } = useQuery({
+    queryKey: ['property-documents', id],
+    queryFn: () => getDocuments(id),
+    enabled: isEdit,
+  });
+  const documents = documentsData ?? [];
 
   const serverForm = useMemo(
     () => (data?.data ? propertyToForm(data.data) : null),
@@ -141,6 +183,35 @@ export default function PropertyFormPage() {
     onError: () => toast.error('Error al actualizar el orden'),
   });
 
+  const uploadDocMutation = useMutation({
+    mutationFn: (file) => uploadDocument(id, file, file.name),
+    onSuccess: () => {
+      toast.success('Documento subido');
+      queryClient.invalidateQueries(['property-documents', id]);
+    },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Error al subir documento'),
+  });
+
+  const deleteDocMutation = useMutation({
+    mutationFn: (docId) => deleteDocument(id, docId),
+    onSuccess: () => {
+      toast.success('Documento eliminado');
+      queryClient.invalidateQueries(['property-documents', id]);
+    },
+  });
+
+  const handleDocFile = (e) => {
+    const file = e.target.files[0];
+    if (file) uploadDocMutation.mutate(file);
+    e.target.value = '';
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const handleFiles = (e) => {
     const files = Array.from(e.target.files);
     setNewFiles((f) => [...f, ...files]);
@@ -155,8 +226,8 @@ export default function PropertyFormPage() {
     if (!form.title || !form.city || !form.type) {
       return toast.error('Título, ciudad y tipo son requeridos');
     }
-    const { pricePending, ...rest } = form;
-    saveMutation.mutate({ ...rest, price: pricePending ? null : form.price });
+    const { pricePending, noCode, ...rest } = form;
+    saveMutation.mutate({ ...rest, price: pricePending ? null : form.price, code: noCode ? '' : form.code });
   };
 
   const existingImages = data?.data?.images || [];
@@ -227,7 +298,20 @@ export default function PropertyFormPage() {
                     className={`${inputClass} resize-none`} />
                 ) : type === 'select' ? (
                   <select value={form[key]}
-                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (key === 'city') {
+                        setForm((f) => {
+                          const next = { ...f, city: value };
+                          if (!f.noCode && (f.code === '' || f.code === CITY_CODE_PREFIX[f.city])) {
+                            next.code = CITY_CODE_PREFIX[value] || '';
+                          }
+                          return next;
+                        });
+                      } else {
+                        setForm((f) => ({ ...f, [key]: value }));
+                      }
+                    }}
                     className={inputClass}>
                     {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
@@ -238,6 +322,26 @@ export default function PropertyFormPage() {
                 )}
               </div>
             ))}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Código de propiedad</label>
+              <input type="text" value={form.code} disabled={form.noCode}
+                placeholder={`Ej: ${CITY_CODE_PREFIX[form.city] || ''}0164`}
+                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`} />
+              <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
+                <input type="checkbox" checked={form.noCode}
+                  onChange={(e) => setForm((f) => ({
+                    ...f,
+                    noCode: e.target.checked,
+                    code: e.target.checked ? '' : (f.code || CITY_CODE_PREFIX[f.city] || ''),
+                  }))}
+                  className="w-4 h-4 rounded accent-blue-900" />
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Sin código asignado
+                </span>
+              </label>
+            </div>
+
             <div className="md:col-span-2 flex items-center gap-3">
               <input type="checkbox" id="featured" checked={form.isFeatured}
                 onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))}
@@ -265,23 +369,43 @@ export default function PropertyFormPage() {
         {isEdit && statusHistory.length > 0 && (
           <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
             <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-              <History size={15} className="text-gray-400" /> Historial de estatus
+              <History size={15} className="text-gray-400" /> Historial de cambios
             </h2>
             <div className="space-y-3">
               {statusHistory.map((h) => (
                 <div key={h.id} className="flex items-center gap-3 text-sm">
-                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusDot[h.toStatus]}`} />
-                  <span className="text-gray-600 dark:text-gray-300">
-                    {h.fromStatus ? (
-                      <>
-                        <span className="text-gray-400 dark:text-gray-500">{statusLabel[h.fromStatus]}</span>
+                  {h.changeType === 'price' ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-yellow-400" />
+                      <span className="text-gray-600 dark:text-gray-300">
+                        Precio:{' '}
+                        {h.fromPrice !== null
+                          ? <span className="text-gray-400 line-through">${Number(h.fromPrice).toLocaleString('es-MX')}</span>
+                          : <span className="text-gray-400">PENDIENTE</span>
+                        }
                         {' → '}
-                        <span className="font-medium text-gray-800 dark:text-gray-100">{statusLabel[h.toStatus]}</span>
-                      </>
-                    ) : (
-                      <>Publicada como <span className="font-medium text-gray-800 dark:text-gray-100">{statusLabel[h.toStatus]}</span></>
-                    )}
-                  </span>
+                        {h.toPrice !== null
+                          ? <span className="font-medium text-gray-800 dark:text-gray-100">${Number(h.toPrice).toLocaleString('es-MX')}</span>
+                          : <span className="font-medium text-yellow-500">PENDIENTE</span>
+                        }
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusDot[h.toStatus]}`} />
+                      <span className="text-gray-600 dark:text-gray-300">
+                        {h.fromStatus ? (
+                          <>
+                            <span className="text-gray-400 dark:text-gray-500">{statusLabel[h.fromStatus]}</span>
+                            {' → '}
+                            <span className="font-medium text-gray-800 dark:text-gray-100">{statusLabel[h.toStatus]}</span>
+                          </>
+                        ) : (
+                          <>Publicada como <span className="font-medium text-gray-800 dark:text-gray-100">{statusLabel[h.toStatus]}</span></>
+                        )}
+                      </span>
+                    </>
+                  )}
                   <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
                     {new Date(h.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
                     {h.userName ? ` · ${h.userName}` : ''}
@@ -299,29 +423,9 @@ export default function PropertyFormPage() {
             <Reorder.Group axis="y" values={imageOrder} onReorder={handleReorder}
               className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {imageOrder.map((img) => (
-                <Reorder.Item key={img.id} value={img} dragListener
-                  className="relative group cursor-grab active:cursor-grabbing">
-                  <img src={buildImageUrl(img.url, 240)} alt="Imagen de propiedad" loading="lazy" decoding="async" draggable={false}
-                    className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
-                  <div className="absolute top-1 right-1 p-1 bg-white/80 dark:bg-[#1a1f2e]/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                    <GripVertical size={14} className="text-gray-500 dark:text-gray-300" />
-                  </div>
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
-                    <button type="button" onClick={() => coverMutation.mutate(img.id)}
-                      className="p-1 bg-yellow-400 rounded-lg" title="Hacer portada">
-                      <Star size={16} className="text-blue-900" />
-                    </button>
-                    <button type="button" onClick={() => deleteImgMutation.mutate({ imgId: img.id })}
-                      className="p-1 bg-red-500 rounded-lg" title="Eliminar">
-                      <X size={16} className="text-white" />
-                    </button>
-                  </div>
-                  {img.isCover && (
-                    <span className="absolute top-1 left-1 bg-yellow-400 text-blue-900 text-xs px-1.5 py-0.5 rounded-md font-medium">
-                      Portada
-                    </span>
-                  )}
-                </Reorder.Item>
+                <ImageThumb key={img.id} img={img}
+                  onSetCover={() => coverMutation.mutate(img.id)}
+                  onDelete={() => deleteImgMutation.mutate({ imgId: img.id })} />
               ))}
             </Reorder.Group>
           </div>
@@ -354,6 +458,46 @@ export default function PropertyFormPage() {
             </div>
           )}
         </div>
+
+        {isEdit && (
+          <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+            <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+              <FileText size={15} className="text-gray-400" /> Documentos
+            </h2>
+
+            {documents.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center gap-3 bg-gray-50 dark:bg-[#1a1f2e] rounded-xl px-4 py-2.5">
+                    <FileText size={16} className="text-blue-600 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">{doc.name}</span>
+                    {doc.size && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{formatFileSize(doc.size)}</span>
+                    )}
+                    <a href={doc.url} target="_blank" rel="noopener noreferrer"
+                      className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-[#2e3650] transition-colors text-gray-500 dark:text-gray-400" title="Descargar">
+                      <Download size={15} />
+                    </a>
+                    <button type="button" onClick={() => deleteDocMutation.mutate(doc.id)}
+                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-500" title="Eliminar">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-[#2e3650] rounded-xl p-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+              <Upload size={28} className="text-gray-300 mb-2" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {uploadDocMutation.isPending ? 'Subiendo...' : 'Haz clic para subir un documento'}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">PDF, DOC, DOCX, XLS o XLSX · Máx. 20MB</p>
+              <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx"
+                onChange={handleDocFile} disabled={uploadDocMutation.isPending} className="hidden" />
+            </label>
+          </div>
+        )}
 
         <div className="flex gap-3 justify-end pb-6">
           <button type="button" onClick={() => navigate(-1)}

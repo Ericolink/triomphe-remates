@@ -42,6 +42,11 @@ const Lead = sequelize.define('Lead', {
     allowNull: true,
     comment: 'Notas internas del agente',
   },
+  source: {
+    type: DataTypes.ENUM('google', 'facebook', 'whatsapp', 'directo', 'referido', 'otro'),
+    defaultValue: 'directo',
+    allowNull: false,
+  },
 }, {
   tableName: 'leads',
   timestamps: true,
