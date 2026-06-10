@@ -127,7 +127,7 @@ const getPropertyById = async (req, res) => {
     const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
     const property = await Property.findByPk(req.params.id, {
       attributes: isStaff ? undefined : { exclude: ['internalNotes'] },
-      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+      include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
     });
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
@@ -156,7 +156,7 @@ const getPropertyBySlug = async (req, res) => {
     const property = await Property.findOne({
       where: { slug: req.params.slug },
       attributes: { exclude: ['internalNotes'] },
-      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+      include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
     });
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
@@ -489,7 +489,7 @@ const getPromotedProperty = async (req, res) => {
   try {
     const property = await Property.findOne({
       where: { isPromoted: true },
-      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+      include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
     });
     return res.json({ data: property || null });
   } catch (error) {

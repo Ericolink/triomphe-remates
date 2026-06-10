@@ -1,7 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Reorder } from 'framer-motion';
 import { Upload, X, Star, ArrowLeft, Lock, History, FileText, Trash2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -57,19 +56,22 @@ const statusDot = { disponible: 'bg-green-500', apartado: 'bg-yellow-500', vendi
 
 const inputClass ='w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
-function ImageThumb({ img, onSetCover, onDelete }) {
+function ImageThumb({ img, index, isDragging, onSetCover, onDelete, onDragStart, onDragOver, onDragEnd }) {
   return (
-    <Reorder.Item value={img}
-      whileDrag={{ scale: 1.05, zIndex: 10, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}
-      className="relative group select-none touch-none cursor-grab active:cursor-grabbing">
+    <div
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => { e.preventDefault(); onDragOver(index); }}
+      onDragEnd={onDragEnd}
+      className={`relative group select-none cursor-grab active:cursor-grabbing transition-opacity ${isDragging ? 'opacity-40' : ''}`}>
       <img src={buildImageUrl(img.url, 240)} alt="Imagen de propiedad" loading="lazy" decoding="async" draggable={false}
         className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none select-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
-        <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onSetCover}
+        <button type="button" draggable onDragStart={(e) => e.preventDefault()} onClick={onSetCover}
           className="p-1 bg-yellow-400 rounded-lg" title="Hacer portada">
           <Star size={16} className="text-blue-900" />
         </button>
-        <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onDelete}
+        <button type="button" draggable onDragStart={(e) => e.preventDefault()} onClick={onDelete}
           className="p-1 bg-red-500 rounded-lg" title="Eliminar">
           <X size={16} className="text-white" />
         </button>
@@ -79,7 +81,7 @@ function ImageThumb({ img, onSetCover, onDelete }) {
           Portada
         </span>
       )}
-    </Reorder.Item>
+    </div>
   );
 }
 
@@ -92,6 +94,8 @@ export default function PropertyFormPage() {
   const [newFiles, setNewFiles] = useState([]);
   const [imageOrder, setImageOrder] = useState([]);
   const [loadedImagesKey, setLoadedImagesKey] = useState(null);
+  const [dragIndex, setDragIndex] = useState(null);
+  const orderRef = useRef([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['property', id],
@@ -173,7 +177,6 @@ export default function PropertyFormPage() {
   const reorderMutation = useMutation({
     mutationFn: (imageIds) => reorderImages(id, imageIds),
     onSuccess: () => {
-      toast.success('Orden de imágenes actualizado');
       queryClient.invalidateQueries(['property', id]);
     },
     onError: () => toast.error('Error al actualizar el orden'),
@@ -233,9 +236,25 @@ export default function PropertyFormPage() {
     setImageOrder(existingImages);
   }
 
-  const handleReorder = (newOrder) => {
-    setImageOrder(newOrder);
-    reorderMutation.mutate(newOrder.map((img) => img.id));
+  useEffect(() => {
+    orderRef.current = imageOrder;
+  }, [imageOrder]);
+
+  const handleDragStart = (index) => setDragIndex(index);
+
+  const handleDragOver = (index) => {
+    if (dragIndex === null || dragIndex === index) return;
+    const next = [...orderRef.current];
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(index, 0, moved);
+    orderRef.current = next;
+    setImageOrder(next);
+    setDragIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    reorderMutation.mutate(orderRef.current.map((img) => img.id));
   };
 
   if (isEdit && isLoading) return <Spinner size="lg" className="py-20" />;
@@ -416,14 +435,17 @@ export default function PropertyFormPage() {
           <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
             <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">Imágenes actuales</h2>
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Arrastra las imágenes para cambiar el orden en que aparecen en la galería.</p>
-            <Reorder.Group axis="y" values={imageOrder} onReorder={handleReorder}
-              className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {imageOrder.map((img) => (
-                <ImageThumb key={img.id} img={img}
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {imageOrder.map((img, index) => (
+                <ImageThumb key={img.id} img={img} index={index}
+                  isDragging={dragIndex === index}
                   onSetCover={() => coverMutation.mutate(img.id)}
-                  onDelete={() => deleteImgMutation.mutate({ imgId: img.id })} />
+                  onDelete={() => deleteImgMutation.mutate({ imgId: img.id })}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd} />
               ))}
-            </Reorder.Group>
+            </div>
           </div>
         )}
 
