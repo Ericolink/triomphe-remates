@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Maximize2, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone, ZoomIn, Clock, CheckCircle2, FileText, Download } from 'lucide-react';
+import { MapPin, Maximize2, LandPlot, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone, ZoomIn, Clock, CheckCircle2, FileText, Download } from 'lucide-react';
 import { getPropertyBySlug, getProperties, getDocuments } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
@@ -130,7 +130,7 @@ export default function PropertyDetailPage() {
       )}
 
       <div className="flex items-center justify-between mb-6">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-blue-900 transition-colors">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-blue-900 dark:hover:text-blue-300 transition-colors">
           <ChevronLeft size={18} /> Regresar
         </button>
         <div className="flex items-center gap-2">
@@ -214,7 +214,7 @@ export default function PropertyDetailPage() {
             )}
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-bold text-blue-900 mb-2">{property.title}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-blue-900 dark:text-white mb-2">{property.title}</h1>
 
           {property.address && (
             <p className="flex items-center gap-1 text-gray-500 mb-4">
@@ -224,32 +224,32 @@ export default function PropertyDetailPage() {
 
           <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-4 bg-gray-50 dark:bg-[#242938] rounded-xl">
             {property.constructionMeters && (
-              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" />
+              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700 dark:text-blue-400" />
                 <span><span className="font-medium">{property.constructionMeters}</span> m² construcción</span>
               </span>
             )}
             {property.terrainMeters && (
-              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" />
+              <span className="flex items-center gap-2"><LandPlot size={18} className="text-blue-700 dark:text-blue-400" />
                 <span><span className="font-medium">{property.terrainMeters}</span> m² terreno</span>
               </span>
             )}
             {!property.constructionMeters && !property.terrainMeters && property.squareMeters && (
-              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700" /> {property.squareMeters} m²</span>
+              <span className="flex items-center gap-2"><Maximize2 size={18} className="text-blue-700 dark:text-blue-400" /> {property.squareMeters} m²</span>
             )}
-            {property.bedrooms && <span className="flex items-center gap-2"><Bed size={18} className="text-blue-700" /> {property.bedrooms} recámaras</span>}
-            {property.bathrooms && <span className="flex items-center gap-2"><Bath size={18} className="text-blue-700" /> {property.bathrooms} baños</span>}
+            {property.bedrooms && <span className="flex items-center gap-2"><Bed size={18} className="text-blue-700 dark:text-blue-400" /> {property.bedrooms} recámaras</span>}
+            {property.bathrooms && <span className="flex items-center gap-2"><Bath size={18} className="text-blue-700 dark:text-blue-400" /> {property.bathrooms} baños</span>}
           </div>
 
           {property.description && (
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-blue-900 mb-2">Descripción</h2>
+              <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-2">Descripción</h2>
               <p className="text-gray-600 leading-relaxed">{property.description}</p>
             </div>
           )}
 
           {documents?.length > 0 && (
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-blue-900 mb-2">Documentos</h2>
+              <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-2">Documentos</h2>
               <div className="space-y-2">
                 {documents.map((doc) => (
                   <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer"
@@ -283,7 +283,7 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
-            <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
+            <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
               <Phone size={18} /> Contactar asesor
             </h3>
             <ContactForm propertyId={property.id} propertyTitle={property.title} />

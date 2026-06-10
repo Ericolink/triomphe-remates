@@ -22,7 +22,8 @@ export default function PropertiesPage() {
   const [showAlertForm, setShowAlertForm] = useState(false);
   const [localFilters, setLocalFilters] = useState({
     city: '', type: '', status: '', maxPrice: '', search: '',
-    minBedrooms: '', minBathrooms: '', minM2: '', maxM2: '',
+    minBedrooms: '', minBathrooms: '',
+    minTerrainM2: '', maxTerrainM2: '', minConstructionM2: '', maxConstructionM2: '',
   });
   const sentinelRef = useRef(null);
 
@@ -34,8 +35,10 @@ export default function PropertiesPage() {
     search: searchParams.get('search') || localFilters.search,
     minBedrooms: localFilters.minBedrooms,
     minBathrooms: localFilters.minBathrooms,
-    minM2: localFilters.minM2,
-    maxM2: localFilters.maxM2,
+    minTerrainM2: localFilters.minTerrainM2,
+    maxTerrainM2: localFilters.maxTerrainM2,
+    minConstructionM2: localFilters.minConstructionM2,
+    maxConstructionM2: localFilters.maxConstructionM2,
   };
 
   const {
@@ -73,12 +76,17 @@ export default function PropertiesPage() {
   };
 
   const clearFilters = () => {
-    setLocalFilters({ city: '', type: '', status: '', maxPrice: '', search: '', minBedrooms: '', minBathrooms: '', minM2: '', maxM2: '' });
+    setLocalFilters({
+      city: '', type: '', status: '', maxPrice: '', search: '',
+      minBedrooms: '', minBathrooms: '',
+      minTerrainM2: '', maxTerrainM2: '', minConstructionM2: '', maxConstructionM2: '',
+    });
     setSearchParams({});
   };
 
   const hasFilters = filters.city || filters.type || filters.status || filters.maxPrice || filters.search
-    || filters.minBedrooms || filters.minBathrooms || filters.minM2 || filters.maxM2;
+    || filters.minBedrooms || filters.minBathrooms
+    || filters.minTerrainM2 || filters.maxTerrainM2 || filters.minConstructionM2 || filters.maxConstructionM2;
 
   return (
     <motion.div
@@ -175,17 +183,31 @@ export default function PropertiesPage() {
                 </div>
               ))}
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">M² mín.</label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Terreno m² mín.</label>
                 <input type="number" placeholder="Ej: 80" min="0"
-                  value={filters.minM2}
-                  onChange={(e) => setFilter('minM2', e.target.value)}
+                  value={filters.minTerrainM2}
+                  onChange={(e) => setFilter('minTerrainM2', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">M² máx.</label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Terreno m² máx.</label>
                 <input type="number" placeholder="Ej: 300" min="0"
-                  value={filters.maxM2}
-                  onChange={(e) => setFilter('maxM2', e.target.value)}
+                  value={filters.maxTerrainM2}
+                  onChange={(e) => setFilter('maxTerrainM2', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Construcción m² mín.</label>
+                <input type="number" placeholder="Ej: 80" min="0"
+                  value={filters.minConstructionM2}
+                  onChange={(e) => setFilter('minConstructionM2', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Construcción m² máx.</label>
+                <input type="number" placeholder="Ej: 300" min="0"
+                  value={filters.maxConstructionM2}
+                  onChange={(e) => setFilter('maxConstructionM2', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
               </div>
             </div>

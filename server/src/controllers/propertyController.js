@@ -19,8 +19,10 @@ const getProperties = async (req, res) => {
       status,
       minPrice,
       maxPrice,
-      minM2,
-      maxM2,
+      minTerrainM2,
+      maxTerrainM2,
+      minConstructionM2,
+      maxConstructionM2,
       minBedrooms,
       minBathrooms,
       featured,
@@ -41,21 +43,19 @@ const getProperties = async (req, res) => {
       if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
     }
 
-    const andConditions = [];
-
-    if (minM2 || maxM2) {
-      const m2Range = {};
-      if (minM2) m2Range[Op.gte] = parseFloat(minM2);
-      if (maxM2) m2Range[Op.lte] = parseFloat(maxM2);
-      // Una propiedad puede registrar sus m² en cualquiera de estos tres campos
-      andConditions.push({
-        [Op.or]: [
-          { squareMeters: m2Range },
-          { terrainMeters: m2Range },
-          { constructionMeters: m2Range },
-        ],
-      });
+    if (minTerrainM2 || maxTerrainM2) {
+      where.terrainMeters = {};
+      if (minTerrainM2) where.terrainMeters[Op.gte] = parseFloat(minTerrainM2);
+      if (maxTerrainM2) where.terrainMeters[Op.lte] = parseFloat(maxTerrainM2);
     }
+
+    if (minConstructionM2 || maxConstructionM2) {
+      where.constructionMeters = {};
+      if (minConstructionM2) where.constructionMeters[Op.gte] = parseFloat(minConstructionM2);
+      if (maxConstructionM2) where.constructionMeters[Op.lte] = parseFloat(maxConstructionM2);
+    }
+
+    const andConditions = [];
 
     if (minBedrooms) where.bedrooms = { [Op.gte]: parseInt(minBedrooms) };
     if (minBathrooms) where.bathrooms = { [Op.gte]: parseInt(minBathrooms) };

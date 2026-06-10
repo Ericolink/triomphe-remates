@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Reorder, useDragControls } from 'framer-motion';
-import { Upload, X, Star, ArrowLeft, Lock, History, GripVertical, FileText, Trash2, Download } from 'lucide-react';
+import { Reorder } from 'framer-motion';
+import { Upload, X, Star, ArrowLeft, Lock, History, FileText, Trash2, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   getPropertyById, createProperty, updateProperty,
@@ -58,22 +58,18 @@ const statusDot = { disponible: 'bg-green-500', apartado: 'bg-yellow-500', vendi
 const inputClass ='w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
 function ImageThumb({ img, onSetCover, onDelete }) {
-  const dragControls = useDragControls();
   return (
-    <Reorder.Item value={img} dragListener={false} dragControls={dragControls}
-      className="relative group">
+    <Reorder.Item value={img}
+      whileDrag={{ scale: 1.05, zIndex: 10, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}
+      className="relative group select-none touch-none cursor-grab active:cursor-grabbing">
       <img src={buildImageUrl(img.url, 240)} alt="Imagen de propiedad" loading="lazy" decoding="async" draggable={false}
-        className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
-      <div onPointerDown={(e) => dragControls.start(e)}
-        className="absolute top-1 right-1 p-1 bg-white/80 dark:bg-[#1a1f2e]/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none">
-        <GripVertical size={14} className="text-gray-500 dark:text-gray-300" />
-      </div>
+        className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none select-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
-        <button type="button" onClick={onSetCover}
+        <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onSetCover}
           className="p-1 bg-yellow-400 rounded-lg" title="Hacer portada">
           <Star size={16} className="text-blue-900" />
         </button>
-        <button type="button" onClick={onDelete}
+        <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onDelete}
           className="p-1 bg-red-500 rounded-lg" title="Eliminar">
           <X size={16} className="text-white" />
         </button>
@@ -231,7 +227,7 @@ export default function PropertyFormPage() {
   };
 
   const existingImages = data?.data?.images || [];
-  const imagesKey = existingImages.map((img) => img.id).join(',');
+  const imagesKey = existingImages.map((img) => `${img.id}:${img.isCover}`).join(',');
   if (existingImages.length > 0 && imagesKey !== loadedImagesKey) {
     setLoadedImagesKey(imagesKey);
     setImageOrder(existingImages);
