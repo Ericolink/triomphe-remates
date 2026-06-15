@@ -14,6 +14,7 @@ const BuzonPage            = lazy(() => import('./pages/public/BuzonPage'));
 const FavoritesPage        = lazy(() => import('./pages/public/FavoritesPage'));
 const ComparatorPage       = lazy(() => import('./pages/public/ComparatorPage'));
 const UnsubscribeAlertPage = lazy(() => import('./pages/public/UnsubscribeAlertPage'));
+const FAQPage              = lazy(() => import('./pages/public/FAQPage'));
 
 // Panel admin — en un chunk separado para que nunca llegue a visitantes anónimos
 const LoginPage            = lazy(() => import('./pages/admin/LoginPage'));
@@ -29,6 +30,7 @@ const BuzonAdminPage       = lazy(() => import('./pages/admin/BuzonAdminPage'));
 const AlertsAdminPage      = lazy(() => import('./pages/admin/AlertsAdminPage'));
 const AuditPage            = lazy(() => import('./pages/admin/AuditPage'));
 const CalendarPage         = lazy(() => import('./pages/admin/CalendarPage'));
+const TestimonialsAdminPage = lazy(() => import('./pages/admin/TestimonialsAdminPage'));
 
 import PublicLayout from './components/layout/PublicLayout';
 
@@ -55,6 +57,7 @@ export default function App() {
             <Route path="/favoritos"            element={<FavoritesPage />} />
             <Route path="/comparar"             element={<ComparatorPage />} />
             <Route path="/cancelar-alerta"      element={<UnsubscribeAlertPage />} />
+            <Route path="/preguntas-frecuentes" element={<FAQPage />} />
           </Route>
 
           <Route path="/admin/login" element={<LoginPage />} />
@@ -76,6 +79,7 @@ export default function App() {
             <Route path="alertas"                element={<AlertsAdminPage />} />
             <Route path="auditoria"              element={<AuditPage />} />
             <Route path="calendario"             element={<CalendarPage />} />
+            <Route path="testimonios"            element={<TestimonialsAdminPage />} />
           </Route>
         </Routes>
       </Suspense>

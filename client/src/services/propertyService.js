@@ -74,6 +74,15 @@ export const getStatusHistory = async (id) => {
   return data;
 };
 
+export const getPriceHistory = async (id) => {
+  const { data } = await api.get(`/properties/${id}/price-history`);
+  return data;
+};
+
+export const trackShare = async (id) => {
+  await api.post(`/properties/${id}/share`);
+};
+
 export const getDocuments = async (id) => {
   const { data } = await api.get(`/properties/${id}/documents`);
   return data;

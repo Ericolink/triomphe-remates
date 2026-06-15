@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Building2, TrendingDown, Shield, ChevronRight, MapPin } from 'lucide-react';
+import { Search, Building2, TrendingDown, Shield, ChevronRight, MapPin, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getProperties, getPromotedProperty, getPropertyStats } from '../../services/propertyService';
+import { getPublicTestimonials } from '../../services/testimonialService';
 import PropertyCard from '../../components/ui/PropertyCard';
 import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkeleton';
 import PromotedPropertyBanner from '../../components/ui/PromotedPropertyBanner';
 import SEO from '../../components/ui/SEO';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { buildImageUrl } from '../../utils/images';
+import { CITY_LABELS } from '../../utils/constants';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -30,6 +33,12 @@ export default function HomePage() {
     queryKey: ['property-stats'],
     queryFn: getPropertyStats,
   });
+
+  const { data: testimonialsData } = useQuery({
+    queryKey: ['testimonials', 'public'],
+    queryFn: () => getPublicTestimonials({ limit: 6 }),
+  });
+  const testimonials = testimonialsData?.data || [];
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -211,6 +220,54 @@ export default function HomePage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Historias de Éxito */}
+      {testimonials.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-16">
+          <AnimatedSection>
+            <h2 className="text-3xl font-bold text-blue-900 dark:text-white text-center mb-12">Historias de Éxito</h2>
+          </AnimatedSection>
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+          >
+            {testimonials.map((t) => (
+              <motion.div key={t.id} variants={fadeInUp}
+                className="bg-white dark:bg-[#1a1f2e] rounded-2xl p-6 shadow-md dark:shadow-none border border-transparent dark:border-[#2e3650] flex flex-col">
+                {(t.beforeImageUrl || t.afterImageUrl) && (
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {t.beforeImageUrl && (
+                      <div className="relative">
+                        <img src={buildImageUrl(t.beforeImageUrl, 300)} alt="Antes" className="w-full h-32 object-cover rounded-xl" />
+                        <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">Antes</span>
+                      </div>
+                    )}
+                    {t.afterImageUrl && (
+                      <div className="relative">
+                        <img src={buildImageUrl(t.afterImageUrl, 300)} alt="Después" className="w-full h-32 object-cover rounded-xl" />
+                        <span className="absolute top-2 left-2 bg-yellow-500 text-blue-900 text-xs px-2 py-0.5 rounded-full font-medium">Después</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="flex items-center gap-1 mb-3 text-yellow-500">
+                  {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+                </div>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed flex-1">&ldquo;{t.testimonialText}&rdquo;</p>
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-[#2e3650]">
+                  <p className="font-bold text-blue-900 dark:text-white">{t.clientName}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t.clientRole}{t.clientRole && t.clientCity && ' · '}{t.clientCity && CITY_LABELS[t.clientCity]}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </section>
+      )}
 
       {/* CTA */}
       <AnimatedSection>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MapPin, Maximize2, LandPlot, Bed, Bath, Building, ChevronLeft, ChevronRight, Phone, ZoomIn, Clock, CheckCircle2, FileText, Download } from 'lucide-react';
-import { getPropertyBySlug, getProperties, getDocuments } from '../../services/propertyService';
+import { getPropertyBySlug, getProperties, getDocuments, getPriceHistory } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
@@ -14,6 +14,7 @@ import FavoriteButton from '../../components/ui/FavoriteButton';
 import ComparatorButton from '../../components/ui/ComparatorButton';
 import PropertyCard from '../../components/ui/PropertyCard';
 import Lightbox from '../../components/ui/Lightbox';
+import PriceHistoryTimeline from '../../components/ui/PriceHistoryTimeline';
 import { buildImageUrl } from '../../utils/images';
 import { formatPrice } from '../../utils/formatters';
 import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
@@ -81,6 +82,13 @@ export default function PropertyDetailPage() {
     enabled: !!property,
   });
 
+  const { data: priceHistoryData } = useQuery({
+    queryKey: ['property-price-history', property?.id],
+    queryFn: () => getPriceHistory(property.id),
+    enabled: !!property,
+  });
+  const priceHistory = priceHistoryData?.data ?? [];
+
   const daysLeft = property?.auctionDate
     ? Math.ceil((new Date(property.auctionDate) - new Date()) / 86400000)
     : null;
@@ -136,7 +144,7 @@ export default function PropertyDetailPage() {
         <div className="flex items-center gap-2">
           <ComparatorButton property={property} size={18} className="w-10 h-10" />
           <FavoriteButton property={property} size={18} className="w-10 h-10" />
-          <ShareButton title={property.title} subtitle={`${formatPrice(property.price)} · ${CITY_LABELS[property.city]}`} url={`/propiedades/${property.slug}`} />
+          <ShareButton title={property.title} subtitle={`${formatPrice(property.price)} · ${CITY_LABELS[property.city]}`} url={`/propiedades/${property.slug}`} propertyId={property.id} />
         </div>
       </div>
 
@@ -260,6 +268,13 @@ export default function PropertyDetailPage() {
                   </a>
                 ))}
               </div>
+            </div>
+          )}
+
+          {priceHistory.length > 1 && (
+            <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md mb-6">
+              <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-4">Historial de precio</h2>
+              <PriceHistoryTimeline history={priceHistory} />
             </div>
           )}
 

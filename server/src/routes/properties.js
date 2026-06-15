@@ -3,7 +3,7 @@ const {
   getProperties, getPropertyById, getPropertyBySlug,
   createProperty, updateProperty, deleteProperty,
   uploadImages, deleteImage, setCoverImage, reorderImages,
-  getPromotedProperty, promoteProperty, getStatusHistory, getPropertyStats,
+  getPromotedProperty, promoteProperty, getStatusHistory, getPublicPriceHistory, trackShare, getPropertyStats,
 } = require('../controllers/propertyController');
 const { getDocuments, uploadDocument, deleteDocument } = require('../controllers/documentController');
 const { authenticate, attachUserIfPresent } = require('../middleware/authMiddleware');
@@ -31,6 +31,8 @@ router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteProper
 
 router.put('/:id/promote', apiLimiter, authenticate, authorize('admin', 'editor'), promoteProperty);
 router.get('/:id/status-history', apiLimiter, authenticate, authorize('admin', 'editor'), getStatusHistory);
+router.get('/:id/price-history', apiLimiter, getPublicPriceHistory);
+router.post('/:id/share', apiLimiter, trackShare);
 router.post('/:id/images', uploadLimiter, authenticate, authorize('admin', 'editor'), upload.array('images', 20), uploadImages);
 router.delete('/:id/images/:imageId', apiLimiter, authenticate, authorize('admin', 'editor'), deleteImage);
 router.put('/:id/images/:imageId/cover', apiLimiter, authenticate, authorize('admin', 'editor'), setCoverImage);

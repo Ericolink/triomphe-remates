@@ -55,6 +55,7 @@ export default function Footer() {
               { to: '/propiedades', label: 'Propiedades' },
               { to: '/nosotros', label: 'Sobre Nosotros' },
               { to: '/contacto', label: 'Contacto' },
+              { to: '/preguntas-frecuentes', label: 'Preguntas Frecuentes' },
               { to: '/buzon', label: 'Buzón de opiniones' },
             ].map(({ to, label }) => (
               <li key={to}>

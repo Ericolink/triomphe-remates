@@ -1,4 +1,4 @@
-const { Lead, LeadNote, Property } = require('../models/index');
+const { Lead, LeadNote, Property, Analytics } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 const leadEvents = require('../utils/leadEvents');
@@ -34,6 +34,16 @@ const createLead = async (req, res) => {
       sendNewLeadNotification(lead, property).catch((e) => console.error('Error email notificación:', e)),
       sendLeadConfirmation(lead).catch((e) => console.error('Error email confirmación:', e)),
     ]);
+
+    if (property) {
+      Analytics.create({
+        event: 'contact',
+        propertyId: property.id,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        referrer: req.headers['referer'] || null,
+      }).catch((e) => console.error('Error registrando analytics contact:', e));
+    }
 
     leadEvents.emit('new-lead', {
       id: lead.id,

@@ -1,13 +1,14 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Upload, X, Star, ArrowLeft, Lock, History, FileText, Trash2, Download } from 'lucide-react';
+import { Upload, X, Star, ArrowLeft, Lock, History, FileText, Trash2, Download, Eye, MessageCircle, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   getPropertyById, createProperty, updateProperty,
   uploadImages, deleteImage, setCoverImage, reorderImages, getStatusHistory,
   getDocuments, uploadDocument, deleteDocument,
 } from '../../services/propertyService';
+import { getPropertyAnalytics } from '../../services/analyticsService';
 import Spinner from '../../components/ui/Spinner';
 import { safeBlobUrl } from '../../utils/sanitize';
 import { buildImageUrl } from '../../utils/images';
@@ -109,6 +110,13 @@ export default function PropertyFormPage() {
     enabled: isEdit,
   });
   const statusHistory = historyData?.data ?? [];
+
+  const { data: analyticsData } = useQuery({
+    queryKey: ['property-analytics', id],
+    queryFn: () => getPropertyAnalytics(id),
+    enabled: isEdit,
+  });
+  const analyticsTotals = analyticsData?.data?.totals;
 
   const { data: documentsData } = useQuery({
     queryKey: ['property-documents', id],
@@ -380,6 +388,34 @@ export default function PropertyFormPage() {
             rows={4} placeholder="Ej: contacto del banco, precio mínimo aceptable, observaciones legales..."
             className={`${inputClass} resize-none`} />
         </div>
+
+        {isEdit && analyticsTotals && (
+          <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+            <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+              <Eye size={15} className="text-gray-400" /> Métricas
+            </h2>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center justify-center gap-2">
+                  <Eye size={18} className="text-blue-500" /> {analyticsTotals.views}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">Vistas</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center justify-center gap-2">
+                  <MessageCircle size={18} className="text-green-500" /> {analyticsTotals.contacts}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">Contactos</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center justify-center gap-2">
+                  <Share2 size={18} className="text-yellow-500" /> {analyticsTotals.shares}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">Compartidos</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isEdit && statusHistory.length > 0 && (
           <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">

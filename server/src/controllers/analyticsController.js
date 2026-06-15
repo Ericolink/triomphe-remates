@@ -192,10 +192,25 @@ const getPropertyAnalytics = async (req, res) => {
       raw: true,
     });
 
+    const eventCounts = await Analytics.findAll({
+      where: { propertyId: req.params.id },
+      attributes: ['event', [fn('COUNT', col('id')), 'total']],
+      group: ['event'],
+      raw: true,
+    });
+
+    const totals = { views: 0, contacts: 0, shares: 0 };
+    eventCounts.forEach((row) => {
+      if (row.event === 'view') totals.views = parseInt(row.total, 10);
+      if (row.event === 'contact') totals.contacts = parseInt(row.total, 10);
+      if (row.event === 'share') totals.shares = parseInt(row.total, 10);
+    });
+
     return res.json({
       data: {
         property: { id: property.id, title: property.title, views: property.views },
         viewsByDay,
+        totals,
       },
     });
   } catch (error) {

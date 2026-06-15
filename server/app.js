@@ -58,6 +58,7 @@ app.use('/api/users',      require('./src/routes/users'));
 app.use('/api/feedback',   require('./src/routes/feedback'));
 app.use('/api/alerts',     require('./src/routes/alerts'));
 app.use('/api/audit',      require('./src/routes/audit'));
+app.use('/api/testimonials', require('./src/routes/testimonials'));
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -534,6 +534,38 @@ const getStatusHistory = async (req, res) => {
   }
 };
 
+// GET /api/properties/:id/price-history (público — sin datos internos)
+const getPublicPriceHistory = async (req, res) => {
+  try {
+    const history = await PropertyStatusHistory.findAll({
+      where: { propertyId: req.params.id },
+      attributes: ['id', 'fromStatus', 'toStatus', 'changeType', 'fromPrice', 'toPrice', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+    });
+    return res.json({ data: history });
+  } catch (error) {
+    console.error('Error en getPublicPriceHistory:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// POST /api/properties/:id/share — registra evento de compartir
+const trackShare = async (req, res) => {
+  try {
+    await Analytics.create({
+      event: 'share',
+      propertyId: req.params.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      referrer: req.headers['referer'] || null,
+    });
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error en trackShare:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 module.exports = {
   getProperties,
   getPropertyById,
@@ -548,5 +580,7 @@ module.exports = {
   getPromotedProperty,
   promoteProperty,
   getStatusHistory,
+  getPublicPriceHistory,
+  trackShare,
   getPropertyStats,
 };
