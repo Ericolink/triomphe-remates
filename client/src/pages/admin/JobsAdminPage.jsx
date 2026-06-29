@@ -7,8 +7,10 @@ import { getAllPositions, createPosition, updatePosition, deletePosition } from 
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { CITY_LABELS } from '../../utils/constants';
 
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro', todas: 'Todas' };
+// 'todas' es propio del dominio de vacantes (no existe en CITY_LABELS, que es para propiedades)
+const cityLabel = { ...CITY_LABELS, todas: 'Todas' };
 const typeLabel = { tiempo_completo: 'Tiempo completo', medio_tiempo: 'Medio tiempo', por_comision: 'Por comisión' };
 const statusColors = {
   activa: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',

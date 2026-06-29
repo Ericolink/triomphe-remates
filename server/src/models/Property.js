@@ -77,7 +77,6 @@ const Property = sequelize.define('Property', {
   slug: {
     type: DataTypes.STRING(255),
     allowNull: true,
-    unique: true,
     comment: 'URL amigable para SEO',
   },
   acquisitionStage: {
@@ -99,6 +98,12 @@ const Property = sequelize.define('Property', {
 }, {
   tableName: 'properties',
   timestamps: true,
+  // Índice único con nombre fijo (ver migración fix-duplicate-unique-indexes): un `unique:
+  // true` inline sin nombre hacía que cada ciclo de sync({alter:true}) creara un índice
+  // nuevo en vez de reconocer el existente, hasta llegar al máximo de 64 claves de MySQL.
+  indexes: [
+    { unique: true, fields: ['slug'], name: 'properties_slug_unique' },
+  ],
 });
 
 module.exports = Property;

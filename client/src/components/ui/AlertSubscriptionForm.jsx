@@ -5,11 +5,12 @@ import toast from 'react-hot-toast';
 import { subscribe } from '../../services/alertService';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '../../utils/animations';
+import { CITY_LABELS, TYPE_LABELS, labelsToOptions } from '../../utils/constants';
 
-const CITIES = [{ value: '', label: 'Cualquier ciudad' }, { value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }];
-const TYPES  = [{ value: '', label: 'Cualquier tipo' }, { value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }, { value: 'terreno', label: 'Terreno' }, { value: 'local', label: 'Local' }, { value: 'bodega', label: 'Bodega' }];
+const CITIES = [{ value: '', label: 'Cualquier ciudad' }, ...labelsToOptions(CITY_LABELS, ['otra'])];
+const TYPES  = [{ value: '', label: 'Cualquier tipo' }, ...labelsToOptions(TYPE_LABELS)];
 
-const INIT = { name: '', email: '', city: '', type: '', maxPrice: '' };
+const INIT = { name: '', email: '', phone: '', city: '', type: '', maxPrice: '' };
 
 export default function AlertSubscriptionForm() {
   const [form, setForm] = useState(INIT);
@@ -50,6 +51,11 @@ export default function AlertSubscriptionForm() {
           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email *</label>
           <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="tu@email.com" maxLength={150} className={inputCls} />
         </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Teléfono / WhatsApp (opcional)</label>
+        <input name="phone" type="tel" value={form.phone} onChange={handleChange} placeholder="Ej: 6561234567" maxLength={20}
+          pattern="^(\+?52)?\d{10}$" title="10 dígitos, con o sin +52" className={inputCls} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>

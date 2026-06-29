@@ -1,20 +1,19 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns } from 'lucide-react';
+import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
-import { getLeads, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, getLeadNotes, addLeadNote, deleteLeadNote } from '../../services/leadService';
+import { getLeads, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp } from '../../services/leadService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import BatchActionBar from '../../components/ui/BatchActionBar';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 import { formatDate, formatDateTime } from '../../utils/formatters';
-import { SOURCE_LABELS, SOURCE_COLORS } from '../../utils/constants';
+import { SOURCE_LABELS, SOURCE_COLORS, LEAD_TYPE_LABELS as typeLabel } from '../../utils/constants';
 
 const statusVariant = { nuevo: 'primary', contactado: 'warning', cerrado: 'success', descartado: 'default' };
-const typeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
 const LEAD_STATUS_OPTIONS = [
   { value: 'contactado', label: 'Contactado' },
   { value: 'cerrado',    label: 'Cerrado' },
@@ -52,6 +51,24 @@ function LeadDetailPanel({ selected, onClose, updateMutation }) {
     mutationFn: ({ leadId, noteId }) => deleteLeadNote(leadId, noteId),
     onSuccess: () => queryClient.invalidateQueries(['lead-notes', selected.id]),
   });
+
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const whatsappMutation = useMutation({
+    mutationFn: ({ id, message }) => sendLeadWhatsApp(id, message),
+    onSuccess: (data) => {
+      setWhatsappMessage('');
+      queryClient.invalidateQueries(['lead-notes', selected.id]);
+      if (data?.warning) toast(data.warning, { icon: '⚠️' });
+      else toast.success('Mensaje de WhatsApp enviado');
+    },
+    onError: (e) => toast.error(e?.response?.data?.error || 'Error al enviar WhatsApp'),
+  });
+
+  const handleSendWhatsapp = () => {
+    const message = whatsappMessage.trim();
+    if (!message) return;
+    whatsappMutation.mutate({ id: selected.id, message });
+  };
 
   const handleAddNote = () => {
     const content = noteText.trim();
@@ -119,6 +136,24 @@ function LeadDetailPanel({ selected, onClose, updateMutation }) {
               className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500" />
           </div>
         </div>
+
+        {/* Envío de WhatsApp */}
+        {selected.phone && (
+          <div className="mb-5">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <MessageCircle size={13} className="text-green-500" /> Enviar WhatsApp
+            </p>
+            <div className="flex gap-2">
+              <textarea value={whatsappMessage} onChange={(e) => setWhatsappMessage(e.target.value)}
+                rows={2} placeholder="Mensaje de seguimiento..."
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500" />
+              <button onClick={handleSendWhatsapp} disabled={!whatsappMessage.trim() || whatsappMutation.isPending}
+                className="px-3 py-2 bg-green-600 text-white rounded-xl text-xs font-medium hover:bg-green-700 disabled:opacity-40 transition-colors flex-shrink-0">
+                {whatsappMutation.isPending ? '...' : 'Enviar'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Seguimiento / historial de notas */}
         <div>

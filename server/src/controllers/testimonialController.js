@@ -1,6 +1,7 @@
 const { Testimonial } = require('../models/index');
 const { cloudinary } = require('../config/cloudinary');
 const { logAudit } = require('../utils/audit');
+const { paginate } = require('../utils/pagination');
 
 const uploadToCloudinary = (buffer, folder) =>
   new Promise((resolve, reject) => {
@@ -37,23 +38,9 @@ const getAllTestimonials = async (req, res) => {
     const where = {};
     if (status) where.status = status;
 
-    const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    const { count, rows } = await Testimonial.findAndCountAll({
-      where,
-      order: [['order', 'ASC'], ['createdAt', 'DESC']],
-      limit: parseInt(limit, 10),
-      offset,
-    });
+    const result = await paginate(Testimonial, { page, limit, where, order: [['order', 'ASC'], ['createdAt', 'DESC']] });
 
-    return res.json({
-      data: rows,
-      pagination: {
-        total: count,
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
-        totalPages: Math.ceil(count / parseInt(limit, 10)),
-      },
-    });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getAllTestimonials:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

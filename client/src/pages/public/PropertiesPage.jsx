@@ -9,10 +9,11 @@ import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkelet
 import SEO from '../../components/ui/SEO';
 import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, labelsToOptions } from '../../utils/constants';
 
-const CITIES = [{ value: '', label: 'Todas las ciudades' }, { value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }];
-const TYPES = [{ value: '', label: 'Todos los tipos' }, { value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }, { value: 'terreno', label: 'Terreno' }, { value: 'local', label: 'Local' }, { value: 'bodega', label: 'Bodega' }];
-const STATUS = [{ value: '', label: 'Todos los estatus' }, { value: 'disponible', label: 'Disponible' }, { value: 'apartado', label: 'Apartado' }];
+const CITIES = [{ value: '', label: 'Todas las ciudades' }, ...labelsToOptions(CITY_LABELS, ['otra'])];
+const TYPES = [{ value: '', label: 'Todos los tipos' }, ...labelsToOptions(TYPE_LABELS)];
+const STATUS = [{ value: '', label: 'Todos los estatus' }, ...labelsToOptions(STATUS_LABELS, ['vendido'])];
 const BEDROOMS = [{ value: '', label: 'Cualquier cantidad' }, { value: '1', label: '1+ recámara' }, { value: '2', label: '2+ recámaras' }, { value: '3', label: '3+ recámaras' }, { value: '4', label: '4+ recámaras' }];
 const BATHROOMS = [{ value: '', label: 'Cualquier cantidad' }, { value: '1', label: '1+ baño' }, { value: '2', label: '2+ baños' }, { value: '3', label: '3+ baños' }];
 

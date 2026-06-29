@@ -1,7 +1,18 @@
+require('dotenv').config();
+
+// AUDIT-020: validar ANTES de cargar app/models — si falta JWT_SECRET o las variables de
+// BD, abortar aquí con un mensaje claro en vez de fallar después con errores genéricos.
+const { validateEnvironment } = require('./src/config/validateEnv');
+try {
+  validateEnvironment();
+} catch (error) {
+  console.error('❌', error.message);
+  process.exit(1);
+}
+
 const app = require('./app');
 const { sequelize } = require('./src/models/index');
 const { verifyConnection } = require('./src/services/emailService');
-require('dotenv').config();
 
 const PORT = process.env.PORT || 3001;
 
@@ -85,7 +96,7 @@ async function startServer() {
       console.log(`📚 Swagger docs: http://localhost:${PORT}/api/docs`);
     });
   } catch (error) {
-    console.error('❌ Error al iniciar el servidor:', error);
+    require('./src/utils/logger').error('Error al iniciar el servidor', { error: error.message, stack: error.stack });
     process.exit(1);
   }
 }

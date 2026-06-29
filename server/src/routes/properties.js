@@ -5,7 +5,7 @@ const {
   uploadImages, deleteImage, setCoverImage, reorderImages,
   getPromotedProperty, promoteProperty, getStatusHistory, getPublicPriceHistory, trackShare, getPropertyStats,
 } = require('../controllers/propertyController');
-const { getDocuments, uploadDocument, deleteDocument } = require('../controllers/documentController');
+const { getDocuments, getAllDocuments, uploadDocument, deleteDocument, setDocumentVisibility } = require('../controllers/documentController');
 const { authenticate, attachUserIfPresent } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const upload = require('../middleware/uploadMiddleware');
@@ -39,7 +39,9 @@ router.put('/:id/images/:imageId/cover', apiLimiter, authenticate, authorize('ad
 router.put('/:id/images/reorder', apiLimiter, authenticate, authorize('admin', 'editor'), reorderImages);
 
 router.get('/:id/documents', apiLimiter, getDocuments);
+router.get('/:id/documents/all', apiLimiter, authenticate, authorize('admin', 'editor'), getAllDocuments);
 router.post('/:id/documents', uploadLimiter, authenticate, authorize('admin', 'editor'), uploadDoc.single('file'), uploadDocument);
+router.patch('/:id/documents/:docId/visibility', apiLimiter, authenticate, authorize('admin', 'editor'), setDocumentVisibility);
 router.delete('/:id/documents/:docId', apiLimiter, authenticate, authorize('admin', 'editor'), deleteDocument);
 
 module.exports = router;

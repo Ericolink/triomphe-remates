@@ -1,13 +1,15 @@
 const { PropertyAlert } = require('../models/index');
-const { validateEmail } = require('../utils/validators');
+const { validateEmail, validatePhone } = require('../utils/validators');
+const { paginate } = require('../utils/pagination');
 
 // POST /api/alerts
 const subscribe = async (req, res) => {
   try {
-    const { name, email, city, type, maxPrice } = req.body;
+    const { name, email, phone, city, type, maxPrice } = req.body;
 
     if (!name || !email) return res.status(400).json({ error: 'Nombre y email son requeridos' });
     if (!validateEmail(email)) return res.status(400).json({ error: 'Email inválido' });
+    if (!validatePhone(phone)) return res.status(400).json({ error: 'Teléfono inválido — usa 10 dígitos, con o sin +52' });
 
     const existing = await PropertyAlert.findOne({ where: { email: email.trim().toLowerCase(), isActive: true } });
     if (existing) {
@@ -17,6 +19,7 @@ const subscribe = async (req, res) => {
     const alert = await PropertyAlert.create({
       name: name.trim(),
       email: email.trim().toLowerCase(),
+      phone: phone?.trim() || null,
       city: city || null,
       type: type || null,
       maxPrice: maxPrice ? parseFloat(maxPrice) : null,
@@ -53,15 +56,9 @@ const getAlerts = async (req, res) => {
     const where = {};
     if (isActive !== undefined) where.isActive = isActive === 'true';
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const { count, rows } = await PropertyAlert.findAndCountAll({
-      where,
-      order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset,
-    });
+    const result = await paginate(PropertyAlert, { page, limit, where, order: [['createdAt', 'DESC']] });
 
-    return res.json({ data: rows, pagination: { total: count, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(count / parseInt(limit)) } });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getAlerts:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

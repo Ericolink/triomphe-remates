@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads, getLeadNotes, addLeadNote, deleteLeadNote } = require('../controllers/leadController');
+const { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads, getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp } = require('../controllers/leadController');
 const { authenticate, authenticateSSE } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { apiLimiter, authLimiter } = require('../middleware/rateLimitMiddleware');
@@ -22,5 +22,6 @@ router.delete('/:id',          apiLimiter, authenticate, authorize('admin'), del
 router.get('/:id/notes',       apiLimiter, authenticate, authorize('admin', 'editor'), getLeadNotes);
 router.post('/:id/notes',      apiLimiter, authenticate, authorize('admin', 'editor'), addLeadNote);
 router.delete('/:id/notes/:noteId', apiLimiter, authenticate, authorize('admin', 'editor'), deleteLeadNote);
+router.post('/:id/whatsapp',   apiLimiter, authenticate, authorize('admin', 'editor'), sendLeadWhatsApp);
 
 module.exports = router;

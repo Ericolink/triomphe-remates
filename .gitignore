@@ -20,3 +20,9 @@ Thumbs.db
 # Uploads
 server/uploads/*
 !server/uploads/.gitkeep
+
+# Configuración de deploy con secretos (AUDIT-001) — usar variables de entorno reales, no archivos
+web.config
+server/web.config
+server/update-admin.js
+*.tar.gz.backup

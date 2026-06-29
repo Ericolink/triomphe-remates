@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { register, login, getMe, changePassword } = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 const { authLimiter, apiLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -14,8 +15,10 @@ const { authLimiter, apiLimiter } = require('../middleware/rateLimitMiddleware')
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Registrar nuevo usuario
+ *     summary: Registrar nuevo usuario (solo admin)
  *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -31,9 +34,11 @@ const { authLimiter, apiLimiter } = require('../middleware/rateLimitMiddleware')
  *     responses:
  *       201: { description: Usuario creado }
  *       400: { description: Datos inválidos }
+ *       401: { description: No autenticado }
+ *       403: { description: No autorizado }
  *       409: { description: Email ya registrado }
  */
-router.post('/register', authLimiter, register);
+router.post('/register', authLimiter, authenticate, authorize('admin'), register);
 
 /**
  * @swagger

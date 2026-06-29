@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
+const { validatePhone } = require('../utils/validators');
 
 const Lead = sequelize.define('Lead', {
   id: {
@@ -19,6 +20,11 @@ const Lead = sequelize.define('Lead', {
   phone: {
     type: DataTypes.STRING(20),
     allowNull: true,
+    validate: {
+      isValidPhone(value) {
+        if (!validatePhone(value)) throw new Error('Teléfono inválido');
+      },
+    },
   },
   message: {
     type: DataTypes.TEXT,

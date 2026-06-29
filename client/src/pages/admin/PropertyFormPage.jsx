@@ -1,12 +1,12 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Upload, X, Star, ArrowLeft, Lock, History, FileText, Trash2, Download, Eye, MessageCircle, Share2 } from 'lucide-react';
+import { Upload, X, Star, ArrowLeft, Lock, History, FileText, Trash2, Download, Eye, EyeOff, MessageCircle, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   getPropertyById, createProperty, updateProperty,
   uploadImages, deleteImage, setCoverImage, reorderImages, getStatusHistory,
-  getDocuments, uploadDocument, deleteDocument,
+  getAllDocuments, uploadDocument, deleteDocument, setDocumentVisibility,
 } from '../../services/propertyService';
 import { getPropertyAnalytics } from '../../services/analyticsService';
 import Spinner from '../../components/ui/Spinner';
@@ -119,8 +119,8 @@ export default function PropertyFormPage() {
   const analyticsTotals = analyticsData?.data?.totals;
 
   const { data: documentsData } = useQuery({
-    queryKey: ['property-documents', id],
-    queryFn: () => getDocuments(id),
+    queryKey: ['property-documents-all', id],
+    queryFn: () => getAllDocuments(id),
     enabled: isEdit,
   });
   const documents = documentsData ?? [];
@@ -190,11 +190,13 @@ export default function PropertyFormPage() {
     onError: () => toast.error('Error al actualizar el orden'),
   });
 
+  const [docIsPublic, setDocIsPublic] = useState(true);
+
   const uploadDocMutation = useMutation({
-    mutationFn: (file) => uploadDocument(id, file, file.name),
+    mutationFn: (file) => uploadDocument(id, file, file.name, docIsPublic),
     onSuccess: () => {
       toast.success('Documento subido');
-      queryClient.invalidateQueries(['property-documents', id]);
+      queryClient.invalidateQueries(['property-documents-all', id]);
     },
     onError: (err) => toast.error(err?.response?.data?.error || 'Error al subir documento'),
   });
@@ -203,8 +205,14 @@ export default function PropertyFormPage() {
     mutationFn: (docId) => deleteDocument(id, docId),
     onSuccess: () => {
       toast.success('Documento eliminado');
-      queryClient.invalidateQueries(['property-documents', id]);
+      queryClient.invalidateQueries(['property-documents-all', id]);
     },
+  });
+
+  const visibilityMutation = useMutation({
+    mutationFn: ({ docId, isPublic }) => setDocumentVisibility(id, docId, isPublic),
+    onSuccess: () => queryClient.invalidateQueries(['property-documents-all', id]),
+    onError: () => toast.error('Error al cambiar la visibilidad'),
   });
 
   const handleDocFile = (e) => {
@@ -528,6 +536,12 @@ export default function PropertyFormPage() {
                     {doc.size && (
                       <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{formatFileSize(doc.size)}</span>
                     )}
+                    <button type="button"
+                      onClick={() => visibilityMutation.mutate({ docId: doc.id, isPublic: !doc.isPublic })}
+                      className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${doc.isPublic ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20' : 'text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2e3650]'}`}
+                      title={doc.isPublic ? 'Público — visible en la ficha de la propiedad' : 'Privado — solo visible en el panel admin'}>
+                      {doc.isPublic ? <Eye size={15} /> : <EyeOff size={15} />}
+                    </button>
                     <a href={doc.url} target="_blank" rel="noopener noreferrer"
                       className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-[#2e3650] transition-colors text-gray-500 dark:text-gray-400" title="Descargar">
                       <Download size={15} />
@@ -541,6 +555,11 @@ export default function PropertyFormPage() {
               </div>
             )}
 
+            <label className="flex items-center gap-2 mb-3 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
+              <input type="checkbox" checked={docIsPublic} onChange={(e) => setDocIsPublic(e.target.checked)}
+                className="rounded border-gray-300" />
+              Visible públicamente en la ficha de la propiedad
+            </label>
             <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-[#2e3650] rounded-xl p-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
               <Upload size={28} className="text-gray-300 mb-2" />
               <p className="text-sm text-gray-500 dark:text-gray-400">

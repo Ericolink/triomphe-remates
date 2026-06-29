@@ -1,0 +1,1 @@
+import{r as e,t}from"./animations-Co9YGMBe.js";import{s as n}from"./animations-DbkjjTm2.js";var r=e();function i({children:e,className:i=``,delay:a=0,variant:o}){return(0,r.jsx)(t.div,{className:i,variants:o||n,initial:`hidden`,whileInView:`visible`,viewport:{once:!0,margin:`-80px`},transition:{delay:a},children:e})}export{i as t};

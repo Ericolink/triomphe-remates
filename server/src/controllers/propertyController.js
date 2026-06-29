@@ -1,9 +1,12 @@
 const { Op, fn, col } = require('sequelize');
 const { cloudinary } = require('../config/cloudinary');
-const { Property, Image, Analytics, PropertyAlert, PropertyStatusHistory } = require('../models/index');
+const { sequelize, Property, Image, Analytics, PropertyStatusHistory } = require('../models/index');
 const { generateSlug } = require('../utils/helpers');
-const { sendPropertyAlertNotification } = require('../services/emailService');
+const alertService = require('../services/alertService');
+const { isValidImageBuffer } = require('../utils/fileSignature');
+const { paginate } = require('../utils/pagination');
 const { logAudit } = require('../utils/audit');
+const logger = require('../utils/logger');
 
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined) ? null : val;
@@ -72,26 +75,16 @@ const getProperties = async (req, res) => {
 
     if (andConditions.length > 0) where[Op.and] = andConditions;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-
-    const { count, rows } = await Property.findAndCountAll({
+    const result = await paginate(Property, {
+      page,
+      limit,
       where,
       attributes: { exclude: ['internalNotes'] },
       include: [{ model: Image, as: 'images', where: { isCover: true }, required: false }],
       order: [['isFeatured', 'DESC'], ['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset,
     });
 
-    return res.json({
-      data: rows,
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(count / parseInt(limit)),
-      },
-    });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getProperties:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
@@ -197,56 +190,43 @@ const createProperty = async (req, res) => {
     const existing = await Property.findOne({ where: { slug } });
     if (existing) slug = `${slug}-${Date.now()}`;
 
-    const property = await Property.create({
-      title, description,
-      price: nullIfEmpty(price),
-      city, type,
-      status: status || 'disponible',
-      squareMeters: nullIfEmpty(squareMeters),
-      terrainMeters: nullIfEmpty(terrainMeters),
-      constructionMeters: nullIfEmpty(constructionMeters),
-      bedrooms: nullIfEmpty(bedrooms),
-      bathrooms: nullIfEmpty(bathrooms),
-      address, auctionDate: auctionDate || null,
-      acquisitionStage: acquisitionStage || 'sin_proceso',
-      isFeatured: isFeatured || false,
-      internalNotes: internalNotes || null,
-      code: nullIfEmpty(code),
-      slug,
+    // AUDIT-018: Property + su primer registro de historial deben crearse juntos —
+    // sin transacción, un fallo en PropertyStatusHistory.create dejaba la propiedad
+    // creada sin su historial inicial.
+    const property = await sequelize.transaction(async (transaction) => {
+      const created = await Property.create({
+        title, description,
+        price: nullIfEmpty(price),
+        city, type,
+        status: status || 'disponible',
+        squareMeters: nullIfEmpty(squareMeters),
+        terrainMeters: nullIfEmpty(terrainMeters),
+        constructionMeters: nullIfEmpty(constructionMeters),
+        bedrooms: nullIfEmpty(bedrooms),
+        bathrooms: nullIfEmpty(bathrooms),
+        address, auctionDate: auctionDate || null,
+        acquisitionStage: acquisitionStage || 'sin_proceso',
+        isFeatured: isFeatured || false,
+        internalNotes: internalNotes || null,
+        code: nullIfEmpty(code),
+        slug,
+      }, { transaction });
+
+      await PropertyStatusHistory.create({
+        propertyId: created.id,
+        fromStatus: null,
+        toStatus: created.status,
+        userName: req.user?.name || null,
+      }, { transaction });
+
+      return created;
     });
 
-    PropertyStatusHistory.create({
-      propertyId: property.id,
-      fromStatus: null,
-      toStatus: property.status,
-      userName: req.user?.name || null,
-    }).catch((e) => console.error('Error registrando historial de estatus:', e));
+    logger.info('Propiedad creada', { propertyId: property.id, userId: req.user?.id, city, type, status: property.status });
 
     // Notificar a suscriptores con alertas coincidentes (sin bloquear la respuesta)
     if ((status || 'disponible') === 'disponible') {
-      const alertWhere = { isActive: true };
-      if (city) alertWhere[Op.or] = [{ city: null }, { city }];
-      if (type) {
-        const typeFilter = [{ type: null }, { type }];
-        alertWhere[Op.or] = alertWhere[Op.or]
-          ? alertWhere[Op.or].concat(typeFilter)
-          : typeFilter;
-      }
-
-      PropertyAlert.findAll({ where: alertWhere }).then((alerts) => {
-        const parsedPrice = price ? parseFloat(price) : null;
-        const matching = alerts.filter((a) => {
-          if (a.city && a.city !== city) return false;
-          if (a.type && a.type !== type) return false;
-          if (a.maxPrice && parsedPrice && parsedPrice > parseFloat(a.maxPrice)) return false;
-          return true;
-        });
-        matching.forEach((a) => {
-          sendPropertyAlertNotification(a, property).catch((e) =>
-            console.error('Error enviando alerta de propiedad:', e)
-          );
-        });
-      }).catch((e) => console.error('Error buscando alertas:', e));
+      alertService.notifyAndSend(property);
     }
 
     logAudit(req, 'create', 'property', property.id, { title: property.title, city, type });
@@ -256,7 +236,7 @@ const createProperty = async (req, res) => {
       data: property,
     });
   } catch (error) {
-    console.error('Error en createProperty:', error);
+    logger.error('Error en createProperty', { userId: req.user?.id, error: error.message });
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -307,6 +287,13 @@ const updateProperty = async (req, res) => {
         toStatus: status,
         userName: req.user?.name || null,
       }).catch((e) => console.error('Error registrando historial de estatus:', e));
+
+      // AUDIT-005: createProperty ya notificaba a suscriptores con alertas coincidentes,
+      // pero updateProperty nunca lo hacía — una propiedad reactivada vía edición no
+      // disparaba ningún email/WhatsApp. Ahora ambos comparten alertService.
+      if (status === 'disponible' && previousStatus !== 'disponible') {
+        alertService.notifyAndSend(property);
+      }
     }
 
     const newPrice = nullIfEmpty(price);
@@ -368,6 +355,12 @@ const uploadImages = async (req, res) => {
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No se enviaron imágenes' });
+    }
+
+    // AUDIT-008: multer ya filtró por extensión/mimetype declarado (falsificable); esto
+    // verifica los bytes reales del archivo antes de subirlo a Cloudinary.
+    if (req.files.some((file) => !isValidImageBuffer(file.buffer))) {
+      return res.status(400).json({ error: 'Uno o más archivos no son imágenes válidas (JPG, PNG o WEBP)' });
     }
 
     const existingImages = await Image.count({ where: { propertyId: property.id } });
@@ -500,21 +493,31 @@ const getPromotedProperty = async (req, res) => {
 
 // PUT /api/properties/:id/promote
 const promoteProperty = async (req, res) => {
+  // AUDIT-004: las dos operaciones (quitar promoción anterior + activar la nueva) deben
+  // ser atómicas — sin transacción, dos admins promoviendo propiedades distintas casi al
+  // mismo tiempo pueden terminar con 0 o 2 propiedades isPromoted:true.
+  const transaction = await sequelize.transaction();
   try {
-    const property = await Property.findByPk(req.params.id);
-    if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+    const property = await Property.findByPk(req.params.id, { transaction });
+    if (!property) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Propiedad no encontrada' });
+    }
 
     if (property.isPromoted) {
-      await property.update({ isPromoted: false });
+      await property.update({ isPromoted: false }, { transaction });
+      await transaction.commit();
       return res.json({ message: 'Propiedad quitada de promoción', data: property });
     }
 
     // Quitar la promoción a cualquier otra propiedad y activar esta
-    await Property.update({ isPromoted: false }, { where: { isPromoted: true } });
-    await property.update({ isPromoted: true });
+    await Property.update({ isPromoted: false }, { where: { isPromoted: true }, transaction });
+    await property.update({ isPromoted: true }, { transaction });
 
+    await transaction.commit();
     return res.json({ message: 'Propiedad promocionada exitosamente', data: property });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error en promoteProperty:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }

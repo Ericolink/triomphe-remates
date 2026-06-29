@@ -1,0 +1,1 @@
+import{t as e}from"./api-DloUHBy6.js";var t=async()=>{let{data:t}=await e.get(`/analytics/dashboard`);return t},n=async t=>{let{data:n}=await e.get(`/analytics/properties/${t}`);return n};export{n,t};

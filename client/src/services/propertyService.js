@@ -88,13 +88,25 @@ export const getDocuments = async (id) => {
   return data;
 };
 
-export const uploadDocument = async (id, file, name) => {
+// AUDIT-007: panel admin necesita ver también los documentos privados
+export const getAllDocuments = async (id) => {
+  const { data } = await api.get(`/properties/${id}/documents/all`);
+  return data;
+};
+
+export const uploadDocument = async (id, file, name, isPublic = true) => {
   const formData = new FormData();
   formData.append('file', file);
   if (name) formData.append('name', name);
+  formData.append('isPublic', isPublic);
   const { data } = await api.post(`/properties/${id}/documents`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+  return data;
+};
+
+export const setDocumentVisibility = async (propertyId, docId, isPublic) => {
+  const { data } = await api.patch(`/properties/${propertyId}/documents/${docId}/visibility`, { isPublic });
   return data;
 };
 

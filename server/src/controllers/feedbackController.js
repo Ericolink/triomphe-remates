@@ -1,6 +1,7 @@
 const { Feedback } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendFeedbackNotification } = require('../services/emailService');
+const { paginate } = require('../utils/pagination');
 
 // POST /api/feedback
 const createFeedback = async (req, res) => {
@@ -51,24 +52,9 @@ const getFeedbacks = async (req, res) => {
     if (status) where.status = status;
     if (category) where.category = category;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const result = await paginate(Feedback, { page, limit, where, order: [['createdAt', 'DESC']] });
 
-    const { count, rows } = await Feedback.findAndCountAll({
-      where,
-      order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset,
-    });
-
-    return res.json({
-      data: rows,
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(count / parseInt(limit)),
-      },
-    });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getFeedbacks:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

@@ -1,5 +1,10 @@
 export const WHATSAPP_NUMBER = '526565792750';
 
+// Convierte un mapa de labels (CITY_LABELS, TYPE_LABELS, etc.) en opciones para <select>,
+// preservando el orden de inserción y excluyendo claves que no aplican como filtro.
+export const labelsToOptions = (labels, exclude = []) =>
+  Object.entries(labels).filter(([value]) => !exclude.includes(value)).map(([value, label]) => ({ value, label }));
+
 export const CITY_LABELS = {
   juarez: 'Cd. Juárez',
   chihuahua: 'Chihuahua',
@@ -34,6 +39,13 @@ export const STATUS_VARIANTS = {
   disponible: 'success',
   apartado: 'warning',
   vendido: 'danger',
+};
+
+// AUDIT-012: estaba duplicado idénticamente en LeadsPage.jsx y CalendarPage.jsx
+export const LEAD_TYPE_LABELS = {
+  contacto: 'Contacto',
+  cita: 'Cita',
+  informacion: 'Información',
 };
 
 export const SOURCE_LABELS = {

@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+const { CITY_LABEL, PROPERTY_TYPE_LABEL } = require('../utils/labels');
 
 const getLogoAttachment = async () => {
   const candidates = [
@@ -31,6 +32,17 @@ const getLogoAttachment = async () => {
     return { filename: 'logo.png', path: logoPath, cid: 'triomphe-logo' };
   }
 };
+
+// Escapa caracteres especiales antes de interpolar datos de usuario en HTML de correo —
+// los formularios públicos (leads, postulaciones, feedback, alertas) no sanitizan su input.
+const escapeHtml = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[c]);
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -64,7 +76,6 @@ const buildEmail = ({ title, subtitle, badge = '', body, cta = '', footerNote = 
   </html>
 `;
 
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro', otra: 'Otra ciudad' };
 const typeLabel = { contacto: 'Solicitud de información', cita: 'Agendar visita', informacion: 'Información del remate' };
 const expLabel = { sin_experiencia: 'Sin experiencia', 'menos_1_año': 'Menos de 1 año', '1_3_años': '1 a 3 años', 'mas_3_años': 'Más de 3 años' };
 
@@ -91,7 +102,7 @@ const verifyConnection = async () => {
 
 const sendNewLeadNotification = async (lead, property) => {
   const propertyRow = property
-    ? tableRow('Propiedad', `<strong style="color:#1a3a5c">${property.title} — ${cityLabel[property.city] || property.city}</strong>`)
+    ? tableRow('Propiedad', `<strong style="color:#1a3a5c">${escapeHtml(property.title)} — ${escapeHtml(CITY_LABEL[property.city] || property.city)}</strong>`)
     : '';
   const appointmentRow = lead.appointmentDate
     ? tableRow('Fecha cita', new Date(lead.appointmentDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }))
@@ -100,17 +111,17 @@ const sendNewLeadNotification = async (lead, property) => {
   const html = buildEmail({
     title: '🔔 Nuevo lead recibido',
     subtitle: 'Triomphe Bienes Raíces — Panel de administración',
-    badge: yellowBadge(`📋 ${typeLabel[lead.type] || lead.type}`),
+    badge: yellowBadge(`📋 ${escapeHtml(typeLabel[lead.type] || lead.type)}`),
     body: `
       <h2 style="margin:0 0 16px;color:#1a3a5c;font-size:15px;font-weight:700">Datos del contacto</h2>
       <table style="width:100%;border-collapse:collapse">
-        ${tableRow('Nombre', `<strong>${lead.name}</strong>`)}
-        ${tableRow('Email', `<a href="mailto:${lead.email}" style="color:#1a3a5c;text-decoration:none">${lead.email}</a>`)}
-        ${lead.phone ? tableRow('Teléfono', `<a href="tel:${lead.phone}" style="color:#1a3a5c;text-decoration:none">${lead.phone}</a>`) : ''}
+        ${tableRow('Nombre', `<strong>${escapeHtml(lead.name)}</strong>`)}
+        ${tableRow('Email', `<a href="mailto:${escapeHtml(lead.email)}" style="color:#1a3a5c;text-decoration:none">${escapeHtml(lead.email)}</a>`)}
+        ${lead.phone ? tableRow('Teléfono', `<a href="tel:${escapeHtml(lead.phone)}" style="color:#1a3a5c;text-decoration:none">${escapeHtml(lead.phone)}</a>`) : ''}
         ${propertyRow}
         ${appointmentRow}
       </table>
-      ${lead.message ? messageBlock(lead.message) : ''}
+      ${lead.message ? messageBlock(escapeHtml(lead.message)) : ''}
     `,
     cta: ctaButton(`${process.env.CLIENT_URL}/admin/leads`, 'Ver en el panel admin →'),
   });
@@ -126,7 +137,7 @@ const sendNewLeadNotification = async (lead, property) => {
 
 const sendLeadConfirmation = async (lead) => {
   const html = buildEmail({
-    title: `¡Gracias por contactarnos, ${lead.name}!`,
+    title: `¡Gracias por contactarnos, ${escapeHtml(lead.name)}!`,
     subtitle: 'Triomphe Bienes Raíces',
     body: `
       <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px">
@@ -135,7 +146,7 @@ const sendLeadConfirmation = async (lead) => {
       </p>
       <div style="background:#eff6ff;border-left:4px solid #1a3a5c;border-radius:6px;padding:16px;margin:20px 0">
         <p style="margin:0;color:#1a3a5c;font-size:13px;font-weight:600">Tu solicitud fue registrada como:</p>
-        <p style="margin:6px 0 0;color:#374151;font-size:13px">${typeLabel[lead.type] || lead.type}</p>
+        <p style="margin:6px 0 0;color:#374151;font-size:13px">${escapeHtml(typeLabel[lead.type] || lead.type)}</p>
       </div>
       <p style="color:#6b7280;font-size:13px;margin:16px 0 0">Si tienes alguna pregunta urgente puedes contactarnos:</p>
       <p style="margin:8px 0 0"><a href="mailto:${process.env.EMAIL_TO}" style="color:#1a3a5c;font-size:13px;font-weight:600">${process.env.EMAIL_TO}</a></p>
@@ -154,7 +165,7 @@ const sendLeadConfirmation = async (lead) => {
 
 const sendJobApplicationNotification = async (application, position) => {
   const badge = position
-    ? yellowBadge(`📋 Vacante: ${position.title}`)
+    ? yellowBadge(`📋 Vacante: ${escapeHtml(position.title)}`)
     : `<div style="background:#e0f2fe;padding:12px 32px;border-bottom:1px solid #bae6fd"><span style="color:#0c4a6e;font-size:13px;font-weight:600">📋 Postulación general</span></div>`;
 
   const html = buildEmail({
@@ -163,14 +174,14 @@ const sendJobApplicationNotification = async (application, position) => {
     badge,
     body: `
       <table style="width:100%;border-collapse:collapse">
-        ${tableRow('Nombre', `<strong>${application.name}</strong>`)}
-        ${tableRow('Email', `<a href="mailto:${application.email}" style="color:#1a3a5c">${application.email}</a>`)}
-        ${tableRow('Teléfono', `<a href="tel:${application.phone}" style="color:#1a3a5c">${application.phone}</a>`)}
-        ${tableRow('Ciudad', cityLabel[application.city] || application.city)}
-        ${tableRow('Experiencia', expLabel[application.experience] || application.experience)}
+        ${tableRow('Nombre', `<strong>${escapeHtml(application.name)}</strong>`)}
+        ${tableRow('Email', `<a href="mailto:${escapeHtml(application.email)}" style="color:#1a3a5c">${escapeHtml(application.email)}</a>`)}
+        ${tableRow('Teléfono', `<a href="tel:${escapeHtml(application.phone)}" style="color:#1a3a5c">${escapeHtml(application.phone)}</a>`)}
+        ${tableRow('Ciudad', escapeHtml(CITY_LABEL[application.city] || application.city))}
+        ${tableRow('Experiencia', escapeHtml(expLabel[application.experience] || application.experience))}
         ${tableRow('Vehículo propio', application.hasVehicle ? '✅ Sí' : '❌ No', true)}
       </table>
-      ${application.motivation ? `<div style="margin-top:20px;background:#f8f9fa;border-radius:10px;padding:16px"><p style="margin:0 0 6px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase">Motivación</p><p style="margin:0;color:#374151;font-size:13px;line-height:1.6">${application.motivation}</p></div>` : ''}
+      ${application.motivation ? `<div style="margin-top:20px;background:#f8f9fa;border-radius:10px;padding:16px"><p style="margin:0 0 6px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase">Motivación</p><p style="margin:0;color:#374151;font-size:13px;line-height:1.6">${escapeHtml(application.motivation)}</p></div>` : ''}
     `,
     cta: ctaButton(`${process.env.CLIENT_URL}/admin/jobs`, 'Ver en el panel admin →'),
     footerNote: `Postulación recibida el ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
@@ -187,11 +198,11 @@ const sendJobApplicationNotification = async (application, position) => {
 
 const sendJobApplicationConfirmation = async (application, position) => {
   const html = buildEmail({
-    title: `¡Gracias por postularte, ${application.name}!`,
+    title: `¡Gracias por postularte, ${escapeHtml(application.name)}!`,
     subtitle: 'Triomphe Bienes Raíces — Bolsa de trabajo',
     body: `
       <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px">
-        Hemos recibido tu postulación${position ? ` para el puesto de <strong>${position.title}</strong>` : ''}. Nuestro equipo la revisará y se pondrá en contacto contigo a la brevedad posible.
+        Hemos recibido tu postulación${position ? ` para el puesto de <strong>${escapeHtml(position.title)}</strong>` : ''}. Nuestro equipo la revisará y se pondrá en contacto contigo a la brevedad posible.
       </p>
       <div style="background:#eff6ff;border-left:4px solid #1a3a5c;border-radius:6px;padding:16px;margin:20px 0">
         <p style="margin:0;color:#1a3a5c;font-size:13px;font-weight:600">¿Qué sigue?</p>
@@ -225,14 +236,14 @@ const sendFeedbackNotification = async (feedback) => {
   const html = buildEmail({
     title: '📬 Nuevo mensaje en el buzón',
     subtitle: 'Triomphe Bienes Raíces — Buzón de opiniones',
-    badge: `<div style="padding:12px 32px;${badgeStyle}"><span style="color:${textColor};font-size:13px;font-weight:600">${categoryLabel[feedback.category] || feedback.category}</span></div>`,
+    badge: `<div style="padding:12px 32px;${badgeStyle}"><span style="color:${textColor};font-size:13px;font-weight:600">${escapeHtml(categoryLabel[feedback.category] || feedback.category)}</span></div>`,
     body: `
       <table style="width:100%;border-collapse:collapse">
-        ${tableRow('Nombre', `<strong>${feedback.name}</strong>`)}
-        ${tableRow('Email', `<a href="mailto:${feedback.email}" style="color:#1a3a5c;text-decoration:none">${feedback.email}</a>`)}
-        ${tableRow('Asunto', `<strong>${feedback.subject}</strong>`, true)}
+        ${tableRow('Nombre', `<strong>${escapeHtml(feedback.name)}</strong>`)}
+        ${tableRow('Email', `<a href="mailto:${escapeHtml(feedback.email)}" style="color:#1a3a5c;text-decoration:none">${escapeHtml(feedback.email)}</a>`)}
+        ${tableRow('Asunto', `<strong>${escapeHtml(feedback.subject)}</strong>`, true)}
       </table>
-      ${messageBlock(feedback.message)}
+      ${messageBlock(escapeHtml(feedback.message))}
     `,
     cta: ctaButton(`${process.env.CLIENT_URL}/admin/buzon`, 'Ver en el panel admin →'),
   });
@@ -246,8 +257,6 @@ const sendFeedbackNotification = async (feedback) => {
   });
 };
 
-const typeLabel2 = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
-
 const sendPropertyAlertNotification = async (alert, property) => {
   const formatPrice = (p) => p ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(p) : 'Consultar';
   const unsubscribeUrl = `${process.env.CLIENT_URL}/cancelar-alerta?token=${alert.token}`;
@@ -258,11 +267,11 @@ const sendPropertyAlertNotification = async (alert, property) => {
     subtitle: 'Triomphe Bienes Raíces — Alertas de propiedades',
     body: `
       <p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px">
-        Hola <strong>${alert.name}</strong>, encontramos una nueva propiedad que coincide con tus criterios de búsqueda.
+        Hola <strong>${escapeHtml(alert.name)}</strong>, encontramos una nueva propiedad que coincide con tus criterios de búsqueda.
       </p>
       <div style="background:#eff6ff;border-left:4px solid #1a3a5c;border-radius:6px;padding:16px;margin:16px 0">
-        <p style="margin:0 0 4px;color:#1a3a5c;font-size:15px;font-weight:700">${property.title}</p>
-        <p style="margin:0;color:#374151;font-size:13px">${cityLabel[property.city] || property.city} · ${typeLabel2[property.type] || property.type}</p>
+        <p style="margin:0 0 4px;color:#1a3a5c;font-size:15px;font-weight:700">${escapeHtml(property.title)}</p>
+        <p style="margin:0;color:#374151;font-size:13px">${escapeHtml(CITY_LABEL[property.city] || property.city)} · ${escapeHtml(PROPERTY_TYPE_LABEL[property.type] || property.type)}</p>
       </div>
       <table style="width:100%;border-collapse:collapse">
         ${tableRow('Precio', `<strong style="color:#1a3a5c">${formatPrice(property.price)}</strong>`)}
@@ -279,7 +288,7 @@ const sendPropertyAlertNotification = async (alert, property) => {
   await transporter.sendMail({
     from: `"Triomphe Bienes Raíces" <${process.env.EMAIL_USER}>`,
     to: alert.email,
-    subject: `🏠 Nueva propiedad en ${cityLabel[property.city] || property.city}: ${property.title}`,
+    subject: `🏠 Nueva propiedad en ${CITY_LABEL[property.city] || property.city}: ${property.title}`,
     html,
     attachments: [await getLogoAttachment()].filter(Boolean),
   });

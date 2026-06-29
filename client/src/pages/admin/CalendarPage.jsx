@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getLeads } from '../../services/leadService';
 import Spinner from '../../components/ui/Spinner';
 import { fadeIn, fadeInUp } from '../../utils/animations';
+import { LEAD_TYPE_LABELS as typeLabel } from '../../utils/constants';
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAY_NAMES   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -46,8 +47,6 @@ export default function CalendarPage() {
 
   const selectedLeads = selected ? leadsOnDay(selected) : [];
   const todayLeads    = leads.filter((l) => isSameDay(new Date(l.appointmentDate), today));
-
-  const typeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
 
   if (isLoading) return <Spinner size="lg" className="py-20" />;
 

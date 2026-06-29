@@ -1,131 +1,22 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
-const path = require('path');
-const fs = require('fs');
 const { Property, Image, Feedback, Lead } = require('../models/index');
+const { CITY_LABEL: cityLabel, PROPERTY_TYPE_LABEL: typeLabel, STATUS_LABEL: statusLabel } = require('../utils/labels');
 
-const COMPANY_PHONE = '+52 (656) 579-2750';
-const COMPANY_WHATSAPP = '526565792750';
-const COMPANY_EMAIL = 't.bienesraicesmx@gmail.com';
-
-const cityLabel   = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
-const typeLabel   = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
-const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
-
-const PRIMARY   = '#1a3a5c';
-const ACCENT    = '#c8a96e';
-const BG_ALT    = '#f0f4f8';
-const TEXT      = '#374151';
-const ST_GREEN  = '#10b981';
-const ST_YELLOW = '#f59e0b';
-const ST_RED    = '#ef4444';
-
-const PRIMARY_ARGB   = 'FF1a3a5c';
-const ACCENT_ARGB    = 'FFc8a96e';
-const BG_ALT_ARGB    = 'FFf0f4f8';
-const WHITE_ARGB     = 'FFFFFFFF';
-const TEXT_ARGB      = 'FF374151';
-const ST_GREEN_ARGB  = 'FF10b981';
-const ST_YELLOW_ARGB = 'FFf59e0b';
-const ST_RED_ARGB    = 'FFef4444';
-
-const statusArgb = { disponible: ST_GREEN_ARGB, apartado: ST_YELLOW_ARGB, vendido: ST_RED_ARGB };
-const statusHex  = { disponible: ST_GREEN,      apartado: ST_YELLOW,      vendido: ST_RED      };
-
-const formatPrice = (price) => {
-  if (price === null || price === undefined || price === '') return 'PENDIENTE';
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
-};
-
-const formatDate = (date) => {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
-
-const dash = (val) => (val !== null && val !== undefined && val !== '') ? String(val) : '—';
-
-const getLogoPath = () => {
-  const candidates = [
-    path.join(__dirname, '../../../client/public/logo.png'),
-    path.join(__dirname, '../../client/public/logo.png'),
-    path.join(__dirname, '../client/public/logo.png'),
-    path.join(__dirname, '../../public/logo.png'),
-  ];
-  return candidates.find((p) => fs.existsSync(p)) || null;
-};
-
-// Logo blanco (brightness-0 invert) para fondos oscuros
-const getWhiteLogoBuffer = async (logoPath) => {
-  try {
-    const { Jimp: JimpClass } = require('jimp');
-    const img = await JimpClass.read(logoPath);
-    for (let y = 0; y < img.height; y++) {
-      for (let x = 0; x < img.width; x++) {
-        const idx = (img.width * y + x) * 4;
-        if (img.bitmap.data[idx + 3] > 10) {
-          img.bitmap.data[idx]     = 255;
-          img.bitmap.data[idx + 1] = 255;
-          img.bitmap.data[idx + 2] = 255;
-        }
-      }
-    }
-    return await img.getBuffer('image/png');
-  } catch (e) {
-    console.error('Jimp error:', e.message);
-    return null;
-  }
-};
-
-const getFilteredProperties = async (query) => {
-  const { city, type, status } = query;
-  const where = {};
-  if (city)   where.city   = city;
-  if (type)   where.type   = type;
-  if (status) where.status = status;
-
-  return Property.findAll({
-    where,
-    order: [['city', 'ASC'], ['createdAt', 'DESC']],
-    attributes: [
-      'id', 'title', 'city', 'type', 'status', 'price',
-      'squareMeters', 'terrainMeters', 'constructionMeters',
-      'bedrooms', 'bathrooms', 'address',
-      'views', 'createdAt', 'updatedAt',
-    ],
-    include: [{
-      model: Image,
-      as: 'images',
-      attributes: ['url', 'isCover'],
-      separate: true,
-      order: [['isCover', 'DESC'], ['createdAt', 'ASC']],
-      limit: 1,
-    }],
-  });
-};
-
-const getFirstImagePath = (property) => {
-  const img = property.images?.[0];
-  if (!img) return null;
-  const base = path.join(__dirname, '../../../');
-  const p = path.join(base, img.url);
-  return fs.existsSync(p) ? p : null;
-};
-
-// Devuelve un buffer de imagen ya sea de una URL remota (Cloudinary) o un archivo local
-const getImageBuffer = async (url) => {
-  if (!url) return null;
-  try {
-    if (url.startsWith('http')) {
-      const response = await fetch(url);
-      if (!response.ok) return null;
-      return Buffer.from(await response.arrayBuffer());
-    }
-    const localPath = path.join(__dirname, '../../../', url);
-    return fs.existsSync(localPath) ? fs.readFileSync(localPath) : null;
-  } catch {
-    return null;
-  }
-};
+// AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
+// ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
+// exports que antes, sin convertirlo en Router).
+const {
+  PRIMARY, ACCENT, BG_ALT, TEXT,
+  PRIMARY_ARGB, ACCENT_ARGB, BG_ALT_ARGB, WHITE_ARGB, TEXT_ARGB, ST_GREEN_ARGB, ST_YELLOW_ARGB,
+  statusArgb, statusHex,
+  COMPANY_PHONE, COMPANY_WHATSAPP, COMPANY_EMAIL,
+} = require('../services/exportBranding');
+const {
+  formatPrice, formatDate, dash,
+  getLogoPath, getWhiteLogoBuffer, getFilteredProperties, getFirstImagePath, getImageBuffer,
+  stripUnsupported,
+} = require('../services/exportHelpers');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCEL
@@ -672,18 +563,6 @@ const exportLeadsExcel = async (req, res) => {
     console.error('Error en exportLeadsExcel:', error);
     res.status(500).json({ error: 'Error al generar Excel de leads' });
   }
-};
-
-// Removes emoji and non-Latin-1 characters that Helvetica can't render
-const stripUnsupported = (str) => {
-  if (!str) return str;
-  return str
-    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')   // Supplementary planes (emoji, symbols)
-    .replace(/[\u{2600}-\u{27BF}]/gu, '')       // Misc symbols, dingbats
-    .replace(/️/gu, '')                     // Emoji variation selector
-    .replace(/‍/gu, '')                     // Zero-width joiner
-    .replace(/\s+/g, ' ')
-    .trim();
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

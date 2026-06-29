@@ -44,3 +44,8 @@ export const deleteLeadNote = async (leadId, noteId) => {
   const { data } = await api.delete(`/leads/${leadId}/notes/${noteId}`);
   return data;
 };
+
+export const sendLeadWhatsApp = async (leadId, message) => {
+  const { data } = await api.post(`/leads/${leadId}/whatsapp`, { message });
+  return data;
+};

@@ -15,7 +15,7 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
       toast.success('¡Mensaje enviado! Te contactaremos pronto.');
       setForm({ name: '', email: '', phone: '', message: '', type: 'contacto' });
     },
-    onError: () => toast.error('Error al enviar. Intenta de nuevo.'),
+    onError: (e) => toast.error(e?.response?.data?.error || 'Error al enviar. Intenta de nuevo.'),
   });
 
   const handleSubmit = (e) => {
@@ -39,8 +39,9 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
       <input type="email" placeholder="Tu email *" value={form.email}
         onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
         className={inputClass} />
-      <input type="text" placeholder="Tu teléfono" value={form.phone}
+      <input type="tel" placeholder="Tu teléfono" value={form.phone} maxLength={20}
         onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+        pattern="^(\+?52)?\d{10}$" title="10 dígitos, con o sin +52"
         className={inputClass} />
       <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
         className={inputClass}>

@@ -8,8 +8,10 @@ import SEO from '../../components/ui/SEO';
 import Spinner from '../../components/ui/Spinner';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { CITY_LABELS } from '../../utils/constants';
 
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro', todas: 'Todas las ciudades' };
+// 'todas' es propio del dominio de vacantes (no existe en CITY_LABELS, que es para propiedades)
+const cityLabel = { ...CITY_LABELS, todas: 'Todas las ciudades' };
 const typeLabel = { tiempo_completo: 'Tiempo completo', medio_tiempo: 'Medio tiempo', por_comision: 'Por comisión' };
 const typeColor = { tiempo_completo: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', medio_tiempo: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300', por_comision: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' };
 

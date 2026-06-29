@@ -1,7 +1,11 @@
 const { Lead, LeadNote, Property, Analytics } = require('../models/index');
-const { validateEmail } = require('../utils/validators');
+const { validateEmail, validatePhone } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
+const { sendLeadFollowUpWhatsApp, isConfigured: isWhatsappConfigured } = require('../services/whatsappService');
+const { logAudit } = require('../utils/audit');
 const leadEvents = require('../utils/leadEvents');
+const { paginate } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 // POST /api/leads
 const createLead = async (req, res) => {
@@ -14,6 +18,10 @@ const createLead = async (req, res) => {
 
     if (!validateEmail(email)) {
       return res.status(400).json({ error: 'Email inválido' });
+    }
+
+    if (!validatePhone(phone)) {
+      return res.status(400).json({ error: 'Teléfono inválido — usa 10 dígitos, con o sin +52' });
     }
 
     let property = null;
@@ -76,9 +84,9 @@ const getLeads = async (req, res) => {
     if (source) where.source = source;
     if (propertyId) where.propertyId = propertyId;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-
-    const { count, rows } = await Lead.findAndCountAll({
+    const result = await paginate(Lead, {
+      page,
+      limit,
       where,
       include: [{
         model: Property,
@@ -87,19 +95,9 @@ const getLeads = async (req, res) => {
         required: false,
       }],
       order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset,
     });
 
-    return res.json({
-      data: rows,
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(count / parseInt(limit)),
-      },
-    });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getLeads:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
@@ -279,4 +277,50 @@ const deleteLeadNote = async (req, res) => {
   }
 };
 
-module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads, getLeadNotes, addLeadNote, deleteLeadNote };
+// POST /api/leads/:id/whatsapp
+const sendLeadWhatsApp = async (req, res) => {
+  try {
+    const lead = await Lead.findByPk(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    const { message } = req.body;
+    if (!message || !message.trim()) return res.status(400).json({ error: 'Mensaje requerido' });
+    if (!lead.phone) return res.status(400).json({ error: 'Este lead no tiene un teléfono registrado' });
+
+    const agentName = req.user?.name || 'Triomphe Bienes Raíces';
+    let warning = null;
+    let sendError = null;
+
+    if (!isWhatsappConfigured()) {
+      warning = 'WhatsApp no está configurado en el servidor; se guardó la nota de seguimiento pero el mensaje no se envió.';
+    } else {
+      // AUDIT-009: antes, si esto lanzaba (token expirado, plantilla no aprobada, teléfono
+      // inválido), el catch exterior se saltaba la creación de LeadNote y el audit log,
+      // perdiendo todo rastro de que se intentó el contacto.
+      try {
+        await sendLeadFollowUpWhatsApp(lead.phone, lead.name, agentName, message.trim());
+      } catch (whatsappError) {
+        sendError = whatsappError;
+        logger.error('Error enviando WhatsApp de seguimiento', { leadId: lead.id, error: whatsappError.message });
+        warning = 'No se pudo enviar el mensaje de WhatsApp (revisa el teléfono o la configuración del servicio). Se guardó el intento en el seguimiento.';
+      }
+    }
+
+    const note = await LeadNote.create({
+      leadId: lead.id,
+      content: sendError
+        ? `WhatsApp NO enviado (falló el envío): ${message.trim()}`
+        : `WhatsApp enviado: ${message.trim()}`,
+      authorName: req.user?.name || null,
+    });
+
+    logAudit(req, 'update', 'lead', lead.id, { whatsapp: true, success: !sendError, error: sendError?.message || null });
+
+    return res.json({ message: warning || 'Mensaje de WhatsApp enviado', data: note, warning });
+  } catch (error) {
+    console.error('Error en sendLeadWhatsApp:', error);
+    return res.status(500).json({ error: 'Error al enviar el mensaje de WhatsApp' });
+  }
+};
+
+module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads, getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp };
