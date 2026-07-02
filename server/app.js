@@ -22,7 +22,7 @@ app.set('trust proxy', 1);
 // propiedades se sirven desde Cloudinary (res.cloudinary.com), que NO envía la cabecera
 // Cross-Origin-Resource-Policy (verificado contra su CDN). Si se activara COEP, todas las
 // fotos del sitio dejarían de cargar.
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false, hsts: false }));
 
 const publicCsp = helmet.contentSecurityPolicy({
   useDefaults: false,
