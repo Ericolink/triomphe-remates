@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
       attributes: ['slug', 'updatedAt'],
     });
 
-    const baseUrl = 'https://rematesbancarios.net';
+    const baseUrl = (process.env.CLIENT_URL || 'https://rematesbancarios.net').replace(/\/$/, '');
 
     const staticPages = [
       { url: '/', priority: '1.0', changefreq: 'weekly' },

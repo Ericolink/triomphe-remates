@@ -26,3 +26,7 @@ web.config
 server/web.config
 server/update-admin.js
 *.tar.gz.backup
+
+# Herramientas de diagnóstico temporal (eliminar después de verificar versión de Node en SmarterASP)
+server/version-check.js
+server/web.config.version-check

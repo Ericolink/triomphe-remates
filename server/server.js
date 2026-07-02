@@ -14,7 +14,8 @@ const app = require('./app');
 const { sequelize } = require('./src/models/index');
 const { verifyConnection } = require('./src/services/emailService');
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.HTTP_PLATFORM_PORT || process.env.PORT || 3001;
+console.log(`[startup] HTTP_PLATFORM_PORT=${process.env.HTTP_PLATFORM_PORT} PORT=${process.env.PORT} → usando ${PORT}`);
 
 async function runMigrations() {
   const qi = sequelize.getQueryInterface();

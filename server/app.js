@@ -25,6 +25,7 @@ app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 const publicCsp = helmet.contentSecurityPolicy({
+  useDefaults: false,
   directives: {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'"],
@@ -36,7 +37,6 @@ const publicCsp = helmet.contentSecurityPolicy({
     baseUri: ["'self'"],
     formAction: ["'self'"],
     frameAncestors: ["'self'"],
-    upgradeInsecureRequests: [],
   },
 });
 
@@ -45,6 +45,7 @@ const publicCsp = helmet.contentSecurityPolicy({
 // (no es contenido producido por usuarios, es generado por la librería) en vez de relajar
 // la política para todo el sitio.
 const docsCsp = helmet.contentSecurityPolicy({
+  useDefaults: false,
   directives: {
     defaultSrc: ["'self'"],
     scriptSrc: ["'self'", "'unsafe-inline'"],
@@ -84,6 +85,8 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes, intenta más tarde.' },
+  // IIS/httpPlatformHandler envía IP:puerto en X-Forwarded-For — strip the port.
+  keyGenerator: (req) => (req.ip || req.socket.remoteAddress || '').replace(/:\d+$/, ''),
 });
 app.use(limiter);
 
