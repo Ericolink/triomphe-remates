@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Building2, Users, Eye, TrendingUp, MapPin, Home, Target, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BarChart, AreaChart } from '../../components/ui/MiniChart';
@@ -12,6 +13,7 @@ const leadTypeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Inform
 
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: getDashboard,
@@ -21,10 +23,15 @@ export default function DashboardPage() {
   const d = data?.data;
   if (isLoading) return <Spinner size="lg" className="py-20" />;
 
+  // Cada tarjeta lleva a la lista ya filtrada — evita que el usuario tenga que ir al
+  // menú y volver a aplicar el filtro manualmente para ver el detalle de la cifra.
   const stats = [
-    { label: 'Total propiedades', value: d?.properties?.total ?? 0,   icon: <Building2 size={22} />, color: 'bg-blue-900' },
-    { label: 'Disponibles',       value: d?.properties?.disponible ?? 0, icon: <Home size={22} />,     color: 'bg-green-600' },
-    { label: 'Leads nuevos',      value: d?.leads?.new ?? 0,           icon: <Users size={22} />,     color: 'bg-yellow-500' },
+    { label: 'Total propiedades', value: d?.properties?.total ?? 0,   icon: <Building2 size={22} />, color: 'bg-blue-900',
+      onClick: () => navigate('/admin/propiedades') },
+    { label: 'Disponibles',       value: d?.properties?.disponible ?? 0, icon: <Home size={22} />,     color: 'bg-green-600',
+      onClick: () => navigate('/admin/propiedades', { state: { status: 'disponible' } }) },
+    { label: 'Leads nuevos',      value: d?.leads?.new ?? 0,           icon: <Users size={22} />,     color: 'bg-yellow-500',
+      onClick: () => navigate('/admin/leads', { state: { status: 'nuevo' } }) },
     { label: 'Vistas (30 días)',  value: d?.views?.last30Days ?? 0,    icon: <Eye size={22} />,       color: 'bg-purple-600' },
   ];
 
@@ -37,15 +44,23 @@ export default function DashboardPage() {
 
       {/* Stats */}
       <motion.div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8" variants={staggerContainer} initial="hidden" animate="visible">
-        {stats.map(({ label, value, icon, color }) => (
+        {stats.map(({ label, value, icon, color, onClick }) => (
           <motion.div key={label} variants={fadeInUp} whileHover={{ y: -4, transition: { duration: 0.2 } }}
-            className="bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-[#2e3650] cursor-default">
+            onClick={onClick}
+            role={onClick ? 'button' : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
+            className={`bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-[#2e3650] transition-shadow ${
+              onClick ? 'cursor-pointer hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800' : 'cursor-default'
+            }`}>
             <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center text-white mb-3`}>{icon}</div>
             <motion.p className="text-2xl font-bold text-gray-800 dark:text-gray-100"
               initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4, delay: 0.2 }}>
               {value}
             </motion.p>
-            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">{label}</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
+              {label}{onClick && <span className="text-blue-500 dark:text-blue-400"> · ver detalle</span>}
+            </p>
           </motion.div>
         ))}
       </motion.div>
@@ -153,11 +168,17 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-[#2e3650]">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Tasa de vista → lead</span>
+              <span className="text-gray-500 dark:text-gray-400 cursor-help"
+                title="De cada 100 personas que vieron una propiedad, cuántas dejaron sus datos de contacto">
+                Tasa de vista → lead
+              </span>
               <span className="font-semibold text-blue-700 dark:text-blue-400">{d?.conversion?.viewToLeadRate ?? 0}%</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 dark:text-gray-400">Tasa de cierre (lead → cerrado)</span>
+              <span className="text-gray-500 dark:text-gray-400 cursor-help"
+                title="De cada 100 leads recibidos, cuántos terminaron en una operación cerrada">
+                Tasa de cierre (lead → cerrado)
+              </span>
               <span className="font-semibold text-green-600 dark:text-green-400">{d?.conversion?.rate ?? 0}%</span>
             </div>
           </div>

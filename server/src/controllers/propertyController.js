@@ -263,21 +263,32 @@ const updateProperty = async (req, res) => {
     const previousStatus = property.status;
     const previousPrice  = property.price;
 
-    await property.update({
-      title, description,
-      price: nullIfEmpty(price),
-      city, type, status,
-      squareMeters: nullIfEmpty(squareMeters),
-      terrainMeters: nullIfEmpty(terrainMeters),
-      constructionMeters: nullIfEmpty(constructionMeters),
-      bedrooms: nullIfEmpty(bedrooms),
-      bathrooms: nullIfEmpty(bathrooms),
-      address, auctionDate: auctionDate || null,
-      acquisitionStage: acquisitionStage || 'sin_proceso',
-      isFeatured, internalNotes: internalNotes || null,
-      code: nullIfEmpty(code),
-      slug: req.body.slug,
-    });
+    // AUDIT-021: solo se incluyen en el UPDATE los campos que el request realmente
+    // envió. Antes se pasaban TODOS los campos desestructurados (incluyendo los
+    // ausentes, como `undefined`), y nullIfEmpty() convertía esos `undefined` en
+    // `null` — cada actualización parcial (ej. arrastrar una propiedad en el Kanban
+    // para solo cambiar `status`) borraba silenciosamente price/m²/recámaras/baños/code.
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (price !== undefined) updates.price = nullIfEmpty(price);
+    if (city !== undefined) updates.city = city;
+    if (type !== undefined) updates.type = type;
+    if (status !== undefined) updates.status = status;
+    if (squareMeters !== undefined) updates.squareMeters = nullIfEmpty(squareMeters);
+    if (terrainMeters !== undefined) updates.terrainMeters = nullIfEmpty(terrainMeters);
+    if (constructionMeters !== undefined) updates.constructionMeters = nullIfEmpty(constructionMeters);
+    if (bedrooms !== undefined) updates.bedrooms = nullIfEmpty(bedrooms);
+    if (bathrooms !== undefined) updates.bathrooms = nullIfEmpty(bathrooms);
+    if (address !== undefined) updates.address = address;
+    if (auctionDate !== undefined) updates.auctionDate = auctionDate || null;
+    if (acquisitionStage !== undefined) updates.acquisitionStage = acquisitionStage || 'sin_proceso';
+    if (isFeatured !== undefined) updates.isFeatured = isFeatured;
+    if (internalNotes !== undefined) updates.internalNotes = internalNotes || null;
+    if (code !== undefined) updates.code = nullIfEmpty(code);
+    if (req.body.slug) updates.slug = req.body.slug;
+
+    await property.update(updates);
 
     if (status && status !== previousStatus) {
       PropertyStatusHistory.create({

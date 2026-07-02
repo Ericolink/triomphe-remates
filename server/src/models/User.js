@@ -37,6 +37,12 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  tokenVersion: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'Se incrementa al cambiar password/rol/desactivar — invalida JWT ya emitidos',
+  },
 }, {
   tableName: 'users',
   timestamps: true,

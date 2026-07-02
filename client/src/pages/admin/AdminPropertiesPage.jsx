@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Eye, Search, FileSpreadsheet, FileText, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,11 +20,13 @@ const statusColors = {
 
 export default function AdminPropertiesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { token } = useAuthStore();
   const [search, setSearch]   = useState('');
   const [city, setCity]       = useState('');
-  const [status, setStatus]   = useState('');
+  // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Disponibles").
+  const [status, setStatus]   = useState(location.state?.status || '');
   const [page, setPage]       = useState(1);
   const [exporting, setExporting] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -63,6 +65,23 @@ export default function AdminPropertiesPage() {
     });
   };
 
+  // Marcar "vendido" es un cambio de negocio poco frecuente y difícil de deshacer por
+  // error (a diferencia de disponible ↔ apartado, que son ajustes rutinarios) — pide
+  // confirmación solo para esta transición.
+  const handleStatusChange = (property, newStatus) => {
+    if (newStatus === 'vendido' && property.status !== 'vendido') {
+      setConfirm({
+        title: `¿Marcar "${property.title}" como vendida?`,
+        message: 'Dejará de mostrarse como disponible en el sitio público.',
+        confirmLabel: 'Marcar como vendida',
+        danger: false,
+        onConfirm: () => { statusMutation.mutate({ id: property.id, status: newStatus }); setConfirm(null); },
+      });
+    } else {
+      statusMutation.mutate({ id: property.id, status: newStatus });
+    }
+  };
+
   const handleExport = async (format) => {
     try {
       setExporting(format);
@@ -72,7 +91,11 @@ export default function AdminPropertiesPage() {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/export/${format}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        let msg = 'No se pudo generar el archivo. Intenta de nuevo.';
+        try { const body = await res.json(); if (body?.error) msg = body.error; } catch { /* respuesta no era JSON */ }
+        throw new Error(msg);
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -81,7 +104,9 @@ export default function AdminPropertiesPage() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success(`Exportado a ${format === 'excel' ? 'Excel' : 'PDF'}`);
-    } catch { toast.error('Error al exportar'); }
+    } catch (err) {
+      toast.error(err.message || 'Error al exportar. Verifica tu conexión e intenta de nuevo.');
+    }
     finally { setExporting(null); }
   };
 
@@ -141,7 +166,7 @@ export default function AdminPropertiesPage() {
             <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 dark:bg-[#1a1f2e] border-b border-gray-100 dark:border-[#2e3650]">
                 <tr>
-                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Fecha alta', 'Última modif.', 'Promo', 'Acciones'].map((h) => (
+                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Fecha alta', 'Última modif.', 'Destacada', 'Acciones'].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -173,7 +198,7 @@ export default function AdminPropertiesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <select value={property.status}
-                          onChange={(e) => statusMutation.mutate({ id: property.id, status: e.target.value })}
+                          onChange={(e) => handleStatusChange(property, e.target.value)}
                           className={`text-xs border-0 rounded-lg px-2 py-1 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 ${statusColors[property.status]}`}>
                           <option value="disponible">Disponible</option>
                           <option value="apartado">Apartado</option>
@@ -225,7 +250,24 @@ export default function AdminPropertiesPage() {
             {data?.data?.length === 0 && (
               <motion.div variants={fadeIn} initial="hidden" animate="visible"
                 className="text-center py-16 text-gray-400 dark:text-gray-500">
-                No se encontraron propiedades
+                {search || city || status ? (
+                  <>
+                    <p>Ningún resultado coincide con los filtros actuales.</p>
+                    <button type="button"
+                      onClick={() => { setSearch(''); setCity(''); setStatus(''); setPage(1); }}
+                      className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">
+                      Quitar filtros
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p>Todavía no hay propiedades cargadas.</p>
+                    <button type="button" onClick={() => navigate('/admin/propiedades/nueva')}
+                      className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">
+                      Crear la primera propiedad
+                    </button>
+                  </>
+                )}
               </motion.div>
             )}
           </div>
@@ -248,7 +290,8 @@ export default function AdminPropertiesPage() {
         open={!!confirm}
         title={confirm?.title}
         message={confirm?.message}
-        confirmLabel="Eliminar"
+        confirmLabel={confirm?.confirmLabel || 'Eliminar'}
+        danger={confirm?.danger ?? true}
         onConfirm={confirm?.onConfirm}
         onCancel={() => setConfirm(null)}
       />

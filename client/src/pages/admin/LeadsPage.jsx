@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns, MessageCircle } from 'lucide-react';
+import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns, MessageCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -27,7 +28,7 @@ const KANBAN_COLUMNS = [
   { key: 'descartado', label: 'Descartados', color: 'border-gray-300 dark:border-gray-600',   headerBg: 'bg-gray-50 dark:bg-[#2e3650]',    dot: 'bg-gray-400' },
 ];
 
-function LeadDetailPanel({ selected, onClose, updateMutation }) {
+function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation }) {
   const queryClient = useQueryClient();
   const [noteText, setNoteText] = useState('');
 
@@ -82,11 +83,21 @@ function LeadDetailPanel({ selected, onClose, updateMutation }) {
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-gray-800 dark:text-gray-100">Detalle del lead</h2>
-          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-            <Trash2 size={20} />
-          </motion.button>
+          {/* El botón de cerrar (X) va en la posición donde el usuario lo espera; eliminar
+              se separa con más espacio para evitar un clic accidental sobre una acción
+              destructiva justo donde antes estaba el "cerrar". */}
+          <div className="flex items-center gap-1">
+            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              onClick={onDelete} title="Eliminar lead"
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+              <Trash2 size={18} />
+            </motion.button>
+            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              onClick={onDeselect} title="Cerrar detalle"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-lg transition-colors">
+              <X size={20} />
+            </motion.button>
+          </div>
         </div>
         <div className="space-y-3 mb-5 text-sm">
           {[{ label: 'Nombre', value: selected.name }, { label: 'Email', value: selected.email }, { label: 'Teléfono', value: selected.phone }, { label: 'Propiedad', value: selected.property?.title }]
@@ -267,7 +278,9 @@ function KanbanBoard({ leads, onSelect, updateMutation }) {
 
 export default function LeadsPage() {
   const queryClient = useQueryClient();
-  const [status, setStatus] = useState('');
+  const location = useLocation();
+  // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Leads nuevos").
+  const [status, setStatus] = useState(location.state?.status || '');
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [checked, setChecked] = useState([]);
@@ -378,7 +391,8 @@ export default function LeadsPage() {
             <AnimatePresence mode="wait">
               {selected ? (
                 <LeadDetailPanel key={selected.id} selected={selected} updateMutation={updateMutation}
-                  onClose={() => setConfirm({ title: '¿Eliminar este lead?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })} />
+                  onDeselect={() => setSelected(null)}
+                  onDelete={() => setConfirm({ title: '¿Eliminar este lead?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })} />
               ) : (
                 <motion.div key="empty-kanban" variants={fadeIn} initial="hidden" animate="visible" exit={{ opacity: 0 }}
                   className="bg-white dark:bg-[#242938] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center text-gray-400 dark:text-gray-500">
@@ -453,7 +467,17 @@ export default function LeadsPage() {
             {!isLoading && leads.length === 0 && (
               <motion.div variants={fadeIn} initial="hidden" animate="visible"
                 className="text-center py-16 text-gray-400 dark:text-gray-500">
-                No hay leads con este filtro
+                {status ? (
+                  <>
+                    <p>No hay leads con el estatus seleccionado.</p>
+                    <button type="button" onClick={() => setStatus('')}
+                      className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">
+                      Ver todos los leads
+                    </button>
+                  </>
+                ) : (
+                  <p>Todavía no se ha recibido ningún lead.</p>
+                )}
               </motion.div>
             )}
           </div>
@@ -463,7 +487,8 @@ export default function LeadsPage() {
             <AnimatePresence mode="wait">
               {selected ? (
                 <LeadDetailPanel key={selected.id} selected={selected} updateMutation={updateMutation}
-                  onClose={() => setConfirm({ title: '¿Eliminar este lead?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })} />
+                  onDeselect={() => setSelected(null)}
+                  onDelete={() => setConfirm({ title: '¿Eliminar este lead?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })} />
               ) : (
                 <motion.div key="empty" variants={fadeIn} initial="hidden" animate="visible" exit={{ opacity: 0 }}
                   className="bg-white dark:bg-[#242938] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center text-gray-400 dark:text-gray-500">

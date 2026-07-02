@@ -16,7 +16,11 @@ const authenticate = async (req, res, next) => {
       attributes: { exclude: ['password'] },
     });
 
-    if (!user || !user.isActive) {
+    // AUDIT-023: tokens emitidos antes de un cambio de password/rol/desactivación
+    // quedan invalidados aunque no hayan expirado — decoded.tokenVersion ausente
+    // (tokens emitidos antes de este cambio) se trata como 0 para no cerrar sesión
+    // a todos los usuarios ya logueados en el momento del deploy.
+    if (!user || !user.isActive || (decoded.tokenVersion ?? 0) !== user.tokenVersion) {
       return res.status(401).json({ error: 'Usuario no autorizado' });
     }
 
@@ -43,7 +47,7 @@ const authenticateSSE = async (req, res, next) => {
       attributes: { exclude: ['password'] },
     });
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || (decoded.tokenVersion ?? 0) !== user.tokenVersion) {
       return res.status(401).json({ error: 'Usuario no autorizado' });
     }
 
@@ -69,7 +73,7 @@ const attachUserIfPresent = async (req, res, next) => {
       attributes: { exclude: ['password'] },
     });
 
-    if (user && user.isActive) req.user = user;
+    if (user && user.isActive && (decoded.tokenVersion ?? 0) === user.tokenVersion) req.user = user;
     return next();
   } catch {
     return next();

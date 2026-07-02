@@ -59,6 +59,13 @@ async function runMigrations() {
     console.log('✅ Migración: columna code agregada a properties');
   }
 
+  // v2.4 — tokenVersion en users (AUDIT-023: invalidación de JWT en cambios sensibles)
+  const usersCols = await qi.describeTable('users').catch(() => null);
+  if (usersCols && !usersCols.tokenVersion) {
+    await sequelize.query(`ALTER TABLE users ADD COLUMN tokenVersion INT NOT NULL DEFAULT 0`);
+    console.log('✅ Migración: columna tokenVersion agregada a users');
+  }
+
   // v1.9 — tabla property_documents
   const tables = await qi.showAllTables().catch(() => []);
   if (!tables.includes('property_documents')) {

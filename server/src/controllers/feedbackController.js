@@ -3,6 +3,8 @@ const { validateEmail } = require('../utils/validators');
 const { sendFeedbackNotification } = require('../services/emailService');
 const { paginate } = require('../utils/pagination');
 
+const VALID_FEEDBACK_STATUS = ['nuevo', 'leido', 'archivado'];
+
 // POST /api/feedback
 const createFeedback = async (req, res) => {
   try {
@@ -67,6 +69,10 @@ const updateFeedback = async (req, res) => {
     const feedback = await Feedback.findByPk(req.params.id);
     if (!feedback) return res.status(404).json({ error: 'Feedback no encontrado' });
 
+    if (req.body.status !== undefined && !VALID_FEEDBACK_STATUS.includes(req.body.status)) {
+      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_FEEDBACK_STATUS.join(', ')}` });
+    }
+
     const updates = {};
     if (req.body.status !== undefined) updates.status = req.body.status;
     if (req.body.notes !== undefined) updates.notes = req.body.notes;
@@ -99,6 +105,9 @@ const batchUpdateFeedback = async (req, res) => {
     const { ids, status } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
     if (!status) return res.status(400).json({ error: 'status requerido' });
+    if (!VALID_FEEDBACK_STATUS.includes(status)) {
+      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_FEEDBACK_STATUS.join(', ')}` });
+    }
     await Feedback.update({ status }, { where: { id: ids } });
     return res.json({ message: `${ids.length} mensaje(s) actualizados` });
   } catch (error) {

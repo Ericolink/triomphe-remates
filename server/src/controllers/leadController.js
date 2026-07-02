@@ -1,4 +1,9 @@
 const { Lead, LeadNote, Property, Analytics } = require('../models/index');
+
+// AUDIT-024: valores permitidos explícitos en vez de confiar solo en el ENUM de MySQL —
+// falla con un 400 claro en vez de un error 500 genérico de Sequelize si llega un valor inválido.
+const VALID_LEAD_STATUS = ['nuevo', 'contactado', 'cerrado', 'descartado'];
+const VALID_LEAD_SOURCE = ['google', 'facebook', 'whatsapp', 'directo', 'referido', 'otro'];
 const { validateEmail, validatePhone } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 const { sendLeadFollowUpWhatsApp, isConfigured: isWhatsappConfigured } = require('../services/whatsappService');
@@ -130,6 +135,12 @@ const updateLead = async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     const { status, notes, appointmentDate, source } = req.body;
+    if (status !== undefined && !VALID_LEAD_STATUS.includes(status)) {
+      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}` });
+    }
+    if (source !== undefined && !VALID_LEAD_SOURCE.includes(source)) {
+      return res.status(400).json({ error: `Fuente inválida. Valores permitidos: ${VALID_LEAD_SOURCE.join(', ')}` });
+    }
     const updates = {};
     if (status !== undefined) updates.status = status;
     if (notes !== undefined) updates.notes = notes;
@@ -164,6 +175,9 @@ const batchUpdateLeads = async (req, res) => {
     const { ids, status } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
     if (!status) return res.status(400).json({ error: 'status requerido' });
+    if (!VALID_LEAD_STATUS.includes(status)) {
+      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}` });
+    }
     await Lead.update({ status }, { where: { id: ids } });
     return res.json({ message: `${ids.length} lead(s) actualizados` });
   } catch (error) {

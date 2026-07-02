@@ -1,6 +1,6 @@
 const { cloudinary } = require('../config/cloudinary');
 const { User } = require('../models/index');
-const { hashPassword, comparePassword } = require('../utils/helpers');
+const { generateToken, hashPassword, comparePassword } = require('../utils/helpers');
 
 const safeUser = (user) => ({
   id: user.id,
@@ -70,6 +70,19 @@ const updateUser = async (req, res) => {
       if (existing) return res.status(409).json({ error: 'El email ya está en uso' });
     }
 
+    // AUDIT-022: el admin principal (ID más bajo) no puede perder el rol de admin ni
+    // ser desactivado por otro usuario — evita que el sistema quede sin administradores.
+    if ((role && role !== 'admin') || isActive === false) {
+      const masterAdmin = await User.findOne({ order: [['id', 'ASC']] });
+      if (masterAdmin && masterAdmin.id === user.id) {
+        return res.status(403).json({ error: 'No se puede quitar el rol de admin ni desactivar al admin principal' });
+      }
+    }
+
+    // AUDIT-023: cambios sensibles (password/rol/desactivación) invalidan los JWT ya
+    // emitidos para este usuario, incrementando tokenVersion — ver authMiddleware.js.
+    const isSensitiveChange = Boolean(newPassword) || (role && role !== user.role) || isActive === false;
+
     // Cambio de contraseña requiere verificar la actual si lo hace el propio usuario
     if (newPassword) {
       if (newPassword.length < 8) {
@@ -112,10 +125,18 @@ const updateUser = async (req, res) => {
       ...(email && { email }),
       ...(role && { role }),
       ...(isActive !== undefined && { isActive }),
+      ...(isSensitiveChange && { tokenVersion: user.tokenVersion + 1 }),
       profilePhoto,
     });
 
-    return res.json({ message: 'Usuario actualizado exitosamente', data: safeUser(user) });
+    // Si el propio usuario cambió su contraseña/rol, su token actual quedó invalidado
+    // por el incremento de tokenVersion — se reemite uno nuevo para no cerrarle la sesión.
+    const response = { message: 'Usuario actualizado exitosamente', data: safeUser(user) };
+    if (isSensitiveChange && req.user.id === user.id) {
+      response.token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+    }
+
+    return res.json(response);
   } catch (error) {
     console.error('Error en updateUser:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
@@ -129,10 +150,15 @@ const deactivateUser = async (req, res) => {
       return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta' });
     }
 
+    const masterAdmin = await User.findOne({ order: [['id', 'ASC']] });
+    if (masterAdmin && masterAdmin.id === parseInt(req.params.id)) {
+      return res.status(403).json({ error: 'No se puede desactivar al admin principal' });
+    }
+
     const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    await user.update({ isActive: false });
+    await user.update({ isActive: false, tokenVersion: user.tokenVersion + 1 });
     return res.json({ message: 'Usuario desactivado exitosamente' });
   } catch (error) {
     console.error('Error en deactivateUser:', error);

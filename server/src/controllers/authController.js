@@ -20,7 +20,7 @@ const register = async (req, res) => {
 
     const user = await User.create({ name, email, password: hashedPassword, role });
 
-    const token = generateToken({ id: user.id, role: user.role });
+    const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
 
     return res.status(201).json({
       message: 'Usuario creado exitosamente',
@@ -59,7 +59,7 @@ const login = async (req, res) => {
     await user.update({ lastLogin: new Date() });
     logAudit({ user, ip: req.ip }, 'login', 'user', user.id, { email: user.email });
 
-    const token = generateToken({ id: user.id, role: user.role });
+    const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
 
     return res.json({
       message: 'Login exitoso',
@@ -99,9 +99,13 @@ const changePassword = async (req, res) => {
     }
 
     const hashedPassword = await hashPassword(newPassword);
-    await user.update({ password: hashedPassword });
+    await user.update({ password: hashedPassword, tokenVersion: user.tokenVersion + 1 });
 
-    return res.json({ message: 'Contraseña actualizada exitosamente' });
+    // El token actual quedó invalidado por el cambio de tokenVersion — se reemite uno
+    // nuevo en la respuesta para que el usuario no se quede sin sesión tras el cambio.
+    const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+
+    return res.json({ message: 'Contraseña actualizada exitosamente', token });
   } catch (error) {
     console.error('Error en changePassword:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

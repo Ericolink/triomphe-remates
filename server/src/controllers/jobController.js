@@ -2,6 +2,8 @@ const { JobPosition, JobApplication } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendJobApplicationNotification, sendJobApplicationConfirmation } = require('../services/emailService');
 
+const VALID_APPLICATION_STATUS = ['nueva', 'en_revision', 'entrevista', 'aceptada', 'rechazada'];
+
 // ===== VACANTES =====
 
 // GET /api/jobs
@@ -82,7 +84,18 @@ const updatePosition = async (req, res) => {
     const position = await JobPosition.findByPk(req.params.id);
     if (!position) return res.status(404).json({ error: 'Vacante no encontrada' });
     const { title, description, requirements, benefits, city, type, status, isUrgent } = req.body;
-    await position.update({ title, description, requirements, benefits, city, type, status, isUrgent });
+    // Preventivo, mismo patrón que AUDIT-021/AUDIT-025: no asumir que el request
+    // siempre trae el formulario completo, aunque hoy el único caller sí lo hace.
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (requirements !== undefined) updates.requirements = requirements;
+    if (benefits !== undefined) updates.benefits = benefits;
+    if (city !== undefined) updates.city = city;
+    if (type !== undefined) updates.type = type;
+    if (status !== undefined) updates.status = status;
+    if (isUrgent !== undefined) updates.isUrgent = isUrgent;
+    await position.update(updates);
     return res.json({ message: 'Vacante actualizada', data: position });
   } catch (error) {
     console.error('Error en updatePosition:', error);
@@ -182,7 +195,16 @@ const updateApplication = async (req, res) => {
     const application = await JobApplication.findByPk(req.params.id);
     if (!application) return res.status(404).json({ error: 'Postulación no encontrada' });
     const { status, notes } = req.body;
-    await application.update({ status, notes });
+    if (status !== undefined && !VALID_APPLICATION_STATUS.includes(status)) {
+      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_APPLICATION_STATUS.join(', ')}` });
+    }
+    // AUDIT-025: mismo bug que updateProperty (AUDIT-021) — pasar status/notes sin
+    // filtrar sobreescribía el campo ausente a null en cada actualización parcial
+    // (ej. cambiar solo el estatus borraba las notas ya escritas, y viceversa).
+    const updates = {};
+    if (status !== undefined) updates.status = status;
+    if (notes !== undefined) updates.notes = notes;
+    await application.update(updates);
     return res.json({ message: 'Postulación actualizada', data: application });
   } catch (error) {
     console.error('Error en updateApplication:', error);

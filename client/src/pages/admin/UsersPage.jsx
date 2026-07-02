@@ -9,6 +9,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
+import { buildImageUrl } from '../../utils/images';
 
 const roleColors = {
   admin:  'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -42,7 +43,7 @@ function PasswordInput({ value, onChange, placeholder, required, showPass, onTog
 }
 
 export default function UsersPage() {
-  const { user: currentUser, updateUser: updateAuthUser } = useAuthStore();
+  const { user: currentUser, updateUser: updateAuthUser, setToken } = useAuthStore();
   const queryClient = useQueryClient();
   const [modal, setModal] = useState(null); // null | 'create' | { user }
   const [confirm, setConfirm] = useState(null);
@@ -68,7 +69,12 @@ export default function UsersPage() {
     onSuccess: (res) => {
       toast.success('Usuario actualizado');
       queryClient.invalidateQueries(['users']);
-      if (res.data?.id === currentUser?.id) updateAuthUser(res.data);
+      if (res.data?.id === currentUser?.id) {
+        updateAuthUser(res.data);
+        // Cambiar la propia contraseña/rol invalida el token anterior (tokenVersion) —
+        // el backend reemite uno nuevo para no cerrar la sesión, hay que guardarlo.
+        if (res.token) setToken(res.token);
+      }
       closeModal();
     },
     onError: (err) => toast.error(err?.response?.data?.error || 'Error al actualizar'),
@@ -144,7 +150,18 @@ export default function UsersPage() {
     setConfirm({
       title: `¿Eliminar a "${u.name}"?`,
       message: 'Esta acción no se puede deshacer. El usuario será eliminado permanentemente.',
+      confirmLabel: 'Eliminar',
       onConfirm: () => { deleteMutation.mutate(u.id); setConfirm(null); },
+    });
+  };
+
+  const confirmDeactivate = (u) => {
+    setConfirm({
+      title: `¿Desactivar a "${u.name}"?`,
+      message: 'No podrá iniciar sesión hasta que alguien lo reactive, pero sus datos, leads atendidos y bitácora se conservan intactos. A diferencia de "Eliminar", esta acción se puede revertir.',
+      confirmLabel: 'Desactivar',
+      danger: false,
+      onConfirm: () => { deactivateMutation.mutate(u.id); setConfirm(null); },
     });
   };
 
@@ -190,7 +207,7 @@ export default function UsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {u.profilePhoto ? (
-                          <img src={u.profilePhoto} alt={u.name}
+                          <img src={buildImageUrl(u.profilePhoto, 80)} alt={u.name}
                             className="w-9 h-9 rounded-full object-cover ring-2 ring-gray-100 dark:ring-[#2e3650]" />
                         ) : (
                           <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm font-bold">
@@ -235,7 +252,7 @@ export default function UsersPage() {
 
                         {canModify(u) && (
                           u.isActive ? (
-                            <motion.button onClick={() => deactivateMutation.mutate(u.id)}
+                            <motion.button onClick={() => confirmDeactivate(u)}
                               whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
                               disabled={deactivateMutation.isPending}
                               className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors disabled:opacity-50"
@@ -276,7 +293,8 @@ export default function UsersPage() {
         open={!!confirm}
         title={confirm?.title}
         message={confirm?.message}
-        confirmLabel="Eliminar"
+        confirmLabel={confirm?.confirmLabel || 'Eliminar'}
+        danger={confirm?.danger ?? true}
         onConfirm={confirm?.onConfirm}
         onCancel={() => setConfirm(null)}
       />

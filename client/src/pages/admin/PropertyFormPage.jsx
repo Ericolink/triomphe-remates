@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Upload, X, Star, ArrowLeft, Lock, History, FileText, Trash2, Download, Eye, EyeOff, MessageCircle, Share2 } from 'lucide-react';
+import { Upload, X, Star, ArrowLeft, Lock, History, FileText, Trash2, Download, Eye, EyeOff, MessageCircle, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   getPropertyById, createProperty, updateProperty,
@@ -10,6 +10,7 @@ import {
 } from '../../services/propertyService';
 import { getPropertyAnalytics } from '../../services/analyticsService';
 import Spinner from '../../components/ui/Spinner';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { safeBlobUrl } from '../../utils/sanitize';
 import { buildImageUrl } from '../../utils/images';
 
@@ -57,7 +58,7 @@ const statusDot = { disponible: 'bg-green-500', apartado: 'bg-yellow-500', vendi
 
 const inputClass ='w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
-function ImageThumb({ img, index, isDragging, onSetCover, onDelete, onDragStart, onDragOver, onDragEnd }) {
+function ImageThumb({ img, index, isFirst, isLast, isDragging, onSetCover, onDelete, onMoveLeft, onMoveRight, onDragStart, onDragOver, onDragEnd }) {
   return (
     <div
       draggable
@@ -67,7 +68,8 @@ function ImageThumb({ img, index, isDragging, onSetCover, onDelete, onDragStart,
       className={`relative group select-none cursor-grab active:cursor-grabbing transition-opacity ${isDragging ? 'opacity-40' : ''}`}>
       <img src={buildImageUrl(img.url, 240)} alt="Imagen de propiedad" loading="lazy" decoding="async" draggable={false}
         className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none select-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`} />
-      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
+      {/* Visibles siempre en touch/tablet (sin hover); en desktop solo aparecen al pasar el mouse */}
+      <div className="absolute inset-0 bg-black/40 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
         <button type="button" draggable onDragStart={(e) => e.preventDefault()} onClick={onSetCover}
           className="p-1 bg-yellow-400 rounded-lg" title="Hacer portada">
           <Star size={16} className="text-blue-900" />
@@ -75,6 +77,18 @@ function ImageThumb({ img, index, isDragging, onSetCover, onDelete, onDragStart,
         <button type="button" draggable onDragStart={(e) => e.preventDefault()} onClick={onDelete}
           className="p-1 bg-red-500 rounded-lg" title="Eliminar">
           <X size={16} className="text-white" />
+        </button>
+      </div>
+      {/* Alternativa al drag&drop para mover el orden — necesaria en tablet/touch, donde
+          el reordenamiento por arrastre (HTML5 draggable) no funciona. */}
+      <div className="absolute bottom-1 inset-x-1 flex justify-between opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <button type="button" draggable onDragStart={(e) => e.preventDefault()} onClick={onMoveLeft} disabled={isFirst}
+          className="p-1 bg-white/90 rounded-lg text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed" title="Mover a la izquierda">
+          <ChevronLeft size={14} />
+        </button>
+        <button type="button" draggable onDragStart={(e) => e.preventDefault()} onClick={onMoveRight} disabled={isLast}
+          className="p-1 bg-white/90 rounded-lg text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed" title="Mover a la derecha">
+          <ChevronRight size={14} />
         </button>
       </div>
       {img.isCover && (
@@ -132,6 +146,7 @@ export default function PropertyFormPage() {
 
   const [form, setForm] = useState(emptyForm);
   const [formLoaded, setFormLoaded] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState([]);
 
   if (serverForm && !formLoaded) {
     setFormLoaded(true);
@@ -163,7 +178,7 @@ export default function PropertyFormPage() {
       queryClient.invalidateQueries(['admin-properties']);
       navigate('/admin/propiedades');
     },
-    onError: () => toast.error('Error al guardar'),
+    onError: (err) => toast.error(err?.response?.data?.error || 'Error al guardar la propiedad'),
   });
 
   const deleteImgMutation = useMutation({
@@ -172,6 +187,7 @@ export default function PropertyFormPage() {
       toast.success('Imagen eliminada');
       queryClient.invalidateQueries(['property', id]);
     },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Error al eliminar la imagen'),
   });
 
   const coverMutation = useMutation({
@@ -180,6 +196,7 @@ export default function PropertyFormPage() {
       toast.success('Portada actualizada');
       queryClient.invalidateQueries(['property', id]);
     },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Error al actualizar la portada'),
   });
 
   const reorderMutation = useMutation({
@@ -207,6 +224,7 @@ export default function PropertyFormPage() {
       toast.success('Documento eliminado');
       queryClient.invalidateQueries(['property-documents-all', id]);
     },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Error al eliminar el documento'),
   });
 
   const visibilityMutation = useMutation({
@@ -236,11 +254,16 @@ export default function PropertyFormPage() {
     setNewFiles((f) => f.filter((_, idx) => idx !== i));
   };
 
+  const REQUIRED_LABELS = { title: 'Título', city: 'Ciudad', type: 'Tipo' };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.title || !form.city || !form.type) {
-      return toast.error('Título, ciudad y tipo son requeridos');
+    const missing = Object.keys(REQUIRED_LABELS).filter((key) => !form[key]);
+    if (missing.length > 0) {
+      setFieldErrors(missing);
+      return toast.error(`Falta completar: ${missing.map((k) => REQUIRED_LABELS[k]).join(', ')}`);
     }
+    setFieldErrors([]);
     const { pricePending, noCode, ...rest } = form;
     saveMutation.mutate({ ...rest, price: pricePending ? null : form.price, code: noCode ? '' : form.code });
   };
@@ -273,6 +296,20 @@ export default function PropertyFormPage() {
     reorderMutation.mutate(orderRef.current.map((img) => img.id));
   };
 
+  // Fallback sin drag&drop para tablet/touch: mueve la imagen un lugar a la izquierda/derecha.
+  const moveImage = (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= imageOrder.length) return;
+    const next = [...imageOrder];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    orderRef.current = next;
+    setImageOrder(next);
+    reorderMutation.mutate(next.map((img) => img.id));
+  };
+
+  const [confirmDeleteImg, setConfirmDeleteImg] = useState(null);
+  const [confirmDeleteDoc, setConfirmDeleteDoc] = useState(null);
+
   if (isEdit && isLoading) return <Spinner size="lg" className="py-20" />;
 
   return (
@@ -296,9 +333,19 @@ export default function PropertyFormPage() {
         <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
           <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">Información general</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {FIELDS.map(({ key, label, type, col, options }) => (
+            {FIELDS.map(({ key, label, type, col, options }) => {
+              const hasError = fieldErrors.includes(key);
+              const fieldClass = hasError
+                ? `${inputClass} border-red-400 dark:border-red-500 focus:ring-red-400`
+                : inputClass;
+              return (
               <div key={key} className={col === 2 ? 'md:col-span-2' : ''}>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+                {key === 'acquisitionStage' && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                    En qué punto va el trámite legal para tomar posesión del inmueble (no afecta lo que ve el público).
+                  </p>
+                )}
                 {type === 'price' ? (
                   <div className="space-y-2">
                     <input
@@ -326,7 +373,7 @@ export default function PropertyFormPage() {
                   <textarea value={form[key]}
                     onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                     rows={3}
-                    className={`${inputClass} resize-none`} />
+                    className={`${fieldClass} resize-none`} />
                 ) : type === 'select' ? (
                   <select value={form[key]}
                     onChange={(e) => {
@@ -343,16 +390,18 @@ export default function PropertyFormPage() {
                         setForm((f) => ({ ...f, [key]: value }));
                       }
                     }}
-                    className={inputClass}>
+                    className={fieldClass}>
                     {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 ) : (
                   <input type={type} value={form[key]}
-                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                    className={inputClass} />
+                    onChange={(e) => { setForm((f) => ({ ...f, [key]: e.target.value })); if (hasError) setFieldErrors((errs) => errs.filter((k) => k !== key)); }}
+                    className={fieldClass} />
                 )}
+                {hasError && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio.</p>}
               </div>
-            ))}
+              );
+            })}
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Código de propiedad</label>
               <input type="text" value={form.code} disabled={form.noCode}
@@ -482,9 +531,12 @@ export default function PropertyFormPage() {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {imageOrder.map((img, index) => (
                 <ImageThumb key={img.id} img={img} index={index}
+                  isFirst={index === 0} isLast={index === imageOrder.length - 1}
                   isDragging={dragIndex === index}
                   onSetCover={() => coverMutation.mutate(img.id)}
-                  onDelete={() => deleteImgMutation.mutate({ imgId: img.id })}
+                  onDelete={() => setConfirmDeleteImg(img.id)}
+                  onMoveLeft={() => moveImage(index, -1)}
+                  onMoveRight={() => moveImage(index, 1)}
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
                   onDragEnd={handleDragEnd} />
@@ -546,7 +598,7 @@ export default function PropertyFormPage() {
                       className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-[#2e3650] transition-colors text-gray-500 dark:text-gray-400" title="Descargar">
                       <Download size={15} />
                     </a>
-                    <button type="button" onClick={() => deleteDocMutation.mutate(doc.id)}
+                    <button type="button" onClick={() => setConfirmDeleteDoc(doc.id)}
                       className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-500" title="Eliminar">
                       <Trash2 size={15} />
                     </button>
@@ -583,6 +635,23 @@ export default function PropertyFormPage() {
           </button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={!!confirmDeleteImg}
+        title="¿Eliminar esta imagen?"
+        message="Se borrará permanentemente y no se puede deshacer."
+        confirmLabel="Eliminar"
+        onConfirm={() => { deleteImgMutation.mutate({ imgId: confirmDeleteImg }); setConfirmDeleteImg(null); }}
+        onCancel={() => setConfirmDeleteImg(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmDeleteDoc}
+        title="¿Eliminar este documento?"
+        message="Se borrará permanentemente y ya no estará disponible, ni siquiera si era público."
+        confirmLabel="Eliminar"
+        onConfirm={() => { deleteDocMutation.mutate(confirmDeleteDoc); setConfirmDeleteDoc(null); }}
+        onCancel={() => setConfirmDeleteDoc(null)}
+      />
     </div>
   );
 }
