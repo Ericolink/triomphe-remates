@@ -32,6 +32,9 @@ const AlertsAdminPage      = lazy(() => import('./pages/admin/AlertsAdminPage'))
 const AuditPage            = lazy(() => import('./pages/admin/AuditPage'));
 const CalendarPage         = lazy(() => import('./pages/admin/CalendarPage'));
 const TestimonialsAdminPage = lazy(() => import('./pages/admin/TestimonialsAdminPage'));
+const CrmDashboardPage     = lazy(() => import('./pages/admin/CrmDashboardPage'));
+const CampaignsPage        = lazy(() => import('./pages/admin/CampaignsPage'));
+const CrmReportsPage       = lazy(() => import('./pages/admin/CrmReportsPage'));
 
 import PublicLayout from './components/layout/PublicLayout';
 
@@ -82,6 +85,9 @@ export default function App() {
             <Route path="auditoria"              element={<AuditPage />} />
             <Route path="calendario"             element={<CalendarPage />} />
             <Route path="testimonios"            element={<TestimonialsAdminPage />} />
+            <Route path="dashboard-comercial"    element={<CrmDashboardPage />} />
+            <Route path="campanas"               element={<CampaignsPage />} />
+            <Route path="reportes"               element={<CrmReportsPage />} />
           </Route>
         </Routes>
       </Suspense>

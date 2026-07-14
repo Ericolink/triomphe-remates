@@ -11,7 +11,10 @@ const AuditLog = sequelize.define('AuditLog', {
     allowNull: false,
   },
   resource: {
-    type: DataTypes.ENUM('property', 'lead', 'feedback', 'user', 'job', 'application', 'alert'),
+    type: DataTypes.ENUM(
+      'property', 'lead', 'feedback', 'user', 'job', 'application', 'alert',
+      'campaign', 'activity', 'appointment', 'task', 'deal'
+    ),
     allowNull: false,
   },
   resourceId: { type: DataTypes.INTEGER, allowNull: true },

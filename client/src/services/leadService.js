@@ -10,6 +10,11 @@ export const getLeads = async (params = {}) => {
   return data;
 };
 
+export const getLeadById = async (id) => {
+  const { data } = await api.get(`/leads/${id}`);
+  return data;
+};
+
 export const updateLead = async (id, leadData) => {
   const { data } = await api.put(`/leads/${id}`, leadData);
   return data;
@@ -20,8 +25,8 @@ export const deleteLead = async (id) => {
   return data;
 };
 
-export const batchUpdateLeads = async (ids, status) => {
-  const { data } = await api.patch('/leads/batch', { ids, status });
+export const batchUpdateLeads = async (ids, pipelineStage) => {
+  const { data } = await api.patch('/leads/batch', { ids, pipelineStage });
   return data;
 };
 
@@ -47,5 +52,26 @@ export const deleteLeadNote = async (leadId, noteId) => {
 
 export const sendLeadWhatsApp = async (leadId, message) => {
   const { data } = await api.post(`/leads/${leadId}/whatsapp`, { message });
+  return data;
+};
+
+// CRM Comercial
+export const closeLeadAsWon = async (id, { propertyId, amount, closedAt }) => {
+  const { data } = await api.put(`/leads/${id}/close-won`, { propertyId, amount, closedAt });
+  return data;
+};
+
+export const closeLeadAsLost = async (id, { closeReason, closeReasonDetail }) => {
+  const { data } = await api.put(`/leads/${id}/close-lost`, { closeReason, closeReasonDetail });
+  return data;
+};
+
+export const addLeadProperty = async (leadId, propertyId) => {
+  const { data } = await api.post(`/leads/${leadId}/properties`, { propertyId });
+  return data;
+};
+
+export const removeLeadProperty = async (leadId, propertyId) => {
+  const { data } = await api.delete(`/leads/${leadId}/properties/${propertyId}`);
   return data;
 };

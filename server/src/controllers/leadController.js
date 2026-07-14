@@ -1,9 +1,18 @@
-const { Lead, LeadNote, Property, Analytics } = require('../models/index');
+const { sequelize, Lead, LeadNote, Property, Analytics, Campaign, User, Deal } = require('../models/index');
 
 // AUDIT-024: valores permitidos explícitos en vez de confiar solo en el ENUM de MySQL —
 // falla con un 400 claro en vez de un error 500 genérico de Sequelize si llega un valor inválido.
 const VALID_LEAD_STATUS = ['nuevo', 'contactado', 'cerrado', 'descartado'];
 const VALID_LEAD_SOURCE = ['google', 'facebook', 'whatsapp', 'directo', 'referido', 'otro'];
+// CRM Comercial — mismo patrón de arrays explícitos para las nuevas ENUMs.
+const VALID_PIPELINE_STAGES = [
+  'nuevo', 'contactado', 'interesado', 'cita_agendada',
+  'cita_realizada', 'negociacion', 'venta_realizada', 'no_interesado',
+];
+const VALID_CLOSE_REASONS = [
+  'compro', 'no_respondio', 'sin_presupuesto',
+  'compro_competencia', 'solo_info', 'perdio_interes', 'otro',
+];
 const { validateEmail, validatePhone } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 const { sendLeadFollowUpWhatsApp, isConfigured: isWhatsappConfigured } = require('../services/whatsappService');
@@ -11,17 +20,18 @@ const { logAudit } = require('../utils/audit');
 const leadEvents = require('../utils/leadEvents');
 const { paginate } = require('../utils/pagination');
 const logger = require('../utils/logger');
+const { TERMINAL_STAGES, logActivity, ensureOpenTask, closeOpenTask, legacyStatusFor } = require('../utils/pipelineHelpers');
 
 // POST /api/leads
 const createLead = async (req, res) => {
   try {
-    const { name, email, phone, message, type, propertyId, appointmentDate, source } = req.body;
+    const { name, email, phone, message, type, propertyId, appointmentDate, source, campaignId, assignedToUserId } = req.body;
 
-    if (!name || !email) {
-      return res.status(400).json({ error: 'Nombre y email son requeridos' });
+    if (!name) {
+      return res.status(400).json({ error: 'Nombre es requerido' });
     }
-
-    if (!validateEmail(email)) {
+    // CRM Comercial: email ya no es obligatorio (prospectos de solo-WhatsApp/Facebook).
+    if (email && !validateEmail(email)) {
       return res.status(400).json({ error: 'Email inválido' });
     }
 
@@ -35,12 +45,26 @@ const createLead = async (req, res) => {
       if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
     }
 
-    const lead = await Lead.create({
-      name, email, phone, message,
-      type: type || 'contacto',
-      source: source || 'directo',
-      propertyId: propertyId || null,
-      appointmentDate: appointmentDate || null,
+    const lead = await sequelize.transaction(async (transaction) => {
+      const created = await Lead.create({
+        name, email: email || null, phone, message,
+        type: type || 'contacto',
+        source: source || 'directo',
+        propertyId: propertyId || null,
+        appointmentDate: appointmentDate || null,
+        campaignId: campaignId || null,
+        assignedToUserId: assignedToUserId || null,
+      }, { transaction });
+
+      await logActivity({ leadId: created.id, type: 'sistema', content: 'Prospecto creado', transaction });
+
+      // Diferido hasta asignar: un prospecto público sin responsable no tiene "próxima
+      // acción" todavía (ver CRM_UX_DESIGN.md / plan de Fase 1).
+      if (assignedToUserId) {
+        await ensureOpenTask({ leadId: created.id, assignedToUserId, type: 'llamar', transaction });
+      }
+
+      return created;
     });
 
     Promise.all([
@@ -81,24 +105,26 @@ const createLead = async (req, res) => {
 // GET /api/leads
 const getLeads = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, type, propertyId, source } = req.query;
+    const { page = 1, limit = 20, status, type, propertyId, source, pipelineStage, campaignId, assignedToUserId } = req.query;
     const where = {};
 
     if (status) where.status = status;
     if (type) where.type = type;
     if (source) where.source = source;
     if (propertyId) where.propertyId = propertyId;
+    if (pipelineStage) where.pipelineStage = pipelineStage;
+    if (campaignId) where.campaignId = campaignId;
+    if (assignedToUserId) where.assignedToUserId = assignedToUserId;
 
     const result = await paginate(Lead, {
       page,
       limit,
       where,
-      include: [{
-        model: Property,
-        as: 'property',
-        attributes: ['id', 'title', 'city', 'slug'],
-        required: false,
-      }],
+      include: [
+        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'slug'], required: false },
+        { model: Campaign, as: 'campaign', attributes: ['id', 'name', 'platform'], required: false },
+        { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
+      ],
       order: [['createdAt', 'DESC']],
     });
 
@@ -113,11 +139,18 @@ const getLeads = async (req, res) => {
 const getLeadById = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id, {
-      include: [{
-        model: Property,
-        as: 'property',
-        attributes: ['id', 'title', 'city', 'slug'],
-      }],
+      include: [
+        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'slug'] },
+        { model: Campaign, as: 'campaign', attributes: ['id', 'name', 'platform'], required: false },
+        { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
+        {
+          model: Property, as: 'interestedProperties',
+          attributes: ['id', 'title', 'city', 'slug'],
+          through: { attributes: [] },
+          required: false,
+        },
+        { model: Deal, as: 'deal', required: false },
+      ],
     });
 
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
@@ -134,23 +167,185 @@ const updateLead = async (req, res) => {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
-    const { status, notes, appointmentDate, source } = req.body;
+    const { status, notes, appointmentDate, source, pipelineStage, assignedToUserId, campaignId } = req.body;
     if (status !== undefined && !VALID_LEAD_STATUS.includes(status)) {
       return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}` });
     }
     if (source !== undefined && !VALID_LEAD_SOURCE.includes(source)) {
       return res.status(400).json({ error: `Fuente inválida. Valores permitidos: ${VALID_LEAD_SOURCE.join(', ')}` });
     }
-    const updates = {};
-    if (status !== undefined) updates.status = status;
-    if (notes !== undefined) updates.notes = notes;
-    if (appointmentDate !== undefined) updates.appointmentDate = appointmentDate;
-    if (source !== undefined) updates.source = source;
-    await lead.update(updates);
+    if (pipelineStage !== undefined) {
+      if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
+        return res.status(400).json({ error: `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}` });
+      }
+      // Las etapas terminales solo se alcanzan a través de /close-won o /close-lost, que
+      // capturan los datos obligatorios (monto+propiedad, o motivo) en la misma transacción.
+      if (TERMINAL_STAGES.includes(pipelineStage)) {
+        return res.status(400).json({ error: 'Para cerrar un prospecto usa PUT /:id/close-won o PUT /:id/close-lost' });
+      }
+    }
+
+    const previousStage = lead.pipelineStage;
+    const previousAssignee = lead.assignedToUserId;
+
+    await sequelize.transaction(async (transaction) => {
+      const updates = {};
+      if (status !== undefined) updates.status = status;
+      if (notes !== undefined) updates.notes = notes;
+      if (appointmentDate !== undefined) updates.appointmentDate = appointmentDate;
+      if (source !== undefined) updates.source = source;
+      if (campaignId !== undefined) updates.campaignId = campaignId;
+      if (pipelineStage !== undefined) {
+        updates.pipelineStage = pipelineStage;
+        updates.status = legacyStatusFor(pipelineStage);
+      }
+      if (assignedToUserId !== undefined) updates.assignedToUserId = assignedToUserId;
+
+      await lead.update(updates, { transaction });
+
+      if (pipelineStage !== undefined && pipelineStage !== previousStage) {
+        await logActivity({
+          leadId: lead.id,
+          type: 'sistema',
+          content: `Etapa actualizada: ${previousStage} → ${pipelineStage}`,
+          userId: req.user?.id ?? null,
+          transaction,
+        });
+      }
+
+      if (assignedToUserId !== undefined && assignedToUserId !== previousAssignee) {
+        await logActivity({
+          leadId: lead.id,
+          type: 'sistema',
+          content: 'Responsable cambiado',
+          userId: req.user?.id ?? null,
+          transaction,
+        });
+        // Un prospecto que no tenía responsable y recién se reclama obtiene su primera
+        // "próxima acción" en este momento (ver decisión de diferir en createLead).
+        if (assignedToUserId && !previousAssignee) {
+          await ensureOpenTask({ leadId: lead.id, assignedToUserId, type: 'llamar', transaction });
+        }
+      }
+    });
 
     return res.json({ message: 'Lead actualizado exitosamente', data: lead });
   } catch (error) {
     console.error('Error en updateLead:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// PUT /api/leads/:id/close-won
+const closeLeadAsWon = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const lead = await Lead.findByPk(req.params.id, { transaction });
+    if (!lead) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Lead no encontrado' });
+    }
+    if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Este prospecto ya está cerrado' });
+    }
+
+    const { propertyId, amount, closedAt } = req.body;
+    if (!propertyId || !amount) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Propiedad y monto son requeridos' });
+    }
+
+    const property = await Property.findByPk(propertyId, { transaction });
+    if (!property) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Propiedad no encontrada' });
+    }
+
+    const deal = await Deal.create({
+      leadId: lead.id,
+      propertyId,
+      amount,
+      closedAt: closedAt || new Date(),
+    }, { transaction });
+
+    await lead.update({
+      pipelineStage: 'venta_realizada',
+      status: legacyStatusFor('venta_realizada'),
+    }, { transaction });
+
+    await logActivity({
+      leadId: lead.id,
+      type: 'sistema',
+      content: `Venta registrada: ${property.title}`,
+      userId: req.user?.id ?? null,
+      transaction,
+    });
+
+    // Etapa terminal — no se crea una tarea siguiente.
+    await closeOpenTask({ leadId: lead.id, transaction });
+
+    await transaction.commit();
+
+    logAudit(req, 'update', 'lead', lead.id, { closedAs: 'won', dealId: deal.id });
+
+    return res.json({ message: 'Venta registrada exitosamente', data: { lead, deal } });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error en closeLeadAsWon:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// PUT /api/leads/:id/close-lost
+const closeLeadAsLost = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const lead = await Lead.findByPk(req.params.id, { transaction });
+    if (!lead) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Lead no encontrado' });
+    }
+    if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Este prospecto ya está cerrado' });
+    }
+
+    const { closeReason, closeReasonDetail } = req.body;
+    if (!closeReason || !VALID_CLOSE_REASONS.includes(closeReason)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: `Motivo inválido. Valores permitidos: ${VALID_CLOSE_REASONS.join(', ')}` });
+    }
+    if (closeReason === 'otro' && !closeReasonDetail?.trim()) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Especifica el motivo en el detalle' });
+    }
+
+    await lead.update({
+      pipelineStage: 'no_interesado',
+      status: legacyStatusFor('no_interesado'),
+      closeReason,
+      closeReasonDetail: closeReasonDetail || null,
+    }, { transaction });
+
+    await logActivity({
+      leadId: lead.id,
+      type: 'sistema',
+      content: `Prospecto marcado como perdido: ${closeReason}`,
+      userId: req.user?.id ?? null,
+      transaction,
+    });
+
+    await closeOpenTask({ leadId: lead.id, transaction });
+
+    await transaction.commit();
+
+    logAudit(req, 'update', 'lead', lead.id, { closedAs: 'lost', closeReason });
+
+    return res.json({ message: 'Prospecto cerrado', data: lead });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error en closeLeadAsLost:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -169,16 +364,23 @@ const deleteLead = async (req, res) => {
   }
 };
 
-// PATCH /api/leads/batch
+// PATCH /api/leads/batch — restringido a etapas no terminales; usar los endpoints de
+// cierre individuales para venta_realizada/no_interesado (necesitan datos adicionales).
 const batchUpdateLeads = async (req, res) => {
   try {
-    const { ids, status } = req.body;
+    const { ids, pipelineStage } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
-    if (!status) return res.status(400).json({ error: 'status requerido' });
-    if (!VALID_LEAD_STATUS.includes(status)) {
-      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}` });
+    if (!pipelineStage) return res.status(400).json({ error: 'pipelineStage requerido' });
+    if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
+      return res.status(400).json({ error: `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}` });
     }
-    await Lead.update({ status }, { where: { id: ids } });
+    if (TERMINAL_STAGES.includes(pipelineStage)) {
+      return res.status(400).json({ error: 'Para cerrar prospectos usa los endpoints de cierre individuales (/close-won, /close-lost)' });
+    }
+    await Lead.update(
+      { pipelineStage, status: legacyStatusFor(pipelineStage) },
+      { where: { id: ids } }
+    );
     return res.json({ message: `${ids.length} lead(s) actualizados` });
   } catch (error) {
     console.error('Error en batchUpdateLeads:', error);
@@ -337,4 +539,9 @@ const sendLeadWhatsApp = async (req, res) => {
   }
 };
 
-module.exports = { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads, getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp };
+module.exports = {
+  createLead, getLeads, getLeadById, updateLead, deleteLead,
+  batchUpdateLeads, batchDeleteLeads, streamLeads,
+  getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp,
+  closeLeadAsWon, closeLeadAsLost,
+};
