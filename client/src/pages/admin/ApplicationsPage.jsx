@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, MapPin, Briefcase, Car, Trash2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Briefcase, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { getApplications, updateApplication, deleteApplication } from '../../services/jobService';
@@ -107,11 +107,13 @@ export default function ApplicationsPage() {
                 </div>
 
                 <div className="space-y-3 mb-5 text-sm">
+                  <div>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100">{selected.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {selected.email} · {selected.phone} · {CITY_LABELS[selected.city]}
+                    </p>
+                  </div>
                   {[
-                    { label: 'Nombre', value: selected.name },
-                    { label: 'Email', value: selected.email },
-                    { label: 'Teléfono', value: selected.phone },
-                    { label: 'Ciudad', value: CITY_LABELS[selected.city] },
                     { label: 'Experiencia', value: expLabel[selected.experience] },
                     { label: 'Vacante', value: selected.position?.title || 'Postulación general' },
                   ].map(({ label, value }) => value && (
@@ -120,12 +122,9 @@ export default function ApplicationsPage() {
                       <p className="font-medium text-gray-800 dark:text-gray-100">{value}</p>
                     </div>
                   ))}
-                  <div className="flex items-center gap-2">
-                    <Car size={14} className={selected.hasVehicle ? 'text-green-500' : 'text-gray-300'} />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {selected.hasVehicle ? 'Tiene vehículo propio' : 'Sin vehículo propio'}
-                    </span>
-                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Vehículo propio: <span className="font-medium text-gray-700 dark:text-gray-300">{selected.hasVehicle ? 'Sí' : 'No'}</span>
+                  </p>
                   {selected.motivation && (
                     <div>
                       <p className="text-xs text-gray-400 dark:text-gray-500">Motivación</p>

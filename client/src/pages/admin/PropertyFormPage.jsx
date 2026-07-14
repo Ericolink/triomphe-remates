@@ -14,20 +14,30 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { safeBlobUrl } from '../../utils/sanitize';
 import { buildImageUrl } from '../../utils/images';
 
+// Cada campo se agrupa por sección para que el formulario se lea como bloques
+// con propósito claro (Datos básicos, Ubicación, Detalles, Remate) en vez de una
+// grilla plana de 12 campos sin relación visual entre ellos.
+const SECTIONS = [
+  { key: 'basicos', title: 'Datos básicos' },
+  { key: 'ubicacion', title: 'Ubicación y tipo' },
+  { key: 'detalles', title: 'Detalles (opcional)' },
+  { key: 'remate', title: 'Remate y estatus' },
+];
+
 const FIELDS = [
-  { key: 'title', label: 'Título *', type: 'text', col: 2 },
-  { key: 'price', label: 'Precio', type: 'price', col: 1 },
-  { key: 'city', label: 'Ciudad *', type: 'select', col: 1, options: [{ value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }] },
-  { key: 'type', label: 'Tipo *', type: 'select', col: 1, options: [{ value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }, { value: 'terreno', label: 'Terreno' }, { value: 'local', label: 'Local' }, { value: 'bodega', label: 'Bodega' }] },
-  { key: 'status', label: 'Estatus', type: 'select', col: 1, options: [{ value: 'disponible', label: 'Disponible' }, { value: 'apartado', label: 'Apartado' }, { value: 'vendido', label: 'Vendido' }] },
-  { key: 'terrainMeters', label: 'M² Terreno', type: 'number', col: 1 },
-  { key: 'constructionMeters', label: 'M² Construcción', type: 'number', col: 1 },
-  { key: 'bedrooms', label: 'Recámaras', type: 'number', col: 1 },
-  { key: 'bathrooms', label: 'Baños', type: 'number', col: 1 },
-  { key: 'auctionDate', label: 'Fecha del remate', type: 'date', col: 1 },
-  { key: 'acquisitionStage', label: 'Etapa de adquisición', type: 'select', col: 1, options: [{ value: 'sin_proceso', label: 'Sin proceso' }, { value: 'documentacion', label: 'Documentación' }, { value: 'avaluo', label: 'Avalúo' }, { value: 'negociacion', label: 'Negociación' }, { value: 'firma', label: 'Firma' }, { value: 'entrega', label: 'Entrega' }] },
-  { key: 'address', label: 'Dirección', type: 'text', col: 2 },
-  { key: 'description', label: 'Descripción', type: 'textarea', col: 2 },
+  { key: 'title', label: 'Título *', type: 'text', col: 2, section: 'basicos' },
+  { key: 'description', label: 'Descripción (opcional)', type: 'textarea', col: 2, section: 'basicos' },
+  { key: 'city', label: 'Ciudad *', type: 'select', col: 1, section: 'ubicacion', options: [{ value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }] },
+  { key: 'type', label: 'Tipo *', type: 'select', col: 1, section: 'ubicacion', options: [{ value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }, { value: 'terreno', label: 'Terreno' }, { value: 'local', label: 'Local' }, { value: 'bodega', label: 'Bodega' }] },
+  { key: 'address', label: 'Dirección (opcional)', type: 'text', col: 2, section: 'ubicacion' },
+  { key: 'terrainMeters', label: 'M² Terreno (opcional)', type: 'number', col: 1, section: 'detalles' },
+  { key: 'constructionMeters', label: 'M² Construcción (opcional)', type: 'number', col: 1, section: 'detalles' },
+  { key: 'bedrooms', label: 'Recámaras (opcional)', type: 'number', col: 1, section: 'detalles' },
+  { key: 'bathrooms', label: 'Baños (opcional)', type: 'number', col: 1, section: 'detalles' },
+  { key: 'status', label: 'Estatus', type: 'select', col: 1, section: 'remate', options: [{ value: 'disponible', label: 'Disponible' }, { value: 'apartado', label: 'Apartado' }, { value: 'vendido', label: 'Vendido' }] },
+  { key: 'auctionDate', label: 'Fecha del remate (opcional)', type: 'date', col: 1, section: 'remate' },
+  { key: 'acquisitionStage', label: 'Etapa de adquisición', type: 'select', col: 1, section: 'remate', options: [{ value: 'sin_proceso', label: 'Sin proceso' }, { value: 'documentacion', label: 'Documentación' }, { value: 'avaluo', label: 'Avalúo' }, { value: 'negociacion', label: 'Negociación' }, { value: 'firma', label: 'Firma' }, { value: 'entrega', label: 'Entrega' }] },
+  { key: 'price', label: 'Precio (opcional)', type: 'price', col: 1, section: 'remate' },
 ];
 
 const CITY_CODE_PREFIX = { juarez: 'JRCH-', chihuahua: 'CHCH-', queretaro: 'QRQR-' };
@@ -330,108 +340,115 @@ export default function PropertyFormPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">Información general</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {FIELDS.map(({ key, label, type, col, options }) => {
-              const hasError = fieldErrors.includes(key);
-              const fieldClass = hasError
-                ? `${inputClass} border-red-400 dark:border-red-500 focus:ring-red-400`
-                : inputClass;
-              return (
-              <div key={key} className={col === 2 ? 'md:col-span-2' : ''}>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-                {key === 'acquisitionStage' && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
-                    En qué punto va el trámite legal para tomar posesión del inmueble (no afecta lo que ve el público).
-                  </p>
-                )}
-                {type === 'price' ? (
-                  <div className="space-y-2">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Ej: 1500000"
-                      value={form.pricePending ? '' : (form.price ?? '')}
-                      disabled={form.pricePending}
-                      onChange={(e) => setForm((f) => ({ ...f, price: e.target.value === '' ? '' : Number(e.target.value) }))}
-                      className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                    />
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
+        {SECTIONS.map(({ key: sectionKey, title }) => (
+          <div key={sectionKey} className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+            <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">{title}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {FIELDS.filter((f) => f.section === sectionKey).map(({ key, label, type, col, options }) => {
+                const hasError = fieldErrors.includes(key);
+                const fieldClass = hasError
+                  ? `${inputClass} border-red-400 dark:border-red-500 focus:ring-red-400`
+                  : inputClass;
+                return (
+                <div key={key} className={col === 2 ? 'md:col-span-2' : ''}>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+                  {key === 'acquisitionStage' && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                      En qué punto va el trámite legal para tomar posesión del inmueble (no afecta lo que ve el público).
+                    </p>
+                  )}
+                  {type === 'price' ? (
+                    <div className="space-y-2">
                       <input
-                        type="checkbox"
-                        checked={form.pricePending}
-                        onChange={(e) => setForm((f) => ({ ...f, pricePending: e.target.checked, price: e.target.checked ? '' : f.price }))}
-                        className="w-4 h-4 rounded accent-blue-900"
+                        type="number"
+                        min="0"
+                        placeholder="Ej: 1500000"
+                        value={form.pricePending ? '' : (form.price ?? '')}
+                        disabled={form.pricePending}
+                        onChange={(e) => setForm((f) => ({ ...f, price: e.target.value === '' ? '' : Number(e.target.value) }))}
+                        className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
                       />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Precio pendiente — se mostrará como <span className="font-semibold text-yellow-500">PENDIENTE</span>
-                      </span>
-                    </label>
-                  </div>
-                ) : type === 'textarea' ? (
-                  <textarea value={form[key]}
-                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                    rows={3}
-                    className={`${fieldClass} resize-none`} />
-                ) : type === 'select' ? (
-                  <select value={form[key]}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (key === 'city') {
-                        setForm((f) => {
-                          const next = { ...f, city: value };
-                          if (!f.noCode && (f.code === '' || f.code === CITY_CODE_PREFIX[f.city])) {
-                            next.code = CITY_CODE_PREFIX[value] || '';
-                          }
-                          return next;
-                        });
-                      } else {
-                        setForm((f) => ({ ...f, [key]: value }));
-                      }
-                    }}
-                    className={fieldClass}>
-                    {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                ) : (
-                  <input type={type} value={form[key]}
-                    onChange={(e) => { setForm((f) => ({ ...f, [key]: e.target.value })); if (hasError) setFieldErrors((errs) => errs.filter((k) => k !== key)); }}
-                    className={fieldClass} />
-                )}
-                {hasError && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio.</p>}
-              </div>
-              );
-            })}
-            <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Código de propiedad</label>
-              <input type="text" value={form.code} disabled={form.noCode}
-                placeholder={`Ej: ${CITY_CODE_PREFIX[form.city] || ''}0164`}
-                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`} />
-              <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
-                <input type="checkbox" checked={form.noCode}
-                  onChange={(e) => setForm((f) => ({
-                    ...f,
-                    noCode: e.target.checked,
-                    code: e.target.checked ? '' : (f.code || CITY_CODE_PREFIX[f.city] || ''),
-                  }))}
-                  className="w-4 h-4 rounded accent-blue-900" />
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Sin código asignado
-                </span>
-              </label>
-            </div>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={form.pricePending}
+                          onChange={(e) => setForm((f) => ({ ...f, pricePending: e.target.checked, price: e.target.checked ? '' : f.price }))}
+                          className="w-4 h-4 rounded accent-blue-900"
+                        />
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          Precio pendiente — se mostrará como <span className="font-semibold text-yellow-500">PENDIENTE</span>
+                        </span>
+                      </label>
+                    </div>
+                  ) : type === 'textarea' ? (
+                    <textarea value={form[key]}
+                      onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                      rows={3}
+                      className={`${fieldClass} resize-none`} />
+                  ) : type === 'select' ? (
+                    <select value={form[key]}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (key === 'city') {
+                          setForm((f) => {
+                            const next = { ...f, city: value };
+                            if (!f.noCode && (f.code === '' || f.code === CITY_CODE_PREFIX[f.city])) {
+                              next.code = CITY_CODE_PREFIX[value] || '';
+                            }
+                            return next;
+                          });
+                        } else {
+                          setForm((f) => ({ ...f, [key]: value }));
+                        }
+                      }}
+                      className={fieldClass}>
+                      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <input type={type} value={form[key]}
+                      onChange={(e) => { setForm((f) => ({ ...f, [key]: e.target.value })); if (hasError) setFieldErrors((errs) => errs.filter((k) => k !== key)); }}
+                      className={fieldClass} />
+                  )}
+                  {hasError && <p className="text-xs text-red-500 mt-1">Este campo es obligatorio.</p>}
+                </div>
+                );
+              })}
 
-            <div className="md:col-span-2 flex items-center gap-3">
-              <input type="checkbox" id="featured" checked={form.isFeatured}
-                onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))}
-                className="w-4 h-4 rounded accent-blue-900" />
-              <label htmlFor="featured" className="text-sm text-gray-700 dark:text-gray-300">
-                Destacar en el sitio público
-              </label>
+              {sectionKey === 'basicos' && (
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Código de propiedad (opcional)</label>
+                  <input type="text" value={form.code} disabled={form.noCode}
+                    placeholder={`Ej: ${CITY_CODE_PREFIX[form.city] || ''}0164`}
+                    onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                    className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`} />
+                  <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
+                    <input type="checkbox" checked={form.noCode}
+                      onChange={(e) => setForm((f) => ({
+                        ...f,
+                        noCode: e.target.checked,
+                        code: e.target.checked ? '' : (f.code || CITY_CODE_PREFIX[f.city] || ''),
+                      }))}
+                      className="w-4 h-4 rounded accent-blue-900" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Sin código asignado
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {sectionKey === 'remate' && (
+                <div className="md:col-span-2 flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-[#2e3650]">
+                  <input type="checkbox" id="featured" checked={form.isFeatured}
+                    onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))}
+                    className="w-4 h-4 rounded accent-blue-900" />
+                  <label htmlFor="featured" className="text-sm text-gray-700 dark:text-gray-300">
+                    Destacar en el sitio público
+                  </label>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        ))}
 
         <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
           <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">

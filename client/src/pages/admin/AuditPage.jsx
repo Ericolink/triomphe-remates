@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ShieldCheck, Building2, Users, MessageSquare, Briefcase, Bell, User } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getAuditLogs } from '../../services/auditService';
 import Badge from '../../components/ui/Badge';
@@ -10,10 +10,6 @@ import { formatDateTime } from '../../utils/formatters';
 
 const actionVariant = { create: 'success', update: 'warning', delete: 'danger', login: 'primary', logout: 'default', export: 'default' };
 const actionLabel  = { create: 'Crear', update: 'Editar', delete: 'Eliminar', login: 'Login', logout: 'Logout', export: 'Exportar' };
-const resourceIcon = {
-  property: <Building2 size={14} />, lead: <Users size={14} />, feedback: <MessageSquare size={14} />,
-  user: <User size={14} />, job: <Briefcase size={14} />, application: <Briefcase size={14} />, alert: <Bell size={14} />,
-};
 const resourceLabel = { property: 'Propiedad', lead: 'Lead', feedback: 'Buzón', user: 'Usuario', job: 'Vacante', application: 'Postulación', alert: 'Alerta' };
 
 const ACTIONS   = ['', 'create', 'update', 'delete', 'login', 'export'];
@@ -57,15 +53,17 @@ export default function AuditPage() {
             try { detail = log.detail ? JSON.parse(log.detail) : null; } catch { /* ignore */ }
             return (
               <motion.div key={log.id} variants={fadeInUp}
-                className="bg-white dark:bg-[#242938] rounded-xl px-5 py-3.5 shadow-sm border border-gray-100 dark:border-[#2e3650] flex flex-wrap items-center gap-3">
-                <Badge variant={actionVariant[log.action] || 'default'}>{actionLabel[log.action] || log.action}</Badge>
-                <span className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
-                  {resourceIcon[log.resource]} {resourceLabel[log.resource] || log.resource}
-                  {log.resourceId && <span className="text-xs text-gray-400">#{log.resourceId}</span>}
-                </span>
-                {detail?.title && <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">{detail.title}</span>}
-                <div className="ml-auto flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-                  {log.userName && <span className="font-medium text-gray-600 dark:text-gray-300">{log.userName}</span>}
+                className="bg-white dark:bg-[#242938] rounded-xl px-5 py-3.5 shadow-sm border border-gray-100 dark:border-[#2e3650]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={actionVariant[log.action] || 'default'}>{actionLabel[log.action] || log.action}</Badge>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                    {resourceLabel[log.resource] || log.resource}
+                    {log.resourceId && <span className="text-xs text-gray-400"> #{log.resourceId}</span>}
+                  </span>
+                  {detail?.title && <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">{detail.title}</span>}
+                </div>
+                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400 dark:text-gray-500">
+                  {log.userName && <span className="font-medium text-gray-500 dark:text-gray-400">{log.userName}</span>}
                   <span>{formatDateTime(log.createdAt)}</span>
                 </div>
               </motion.div>

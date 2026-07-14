@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Calendar, MapPin, User, Phone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getLeads } from '../../services/leadService';
 import Spinner from '../../components/ui/Spinner';
@@ -14,6 +14,33 @@ function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear()
     && a.getMonth() === b.getMonth()
     && a.getDate() === b.getDate();
+}
+
+// Fila de cita compartida entre "día seleccionado" y "próximas citas" para que
+// ambas secciones se lean con el mismo estilo en vez de dos densidades distintas.
+function AppointmentRow({ lead, showDate }) {
+  return (
+    <div className="flex items-start gap-2 bg-gray-50 dark:bg-[#1a1f2e] rounded-xl p-3">
+      {showDate && (
+        <span className="mt-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded text-[10px] font-mono whitespace-nowrap flex-shrink-0">
+          {new Date(lead.appointmentDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+        </span>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm text-gray-800 dark:text-gray-100 flex items-center gap-1.5 truncate">
+          <User size={12} className="text-gray-400 flex-shrink-0" /> {lead.name}
+        </p>
+        {(lead.phone || lead.property) && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+            {[lead.phone, lead.property?.title].filter(Boolean).join(' · ')}
+          </p>
+        )}
+      </div>
+      <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+        {typeLabel[lead.type] || lead.type}
+      </span>
+    </div>
+  );
 }
 
 export default function CalendarPage() {
@@ -46,7 +73,6 @@ export default function CalendarPage() {
   };
 
   const selectedLeads = selected ? leadsOnDay(selected) : [];
-  const todayLeads    = leads.filter((l) => isSameDay(new Date(l.appointmentDate), today));
 
   if (isLoading) return <Spinner size="lg" className="py-20" />;
 
@@ -56,11 +82,6 @@ export default function CalendarPage() {
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Calendario de citas</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
           {leads.length} cita{leads.length !== 1 ? 's' : ''} programada{leads.length !== 1 ? 's' : ''}
-          {todayLeads.length > 0 && (
-            <span className="ml-2 text-yellow-600 dark:text-yellow-400 font-medium">
-              · {todayLeads.length} hoy
-            </span>
-          )}
         </p>
       </div>
 
@@ -106,7 +127,7 @@ export default function CalendarPage() {
                   `}>
                   {day && (
                     <>
-                      <span className={`font-medium ${isToday ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
                         {day}
                       </span>
                       {dayLeads.length > 0 && (
@@ -145,26 +166,7 @@ export default function CalendarPage() {
                   <p className="text-sm text-gray-400 dark:text-gray-500 italic">Sin citas este día.</p>
                 ) : (
                   <div className="space-y-3">
-                    {selectedLeads.map((l) => (
-                      <div key={l.id} className="bg-gray-50 dark:bg-[#1a1f2e] rounded-xl p-3">
-                        <p className="font-medium text-sm text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
-                          <User size={12} className="text-gray-400" /> {l.name}
-                        </p>
-                        {l.phone && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1.5">
-                            <Phone size={11} /> {l.phone}
-                          </p>
-                        )}
-                        {l.property && (
-                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1.5 truncate">
-                            <MapPin size={11} /> {l.property.title}
-                          </p>
-                        )}
-                        <span className="inline-block mt-1.5 text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">
-                          {typeLabel[l.type] || l.type}
-                        </span>
-                      </div>
-                    ))}
+                    {selectedLeads.map((l) => <AppointmentRow key={l.id} lead={l} />)}
                   </div>
                 )}
               </motion.div>
@@ -185,14 +187,7 @@ export default function CalendarPage() {
                   .filter((l) => new Date(l.appointmentDate) >= today)
                   .sort((a, b) => new Date(a.appointmentDate) - new Date(b.appointmentDate))
                   .slice(0, 8)
-                  .map((l) => (
-                    <div key={l.id} className="flex items-start gap-2 text-xs">
-                      <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-mono whitespace-nowrap">
-                        {new Date(l.appointmentDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
-                      </span>
-                      <span className="text-gray-700 dark:text-gray-300 truncate">{l.name}</span>
-                    </div>
-                  ))}
+                  .map((l) => <AppointmentRow key={l.id} lead={l} showDate />)}
               </div>
             </div>
           )}

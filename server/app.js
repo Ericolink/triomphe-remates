@@ -9,8 +9,9 @@ require('dotenv').config();
 
 const app = express();
 
-// AUDIT-003: Render actúa como proxy inverso — sin esto, req.ip resuelve siempre a la IP
-// interna del proxy, lo que inutiliza el rate limiting por IP y falsea los logs de auditoría.
+// AUDIT-003: IIS/httpPlatformHandler (SmarterASP.NET) actúa como proxy inverso — sin esto,
+// req.ip resuelve siempre a la IP interna del proxy, lo que inutiliza el rate limiting por IP
+// y falsea los logs de auditoría.
 app.set('trust proxy', 1);
 
 // Cabeceras de seguridad HTTP (helmet). El servidor sirve dos tipos de página muy distintos
@@ -62,7 +63,6 @@ app.use((req, res, next) => (req.path.startsWith('/api/docs') ? docsCsp(req, res
 const allowedOrigins = [
   ...(process.env.CLIENT_URLS ? process.env.CLIENT_URLS.split(',').map((u) => u.trim()) : []),
   process.env.CLIENT_URL,
-  'https://triomphedemo.netlify.app',
   'http://localhost:5173',
   'http://localhost:4173',
 ].filter(Boolean);

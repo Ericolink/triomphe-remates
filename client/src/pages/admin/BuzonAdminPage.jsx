@@ -18,7 +18,6 @@ const categoryIcon = {
   comentario: <MessageSquare size={14} />,
   sugerencia: <Lightbulb size={14} />,
 };
-const statusVariant = { nuevo: 'primary', leido: 'warning', archivado: 'default' };
 
 export default function BuzonAdminPage() {
   const queryClient = useQueryClient();
@@ -135,12 +134,16 @@ export default function BuzonAdminPage() {
           {isLoading ? <Spinner size="lg" className="py-16" /> : (
             <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
               <AnimatePresence>
-                {items.map((item) => (
+                {items.map((item) => {
+                  const isUnread = item.status === 'nuevo';
+                  return (
                   <motion.div key={item.id}
                     variants={fadeInUp} layout
                     onClick={() => handleSelect(item)}
                     whileHover={{ x: 4, transition: { duration: 0.15 } }}
-                    className={`bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border cursor-pointer transition-all ${
+                    className={`rounded-2xl p-5 shadow-sm border cursor-pointer transition-all ${
+                      isUnread ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'bg-white dark:bg-[#242938]'
+                    } ${
                       selected?.id === item.id
                         ? 'border-blue-500 dark:border-blue-400 ring-1 ring-blue-500'
                         : 'border-gray-100 dark:border-[#2e3650]'
@@ -152,21 +155,24 @@ export default function BuzonAdminPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0 mr-3">
-                            <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">{item.subject}</p>
+                            <p className="flex items-center gap-2 truncate">
+                              {isUnread && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />}
+                              <span className={`truncate ${isUnread ? 'font-bold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}>
+                                {item.subject}
+                              </span>
+                            </p>
                             <p className="text-xs text-gray-400 dark:text-gray-500">{item.name} · {formatDate(item.createdAt)}</p>
                           </div>
-                          <div className="flex gap-2 flex-shrink-0">
-                            <Badge variant={categoryVariant[item.category]}>
-                              <span className="flex items-center gap-1">{categoryIcon[item.category]} {item.category}</span>
-                            </Badge>
-                            <Badge variant={statusVariant[item.status]}>{item.status}</Badge>
-                          </div>
+                          <Badge variant={categoryVariant[item.category]}>
+                            <span className="flex items-center gap-1">{categoryIcon[item.category]} {item.category}</span>
+                          </Badge>
                         </div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2">{item.message}</p>
                       </div>
                     </div>
                   </motion.div>
-                ))}
+                  );
+                })}
               </AnimatePresence>
             </motion.div>
           )}

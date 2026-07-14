@@ -61,7 +61,7 @@ Antes de construir el backlog, cada hallazgo "abierto" de las auditorías previa
 | 9 | `analyticsController.getDashboard` con ~15 queries secuenciales sin `Promise.all` | No tocado por el remediation pass backend (que fue de seguridad/estabilidad, no performance) | BAJO-MEDIO |
 | 10 | `exportController.js` sigue siendo un archivo grande (720 líneas, antes 841) con 4 responsabilidades mezcladas | `wc -l` → 720; redujo tamaño al extraer labels pero no se dividió en módulos | BAJO (mantenibilidad) |
 | 11 | `sync({alter:false})` sin sistema de migraciones formal (Sequelize CLI/Umzug) | Sin cambios — sigue siendo el mecanismo de schema | MEDIO (largo plazo) |
-| 12 | SSE con `EventEmitter` en memoria, no escala a multi-instancia | Sin cambios; aceptable mientras Render sea un solo proceso | INFO (documentar, no actuar) |
+| 12 | SSE con `EventEmitter` en memoria, no escala a multi-instancia | Sin cambios; aceptable mientras el server corra como un solo proceso (SmarterASP/IIS httpPlatformHandler) | INFO (documentar, no actuar) |
 
 ---
 

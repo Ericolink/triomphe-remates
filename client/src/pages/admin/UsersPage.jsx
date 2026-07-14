@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { getUsers, createUser, updateUser, deactivateUser, activateUser, permanentDeleteUser } from '../../services/usersService';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import OverflowMenu from '../../components/ui/OverflowMenu';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
@@ -214,19 +215,15 @@ export default function UsersPage() {
                             {u.name?.[0]?.toUpperCase()}
                           </div>
                         )}
-                        <div>
-                          <p className="font-medium text-gray-800 dark:text-gray-100">{u.name}</p>
-                          <div className="flex items-center gap-1">
-                            {u.id === currentUser?.id && <span className="text-xs text-blue-500">Tú</span>}
-                            {u.id === masterAdminId && <span className="text-xs text-yellow-500">Principal</span>}
-                          </div>
-                        </div>
+                        <p className="font-medium text-gray-800 dark:text-gray-100">{u.name}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{u.email}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${roleColors[u.role]}`}>
-                        {u.role === 'admin' ? <><ShieldCheck size={11} /> Admin</> : 'Editor'}
+                        {u.role === 'admin' && <ShieldCheck size={11} />}
+                        {u.role === 'admin' ? 'Admin' : 'Editor'}
+                        {u.id === currentUser?.id ? ' · Tú' : u.id === masterAdminId ? ' · Principal' : ''}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
@@ -250,34 +247,17 @@ export default function UsersPage() {
                           <Pencil size={16} />
                         </motion.button>
 
-                        {canModify(u) && (
-                          u.isActive ? (
-                            <motion.button onClick={() => confirmDeactivate(u)}
-                              whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
-                              disabled={deactivateMutation.isPending}
-                              className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors disabled:opacity-50"
-                              title="Desactivar">
-                              <UserX size={16} />
-                            </motion.button>
-                          ) : (
-                            <motion.button onClick={() => activateMutation.mutate(u.id)}
-                              whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
-                              disabled={activateMutation.isPending}
-                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
-                              title="Activar">
-                              <UserCheck size={16} />
-                            </motion.button>
-                          )
-                        )}
-
-                        {canDelete(u) && (
-                          <motion.button onClick={() => confirmDelete(u)}
-                            whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
-                            disabled={deleteMutation.isPending}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
-                            title="Eliminar permanentemente">
-                            <Trash2 size={16} />
-                          </motion.button>
+                        {(canModify(u) || canDelete(u)) && (
+                          <OverflowMenu items={[
+                            ...(canModify(u) ? [
+                              u.isActive
+                                ? { label: 'Desactivar', icon: <UserX size={14} />, onClick: () => confirmDeactivate(u) }
+                                : { label: 'Activar', icon: <UserCheck size={14} />, onClick: () => activateMutation.mutate(u.id) },
+                            ] : []),
+                            ...(canDelete(u) ? [
+                              { label: 'Eliminar', icon: <Trash2 size={14} />, danger: true, onClick: () => confirmDelete(u) },
+                            ] : []),
+                          ]} />
                         )}
                       </div>
                     </td>

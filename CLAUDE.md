@@ -78,7 +78,7 @@ The server needs MySQL running locally (`triomphe_db`). Sequelize runs `sync({ a
 
 ### Deployment
 
-Single Render service: `npm run build` (root) compiles the React app into `server/client/`, then `npm start` boots Express which serves both the API and the compiled frontend. The frontend build is committed to `server/client/` via CI.
+Hosted exclusively on **SmarterASP.NET** as a Node.js app running under IIS via `httpPlatformHandler` (not ASP.NET Core). `npm run build` (root) compiles the React app into `server/client/`, then `npm start` (`node server/server.js`) boots Express, which serves both the API and the compiled frontend. Deploys are manual: build locally, then FTP-upload `server/` (including the compiled `server/client/`) plus `web.config` to the SmarterASP webroot. `web.config` (repo root) is the clean IIS/httpPlatformHandler template — the real `server/web.config` with production secrets is gitignored and lives only on the deploy target; never commit it. SmarterASP has no native env-var panel — production env vars are injected via the `<environmentVariables>` block inside `web.config` itself. See `AUDITORIA_SMARTERASP_DEPLOY.md` for the full deploy checklist.
 
 ### Auth Flow
 

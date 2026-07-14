@@ -119,17 +119,19 @@ export default function AdminPropertiesPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Propiedades</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{data?.pagination?.total ?? 0} en total</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <motion.button whileHover={buttonHover} whileTap={buttonTap}
-            onClick={() => handleExport('excel')} disabled={exporting === 'excel'}
-            className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50">
-            <FileSpreadsheet size={14} /> {exporting === 'excel' ? 'Generando...' : 'Excel'}
-          </motion.button>
-          <motion.button whileHover={buttonHover} whileTap={buttonTap}
-            onClick={() => handleExport('pdf')} disabled={exporting === 'pdf'}
-            className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50">
-            <FileText size={14} /> {exporting === 'pdf' ? 'Generando...' : 'PDF'}
-          </motion.button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-2 mr-2">
+            <motion.button whileHover={buttonHover} whileTap={buttonTap}
+              onClick={() => handleExport('excel')} disabled={exporting === 'excel'}
+              className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50">
+              <FileSpreadsheet size={14} /> {exporting === 'excel' ? 'Generando...' : 'Excel'}
+            </motion.button>
+            <motion.button whileHover={buttonHover} whileTap={buttonTap}
+              onClick={() => handleExport('pdf')} disabled={exporting === 'pdf'}
+              className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50">
+              <FileText size={14} /> {exporting === 'pdf' ? 'Generando...' : 'PDF'}
+            </motion.button>
+          </div>
           <motion.button whileHover={buttonHover} whileTap={buttonTap}
             onClick={() => navigate('/admin/propiedades/nueva')}
             className="flex items-center gap-1.5 bg-blue-900 dark:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-blue-700 transition-colors">
@@ -166,7 +168,7 @@ export default function AdminPropertiesPage() {
             <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 dark:bg-[#1a1f2e] border-b border-gray-100 dark:border-[#2e3650]">
                 <tr>
-                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Fecha alta', 'Última modif.', 'Destacada', 'Acciones'].map((h) => (
+                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Actualizado', 'Destacada', 'Acciones'].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -208,10 +210,8 @@ export default function AdminPropertiesPage() {
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
                         {property.views ?? 0}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
-                        {formatDate(property.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs"
+                        title={`Alta: ${formatDate(property.createdAt)}`}>
                         {formatDate(property.updatedAt)}
                       </td>
                       <td className="px-4 py-3 text-center">

@@ -12,7 +12,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import BatchActionBar from '../../components/ui/BatchActionBar';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 import { formatDate, formatDateTime } from '../../utils/formatters';
-import { SOURCE_LABELS, SOURCE_COLORS, LEAD_TYPE_LABELS as typeLabel } from '../../utils/constants';
+import { SOURCE_LABELS, LEAD_TYPE_LABELS as typeLabel } from '../../utils/constants';
 
 const statusVariant = { nuevo: 'primary', contactado: 'warning', cerrado: 'success', descartado: 'default' };
 const LEAD_STATUS_OPTIONS = [
@@ -439,17 +439,12 @@ export default function LeadsPage() {
                           <div className="flex items-start justify-between mb-2">
                             <div>
                               <p className="font-semibold text-gray-800 dark:text-gray-100">{lead.name}</p>
-                              <p className="text-xs text-gray-400 dark:text-gray-500">{formatDate(lead.createdAt)}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">
+                                {formatDate(lead.createdAt)} · {typeLabel[lead.type]}
+                                {lead.source && lead.source !== 'directo' ? ` · ${SOURCE_LABELS[lead.source]}` : ''}
+                              </p>
                             </div>
-                            <div className="flex gap-2">
-                              <Badge variant="default">{typeLabel[lead.type]}</Badge>
-                              <Badge variant={statusVariant[lead.status]}>{lead.status}</Badge>
-                              {lead.source && lead.source !== 'directo' && (
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_COLORS[lead.source] || SOURCE_COLORS.otro}`}>
-                                  {SOURCE_LABELS[lead.source]}
-                                </span>
-                              )}
-                            </div>
+                            <Badge variant={statusVariant[lead.status]}>{lead.status}</Badge>
                           </div>
                           <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
                             <span className="flex items-center gap-1"><Mail size={12} /> {lead.email}</span>

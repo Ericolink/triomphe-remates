@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, Trash2, MapPin, Tag, DollarSign } from 'lucide-react';
+import { Bell, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { getAlerts, deleteAlert } from '../../services/alertService';
@@ -63,26 +63,18 @@ export default function AlertsAdminPage() {
                 </motion.button>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-3">
-                {alert.city ? (
-                  <span className="flex items-center gap-1 text-xs bg-gray-100 dark:bg-[#2e3650] text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full">
-                    <MapPin size={11} /> {CITY_LABELS[alert.city]}
-                  </span>
-                ) : <span className="text-xs text-gray-400 dark:text-gray-500">Cualquier ciudad</span>}
-                {alert.type && (
-                  <span className="flex items-center gap-1 text-xs bg-gray-100 dark:bg-[#2e3650] text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full">
-                    <Tag size={11} /> {TYPE_LABELS_SHORT[alert.type]}
-                  </span>
-                )}
-                {alert.maxPrice && (
-                  <span className="flex items-center gap-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-1 rounded-full">
-                    <DollarSign size={11} /> hasta {formatPrice(alert.maxPrice)}
-                  </span>
-                )}
-              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {[
+                  alert.city ? CITY_LABELS[alert.city] : 'Cualquier ciudad',
+                  alert.type ? TYPE_LABELS_SHORT[alert.type] : null,
+                  alert.maxPrice ? `hasta ${formatPrice(alert.maxPrice)}` : null,
+                ].filter(Boolean).join(' · ')}
+              </p>
 
               <div className="flex items-center justify-between">
-                <Badge variant={alert.isActive ? 'success' : 'default'}>{alert.isActive ? 'Activa' : 'Cancelada'}</Badge>
+                {isActiveFilter === '' ? (
+                  <Badge variant={alert.isActive ? 'success' : 'default'}>{alert.isActive ? 'Activa' : 'Cancelada'}</Badge>
+                ) : <span />}
                 <span className="text-xs text-gray-400 dark:text-gray-500">{formatDate(alert.createdAt)}</span>
               </div>
             </motion.div>

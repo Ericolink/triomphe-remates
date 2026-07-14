@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck, MessageSquare, Bell, ClipboardList, CalendarDays, MessageSquareQuote } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck, MessageSquare, Bell, ClipboardList, CalendarDays, MessageSquareQuote } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -12,7 +12,10 @@ import toast from 'react-hot-toast';
 const navGroups = [
   {
     label: null,
-    links: [{ to: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' }],
+    links: [
+      { to: '/admin/dashboard',     icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+      { to: '/admin/estadisticas',  icon: <BarChart3 size={18} />,       label: 'Estadísticas' },
+    ],
   },
   {
     label: 'Propiedades',

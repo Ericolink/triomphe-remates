@@ -20,6 +20,7 @@ const FAQPage              = lazy(() => import('./pages/public/FAQPage'));
 const LoginPage            = lazy(() => import('./pages/admin/LoginPage'));
 const AdminLayout          = lazy(() => import('./components/layout/AdminLayout'));
 const DashboardPage        = lazy(() => import('./pages/admin/DashboardPage'));
+const EstadisticasPage     = lazy(() => import('./pages/admin/EstadisticasPage'));
 const AdminPropertiesPage  = lazy(() => import('./pages/admin/AdminPropertiesPage'));
 const PropertyFormPage     = lazy(() => import('./pages/admin/PropertyFormPage'));
 const LeadsPage            = lazy(() => import('./pages/admin/LeadsPage'));
@@ -68,6 +69,7 @@ export default function App() {
           }>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard"              element={<DashboardPage />} />
+            <Route path="estadisticas"           element={<EstadisticasPage />} />
             <Route path="propiedades"            element={<AdminPropertiesPage />} />
             <Route path="propiedades/nueva"      element={<PropertyFormPage />} />
             <Route path="propiedades/:id/editar" element={<PropertyFormPage />} />
