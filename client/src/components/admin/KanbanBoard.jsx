@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Building2, MessageCircle, PhoneCall } from 'lucide-react';
+import { Building2, MessageCircle, PhoneCall, AlertCircle, Pin } from 'lucide-react';
 import { getLeads } from '../../services/leadService';
 import { getTasks } from '../../services/taskService';
 import Badge from '../ui/Badge';
@@ -34,7 +34,8 @@ export function NextActionLine({ task }) {
   const overdue = new Date(task.dueDate) < new Date();
   return (
     <p className={`text-xs mt-1.5 flex items-center gap-1 ${overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-      {overdue ? '🔴' : '📌'} {TASK_TYPE_LABELS[task.type] || task.type} · {formatDate(task.dueDate)}
+      {overdue ? <AlertCircle size={12} className="flex-shrink-0" /> : <Pin size={12} className="flex-shrink-0" />}
+      {TASK_TYPE_LABELS[task.type] || task.type} · {formatDate(task.dueDate)}
     </p>
   );
 }
@@ -166,10 +167,17 @@ function KanbanColumn({ col, filters, fullWidth, onSelect,
       onDrop={(e) => onDrop(e, col.key)}
       onDragLeave={onDragLeave}
       className={`flex flex-col rounded-2xl border-2 transition-colors ${fullWidth ? 'w-full flex-shrink-0' : 'flex-1 min-w-0'} ${col.color} ${isDragOver ? 'bg-blue-50 dark:bg-blue-900/10' : 'bg-gray-50/60 dark:bg-[#1a1f2e]/60'}`}>
-      <div className={`px-4 py-3 rounded-t-xl flex items-center gap-2 flex-shrink-0 ${col.headerBg}`}>
-        <span className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
-        <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">{col.label}</span>
-        <span className="ml-auto text-xs bg-white dark:bg-[#242938] text-gray-500 rounded-full px-2 py-0.5 font-medium">
+      {/* Encabezado a una sola línea siempre: con 8 columnas simultáneas en pc, algunas
+          etiquetas ("Cita agendada", "Venta realizada") no caben enteras junto al contador.
+          Envolver a 2 líneas rompía la alineación (el contador, centrado con `items-center`
+          contra el bloque completo, quedaba flotando entre ambas líneas en vez de junto al
+          texto). `truncate` + `title` (tooltip) es el mismo patrón que usan Trello/Jira para
+          títulos de columna angostos: nunca se rompe la fila, el nombre completo sigue
+          disponible al pasar el cursor. */}
+      <div className={`px-3 py-2.5 rounded-t-xl flex items-center gap-2 flex-shrink-0 ${col.headerBg}`}>
+        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${col.dot}`} />
+        <span className="font-semibold text-sm text-gray-700 dark:text-gray-200 truncate min-w-0 flex-1" title={col.label}>{col.label}</span>
+        <span className="flex-shrink-0 text-xs bg-white dark:bg-[#242938] text-gray-500 dark:text-gray-400 rounded-full px-2 py-0.5 font-medium">
           {isLoading ? '…' : total}
         </span>
       </div>

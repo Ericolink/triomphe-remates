@@ -1,3 +1,5 @@
+import { Bell } from 'lucide-react';
+
 export default function LeadToast({ t, diff, lead }) {
   return (
     <div
@@ -6,7 +8,7 @@ export default function LeadToast({ t, diff, lead }) {
       } bg-white shadow-lg rounded-xl p-4 flex items-start gap-3 max-w-sm border border-gray-100`}
     >
       <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-        <span className="text-yellow-400 text-lg">🔔</span>
+        <Bell size={18} className="text-yellow-400" />
       </div>
       <div>
         <p className="font-semibold text-gray-800 text-sm">

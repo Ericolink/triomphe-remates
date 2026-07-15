@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns, MessageCircle, X, PhoneCall, ArrowRightLeft, Plus, Search, UserCheck, Wallet } from 'lucide-react';
+import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns, MessageCircle, MessageSquare, X, PhoneCall, ArrowRightLeft, Plus, Search, UserCheck, Wallet, Activity, FileText, Flag, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -142,7 +142,7 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
     onSuccess: (data) => {
       setWhatsappMessage('');
       queryClient.invalidateQueries(['lead-notes', selected.id]);
-      if (data?.warning) toast(data.warning, { icon: '⚠️' });
+      if (data?.warning) toast(data.warning, { icon: <AlertTriangle size={16} className="text-amber-500" /> });
       else toast.success('Mensaje de WhatsApp enviado');
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al enviar WhatsApp'),
@@ -153,15 +153,38 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
     (p) => p.id !== lead.propertyId && !interestedProperties.some((ip) => ip.id === p.id)
   );
 
-  const inputClass = "w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100";
+  // Reutilizados por todos los campos de solo-un-control ("Responsable", "Fuente",
+  // "Forma de pago") para que compartan tamaño de fuente, radio y foco.
+  const fieldLabelClass = "block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1";
+  const fieldControlClass = "w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
+  // Compone una fila de "input + botón": min-w-0 + flex-1 hace que el control ceda ante
+  // el botón en vez de imponer su propio 100% de ancho (bug original: `w-full` dentro de
+  // un `flex` fuerza al hijo a pedir el ancho completo del contenedor y empuja al botón
+  // fuera de vista → scroll horizontal para llegar a escribir).
+  const rowControlClass = "min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500";
+  const rowButtonClass = "flex-shrink-0 px-2.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors";
+  const sectionLabelClass = "text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5";
+  const cardClass = "rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3";
 
   return (
     <motion.div key={selected.id} variants={fadeInRight} initial="hidden" animate="visible" exit={{ opacity: 0, x: 20 }}
       className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-120px)]">
       <div className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-gray-800 dark:text-gray-100">Detalle del prospecto</h2>
-          <div className="flex items-center gap-1">
+        {/* Identidad — el nombre del prospecto va en el encabezado (antes solo aparecía
+            varias secciones más abajo, en la lista plana de datos): es lo primero que hay
+            que poder confirmar al abrir el panel, sin desplazarse. */}
+        <div className="flex items-start justify-between gap-2 mb-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Detalle del prospecto</p>
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 truncate">{selected.name}</h2>
+            {(selected.phone || selected.property?.title) && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {selected.phone && <span className="flex items-center gap-1"><Phone size={11} className="flex-shrink-0" />{selected.phone}</span>}
+                {selected.property?.title && <span className="flex items-center gap-1 min-w-0"><Building2 size={11} className="flex-shrink-0" /><span className="truncate">{selected.property.title}</span></span>}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
             {selected.phone && (
               <a href={`tel:${selected.phone}`} title="Llamar"
                 className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
@@ -187,9 +210,16 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
           </div>
         </div>
 
+        {selected.message && (
+          <div className={`mb-4 ${cardClass}`}>
+            <p className={sectionLabelClass}><MessageSquare size={13} /> Mensaje inicial</p>
+            <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed">{selected.message}</p>
+          </div>
+        )}
+
         {/* Próxima acción — siempre arriba, es lo más importante */}
-        <div className="mb-5 p-3 rounded-xl bg-gray-50 dark:bg-[#1a1f2e]">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Próxima acción</p>
+        <div className={`mb-4 ${cardClass}`}>
+          <p className={sectionLabelClass}><Flag size={13} /> Próxima acción</p>
           {openTask ? (
             <div className="flex items-center justify-between gap-2">
               <NextActionLine task={openTask} />
@@ -207,8 +237,8 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
 
         {/* Timeline de actividad — justo debajo de la próxima acción, antes que los
             campos editables: es lo primero que se quiere leer al abrir un prospecto. */}
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Actividad</p>
+        <div className="mb-4">
+          <p className={sectionLabelClass}><Activity size={13} /> Actividad</p>
           <div className="space-y-2 mb-3 max-h-48 overflow-y-auto pr-1">
             {activities.length === 0 ? (
               <p className="text-xs text-gray-400 dark:text-gray-500 italic">Sin actividad registrada.</p>
@@ -222,82 +252,79 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
+          {/* Tipo y mensaje van en filas separadas (en vez de compartir una sola fila
+              angosta): así el campo de texto siempre tiene ancho completo para escribir
+              cómodo, sin importar qué tan angosto sea el panel. */}
+          <div className="space-y-2">
             <select value={activityType} onChange={(e) => setActivityType(e.target.value)}
-              className={`${inputClass} flex-shrink-0 w-28`}>
+              className="w-40 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
               {['llamada', 'whatsapp', 'email', 'visita', 'nota'].map((t) => <option key={t} value={t}>{ACTIVITY_TYPE_LABELS[t]}</option>)}
             </select>
-            <input value={activityContent} onChange={(e) => setActivityContent(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && activityContent.trim() && addActivityMutation.mutate({ id: selected.id, data: { type: activityType, content: activityContent.trim() } })}
-              placeholder="Registrar interacción..." className={inputClass} />
-            <button onClick={() => activityContent.trim() && addActivityMutation.mutate({ id: selected.id, data: { type: activityType, content: activityContent.trim() } })}
-              disabled={!activityContent.trim() || addActivityMutation.isPending}
-              className="px-2.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0">
-              +
-            </button>
+            <div className="flex gap-2">
+              <input value={activityContent} onChange={(e) => setActivityContent(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && activityContent.trim() && addActivityMutation.mutate({ id: selected.id, data: { type: activityType, content: activityContent.trim() } })}
+                placeholder="Registrar interacción..." className={rowControlClass} />
+              <button onClick={() => activityContent.trim() && addActivityMutation.mutate({ id: selected.id, data: { type: activityType, content: activityContent.trim() } })}
+                disabled={!activityContent.trim() || addActivityMutation.isPending}
+                title="Registrar interacción" className={rowButtonClass}>
+                <Plus size={14} />
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-3 mb-5 text-sm">
-          {[{ label: 'Nombre', value: selected.name }, { label: 'Teléfono', value: selected.phone }, { label: 'Propiedad de origen', value: selected.property?.title }]
-            .filter(({ value }) => value).map(({ label, value }) => (
-            <div key={label}>
-              <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
-              <p className="font-medium text-gray-800 dark:text-gray-100">{value}</p>
-            </div>
-          ))}
-          {selected.message && (
-            <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Mensaje</p>
-              <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed">{selected.message}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-3 mb-5">
+        {/* Seguimiento — los dos campos que más se tocan durante la jornada. */}
+        <div className={`space-y-3 mb-4 ${cardClass}`}>
+          <p className={sectionLabelClass}><ArrowRightLeft size={13} /> Seguimiento</p>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Etapa</label>
+            <label className={fieldLabelClass}>Etapa</label>
             <button onClick={() => onAttemptStageChange(lead)}
               className="w-full flex items-center justify-between px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors">
-              <Badge variant={PIPELINE_STAGE_VARIANTS[lead.pipelineStage]}>{PIPELINE_STAGE_LABELS[lead.pipelineStage]}</Badge>
-              <ArrowRightLeft size={14} className="text-gray-400" />
+              <span>{PIPELINE_STAGE_LABELS[lead.pipelineStage]}</span>
+              <ArrowRightLeft size={14} className="text-gray-400 flex-shrink-0" />
             </button>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Responsable</label>
+            <label className={fieldLabelClass}>Responsable</label>
             <select value={lead.assignedToUserId || ''}
               onChange={(e) => updateMutation.mutate({ id: selected.id, data: { assignedToUserId: e.target.value ? Number(e.target.value) : null } })}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none">
+              className={fieldControlClass}>
               <option value="">Sin asignar</option>
               {users.filter((u) => u.isActive).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </div>
+        </div>
+
+        {/* Datos comerciales — información de perfil, se toca con menos frecuencia que
+            Seguimiento; separada en su propia tarjeta para no competir visualmente. */}
+        <div className={`space-y-3 mb-4 ${cardClass}`}>
+          <p className={sectionLabelClass}><Wallet size={13} /> Datos comerciales</p>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fuente</label>
+            <label className={fieldLabelClass}>Fuente</label>
             <select value={selected.source || 'directo'}
               onChange={(e) => { updateMutation.mutate({ id: selected.id, data: { source: e.target.value } }); }}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none">
+              className={fieldControlClass}>
               {Object.entries(SOURCE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de primer contacto</label>
+            <label className={fieldLabelClass}>Fecha de primer contacto</label>
             <div className="flex gap-2">
               <input type="date" max={todayISODate()} value={firstContactInput}
                 onChange={(e) => setFirstContactInput(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none" />
+                className={`${rowControlClass} text-sm`} />
               <button onClick={() => updateMutation.mutate({ id: selected.id, data: { firstContactDate: firstContactInput || null } })}
                 disabled={firstContactInput === (lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : '')}
-                className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0">
+                className={`${rowButtonClass} text-sm`}>
                 Guardar
               </button>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Forma de pago</label>
+            <label className={fieldLabelClass}>Forma de pago</label>
             <select value={lead.paymentMethod || ''}
               onChange={(e) => updateMutation.mutate({ id: selected.id, data: { paymentMethod: e.target.value || null } })}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none">
+              className={fieldControlClass}>
               <option value="">Sin especificar</option>
               {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
@@ -319,10 +346,10 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
               <input type="number" min="0" step="1000" value={budgetAmountInput} disabled={lead.budgetNotSpecified}
                 onChange={(e) => setBudgetAmountInput(e.target.value)}
                 placeholder="Ej. 1500000"
-                className={`w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${budgetAmountInvalid ? 'ring-2 ring-red-400' : ''}`} />
+                className={`${rowControlClass} text-sm disabled:opacity-50 disabled:cursor-not-allowed ${budgetAmountInvalid ? 'ring-2 ring-red-400' : ''}`} />
               <button onClick={() => updateMutation.mutate({ id: selected.id, data: { budgetAmount: budgetAmountInput.trim() === '' ? null : Number(budgetAmountInput), budgetNotSpecified: false } })}
                 disabled={lead.budgetNotSpecified || budgetAmountInvalid || (budgetAmountInput.trim() === '' ? lead.budgetAmount == null : Number(budgetAmountInput) === Number(lead.budgetAmount))}
-                className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0">
+                className={`${rowButtonClass} text-sm`}>
                 Guardar
               </button>
             </div>
@@ -332,8 +359,8 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
         </div>
 
         {/* Propiedades de interés */}
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Propiedades de interés</p>
+        <div className="mb-4">
+          <p className={sectionLabelClass}><Building2 size={13} /> Propiedades de interés</p>
           <div className="space-y-1.5 mb-2">
             {interestedProperties.length === 0 && (
               <p className="text-xs text-gray-400 dark:text-gray-500 italic">Ninguna todavía.</p>
@@ -348,24 +375,21 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
           </div>
           {availableToAdd.length > 0 && (
             <div className="flex gap-2">
-              <select value={addPropertyId} onChange={(e) => setAddPropertyId(e.target.value)} className={inputClass}>
+              <select value={addPropertyId} onChange={(e) => setAddPropertyId(e.target.value)} className={rowControlClass}>
                 <option value="">Agregar propiedad...</option>
                 {availableToAdd.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
               </select>
               <button onClick={() => addPropertyId && addPropertyMutation.mutate({ leadId: selected.id, propertyId: Number(addPropertyId) })}
-                disabled={!addPropertyId}
-                className="px-2.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0">
-                <Plus size={13} />
+                disabled={!addPropertyId} title="Agregar propiedad" className={rowButtonClass}>
+                <Plus size={14} />
               </button>
             </div>
           )}
         </div>
 
         {/* Citas */}
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Calendar size={13} /> Citas
-          </p>
+        <div className="mb-4">
+          <p className={sectionLabelClass}><Calendar size={13} /> Citas</p>
           <div className="space-y-1.5 mb-2 max-h-32 overflow-y-auto pr-1">
             {appointments.length === 0 && <p className="text-xs text-gray-400 dark:text-gray-500 italic">Sin citas registradas.</p>}
             {appointments.map((a) => (
@@ -376,10 +400,10 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
             ))}
           </div>
           <div className="flex gap-2">
-            <input type="datetime-local" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} className={inputClass} />
+            <input type="datetime-local" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} className={rowControlClass} />
             <button onClick={() => appointmentDate && scheduleMutation.mutate({ leadId: selected.id, propertyId: appointmentPropertyId || undefined, scheduledAt: appointmentDate })}
               disabled={!appointmentDate || scheduleMutation.isPending}
-              className="px-2.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0">
+              className={rowButtonClass}>
               Agendar
             </button>
           </div>
@@ -387,17 +411,17 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
 
         {/* Envío de WhatsApp */}
         {selected.phone && (
-          <div className="mb-5">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+          <div className="mb-4">
+            <p className={sectionLabelClass}>
               <MessageCircle size={13} className="text-green-500" /> Enviar WhatsApp
             </p>
             <div className="flex gap-2">
               <textarea value={whatsappMessage} onChange={(e) => setWhatsappMessage(e.target.value)}
                 rows={2} placeholder="Mensaje de seguimiento..."
-                className="flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500" />
+                className="min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500" />
               <button onClick={() => whatsappMessage.trim() && whatsappMutation.mutate({ id: selected.id, message: whatsappMessage.trim() })}
                 disabled={!whatsappMessage.trim() || whatsappMutation.isPending}
-                className="px-3 py-2 bg-green-600 text-white rounded-xl text-xs font-medium hover:bg-green-700 disabled:opacity-40 transition-colors flex-shrink-0">
+                className="flex-shrink-0 px-3 py-2 bg-green-600 text-white rounded-xl text-xs font-medium hover:bg-green-700 disabled:opacity-40 transition-colors">
                 {whatsappMutation.isPending ? '...' : 'Enviar'}
               </button>
             </div>
@@ -406,7 +430,7 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
 
         {/* Notas rápidas */}
         <div>
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Notas</p>
+          <p className={sectionLabelClass}><FileText size={13} /> Notas</p>
           <div className="space-y-2 mb-3 max-h-48 overflow-y-auto pr-1">
             {notesLoading ? <Spinner size="sm" className="py-2" /> : notes.length === 0 ? (
               <p className="text-xs text-gray-400 dark:text-gray-500 italic">Sin notas de seguimiento aún.</p>
@@ -426,12 +450,11 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
           <div className="flex gap-2">
             <input value={noteText} onChange={(e) => setNoteText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && noteText.trim() && addNoteMutation.mutate({ id: selected.id, content: noteText.trim() })}
-              placeholder="Agregar nota..."
-              className="flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500" />
+              placeholder="Agregar nota..." className={rowControlClass} />
             <button onClick={() => noteText.trim() && addNoteMutation.mutate({ id: selected.id, content: noteText.trim() })}
               disabled={!noteText.trim() || addNoteMutation.isPending}
-              className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors">
-              +
+              title="Agregar nota" className={rowButtonClass}>
+              <Plus size={14} />
             </button>
           </div>
         </div>
@@ -543,11 +566,20 @@ export default function LeadsPage() {
     onSuccess: (res, { data: updated }) => {
       toast.success('Prospecto actualizado');
       queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['leads-column']);
       queryClient.invalidateQueries(['lead-detail']);
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['open-tasks-column']);
-      queryClient.invalidateQueries(['open-task-selected']);
+      // Este mutation se usa para cualquier campo editable del detalle (fuente, forma de
+      // pago, monto, fecha de primer contacto, etc.), pero las 8 columnas del Kanban y sus
+      // tareas abiertas solo cambian si se movió de etapa o se (re)asignó responsable —
+      // invalidar siempre esas ~16 queries en cada edición menor agotaba el rate limit
+      // (ver AUDIT: 429 en /api/leads tras editar un campo cualquiera del detalle).
+      const affectsColumns = updated.pipelineStage !== undefined;
+      const affectsTasks = affectsColumns || updated.assignedToUserId !== undefined;
+      if (affectsColumns) queryClient.invalidateQueries(['leads-column']);
+      if (affectsTasks) {
+        queryClient.invalidateQueries(['open-tasks']);
+        queryClient.invalidateQueries(['open-tasks-column']);
+        queryClient.invalidateQueries(['open-task-selected']);
+      }
       if (updated.pipelineStage) setSelected((s) => (s ? { ...s, pipelineStage: updated.pipelineStage } : s));
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al actualizar'),
