@@ -205,12 +205,14 @@ const getLeadById = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id, {
       include: [
-        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'slug'] },
+        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'slug', 'price'] },
         { model: Campaign, as: 'campaign', attributes: ['id', 'name', 'platform'], required: false },
         { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
         {
           model: Property, as: 'interestedProperties',
-          attributes: ['id', 'title', 'city', 'slug'],
+          // `price` viaja para que CloseLeadModal pueda preasignar el monto de venta al
+          // elegir la propiedad (evita que el usuario tenga que ir a buscarlo aparte).
+          attributes: ['id', 'title', 'city', 'slug', 'price'],
           through: { attributes: [] },
           required: false,
         },

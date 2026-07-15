@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck, MessageSquare, Bell, ClipboardList, CalendarDays, MessageSquareQuote, TrendingUp, Megaphone, PieChart } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck, MessageSquare, Bell, ClipboardList, CalendarDays, MessageSquareQuote, TrendingUp, Megaphone, PieChart, Trophy } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -26,6 +26,7 @@ const navGroups = [
     links: [
       { to: '/admin/dashboard-comercial', icon: <TrendingUp size={18} />,  label: 'Dashboard Comercial' },
       { to: '/admin/leads',      icon: <Users size={18} />,       label: 'Prospectos' },
+      { to: '/admin/casos-exito', icon: <Trophy size={18} />,     label: 'Casos de éxito' },
       { to: '/admin/calendario', icon: <CalendarDays size={18} />, label: 'Calendario de citas' },
       { to: '/admin/campanas',  icon: <Megaphone size={18} />,   label: 'Campañas' },
       { to: '/admin/reportes',  icon: <PieChart size={18} />,    label: 'Reportes' },

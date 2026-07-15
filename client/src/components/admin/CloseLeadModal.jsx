@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { buttonHover, buttonTap } from '../../utils/animations';
+import { formatPrice } from '../../utils/formatters';
 import { CLOSE_REASON_LABELS } from '../../utils/constants';
 
 // Modal obligatorio y mínimo al cerrar un prospecto (drag a una columna terminal del
@@ -19,6 +20,7 @@ export default function CloseLeadModal({ open, lead, targetStage, onClose, onCon
   const propertyOptions = [lead.property, ...(lead.interestedProperties || [])]
     .filter(Boolean)
     .filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
+  const selectedProperty = propertyOptions.find((p) => String(p.id) === propertyId);
 
   const isWon = targetStage === 'venta_realizada';
   const canSubmit = isWon
@@ -28,6 +30,16 @@ export default function CloseLeadModal({ open, lead, targetStage, onClose, onCon
   const reset = () => { setPropertyId(''); setAmount(''); setCloseReason(''); setCloseReasonDetail(''); };
 
   const handleClose = () => { reset(); onClose(); };
+
+  // Preasigna el monto con el precio de la propiedad elegida (si lo tiene — puede estar
+  // en "PENDIENTE"/null) para no obligar a ir a buscarlo aparte; sigue siendo editable
+  // por si el precio de venta final fue distinto al de lista.
+  const handlePropertyChange = (e) => {
+    const id = e.target.value;
+    setPropertyId(id);
+    const selected = propertyOptions.find((p) => String(p.id) === id);
+    if (selected?.price != null) setAmount(String(Number(selected.price)));
+  };
 
   const handleSubmit = () => {
     if (!canSubmit) return;
@@ -69,7 +81,7 @@ export default function CloseLeadModal({ open, lead, targetStage, onClose, onCon
                       Agrega una propiedad de interés en el detalle del prospecto antes de registrar la venta.
                     </p>
                   ) : (
-                    <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className={inputClass}>
+                    <select value={propertyId} onChange={handlePropertyChange} className={inputClass}>
                       <option value="">Selecciona una propiedad...</option>
                       {propertyOptions.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
                     </select>
@@ -79,6 +91,11 @@ export default function CloseLeadModal({ open, lead, targetStage, onClose, onCon
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Monto (MXN)</label>
                   <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
                     placeholder="1850000" className={inputClass} />
+                  {selectedProperty && (
+                    selectedProperty.price != null
+                      ? <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Precio de lista: {formatPrice(selectedProperty.price)} · puedes ajustarlo si la venta fue por otro monto</p>
+                      : <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Esta propiedad no tiene precio de lista (PENDIENTE) — captura el monto manualmente</p>
+                  )}
                 </div>
               </div>
             ) : (

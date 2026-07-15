@@ -35,6 +35,7 @@ const TestimonialsAdminPage = lazy(() => import('./pages/admin/TestimonialsAdmin
 const CrmDashboardPage     = lazy(() => import('./pages/admin/CrmDashboardPage'));
 const CampaignsPage        = lazy(() => import('./pages/admin/CampaignsPage'));
 const CrmReportsPage       = lazy(() => import('./pages/admin/CrmReportsPage'));
+const CasosExitoPage       = lazy(() => import('./pages/admin/CasosExitoPage'));
 
 import PublicLayout from './components/layout/PublicLayout';
 
@@ -88,6 +89,7 @@ export default function App() {
             <Route path="dashboard-comercial"    element={<CrmDashboardPage />} />
             <Route path="campanas"               element={<CampaignsPage />} />
             <Route path="reportes"               element={<CrmReportsPage />} />
+            <Route path="casos-exito"            element={<CasosExitoPage />} />
           </Route>
         </Routes>
       </Suspense>

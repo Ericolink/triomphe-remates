@@ -1,5 +1,15 @@
 const { Op } = require('sequelize');
-const { Deal, Lead, Property } = require('../models/index');
+const { Deal, Lead, Property, Image } = require('../models/index');
+
+// `city` + portada van en ambos endpoints para la pantalla "Casos de éxito" (galería con
+// miniatura por caso) — el resto de datos del prospecto (actividades, notas, citas) se
+// resuelve en el frontend reutilizando /api/leads/:id/activities|notes|appointments, ya
+// que un Deal siempre tiene un Lead asociado.
+const propertyAttributes = ['id', 'title', 'city'];
+const propertyInclude = {
+  model: Property, as: 'property', attributes: propertyAttributes,
+  include: [{ model: Image, as: 'images', attributes: ['id', 'url', 'isCover'] }],
+};
 
 // GET /api/deals — no hay create/update/delete directo: un Deal solo nace de
 // leadController.closeLeadAsWon, para garantizar que nunca exista sin el cambio
@@ -18,7 +28,7 @@ const getDeals = async (req, res) => {
       where,
       include: [
         { model: Lead, as: 'lead', attributes: ['id', 'name', 'assignedToUserId'] },
-        { model: Property, as: 'property', attributes: ['id', 'title'] },
+        propertyInclude,
       ],
       order: [['closedAt', 'DESC']],
     });
@@ -36,7 +46,7 @@ const getDealById = async (req, res) => {
     const deal = await Deal.findByPk(req.params.id, {
       include: [
         { model: Lead, as: 'lead' },
-        { model: Property, as: 'property', attributes: ['id', 'title'] },
+        propertyInclude,
       ],
     });
     if (!deal) return res.status(404).json({ error: 'Venta no encontrada' });
