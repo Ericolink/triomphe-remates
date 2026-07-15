@@ -5,9 +5,17 @@ import { getCrmReports } from '../../services/crmAnalyticsService';
 import Spinner from '../../components/ui/Spinner';
 import { staggerContainer, fadeInUp, fadeIn } from '../../utils/animations';
 import { formatPrice } from '../../utils/formatters';
-import { PIPELINE_STAGE_LABELS, CLOSE_REASON_LABELS, APPOINTMENT_STATUS_LABELS } from '../../utils/constants';
+import {
+  PIPELINE_STAGE_LABELS, PIPELINE_STAGE_BAR_COLORS,
+  CLOSE_REASON_LABELS, CLOSE_REASON_BAR_COLORS,
+  APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_BAR_COLORS,
+} from '../../utils/constants';
 
-function ProgressRow({ label, total, max, index }) {
+const DEFAULT_BAR_COLOR = 'bg-blue-900 dark:bg-blue-500';
+
+// El color ahora depende de la rama/categoría de cada barra (etapa, motivo de cierre o
+// estado de cita) en vez de un azul uniforme — ver los mapas *_BAR_COLORS en constants.js.
+function ProgressRow({ label, total, max, index, color = DEFAULT_BAR_COLOR }) {
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
@@ -15,7 +23,7 @@ function ProgressRow({ label, total, max, index }) {
         <span className="font-semibold text-gray-800 dark:text-gray-100">{total}</span>
       </div>
       <div className="h-2 bg-gray-100 dark:bg-[#2e3650] rounded-full overflow-hidden">
-        <motion.div className="h-full bg-blue-900 dark:bg-blue-500 rounded-full"
+        <motion.div className={`h-full rounded-full ${color}`}
           initial={{ width: 0 }} animate={{ width: `${max > 0 ? (total / max) * 100 : 0}%` }}
           transition={{ duration: 0.8, delay: 0.2 + index * 0.08, ease: 'easeOut' }} />
       </div>
@@ -50,7 +58,8 @@ export default function CrmReportsPage() {
           </h2>
           <div className="space-y-3">
             {(d?.funnel ?? []).map(({ stage, total }, i) => (
-              <ProgressRow key={stage} label={PIPELINE_STAGE_LABELS[stage] || stage} total={total} max={funnelMax} index={i} />
+              <ProgressRow key={stage} label={PIPELINE_STAGE_LABELS[stage] || stage} total={total} max={funnelMax} index={i}
+                color={PIPELINE_STAGE_BAR_COLORS[stage]} />
             ))}
           </div>
         </motion.div>
@@ -64,7 +73,8 @@ export default function CrmReportsPage() {
           ) : (
             <div className="space-y-3">
               {(d?.closeReasons ?? []).filter((r) => r.total > 0).map(({ reason, total }, i) => (
-                <ProgressRow key={reason} label={CLOSE_REASON_LABELS[reason] || reason} total={total} max={closeReasonsMax} index={i} />
+                <ProgressRow key={reason} label={CLOSE_REASON_LABELS[reason] || reason} total={total} max={closeReasonsMax} index={i}
+                  color={CLOSE_REASON_BAR_COLORS[reason]} />
               ))}
             </div>
           )}
@@ -98,7 +108,8 @@ export default function CrmReportsPage() {
           </h2>
           <div className="space-y-3">
             {(d?.citasPorEstado ?? []).map(({ status, total }, i) => (
-              <ProgressRow key={status} label={APPOINTMENT_STATUS_LABELS[status] || status} total={total} max={citasMax} index={i} />
+              <ProgressRow key={status} label={APPOINTMENT_STATUS_LABELS[status] || status} total={total} max={citasMax} index={i}
+                color={APPOINTMENT_STATUS_BAR_COLORS[status]} />
             ))}
           </div>
         </motion.div>

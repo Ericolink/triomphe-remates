@@ -94,6 +94,26 @@ export const PIPELINE_STAGE_VARIANTS = {
 
 export const TERMINAL_STAGES = ['venta_realizada', 'no_interesado'];
 
+// Color de barra por etapa en los reportes (CrmReportsPage) — a diferencia de
+// PIPELINE_STAGE_VARIANTS (que agrupa varias etapas bajo el mismo estado de Badge), aquí
+// cada etapa necesita un color distinto para poder distinguirse en la misma gráfica. Las
+// dos etapas terminales sí reutilizan el verde/gris ya establecido en Badge/Kanban para
+// "venta"/"perdido"; el resto sigue un orden categórico fijo, nunca por posición en el
+// arreglo (evita que los colores cambien si una fila se filtra por tener total 0). Orden
+// validado con el script de accesibilidad de la skill dataviz (separación ante daltonismo
+// y contraste normal) contra ambos fondos — solo el gris "sin datos" queda fuera del piso
+// de croma a propósito (siempre va acompañado de su etiqueta de texto visible).
+export const PIPELINE_STAGE_BAR_COLORS = {
+  nuevo:            'bg-blue-600 dark:bg-blue-500',
+  contactado:       'bg-teal-600 dark:bg-teal-400',
+  interesado:       'bg-orange-600 dark:bg-orange-400',
+  cita_agendada:    'bg-pink-600 dark:bg-pink-400',
+  cita_realizada:   'bg-amber-600 dark:bg-amber-400',
+  negociacion:      'bg-violet-600 dark:bg-violet-400',
+  venta_realizada:  'bg-green-600 dark:bg-green-400',
+  no_interesado:    'bg-gray-400 dark:bg-gray-500',
+};
+
 export const CLOSE_REASON_LABELS = {
   compro: 'Compró',
   no_respondio: 'No respondió',
@@ -102,6 +122,18 @@ export const CLOSE_REASON_LABELS = {
   solo_info: 'Solo solicitó información',
   perdio_interes: 'Perdió interés',
   otro: 'Otro',
+};
+
+// Mismo criterio de orden categórico fijo que PIPELINE_STAGE_BAR_COLORS, validado aparte
+// (7 categorías, orden de adyacencia propio de esta lista).
+export const CLOSE_REASON_BAR_COLORS = {
+  compro:              'bg-pink-600 dark:bg-pink-400',
+  no_respondio:        'bg-amber-600 dark:bg-amber-400',
+  sin_presupuesto:     'bg-blue-600 dark:bg-blue-500',
+  compro_competencia:  'bg-teal-600 dark:bg-teal-400',
+  solo_info:           'bg-violet-600 dark:bg-violet-400',
+  perdio_interes:      'bg-orange-600 dark:bg-orange-400',
+  otro:                'bg-gray-400 dark:bg-gray-500',
 };
 
 export const ACTIVITY_TYPE_LABELS = {
@@ -128,6 +160,20 @@ export const APPOINTMENT_STATUS_LABELS = {
   completada: 'Completada',
   no_show: 'No asistió',
   cancelada: 'Cancelada',
+};
+
+// completada/no_show/cancelada se mantienen en la familia verde/rojo/gris de
+// APPOINTMENT_STATUS_VARIANTS (emerald/red en vez de green/red puros: el par
+// verde-rojo puro no separa lo suficiente para daltonismo rojo-verde al quedar
+// adyacentes en esta lista — validado con el script de la skill dataviz).
+// programada/confirmada comparten variant "primary" en el Badge pero aquí necesitan
+// distinguirse, así que se separan en cian/azul.
+export const APPOINTMENT_STATUS_BAR_COLORS = {
+  programada: 'bg-cyan-600 dark:bg-cyan-400',
+  confirmada: 'bg-blue-600 dark:bg-blue-500',
+  completada: 'bg-emerald-600 dark:bg-emerald-400',
+  no_show:    'bg-red-600 dark:bg-red-400',
+  cancelada:  'bg-gray-400 dark:bg-gray-500',
 };
 
 export const APPOINTMENT_STATUS_VARIANTS = {
