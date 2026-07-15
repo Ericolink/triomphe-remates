@@ -20,7 +20,6 @@ const FAQPage              = lazy(() => import('./pages/public/FAQPage'));
 const LoginPage            = lazy(() => import('./pages/admin/LoginPage'));
 const AdminLayout          = lazy(() => import('./components/layout/AdminLayout'));
 const DashboardPage        = lazy(() => import('./pages/admin/DashboardPage'));
-const EstadisticasPage     = lazy(() => import('./pages/admin/EstadisticasPage'));
 const AdminPropertiesPage  = lazy(() => import('./pages/admin/AdminPropertiesPage'));
 const PropertyFormPage     = lazy(() => import('./pages/admin/PropertyFormPage'));
 const LeadsPage            = lazy(() => import('./pages/admin/LeadsPage'));
@@ -32,9 +31,7 @@ const AlertsAdminPage      = lazy(() => import('./pages/admin/AlertsAdminPage'))
 const AuditPage            = lazy(() => import('./pages/admin/AuditPage'));
 const CalendarPage         = lazy(() => import('./pages/admin/CalendarPage'));
 const TestimonialsAdminPage = lazy(() => import('./pages/admin/TestimonialsAdminPage'));
-const CrmDashboardPage     = lazy(() => import('./pages/admin/CrmDashboardPage'));
 const CampaignsPage        = lazy(() => import('./pages/admin/CampaignsPage'));
-const CrmReportsPage       = lazy(() => import('./pages/admin/CrmReportsPage'));
 const CasosExitoPage       = lazy(() => import('./pages/admin/CasosExitoPage'));
 
 import PublicLayout from './components/layout/PublicLayout';
@@ -73,7 +70,7 @@ export default function App() {
           }>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard"              element={<DashboardPage />} />
-            <Route path="estadisticas"           element={<EstadisticasPage />} />
+            <Route path="estadisticas"           element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="propiedades"            element={<AdminPropertiesPage />} />
             <Route path="propiedades/nueva"      element={<PropertyFormPage />} />
             <Route path="propiedades/:id/editar" element={<PropertyFormPage />} />
@@ -86,9 +83,9 @@ export default function App() {
             <Route path="auditoria"              element={<AuditPage />} />
             <Route path="calendario"             element={<CalendarPage />} />
             <Route path="testimonios"            element={<TestimonialsAdminPage />} />
-            <Route path="dashboard-comercial"    element={<CrmDashboardPage />} />
+            <Route path="dashboard-comercial"    element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="campanas"               element={<CampaignsPage />} />
-            <Route path="reportes"               element={<CrmReportsPage />} />
+            <Route path="reportes"               element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="casos-exito"            element={<CasosExitoPage />} />
           </Route>
         </Routes>

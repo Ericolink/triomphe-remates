@@ -94,7 +94,7 @@ export const PIPELINE_STAGE_VARIANTS = {
 
 export const TERMINAL_STAGES = ['venta_realizada', 'no_interesado'];
 
-// Color de barra por etapa en los reportes (CrmReportsPage) — a diferencia de
+// Color de barra por etapa en los reportes (ReportsSection del Dashboard) — a diferencia de
 // PIPELINE_STAGE_VARIANTS (que agrupa varias etapas bajo el mismo estado de Badge), aquí
 // cada etapa necesita un color distinto para poder distinguirse en la misma gráfica. Las
 // dos etapas terminales sí reutilizan el verde/gris ya establecido en Badge/Kanban para
