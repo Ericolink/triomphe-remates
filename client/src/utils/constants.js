@@ -149,6 +149,11 @@ export const TASK_TYPE_LABELS = {
   otro: 'Otro',
 };
 
+export const PAYMENT_METHOD_LABELS = {
+  credito_hipotecario: 'Crédito hipotecario',
+  contado: 'Contado',
+};
+
 export const CAMPAIGN_PLATFORM_LABELS = {
   facebook: 'Facebook',
   google: 'Google',

@@ -87,6 +87,27 @@ const Lead = sequelize.define('Lead', {
     defaultValue: 'directo',
     allowNull: false,
   },
+  paymentMethod: {
+    type: DataTypes.ENUM('credito_hipotecario', 'contado'),
+    allowNull: true,
+  },
+  budgetAmount: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: true,
+  },
+  // Distingue "no preguntado todavía" (budgetAmount null, budgetNotSpecified false) de
+  // "se preguntó y el prospecto no lo dijo" (budgetNotSpecified true) — relevante para
+  // métricas comerciales futuras sobre qué tan seguido se logra capturar el presupuesto.
+  budgetNotSpecified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  firstContactDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+    comment: 'Fecha en que el prospecto contactó por primera vez (puede ser anterior a createdAt)',
+  },
 }, {
   tableName: 'leads',
   timestamps: true,

@@ -6,13 +6,19 @@ import { buttonHover, buttonTap } from '../../utils/animations';
 import { getCampaigns } from '../../services/campaignService';
 import { getProperties } from '../../services/propertyService';
 import { getUsers } from '../../services/usersService';
-import { SOURCE_LABELS } from '../../utils/constants';
+import { SOURCE_LABELS, PAYMENT_METHOD_LABELS } from '../../utils/constants';
+import { todayISODate } from '../../utils/formatters';
 
-const emptyForm = { name: '', phone: '', email: '', source: 'directo', campaignId: '', propertyId: '', assignedToUserId: '' };
+const emptyForm = {
+  name: '', phone: '', source: 'directo', firstContactDate: '',
+  paymentMethod: '', budgetAmount: '', budgetNotSpecified: false,
+  campaignId: '', propertyId: '', assignedToUserId: '',
+};
 
 // Flujo "Registrar un nuevo prospecto" (CRM_UX_DESIGN.md §2.a): modal corto, sin
-// navegar de página, con los campos mínimos — nombre es lo único obligatorio, el email
-// es opcional (muchos prospectos solo dejan teléfono/WhatsApp).
+// navegar de página, con los campos mínimos — nombre es lo único obligatorio. El correo
+// se eliminó del formulario (el equipo comercial casi nunca lo usa); el modelo lo
+// conserva para los prospectos que llegan por el formulario público del sitio.
 export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) {
   const [form, setForm] = useState(emptyForm);
 
@@ -28,13 +34,23 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
 
   const handleClose = () => { setForm(emptyForm); onClose(); };
 
+  // Solo bloquea el envío si el monto viene mal formado; nunca es obligatorio (ver
+  // requerimiento "no especificó el monto").
+  const budgetInvalid = !form.budgetNotSpecified && form.budgetAmount.trim() !== ''
+    && (Number.isNaN(Number(form.budgetAmount)) || Number(form.budgetAmount) < 0);
+
   const handleSubmit = () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || budgetInvalid) return;
     onSubmit({
       name: form.name.trim(),
       phone: form.phone.trim() || undefined,
-      email: form.email.trim() || undefined,
       source: form.source,
+      firstContactDate: form.firstContactDate || undefined,
+      paymentMethod: form.paymentMethod || undefined,
+      budgetNotSpecified: form.budgetNotSpecified,
+      budgetAmount: form.budgetNotSpecified
+        ? null
+        : (form.budgetAmount.trim() !== '' ? Number(form.budgetAmount) : undefined),
       campaignId: form.campaignId ? Number(form.campaignId) : undefined,
       propertyId: form.propertyId ? Number(form.propertyId) : undefined,
       assignedToUserId: form.assignedToUserId ? Number(form.assignedToUserId) : undefined,
@@ -72,17 +88,45 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                     placeholder="6141234567" className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email (opcional)</label>
-                  <input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    placeholder="correo@ejemplo.com" className={inputClass} />
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Origen</label>
+                  <select value={form.source} onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))} className={inputClass}>
+                    {Object.entries(SOURCE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Origen</label>
-                <select value={form.source} onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))} className={inputClass}>
-                  {Object.entries(SOURCE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de primer contacto (opcional)</label>
+                <input type="date" max={todayISODate()} value={form.firstContactDate}
+                  onChange={(e) => setForm((f) => ({ ...f, firstContactDate: e.target.value }))}
+                  className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Forma de pago (opcional)</label>
+                <select value={form.paymentMethod} onChange={(e) => setForm((f) => ({ ...f, paymentMethod: e.target.value }))} className={inputClass}>
+                  <option value="">Sin especificar</option>
+                  {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
               </div>
+              {/* El monto solo se pregunta una vez que se sabe cómo planea comprar el
+                  prospecto — reduce el formulario a un campo menos cuando aún no aplica. */}
+              {form.paymentMethod && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Monto disponible</label>
+                    <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
+                      <input type="checkbox" checked={form.budgetNotSpecified}
+                        onChange={(e) => setForm((f) => ({ ...f, budgetNotSpecified: e.target.checked, budgetAmount: e.target.checked ? '' : f.budgetAmount }))}
+                        className="w-3.5 h-3.5 rounded accent-blue-600" />
+                      No especificó el monto
+                    </label>
+                  </div>
+                  <input type="number" min="0" step="1000" value={form.budgetAmount} disabled={form.budgetNotSpecified}
+                    onChange={(e) => setForm((f) => ({ ...f, budgetAmount: e.target.value }))}
+                    placeholder="Ej. 1500000"
+                    className={`${inputClass} disabled:opacity-50 disabled:cursor-not-allowed ${budgetInvalid ? 'ring-2 ring-red-400' : ''}`} />
+                  {budgetInvalid && <p className="text-xs text-red-500 mt-1">Ingresa un monto válido</p>}
+                </div>
+              )}
               {campaigns.length > 0 && (
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Campaña (opcional)</label>
@@ -115,7 +159,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 className="flex-1 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors">
                 Cancelar
               </motion.button>
-              <motion.button type="button" onClick={handleSubmit} disabled={!form.name.trim() || isPending}
+              <motion.button type="button" onClick={handleSubmit} disabled={!form.name.trim() || budgetInvalid || isPending}
                 whileHover={buttonHover} whileTap={buttonTap}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 transition-colors">
                 {isPending ? 'Guardando...' : 'Crear prospecto'}

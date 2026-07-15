@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns, MessageCircle, X, PhoneCall, ArrowRightLeft, Plus } from 'lucide-react';
+import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns, MessageCircle, X, PhoneCall, ArrowRightLeft, Plus, Search, UserCheck, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -11,6 +11,7 @@ import { getLeadAppointments, createAppointment } from '../../services/appointme
 import { getTasks, completeTask } from '../../services/taskService';
 import { getUsers } from '../../services/usersService';
 import { getProperties } from '../../services/propertyService';
+import useAuthStore from '../../store/authStore';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
@@ -18,48 +19,18 @@ import BatchActionBar from '../../components/ui/BatchActionBar';
 import CloseLeadModal from '../../components/admin/CloseLeadModal';
 import StageBottomSheet from '../../components/admin/StageBottomSheet';
 import CreateLeadModal from '../../components/admin/CreateLeadModal';
+import KanbanBoard, { NextActionLine } from '../../components/admin/KanbanBoard';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
-import { formatDate, formatDateTime } from '../../utils/formatters';
+import { formatDate, formatDateTime, toWhatsAppLink, formatBudget, todayISODate } from '../../utils/formatters';
 import {
   SOURCE_LABELS, LEAD_TYPE_LABELS as typeLabel,
   PIPELINE_STAGE_LABELS, PIPELINE_STAGE_VARIANTS, TERMINAL_STAGES,
-  ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_COLORS, TASK_TYPE_LABELS,
+  ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_COLORS, PAYMENT_METHOD_LABELS,
 } from '../../utils/constants';
 
 const NON_TERMINAL_STAGE_OPTIONS = Object.entries(PIPELINE_STAGE_LABELS)
   .filter(([value]) => !TERMINAL_STAGES.includes(value))
   .map(([value, label]) => ({ value, label }));
-
-const KANBAN_COLUMNS = Object.entries(PIPELINE_STAGE_LABELS).map(([key, label]) => ({
-  key, label,
-  color: TERMINAL_STAGES.includes(key)
-    ? (key === 'venta_realizada' ? 'border-green-400' : 'border-gray-300 dark:border-gray-600')
-    : 'border-blue-400',
-  headerBg: TERMINAL_STAGES.includes(key)
-    ? (key === 'venta_realizada' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-[#2e3650]')
-    : 'bg-blue-50 dark:bg-blue-900/20',
-  dot: TERMINAL_STAGES.includes(key)
-    ? (key === 'venta_realizada' ? 'bg-green-500' : 'bg-gray-400')
-    : 'bg-blue-500',
-}));
-
-// Deja solo dígitos y antepone 52 si es un número mexicano de 10 dígitos sin lada —
-// mismo criterio que validatePhone en el backend (server/src/utils/validators.js).
-function toWhatsAppLink(phone) {
-  const digits = (phone || '').replace(/\D/g, '');
-  const withCountry = digits.length === 10 ? `52${digits}` : digits;
-  return `https://wa.me/${withCountry}`;
-}
-
-function NextActionLine({ task }) {
-  if (!task) return null;
-  const overdue = new Date(task.dueDate) < new Date();
-  return (
-    <p className={`text-xs mt-1.5 flex items-center gap-1 ${overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-      {overdue ? '🔴' : '📌'} {TASK_TYPE_LABELS[task.type] || task.type} · {formatDate(task.dueDate)}
-    </p>
-  );
-}
 
 function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users, openTask, onAttemptStageChange }) {
   const queryClient = useQueryClient();
@@ -69,6 +40,13 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentPropertyId, setAppointmentPropertyId] = useState('');
   const [addPropertyId, setAddPropertyId] = useState('');
+  // Inicializados desde `selected` (no `lead`, que llega async vía detailData) — el panel
+  // se remonta con key={selected.id} en cada cambio de prospecto, así que basta un solo
+  // useState por selección.
+  const [budgetAmountInput, setBudgetAmountInput] = useState(selected.budgetAmount != null ? String(selected.budgetAmount) : '');
+  const [firstContactInput, setFirstContactInput] = useState(selected.firstContactDate ? selected.firstContactDate.slice(0, 10) : '');
+  const budgetAmountInvalid = budgetAmountInput.trim() !== ''
+    && (Number.isNaN(Number(budgetAmountInput)) || Number(budgetAmountInput) < 0);
 
   const { data: detailData } = useQuery({
     queryKey: ['lead-detail', selected?.id],
@@ -261,7 +239,7 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
         </div>
 
         <div className="space-y-3 mb-5 text-sm">
-          {[{ label: 'Nombre', value: selected.name }, { label: 'Email', value: selected.email }, { label: 'Teléfono', value: selected.phone }, { label: 'Propiedad de origen', value: selected.property?.title }]
+          {[{ label: 'Nombre', value: selected.name }, { label: 'Teléfono', value: selected.phone }, { label: 'Propiedad de origen', value: selected.property?.title }]
             .filter(({ value }) => value).map(({ label, value }) => (
             <div key={label}>
               <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
@@ -301,6 +279,55 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
               className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none">
               {Object.entries(SOURCE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha de primer contacto</label>
+            <div className="flex gap-2">
+              <input type="date" max={todayISODate()} value={firstContactInput}
+                onChange={(e) => setFirstContactInput(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none" />
+              <button onClick={() => updateMutation.mutate({ id: selected.id, data: { firstContactDate: firstContactInput || null } })}
+                disabled={firstContactInput === (lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : '')}
+                className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0">
+                Guardar
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Forma de pago</label>
+            <select value={lead.paymentMethod || ''}
+              onChange={(e) => updateMutation.mutate({ id: selected.id, data: { paymentMethod: e.target.value || null } })}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none">
+              <option value="">Sin especificar</option>
+              {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Monto disponible</label>
+              <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
+                <input type="checkbox" checked={!!lead.budgetNotSpecified}
+                  onChange={(e) => {
+                    setBudgetAmountInput('');
+                    updateMutation.mutate({ id: selected.id, data: { budgetNotSpecified: e.target.checked, budgetAmount: e.target.checked ? null : undefined } });
+                  }}
+                  className="w-3.5 h-3.5 rounded accent-blue-600" />
+                No especificó
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <input type="number" min="0" step="1000" value={budgetAmountInput} disabled={lead.budgetNotSpecified}
+                onChange={(e) => setBudgetAmountInput(e.target.value)}
+                placeholder="Ej. 1500000"
+                className={`w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${budgetAmountInvalid ? 'ring-2 ring-red-400' : ''}`} />
+              <button onClick={() => updateMutation.mutate({ id: selected.id, data: { budgetAmount: budgetAmountInput.trim() === '' ? null : Number(budgetAmountInput), budgetNotSpecified: false } })}
+                disabled={lead.budgetNotSpecified || budgetAmountInvalid || (budgetAmountInput.trim() === '' ? lead.budgetAmount == null : Number(budgetAmountInput) === Number(lead.budgetAmount))}
+                className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0">
+                Guardar
+              </button>
+            </div>
+            {budgetAmountInvalid && <p className="text-xs text-red-500 mt-1">Ingresa un monto válido</p>}
+            {!lead.budgetNotSpecified && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatBudget(lead.budgetAmount, false)}</p>}
           </div>
         </div>
 
@@ -413,108 +440,50 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
   );
 }
 
-function KanbanCard({ lead, openTask, onSelect, onAttemptStageChange, draggable, onDragStart, onDragEnd, isDragging }) {
+// En pantallas angostas (mobile/tablet) el detalle no cabe como tercera columna, así que
+// se muestra como overlay a pantalla completa (mismo patrón de slide-in que StageBottomSheet).
+// De xl en adelante vuelve a ser la columna lateral fija de siempre.
+function DetailPanelSlot({ selected, emptyText, onDeselect, ...panelProps }) {
   return (
-    <div draggable={draggable}
-      onDragStart={onDragStart} onDragEnd={onDragEnd}
-      onClick={() => onSelect(lead)}
-      className={`bg-white dark:bg-[#242938] rounded-xl p-3 shadow-sm border border-gray-100 dark:border-[#2e3650] cursor-pointer hover:shadow-md transition-shadow select-none ${draggable ? 'active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm truncate">{lead.name}</p>
-        <button onClick={(e) => { e.stopPropagation(); onAttemptStageChange(lead); }} title="Cambiar etapa"
-          className="p-1 text-gray-300 hover:text-blue-500 flex-shrink-0">
-          <ArrowRightLeft size={13} />
-        </button>
-      </div>
-      {lead.campaign && <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5 truncate">{lead.campaign.name}</p>}
-      {lead.property && (
-        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1 truncate">
-          <Building2 size={10} /> {lead.property.title}
-        </p>
-      )}
-      <NextActionLine task={openTask} />
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-1">
-          {lead.phone && (
-            <a href={`tel:${lead.phone}`} onClick={(e) => e.stopPropagation()} title="Llamar"
-              className="p-1 text-gray-400 hover:text-blue-500"><PhoneCall size={12} /></a>
+    <>
+      <AnimatePresence>
+        {selected && (
+          <motion.div key="detail-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onDeselect}
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-end xl:hidden">
+            <motion.div onClick={(e) => e.stopPropagation()}
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+              className="w-full max-w-md h-full overflow-y-auto bg-white dark:bg-[#242938]">
+              <LeadDetailPanel selected={selected} onDeselect={onDeselect} {...panelProps} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="hidden xl:block">
+        <AnimatePresence mode="wait">
+          {selected ? (
+            <LeadDetailPanel key={selected.id} selected={selected} onDeselect={onDeselect} {...panelProps} />
+          ) : (
+            <motion.div key="detail-empty" variants={fadeIn} initial="hidden" animate="visible" exit={{ opacity: 0 }}
+              className="bg-white dark:bg-[#242938] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center text-gray-400 dark:text-gray-500">
+              <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+                <Mail size={32} className="mx-auto mb-2 opacity-30" />
+              </motion.div>
+              <p className="text-sm">{emptyText}</p>
+            </motion.div>
           )}
-          {lead.phone && (
-            <a href={toWhatsAppLink(lead.phone)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="WhatsApp"
-              className="p-1 text-gray-400 hover:text-green-500"><MessageCircle size={12} /></a>
-          )}
-        </div>
-        <Badge variant="default" className="text-xs">{typeLabel[lead.type]}</Badge>
+        </AnimatePresence>
       </div>
-    </div>
-  );
-}
-
-function KanbanBoard({ leads, openTaskByLead, onSelect, onAttemptStageChange, onOpenSheet }) {
-  const [dragging, setDragging] = useState(null);
-  const [dragOver, setDragOver] = useState(null);
-
-  const handleDragStart = (e, lead) => {
-    setDragging(lead);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e, colKey) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOver(colKey);
-  };
-
-  const handleDrop = (e, colKey) => {
-    e.preventDefault();
-    setDragOver(null);
-    if (dragging && dragging.pipelineStage !== colKey) {
-      onAttemptStageChange(dragging, colKey);
-    }
-    setDragging(null);
-  };
-
-  const handleDragEnd = () => { setDragging(null); setDragOver(null); };
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      {KANBAN_COLUMNS.map((col) => {
-        const colLeads = leads.filter((l) => l.pipelineStage === col.key);
-        const isOver = dragOver === col.key;
-        return (
-          <div key={col.key}
-            onDragOver={(e) => handleDragOver(e, col.key)}
-            onDrop={(e) => handleDrop(e, col.key)}
-            onDragLeave={() => setDragOver(null)}
-            className={`rounded-2xl border-2 transition-colors min-h-[200px] ${col.color} ${isOver ? 'bg-blue-50 dark:bg-blue-900/10' : 'bg-gray-50/60 dark:bg-[#1a1f2e]/60'}`}>
-            <div className={`px-4 py-3 rounded-t-xl flex items-center gap-2 ${col.headerBg}`}>
-              <span className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
-              <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">{col.label}</span>
-              <span className="ml-auto text-xs bg-white dark:bg-[#242938] text-gray-500 rounded-full px-2 py-0.5 font-medium">
-                {colLeads.length}
-              </span>
-            </div>
-            <div className="p-3 space-y-2">
-              {colLeads.map((lead) => (
-                <KanbanCard key={lead.id} lead={lead} openTask={openTaskByLead[lead.id]} onSelect={onSelect}
-                  onAttemptStageChange={() => onOpenSheet(lead)}
-                  draggable onDragStart={(e) => handleDragStart(e, lead)} onDragEnd={handleDragEnd}
-                  isDragging={dragging?.id === lead.id} />
-              ))}
-              {colLeads.length === 0 && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4 italic">Sin prospectos</p>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+    </>
   );
 }
 
 export default function LeadsPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
+  const currentUserId = useAuthStore((s) => s.user?.id);
   // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Prospectos nuevos").
   const [stage, setStage] = useState(location.state?.pipelineStage || location.state?.status || '');
   const [selected, setSelected] = useState(null);
@@ -524,16 +493,23 @@ export default function LeadsPage() {
   const [closeTarget, setCloseTarget] = useState(null); // { lead, targetStage }
   const [sheetLead, setSheetLead] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [onlyMine, setOnlyMine] = useState(false);
+  const assignedToUserId = onlyMine ? currentUserId : '';
 
+  // Búsqueda y "Mis prospectos" son compartidos entre Lista y Kanban — barra persistente
+  // por encima de ambas vistas, tal como pide CRM_UX_DESIGN.md §2g.
   const { data, isLoading } = useQuery({
-    queryKey: ['leads', stage],
-    queryFn: () => getLeads({ pipelineStage: stage, limit: 100 }),
+    queryKey: ['leads', stage, search, assignedToUserId],
+    queryFn: () => getLeads({ pipelineStage: stage, limit: 100, search: search || undefined, assignedToUserId: assignedToUserId || undefined }),
   });
   const leads = useMemo(() => data?.data ?? [], [data]);
 
   const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: getUsers });
   const users = usersData?.data ?? [];
 
+  // Usada por la vista Lista (que sigue trayendo un solo lote de prospectos). El Kanban
+  // ya no depende de esto: cada columna resuelve sus propias tareas abiertas.
   const leadIds = useMemo(() => leads.map((l) => l.id), [leads]);
   const { data: openTasksData } = useQuery({
     queryKey: ['open-tasks', leadIds.join(',')],
@@ -546,6 +522,16 @@ export default function LeadsPage() {
     return map;
   }, [openTasksData]);
 
+  // El panel de detalle se abre tanto desde Lista como desde Kanban; en Kanban el
+  // prospecto seleccionado puede no estar en el lote de arriba, así que resuelve su
+  // próxima acción con una consulta puntual en vez de depender de openTaskByLead.
+  const { data: selectedTaskData } = useQuery({
+    queryKey: ['open-task-selected', selected?.id],
+    queryFn: () => getTasks({ leadIds: String(selected.id), done: false }),
+    enabled: !!selected?.id,
+  });
+  const selectedOpenTask = selectedTaskData?.data?.[0];
+
   const { data: closeLeadDetail } = useQuery({
     queryKey: ['lead-detail-for-close', closeTarget?.lead?.id],
     queryFn: () => getLeadById(closeTarget.lead.id),
@@ -557,8 +543,11 @@ export default function LeadsPage() {
     onSuccess: (res, { data: updated }) => {
       toast.success('Prospecto actualizado');
       queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
       queryClient.invalidateQueries(['lead-detail']);
       queryClient.invalidateQueries(['open-tasks']);
+      queryClient.invalidateQueries(['open-tasks-column']);
+      queryClient.invalidateQueries(['open-task-selected']);
       if (updated.pipelineStage) setSelected((s) => (s ? { ...s, pipelineStage: updated.pipelineStage } : s));
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al actualizar'),
@@ -570,7 +559,9 @@ export default function LeadsPage() {
       toast.success('Venta registrada exitosamente');
       setCloseTarget(null); setSelected(null);
       queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
       queryClient.invalidateQueries(['open-tasks']);
+      queryClient.invalidateQueries(['open-tasks-column']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al registrar la venta'),
   });
@@ -581,31 +572,50 @@ export default function LeadsPage() {
       toast.success('Prospecto cerrado');
       setCloseTarget(null); setSelected(null);
       queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
       queryClient.invalidateQueries(['open-tasks']);
+      queryClient.invalidateQueries(['open-tasks-column']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al cerrar el prospecto'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteLead,
-    onSuccess: () => { toast.success('Prospecto eliminado'); setSelected(null); queryClient.invalidateQueries(['leads']); },
+    onSuccess: () => {
+      toast.success('Prospecto eliminado'); setSelected(null);
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
+    },
   });
 
   const createMutation = useMutation({
     mutationFn: createLead,
-    onSuccess: () => { toast.success('Prospecto creado exitosamente'); setCreateOpen(false); queryClient.invalidateQueries(['leads']); },
+    onSuccess: () => {
+      toast.success('Prospecto creado exitosamente'); setCreateOpen(false);
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
+    },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al crear el prospecto'),
   });
 
   const batchStatusMutation = useMutation({
     mutationFn: ({ ids, stage: s }) => batchUpdateLeads(ids, s),
-    onSuccess: (_, { ids }) => { toast.success(`${ids.length} prospecto(s) actualizados`); setChecked([]); queryClient.invalidateQueries(['leads']); },
+    onSuccess: (_, { ids }) => {
+      toast.success(`${ids.length} prospecto(s) actualizados`); setChecked([]);
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
+      queryClient.invalidateQueries(['open-tasks-column']);
+    },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al actualizar en lote'),
   });
 
   const batchDeleteMutation = useMutation({
     mutationFn: batchDeleteLeads,
-    onSuccess: (_, ids) => { toast.success(`${ids.length} prospecto(s) eliminados`); setChecked([]); setSelected(null); queryClient.invalidateQueries(['leads']); },
+    onSuccess: (_, ids) => {
+      toast.success(`${ids.length} prospecto(s) eliminados`); setChecked([]); setSelected(null);
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
+    },
   });
 
   // Único punto de entrada para cambiar de etapa (drag, bottom sheet o botón del
@@ -620,7 +630,6 @@ export default function LeadsPage() {
       setSheetLead(null);
     }
   };
-  const openStageSheet = (lead) => setSheetLead(lead);
 
   const toggleCheck = (e, id) => {
     e.stopPropagation();
@@ -659,7 +668,23 @@ export default function LeadsPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Prospectos</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{data?.pagination?.total ?? 0} prospectos registrados</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-xl px-3 py-2 w-full sm:w-auto">
+            <Search size={16} className="text-gray-400 flex-shrink-0" />
+            <input type="text" placeholder="Buscar por nombre o teléfono..." value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 sm:w-48 text-sm focus:outline-none bg-transparent dark:text-gray-100 dark:placeholder-gray-500" />
+          </div>
+          {currentUserId && (
+            <button onClick={() => setOnlyMine((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                onlyMine
+                  ? 'bg-blue-600 border-blue-600 text-white'
+                  : 'bg-white dark:bg-[#242938] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
+              }`}>
+              <UserCheck size={15} /> Mis prospectos
+            </button>
+          )}
           <button onClick={() => setCreateOpen(true)}
             className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
             <Plus size={16} /> Nuevo prospecto
@@ -678,47 +703,34 @@ export default function LeadsPage() {
               <Columns size={15} /> Kanban
             </button>
           </div>
-          {view === 'list' && (
-            <select value={stage} onChange={(e) => { setStage(e.target.value); setChecked([]); }}
-              className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none">
-              <option value="">Todas las etapas</option>
-              {Object.entries(PIPELINE_STAGE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          )}
+          <select value={stage} onChange={(e) => { setStage(e.target.value); setChecked([]); }}
+            className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none">
+            <option value="">Todas las etapas</option>
+            {Object.entries(PIPELINE_STAGE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
         </div>
       </motion.div>
 
       {view === 'kanban' ? (
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          <div className="xl:col-span-3">
-            {isLoading ? <Spinner size="lg" className="py-16" /> : (
-              <KanbanBoard leads={leads} openTaskByLead={openTaskByLead} onSelect={setSelected} onAttemptStageChange={attemptStageChange} onOpenSheet={openStageSheet} />
-            )}
+        <div className="flex flex-col xl:flex-row gap-6">
+          <div className="flex-1 min-w-0">
+            <KanbanBoard filters={{ search, assignedToUserId }} focusStage={stage} onSelect={setSelected}
+              onAttemptStageChange={attemptStageChange} />
           </div>
-          <div className="xl:col-span-1">
-            <AnimatePresence mode="wait">
-              {selected ? (
-                <LeadDetailPanel key={selected.id} selected={selected} updateMutation={updateMutation}
-                  users={users} openTask={openTaskByLead[selected.id]}
-                  onAttemptStageChange={(lead) => setSheetLead(lead)}
-                  onDeselect={() => setSelected(null)}
-                  onDelete={() => setConfirm({ title: '¿Eliminar este prospecto?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })} />
-              ) : (
-                <motion.div key="empty-kanban" variants={fadeIn} initial="hidden" animate="visible" exit={{ opacity: 0 }}
-                  className="bg-white dark:bg-[#242938] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center text-gray-400 dark:text-gray-500">
-                  <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-                    <Mail size={32} className="mx-auto mb-2 opacity-30" />
-                  </motion.div>
-                  <p className="text-sm">Haz clic en un prospecto para ver el detalle</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* Sin prospecto seleccionado no se reserva ancho para el panel — así el Kanban
+              usa el espacio completo para mostrar las 8 columnas; en cuanto se selecciona
+              un prospecto, el panel reclama sus 320px habituales. */}
+          <div className={selected ? 'xl:w-80 flex-shrink-0' : 'xl:w-0 xl:flex-shrink-0 xl:overflow-hidden'}>
+            <DetailPanelSlot selected={selected} updateMutation={updateMutation} users={users}
+              openTask={selectedOpenTask} onAttemptStageChange={(lead) => setSheetLead(lead)}
+              onDeselect={() => setSelected(null)} emptyText="Haz clic en un prospecto para ver el detalle"
+              onDelete={() => setConfirm({ title: '¿Eliminar este prospecto?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })} />
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Lista */}
-          <div className="lg:col-span-2 space-y-3">
+          <div className="xl:col-span-2 space-y-3">
             {leads.length > 0 && (
               <div className="flex items-center gap-2 px-1">
                 <input type="checkbox" checked={allChecked} onChange={toggleAll}
@@ -760,6 +772,11 @@ export default function LeadsPage() {
                             {lead.email && <span className="flex items-center gap-1"><Mail size={12} /> {lead.email}</span>}
                             {lead.phone && <span className="flex items-center gap-1"><Phone size={12} /> {lead.phone}</span>}
                             {lead.property && <span className="flex items-center gap-1"><Building2 size={12} /> {lead.property.title}</span>}
+                            {lead.paymentMethod && (
+                              <span className="flex items-center gap-1">
+                                <Wallet size={12} /> {PAYMENT_METHOD_LABELS[lead.paymentMethod]} · {formatBudget(lead.budgetAmount, lead.budgetNotSpecified)}
+                              </span>
+                            )}
                           </div>
                           <NextActionLine task={openTaskByLead[lead.id]} />
                           {lead.message && <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 line-clamp-2">{lead.message}</p>}
@@ -789,24 +806,11 @@ export default function LeadsPage() {
           </div>
 
           {/* Detalle */}
-          <div className="lg:col-span-1">
-            <AnimatePresence mode="wait">
-              {selected ? (
-                <LeadDetailPanel key={selected.id} selected={selected} updateMutation={updateMutation}
-                  users={users} openTask={openTaskByLead[selected.id]}
-                  onAttemptStageChange={(lead) => setSheetLead(lead)}
-                  onDeselect={() => setSelected(null)}
-                  onDelete={() => setConfirm({ title: '¿Eliminar este prospecto?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })} />
-              ) : (
-                <motion.div key="empty" variants={fadeIn} initial="hidden" animate="visible" exit={{ opacity: 0 }}
-                  className="bg-white dark:bg-[#242938] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center text-gray-400 dark:text-gray-500">
-                  <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-                    <Mail size={32} className="mx-auto mb-2 opacity-30" />
-                  </motion.div>
-                  <p className="text-sm">Selecciona un prospecto para ver el detalle</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          <div className="xl:col-span-1">
+            <DetailPanelSlot selected={selected} updateMutation={updateMutation} users={users}
+              openTask={selectedOpenTask} onAttemptStageChange={(lead) => setSheetLead(lead)}
+              onDeselect={() => setSelected(null)} emptyText="Selecciona un prospecto para ver el detalle"
+              onDelete={() => setConfirm({ title: '¿Eliminar este prospecto?', message: `Se eliminará el contacto de ${selected.name} permanentemente.`, onConfirm: () => { deleteMutation.mutate(selected.id); setConfirm(null); } })} />
           </div>
         </div>
       )}

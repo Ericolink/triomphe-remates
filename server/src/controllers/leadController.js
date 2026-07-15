@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { sequelize, Lead, LeadNote, Property, Analytics, Campaign, User, Deal } = require('../models/index');
 
 // AUDIT-024: valores permitidos explícitos en vez de confiar solo en el ENUM de MySQL —
@@ -13,6 +14,58 @@ const VALID_CLOSE_REASONS = [
   'compro', 'no_respondio', 'sin_presupuesto',
   'compro_competencia', 'solo_info', 'perdio_interes', 'otro',
 ];
+const VALID_PAYMENT_METHODS = ['credito_hipotecario', 'contado'];
+
+// Normaliza forma de pago / monto disponible / fecha de primer contacto — usado tanto
+// por createLead como updateLead para no duplicar las reglas de validación.
+// Devuelve { error } o { values } con solo las llaves presentes en el body.
+function parseCommercialFields(body) {
+  const values = {};
+
+  if (body.paymentMethod !== undefined) {
+    if (body.paymentMethod !== null && !VALID_PAYMENT_METHODS.includes(body.paymentMethod)) {
+      return { error: `Forma de pago inválida. Valores permitidos: ${VALID_PAYMENT_METHODS.join(', ')}` };
+    }
+    values.paymentMethod = body.paymentMethod || null;
+  }
+
+  if (body.budgetNotSpecified !== undefined) values.budgetNotSpecified = !!body.budgetNotSpecified;
+
+  const budgetNotSpecified = body.budgetNotSpecified ?? false;
+  if (budgetNotSpecified) {
+    // Marcado explícitamente como "no especificó" — el monto no se conserva aunque
+    // venga en el body (evita datos contradictorios: no puede estar "sin especificar"
+    // y tener un monto a la vez).
+    if (body.budgetAmount !== undefined) values.budgetAmount = null;
+  } else if (body.budgetAmount !== undefined) {
+    if (body.budgetAmount === null || body.budgetAmount === '') {
+      values.budgetAmount = null;
+    } else {
+      const amount = Number(body.budgetAmount);
+      if (!Number.isFinite(amount) || amount < 0) {
+        return { error: 'Monto disponible inválido' };
+      }
+      values.budgetAmount = amount;
+    }
+  }
+
+  if (body.firstContactDate !== undefined) {
+    if (body.firstContactDate === null || body.firstContactDate === '') {
+      values.firstContactDate = null;
+    } else {
+      const date = new Date(body.firstContactDate);
+      if (Number.isNaN(date.getTime())) {
+        return { error: 'Fecha de primer contacto inválida' };
+      }
+      if (date.getTime() > Date.now()) {
+        return { error: 'La fecha de primer contacto no puede ser futura' };
+      }
+      values.firstContactDate = body.firstContactDate;
+    }
+  }
+
+  return { values };
+}
 const { validateEmail, validatePhone } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 const { sendLeadFollowUpWhatsApp, isConfigured: isWhatsappConfigured } = require('../services/whatsappService');
@@ -39,6 +92,9 @@ const createLead = async (req, res) => {
       return res.status(400).json({ error: 'Teléfono inválido — usa 10 dígitos, con o sin +52' });
     }
 
+    const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);
+    if (commercialError) return res.status(400).json({ error: commercialError });
+
     let property = null;
     if (propertyId) {
       property = await Property.findByPk(propertyId);
@@ -54,6 +110,7 @@ const createLead = async (req, res) => {
         appointmentDate: appointmentDate || null,
         campaignId: campaignId || null,
         assignedToUserId: assignedToUserId || null,
+        ...commercialFields,
       }, { transaction });
 
       await logActivity({ leadId: created.id, type: 'sistema', content: 'Prospecto creado', transaction });
@@ -105,7 +162,7 @@ const createLead = async (req, res) => {
 // GET /api/leads
 const getLeads = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, type, propertyId, source, pipelineStage, campaignId, assignedToUserId } = req.query;
+    const { page = 1, limit = 20, status, type, propertyId, source, pipelineStage, campaignId, assignedToUserId, search } = req.query;
     const where = {};
 
     if (status) where.status = status;
@@ -115,6 +172,14 @@ const getLeads = async (req, res) => {
     if (pipelineStage) where.pipelineStage = pipelineStage;
     if (campaignId) where.campaignId = campaignId;
     if (assignedToUserId) where.assignedToUserId = assignedToUserId;
+    // Búsqueda instantánea (Kanban/Lista) — mismo patrón Op.or/Op.like que propertyController.
+    if (search) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { phone: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } },
+      ];
+    }
 
     const result = await paginate(Lead, {
       page,
@@ -185,6 +250,9 @@ const updateLead = async (req, res) => {
       }
     }
 
+    const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);
+    if (commercialError) return res.status(400).json({ error: commercialError });
+
     const previousStage = lead.pipelineStage;
     const previousAssignee = lead.assignedToUserId;
 
@@ -200,6 +268,7 @@ const updateLead = async (req, res) => {
         updates.status = legacyStatusFor(pipelineStage);
       }
       if (assignedToUserId !== undefined) updates.assignedToUserId = assignedToUserId;
+      Object.assign(updates, commercialFields);
 
       await lead.update(updates, { transaction });
 
@@ -245,10 +314,14 @@ const closeLeadAsWon = async (req, res) => {
       await transaction.rollback();
       return res.status(404).json({ error: 'Lead no encontrado' });
     }
-    if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
+    // Un prospecto cerrado por error como "No interesado" se puede corregir a venta —
+    // pero si ya está registrado como venta, no tiene caso repetirlo (ver "reversible
+    // antes que perfecto" en CRM_UX_DESIGN.md).
+    if (lead.pipelineStage === 'venta_realizada') {
       await transaction.rollback();
-      return res.status(400).json({ error: 'Este prospecto ya está cerrado' });
+      return res.status(400).json({ error: 'Este prospecto ya tiene una venta registrada' });
     }
+    const wasLost = lead.pipelineStage === 'no_interesado';
 
     const { propertyId, amount, closedAt } = req.body;
     if (!propertyId || !amount) {
@@ -272,12 +345,17 @@ const closeLeadAsWon = async (req, res) => {
     await lead.update({
       pipelineStage: 'venta_realizada',
       status: legacyStatusFor('venta_realizada'),
+      // Limpia el motivo de pérdida si se está corrigiendo un cierre equivocado.
+      closeReason: null,
+      closeReasonDetail: null,
     }, { transaction });
 
     await logActivity({
       leadId: lead.id,
       type: 'sistema',
-      content: `Venta registrada: ${property.title}`,
+      content: wasLost
+        ? `Venta registrada: ${property.title} (corrección de cierre anterior)`
+        : `Venta registrada: ${property.title}`,
       userId: req.user?.id ?? null,
       transaction,
     });
@@ -306,10 +384,13 @@ const closeLeadAsLost = async (req, res) => {
       await transaction.rollback();
       return res.status(404).json({ error: 'Lead no encontrado' });
     }
-    if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
+    // Un prospecto marcado por error como "Venta realizada" se puede corregir a
+    // perdido — pero si ya está marcado como perdido, no tiene caso repetirlo.
+    if (lead.pipelineStage === 'no_interesado') {
       await transaction.rollback();
-      return res.status(400).json({ error: 'Este prospecto ya está cerrado' });
+      return res.status(400).json({ error: 'Este prospecto ya está marcado como no interesado' });
     }
+    const wasWon = lead.pipelineStage === 'venta_realizada';
 
     const { closeReason, closeReasonDetail } = req.body;
     if (!closeReason || !VALID_CLOSE_REASONS.includes(closeReason)) {
@@ -319,6 +400,12 @@ const closeLeadAsLost = async (req, res) => {
     if (closeReason === 'otro' && !closeReasonDetail?.trim()) {
       await transaction.rollback();
       return res.status(400).json({ error: 'Especifica el motivo en el detalle' });
+    }
+
+    // Un prospecto perdido no debe conservar el registro de venta de un cierre
+    // anterior equivocado.
+    if (wasWon) {
+      await Deal.destroy({ where: { leadId: lead.id }, transaction });
     }
 
     await lead.update({
@@ -331,7 +418,9 @@ const closeLeadAsLost = async (req, res) => {
     await logActivity({
       leadId: lead.id,
       type: 'sistema',
-      content: `Prospecto marcado como perdido: ${closeReason}`,
+      content: wasWon
+        ? `Prospecto marcado como perdido: ${closeReason} (corrección de venta registrada por error)`
+        : `Prospecto marcado como perdido: ${closeReason}`,
       userId: req.user?.id ?? null,
       transaction,
     });

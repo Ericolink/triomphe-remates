@@ -437,6 +437,7 @@ const exportFeedbackExcel = async (req, res) => {
 const leadTypeLabel   = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
 const leadStatusLabel = { nuevo: 'Nuevo', contactado: 'Contactado', cerrado: 'Cerrado', descartado: 'Descartado' };
 const leadStatusArgb  = { nuevo: 'FF3B82F6', contactado: ST_YELLOW_ARGB, cerrado: ST_GREEN_ARGB, descartado: 'FF9CA3AF' };
+const paymentMethodLabel = { credito_hipotecario: 'Crédito hipotecario', contado: 'Contado' };
 
 const exportLeadsExcel = async (req, res) => {
   try {
@@ -471,6 +472,9 @@ const exportLeadsExcel = async (req, res) => {
       { header: 'Propiedad',       key: 'property',        width: 30 },
       { header: 'Tipo',            key: 'type',            width: 13 },
       { header: 'Estatus',         key: 'status',          width: 13 },
+      { header: 'Forma de pago',   key: 'paymentMethod',   width: 18 },
+      { header: 'Monto disponible', key: 'budgetAmount',   width: 18 },
+      { header: 'Primer contacto', key: 'firstContactDate', width: 16 },
       { header: 'Fecha de cita',   key: 'appointmentDate', width: 16 },
       { header: 'Mensaje',         key: 'message',         width: 40 },
       { header: 'Notas',           key: 'notes',           width: 30 },
@@ -530,6 +534,9 @@ const exportLeadsExcel = async (req, res) => {
         property:        dash(lead.property?.title),
         type:            leadTypeLabel[lead.type]     || lead.type,
         status:          leadStatusLabel[lead.status] || lead.status,
+        paymentMethod:   lead.paymentMethod ? (paymentMethodLabel[lead.paymentMethod] || lead.paymentMethod) : '—',
+        budgetAmount:    lead.budgetNotSpecified ? 'No especificó' : (lead.budgetAmount != null ? formatPrice(lead.budgetAmount) : '—'),
+        firstContactDate: lead.firstContactDate ? formatDate(lead.firstContactDate) : '—',
         appointmentDate: lead.appointmentDate ? formatDate(lead.appointmentDate) : '—',
         message:         lead.message ? lead.message.slice(0, 200) : '—',
         notes:           dash(lead.notes),
