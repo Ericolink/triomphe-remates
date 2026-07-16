@@ -20,9 +20,12 @@ describe('POST /api/leads', () => {
     await sequelize.close();
   });
 
-  test('rechaza sin nombre/email', async () => {
+  test('crea el lead sin nombre con un placeholder (campo opcional)', async () => {
     const res = await request(app).post('/api/leads').send({ phone: '6561234567' });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+
+    const stored = await Lead.findOne({ where: { phone: '6561234567' } });
+    expect(stored.name).toBe('Prospecto sin nombre');
   });
 
   test('rechaza email inválido', async () => {

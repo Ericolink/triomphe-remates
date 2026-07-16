@@ -69,7 +69,7 @@ export default function NotificationBell() {
                 notifications.map((lead) => (
                   <div key={lead.id}
                     className="px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 cursor-pointer"
-                    onClick={() => { navigate('/admin/leads'); setOpen(false); }}
+                    onClick={() => { navigate('/admin/crm?tab=prospectos'); setOpen(false); }}
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -101,7 +101,7 @@ export default function NotificationBell() {
             {/* Footer */}
             <div className="px-4 py-3 border-t border-gray-100">
               <button
-                onClick={() => { navigate('/admin/leads'); setOpen(false); }}
+                onClick={() => { navigate('/admin/crm?tab=prospectos'); setOpen(false); }}
                 className="w-full text-center text-sm text-blue-700 font-medium hover:text-blue-900 transition-colors"
               >
                 Ver todos los leads →

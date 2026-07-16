@@ -11,9 +11,9 @@ export default function OverviewSection({ ventasSemana, tasaCierre, propiedadesD
 
   const kpis = [
     { label: 'Ventas esta semana', value: `${ventasSemana?.count ?? 0} · ${formatPrice(ventasSemana?.total)}`, icon: <TrendingUp size={22} />, color: 'bg-green-600',
-      onClick: () => navigate('/admin/leads', { state: { pipelineStage: 'venta_realizada' } }) },
+      onClick: () => navigate('/admin/crm?tab=prospectos&stage=venta_realizada') },
     { label: 'Tasa de cierre', value: `${tasaCierre ?? 0}%`, icon: <Target size={22} />, color: 'bg-blue-900',
-      onClick: () => navigate('/admin/leads') },
+      onClick: () => navigate('/admin/crm?tab=prospectos') },
     { label: 'Propiedades disponibles', value: propiedadesDisponibles ?? 0, icon: <Home size={22} />, color: 'bg-blue-600',
       onClick: () => navigate('/admin/propiedades', { state: { status: 'disponible' } }) },
     { label: 'Vistas del sitio (30 días)', value: vistas30Dias ?? 0, icon: <Eye size={22} />, color: 'bg-purple-600' },
@@ -44,7 +44,7 @@ export default function OverviewSection({ ventasSemana, tasaCierre, propiedadesD
             <h2 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
               <Megaphone size={16} className="text-yellow-500" /> Mejor campaña
             </h2>
-            <button onClick={() => navigate('/admin/campanas')} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
+            <button onClick={() => navigate('/admin/crm?tab=campanas')} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
               Ver campañas
             </button>
           </div>

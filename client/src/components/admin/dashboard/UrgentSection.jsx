@@ -14,12 +14,12 @@ export default function UrgentSection({ overdueTasks, onCompleteTask, prospectos
     ...(prospectosNuevos > 0 ? [{
       key: 'nuevos',
       text: `${prospectosNuevos} prospecto${prospectosNuevos !== 1 ? 's' : ''} nuevo${prospectosNuevos !== 1 ? 's' : ''} sin contactar`,
-      onClick: () => navigate('/admin/leads', { state: { pipelineStage: 'nuevo' } }),
+      onClick: () => navigate('/admin/crm?tab=prospectos&stage=nuevo'),
     }] : []),
     ...(prospectosPendientes > 0 ? [{
       key: 'pendientes',
       text: `${prospectosPendientes} prospecto${prospectosPendientes !== 1 ? 's' : ''} pendiente${prospectosPendientes !== 1 ? 's' : ''} de responder`,
-      onClick: () => navigate('/admin/leads', { state: { pipelineStage: 'contactado' } }),
+      onClick: () => navigate('/admin/crm?tab=prospectos&stage=contactado'),
     }] : []),
     ...(newFeedbackCount > 0 ? [{
       key: 'feedback',
@@ -43,7 +43,7 @@ export default function UrgentSection({ overdueTasks, onCompleteTask, prospectos
           <div className="space-y-2">
             {overdueTasks.map((task) => (
               <div key={task.id} className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/10">
-                <button onClick={() => navigate('/admin/leads')} className="text-left flex-1 min-w-0">
+                <button onClick={() => navigate('/admin/crm?tab=prospectos')} className="text-left flex-1 min-w-0">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{task.lead?.name}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-400 block">
                     {TASK_TYPE_LABELS[task.type] || task.type} — venció {formatDateTime(task.dueDate)}
@@ -79,7 +79,7 @@ export default function UrgentSection({ overdueTasks, onCompleteTask, prospectos
           <h2 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
             <CalendarClock size={16} className="text-blue-700 dark:text-blue-400" /> Citas de hoy
           </h2>
-          <button onClick={() => navigate('/admin/calendario')} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
+          <button onClick={() => navigate('/admin/crm?tab=calendario')} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
             Ver calendario
           </button>
         </div>

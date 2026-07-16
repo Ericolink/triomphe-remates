@@ -80,9 +80,10 @@ const createLead = async (req, res) => {
   try {
     const { name, email, phone, message, type, propertyId, appointmentDate, source, campaignId, assignedToUserId } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ error: 'Nombre es requerido' });
-    }
+    // Nombre ya no es obligatorio: un prospecto capturado de prisa (llamada, feria) a
+    // veces solo trae teléfono. Se usa un placeholder en vez de dejarlo null para no
+    // tener que blindar cada vista/email que ya asume lead.name como string.
+    const resolvedName = (name && name.trim()) || 'Prospecto sin nombre';
     // CRM Comercial: email ya no es obligatorio (prospectos de solo-WhatsApp/Facebook).
     if (email && !validateEmail(email)) {
       return res.status(400).json({ error: 'Email inválido' });
@@ -103,7 +104,7 @@ const createLead = async (req, res) => {
 
     const lead = await sequelize.transaction(async (transaction) => {
       const created = await Lead.create({
-        name, email: email || null, phone, message,
+        name: resolvedName, email: email || null, phone, message,
         type: type || 'contacto',
         source: source || 'directo',
         propertyId: propertyId || null,

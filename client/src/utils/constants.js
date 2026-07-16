@@ -200,6 +200,22 @@ export const PAYMENT_METHOD_LABELS = {
   contado: 'Contado',
 };
 
+export const FEEDBACK_CATEGORY_LABELS = { queja: 'Queja', comentario: 'Comentario', sugerencia: 'Sugerencia' };
+
+// Mapeadas a las 5 variantes que soporta Badge, mismo criterio que PIPELINE_STAGE_VARIANTS
+export const FEEDBACK_CATEGORY_VARIANTS = { queja: 'danger', comentario: 'primary', sugerencia: 'success' };
+
+// Franja de degradado del lado derecho de la tarjeta (BuzonAdminPage) — opacidad baja para
+// que el contenido siga siendo legible encima; el Badge de categoría es opaco así que no
+// se ve afectado por estar sobre la franja.
+export const FEEDBACK_CATEGORY_GRADIENT = {
+  queja:      'from-red-400/50 dark:from-red-500/25',
+  comentario: 'from-blue-400/50 dark:from-blue-500/25',
+  sugerencia: 'from-green-400/50 dark:from-green-500/25',
+};
+
+export const FEEDBACK_STATUS_LABELS = { nuevo: 'Nuevo', leido: 'Leído', archivado: 'Archivado' };
+
 export const CAMPAIGN_PLATFORM_LABELS = {
   facebook: 'Facebook',
   google: 'Google',

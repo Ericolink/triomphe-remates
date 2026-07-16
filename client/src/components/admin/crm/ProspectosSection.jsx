@@ -1,32 +1,32 @@
 import { useState, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mail, Phone, Building2, Calendar, Trash2, FileSpreadsheet, LayoutList, Columns, MessageCircle, MessageSquare, X, PhoneCall, ArrowRightLeft, Plus, Search, UserCheck, Wallet, Activity, FileText, Flag, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import api from '../../services/api';
-import { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp, closeLeadAsWon, closeLeadAsLost, addLeadProperty, removeLeadProperty } from '../../services/leadService';
-import { getLeadActivities, createLeadActivity } from '../../services/activityService';
-import { getLeadAppointments, createAppointment } from '../../services/appointmentService';
-import { getTasks, completeTask } from '../../services/taskService';
-import { getUsers } from '../../services/usersService';
-import { getProperties } from '../../services/propertyService';
-import useAuthStore from '../../store/authStore';
-import Badge from '../../components/ui/Badge';
-import Spinner from '../../components/ui/Spinner';
-import ConfirmDialog from '../../components/ui/ConfirmDialog';
-import BatchActionBar from '../../components/ui/BatchActionBar';
-import CloseLeadModal from '../../components/admin/CloseLeadModal';
-import StageBottomSheet from '../../components/admin/StageBottomSheet';
-import CreateLeadModal from '../../components/admin/CreateLeadModal';
-import KanbanBoard, { NextActionLine } from '../../components/admin/KanbanBoard';
-import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
-import { formatDate, formatDateTime, toWhatsAppLink, formatBudget, todayISODate } from '../../utils/formatters';
+import api from '../../../services/api';
+import { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp, closeLeadAsWon, closeLeadAsLost, addLeadProperty, removeLeadProperty } from '../../../services/leadService';
+import { getLeadActivities, createLeadActivity } from '../../../services/activityService';
+import { getLeadAppointments, createAppointment } from '../../../services/appointmentService';
+import { getTasks, completeTask } from '../../../services/taskService';
+import { getUsers } from '../../../services/usersService';
+import { getProperties } from '../../../services/propertyService';
+import useAuthStore from '../../../store/authStore';
+import Badge from '../../ui/Badge';
+import Spinner from '../../ui/Spinner';
+import ConfirmDialog from '../../ui/ConfirmDialog';
+import BatchActionBar from '../../ui/BatchActionBar';
+import CloseLeadModal from '../CloseLeadModal';
+import StageBottomSheet from '../StageBottomSheet';
+import CreateLeadModal from '../CreateLeadModal';
+import KanbanBoard, { NextActionLine } from '../KanbanBoard';
+import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../../utils/animations';
+import { formatDate, formatDateTime, toWhatsAppLink, formatBudget, todayISODate } from '../../../utils/formatters';
 import {
   SOURCE_LABELS, LEAD_TYPE_LABELS as typeLabel,
   PIPELINE_STAGE_LABELS, PIPELINE_STAGE_VARIANTS, TERMINAL_STAGES,
   ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_COLORS, PAYMENT_METHOD_LABELS,
-} from '../../utils/constants';
+} from '../../../utils/constants';
 
 const NON_TERMINAL_STAGE_OPTIONS = Object.entries(PIPELINE_STAGE_LABELS)
   .filter(([value]) => !TERMINAL_STAGES.includes(value))
@@ -168,7 +168,7 @@ function LeadDetailPanel({ selected, onDeselect, onDelete, updateMutation, users
 
   return (
     <motion.div key={selected.id} variants={fadeInRight} initial="hidden" animate="visible" exit={{ opacity: 0, x: 20 }}
-      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-120px)]">
+      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-170px)]">
       <div className="p-6">
         {/* Identidad — el nombre del prospecto va en el encabezado (antes solo aparecía
             varias secciones más abajo, en la lista plana de datos): es lo primero que hay
@@ -503,12 +503,13 @@ function DetailPanelSlot({ selected, emptyText, onDeselect, ...panelProps }) {
   );
 }
 
-export default function LeadsPage() {
+export default function ProspectosSection() {
   const queryClient = useQueryClient();
-  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const currentUserId = useAuthStore((s) => s.user?.id);
-  // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Prospectos nuevos").
-  const [stage, setStage] = useState(location.state?.pipelineStage || location.state?.status || '');
+  // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Prospectos nuevos"),
+  // vía ?stage= en la URL en vez de location.state — así sobrevive un refresh.
+  const [stage, setStage] = useState(searchParams.get('stage') || '');
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [checked, setChecked] = useState([]);
@@ -696,10 +697,7 @@ export default function LeadsPage() {
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
       <motion.div variants={fadeInUp} initial="hidden" animate="visible"
         className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Prospectos</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{data?.pagination?.total ?? 0} prospectos registrados</p>
-        </div>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">{data?.pagination?.total ?? 0} prospectos registrados</p>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-xl px-3 py-2 w-full sm:w-auto">
             <Search size={16} className="text-gray-400 flex-shrink-0" />

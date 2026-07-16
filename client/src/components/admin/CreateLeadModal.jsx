@@ -16,9 +16,11 @@ const emptyForm = {
 };
 
 // Flujo "Registrar un nuevo prospecto" (CRM_UX_DESIGN.md §2.a): modal corto, sin
-// navegar de página, con los campos mínimos — nombre es lo único obligatorio. El correo
-// se eliminó del formulario (el equipo comercial casi nunca lo usa); el modelo lo
-// conserva para los prospectos que llegan por el formulario público del sitio.
+// navegar de página, con los campos mínimos — ningún campo es obligatorio (un prospecto
+// capturado de prisa a veces solo trae teléfono; el backend rellena un nombre
+// placeholder si se deja en blanco). El correo se eliminó del formulario (el equipo
+// comercial casi nunca lo usa); el modelo lo conserva para los prospectos que llegan
+// por el formulario público del sitio.
 export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) {
   const [form, setForm] = useState(emptyForm);
 
@@ -40,9 +42,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
     && (Number.isNaN(Number(form.budgetAmount)) || Number(form.budgetAmount) < 0);
 
   const handleSubmit = () => {
-    if (!form.name.trim() || budgetInvalid) return;
+    if (budgetInvalid) return;
     onSubmit({
-      name: form.name.trim(),
+      name: form.name.trim() || undefined,
       phone: form.phone.trim() || undefined,
       source: form.source,
       firstContactDate: form.firstContactDate || undefined,
@@ -77,7 +79,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
 
             <div className="space-y-3 mb-5">
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nombre *</label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nombre (opcional)</label>
                 <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="Nombre del prospecto" className={inputClass} autoFocus />
               </div>
@@ -159,7 +161,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 className="flex-1 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors">
                 Cancelar
               </motion.button>
-              <motion.button type="button" onClick={handleSubmit} disabled={!form.name.trim() || budgetInvalid || isPending}
+              <motion.button type="button" onClick={handleSubmit} disabled={budgetInvalid || isPending}
                 whileHover={buttonHover} whileTap={buttonTap}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 transition-colors">
                 {isPending ? 'Guardando...' : 'Crear prospecto'}

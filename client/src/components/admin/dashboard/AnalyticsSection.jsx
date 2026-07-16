@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Eye, TrendingUp, MapPin, Home, Target, ArrowRight, Users, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CollapsibleSection from '../../ui/CollapsibleSection';
+import TabBar from '../../ui/TabBar';
 import Badge from '../../ui/Badge';
 import { BarChart, AreaChart } from '../../ui/MiniChart';
 import { staggerContainer, fadeInUp } from '../../../utils/animations';
@@ -26,16 +27,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
   return (
     <CollapsibleSection title="Analítica" icon={<BarChart3 size={16} className="text-blue-700 dark:text-blue-400" />}
       subtitle="gráficas y desgloses a detalle">
-      <div className="flex gap-2 mb-6">
-        {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`text-sm font-medium px-4 py-2 rounded-xl transition-colors ${
-              tab === t.key ? 'bg-blue-900 text-white dark:bg-blue-600' : 'bg-gray-100 dark:bg-[#1a1f2e] text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#2e3650]'
-            }`}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <TabBar tabs={TABS} active={tab} onChange={setTab} />
 
       {tab === 'inventario' && (
         <motion.div key="inventario" initial="hidden" animate="visible" variants={staggerContainer}>

@@ -2,17 +2,17 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Search, X, Building2, Wallet, Activity, FileText, Calendar } from 'lucide-react';
-import { getDeals } from '../../services/dealService';
-import { getLeadActivities } from '../../services/activityService';
-import { getLeadNotes } from '../../services/leadService';
-import { getLeadAppointments } from '../../services/appointmentService';
-import { getUsers } from '../../services/usersService';
-import Spinner from '../../components/ui/Spinner';
-import Badge from '../../components/ui/Badge';
-import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
-import { formatPrice, formatDate, formatDateTime } from '../../utils/formatters';
-import { CITY_LABELS, ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_COLORS } from '../../utils/constants';
-import { buildImageUrl } from '../../utils/images';
+import { getDeals } from '../../../services/dealService';
+import { getLeadActivities } from '../../../services/activityService';
+import { getLeadNotes } from '../../../services/leadService';
+import { getLeadAppointments } from '../../../services/appointmentService';
+import { getUsers } from '../../../services/usersService';
+import Spinner from '../../ui/Spinner';
+import Badge from '../../ui/Badge';
+import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../../utils/animations';
+import { formatPrice, formatDate, formatDateTime } from '../../../utils/formatters';
+import { CITY_LABELS, ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_COLORS } from '../../../utils/constants';
+import { buildImageUrl } from '../../../utils/images';
 
 const sectionLabelClass = "text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5";
 const cardClass = "rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3";
@@ -71,7 +71,7 @@ function DealDetailPanel({ deal, users, onDeselect }) {
 
   return (
     <motion.div key={deal.id} variants={fadeInRight} initial="hidden" animate="visible" exit={{ opacity: 0, x: 20 }}
-      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-120px)]">
+      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-170px)]">
       {imageUrl && (
         <div className="h-36 overflow-hidden rounded-t-2xl">
           <img src={imageUrl} alt={deal.property?.title} className="w-full h-full object-cover" />
@@ -157,7 +157,7 @@ function DealDetailPanel({ deal, users, onDeselect }) {
   );
 }
 
-// Mismo patrón responsive que DetailPanelSlot en LeadsPage.jsx: overlay a pantalla
+// Mismo patrón responsive que DetailPanelSlot en ProspectosSection.jsx: overlay a pantalla
 // completa en mobile/tablet, columna lateral fija de xl en adelante.
 function DealDetailSlot({ selected, users, onDeselect }) {
   return (
@@ -197,7 +197,7 @@ function DealDetailSlot({ selected, users, onDeselect }) {
 // Casos de éxito — galería de ventas cerradas (un Deal solo existe si el prospecto llegó
 // a "Venta realizada"; ver leadController.closeLeadAsWon/closeLeadAsLost). Separado de
 // Prospectos porque aquí el objetivo es revisar lo ya ganado, no seguir trabajando el caso.
-export default function CasosExitoPage() {
+export default function CasosExitoSection() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
 
@@ -219,14 +219,9 @@ export default function CasosExitoPage() {
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
       <motion.div variants={fadeInUp} initial="hidden" animate="visible"
         className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            <Trophy size={24} className="text-yellow-500" /> Casos de éxito
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            {deals.length} venta{deals.length === 1 ? '' : 's'} registrada{deals.length === 1 ? '' : 's'} · {formatPrice(totalAmount)} en total
-          </p>
-        </div>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">
+          {deals.length} venta{deals.length === 1 ? '' : 's'} registrada{deals.length === 1 ? '' : 's'} · {formatPrice(totalAmount)} en total
+        </p>
         <div className="flex items-center gap-2 bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-xl px-3 py-2 w-full sm:w-auto">
           <Search size={16} className="text-gray-400 flex-shrink-0" />
           <input type="text" placeholder="Buscar por cliente o propiedad..." value={search}

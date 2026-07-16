@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Calendar, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { getAppointments, updateAppointmentStatus, rescheduleAppointment } from '../../services/appointmentService';
-import Spinner from '../../components/ui/Spinner';
-import Badge from '../../components/ui/Badge';
-import OverflowMenu from '../../components/ui/OverflowMenu';
-import { fadeIn, fadeInUp } from '../../utils/animations';
-import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_VARIANTS } from '../../utils/constants';
+import { getAppointments, updateAppointmentStatus, rescheduleAppointment } from '../../../services/appointmentService';
+import Spinner from '../../ui/Spinner';
+import Badge from '../../ui/Badge';
+import OverflowMenu from '../../ui/OverflowMenu';
+import { fadeIn, fadeInUp } from '../../../utils/animations';
+import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_VARIANTS } from '../../../utils/constants';
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAY_NAMES   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -68,7 +68,7 @@ function AppointmentRow({ appointment, showDate, onStatusChange, onReschedule })
   );
 }
 
-export default function CalendarPage() {
+export default function CalendarioSection() {
   const queryClient = useQueryClient();
   const today = new Date();
   const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -130,8 +130,7 @@ export default function CalendarPage() {
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible" className="max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Calendario de citas</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+        <p className="text-gray-500 dark:text-gray-400 text-sm">
           {appointments.length} cita{appointments.length !== 1 ? 's' : ''} este mes
         </p>
       </div>

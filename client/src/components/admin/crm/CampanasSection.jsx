@@ -3,13 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, X, Megaphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { getCampaigns, getCampaignById, createCampaign, updateCampaign, deleteCampaign } from '../../services/campaignService';
-import Spinner from '../../components/ui/Spinner';
-import ConfirmDialog from '../../components/ui/ConfirmDialog';
-import OverflowMenu from '../../components/ui/OverflowMenu';
-import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
-import { formatPrice, formatDate } from '../../utils/formatters';
-import { CAMPAIGN_PLATFORM_LABELS } from '../../utils/constants';
+import { getCampaigns, getCampaignById, createCampaign, updateCampaign, deleteCampaign } from '../../../services/campaignService';
+import Spinner from '../../ui/Spinner';
+import ConfirmDialog from '../../ui/ConfirmDialog';
+import OverflowMenu from '../../ui/OverflowMenu';
+import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../../utils/animations';
+import { formatPrice, formatDate } from '../../../utils/formatters';
+import { CAMPAIGN_PLATFORM_LABELS } from '../../../utils/constants';
 
 const emptyForm = { platform: 'facebook', name: '', startDate: '', endDate: '', budget: '' };
 
@@ -102,7 +102,7 @@ function CampaignDetail({ campaignId, onClose }) {
   );
 }
 
-export default function CampaignsPage() {
+export default function CampanasSection() {
   const queryClient = useQueryClient();
   const [modal, setModal] = useState(null); // null | 'create' | campaign
   const [confirm, setConfirm] = useState(null);
@@ -134,10 +134,7 @@ export default function CampaignsPage() {
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
       <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Campañas</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{campaigns.length} campañas registradas</p>
-        </div>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">{campaigns.length} campañas registradas</p>
         <motion.button whileHover={buttonHover} whileTap={buttonTap} onClick={() => setModal('create')}
           className="flex items-center gap-2 bg-blue-900 dark:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
           <Plus size={16} /> Nueva campaña
