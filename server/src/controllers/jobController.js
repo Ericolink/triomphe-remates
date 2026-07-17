@@ -1,6 +1,7 @@
 const { JobPosition, JobApplication } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendJobApplicationNotification, sendJobApplicationConfirmation } = require('../services/emailService');
+const { logAudit } = require('../utils/audit');
 
 const VALID_APPLICATION_STATUS = ['nueva', 'en_revision', 'entrevista', 'aceptada', 'rechazada'];
 
@@ -96,6 +97,7 @@ const updatePosition = async (req, res) => {
     if (status !== undefined) updates.status = status;
     if (isUrgent !== undefined) updates.isUrgent = isUrgent;
     await position.update(updates);
+    logAudit(req, 'update', 'job', position.id, updates);
     return res.json({ message: 'Vacante actualizada', data: position });
   } catch (error) {
     console.error('Error en updatePosition:', error);
@@ -109,6 +111,7 @@ const deletePosition = async (req, res) => {
     const position = await JobPosition.findByPk(req.params.id);
     if (!position) return res.status(404).json({ error: 'Vacante no encontrada' });
     await position.destroy();
+    logAudit(req, 'delete', 'job', req.params.id, { title: position.title });
     return res.json({ message: 'Vacante eliminada' });
   } catch (error) {
     console.error('Error en deletePosition:', error);
@@ -205,6 +208,7 @@ const updateApplication = async (req, res) => {
     if (status !== undefined) updates.status = status;
     if (notes !== undefined) updates.notes = notes;
     await application.update(updates);
+    logAudit(req, 'update', 'application', application.id, updates);
     return res.json({ message: 'Postulación actualizada', data: application });
   } catch (error) {
     console.error('Error en updateApplication:', error);
@@ -218,6 +222,7 @@ const deleteApplication = async (req, res) => {
     const application = await JobApplication.findByPk(req.params.id);
     if (!application) return res.status(404).json({ error: 'Postulación no encontrada' });
     await application.destroy();
+    logAudit(req, 'delete', 'application', req.params.id, { name: application.name, email: application.email });
     return res.json({ message: 'Postulación eliminada' });
   } catch (error) {
     console.error('Error en deleteApplication:', error);

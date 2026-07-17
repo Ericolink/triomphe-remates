@@ -2,6 +2,7 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { Property, Image, Feedback, Lead } = require('../models/index');
 const { CITY_LABEL: cityLabel, PROPERTY_TYPE_LABEL: typeLabel, STATUS_LABEL: statusLabel } = require('../utils/labels');
+const { logAudit } = require('../utils/audit');
 
 // AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
 // ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
@@ -24,6 +25,7 @@ const {
 const exportExcel = async (req, res) => {
   try {
     const properties = await getFilteredProperties(req.query);
+    logAudit(req, 'export', 'property', null, { format: 'excel', count: properties.length, query: req.query });
     const generatedAt = new Date().toLocaleDateString('es-MX', {
       day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
@@ -212,6 +214,7 @@ const drawPDFFooter = (doc) => {
 const exportPDF = async (req, res) => {
   try {
     const properties = await getFilteredProperties(req.query);
+    logAudit(req, 'export', 'property', null, { format: 'pdf', count: properties.length, query: req.query });
     const generatedAt = new Date().toLocaleDateString('es-MX', {
       day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
@@ -316,6 +319,7 @@ const exportFeedbackExcel = async (req, res) => {
       where,
       order: [['createdAt', 'DESC']],
     });
+    logAudit(req, 'export', 'feedback', null, { format: 'excel', count: items.length, query: req.query });
 
     const generatedAt = new Date().toLocaleDateString('es-MX', {
       day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -451,6 +455,7 @@ const exportLeadsExcel = async (req, res) => {
       order: [['createdAt', 'DESC']],
       include: [{ model: Property, as: 'property', attributes: ['title'] }],
     });
+    logAudit(req, 'export', 'lead', null, { format: 'excel', count: leads.length, query: req.query });
 
     const generatedAt = new Date().toLocaleDateString('es-MX', {
       day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',

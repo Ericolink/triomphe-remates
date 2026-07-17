@@ -1,6 +1,7 @@
 const { PropertyAlert } = require('../models/index');
 const { validateEmail, validatePhone } = require('../utils/validators');
 const { paginate } = require('../utils/pagination');
+const { logAudit } = require('../utils/audit');
 
 // POST /api/alerts
 const subscribe = async (req, res) => {
@@ -71,6 +72,7 @@ const deleteAlert = async (req, res) => {
     const alert = await PropertyAlert.findByPk(req.params.id);
     if (!alert) return res.status(404).json({ error: 'Alerta no encontrada' });
     await alert.destroy();
+    logAudit(req, 'delete', 'alert', req.params.id, { email: alert.email });
     return res.json({ message: 'Alerta eliminada' });
   } catch (error) {
     console.error('Error en deleteAlert:', error);

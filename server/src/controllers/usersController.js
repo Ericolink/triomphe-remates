@@ -1,6 +1,7 @@
 const { cloudinary } = require('../config/cloudinary');
 const { User } = require('../models/index');
 const { generateToken, hashPassword, comparePassword } = require('../utils/helpers');
+const { logAudit } = require('../utils/audit');
 
 const safeUser = (user) => ({
   id: user.id,
@@ -49,6 +50,8 @@ const createUser = async (req, res) => {
       password: hashedPassword,
       role: role || 'editor',
     });
+
+    logAudit(req, 'create', 'user', user.id, { name: user.name, email: user.email, role: user.role });
 
     return res.status(201).json({ message: 'Usuario creado exitosamente', data: safeUser(user) });
   } catch (error) {
@@ -129,6 +132,14 @@ const updateUser = async (req, res) => {
       profilePhoto,
     });
 
+    logAudit(req, 'update', 'user', user.id, {
+      ...(name && { name }),
+      ...(email && { email }),
+      ...(role && { role }),
+      ...(isActive !== undefined && { isActive }),
+      ...(newPassword && { passwordChanged: true }),
+    });
+
     // Si el propio usuario cambió su contraseña/rol, su token actual quedó invalidado
     // por el incremento de tokenVersion — se reemite uno nuevo para no cerrarle la sesión.
     const response = { message: 'Usuario actualizado exitosamente', data: safeUser(user) };
@@ -159,6 +170,7 @@ const deactivateUser = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     await user.update({ isActive: false, tokenVersion: user.tokenVersion + 1 });
+    logAudit(req, 'update', 'user', user.id, { isActive: false });
     return res.json({ message: 'Usuario desactivado exitosamente' });
   } catch (error) {
     console.error('Error en deactivateUser:', error);
@@ -173,6 +185,7 @@ const activateUser = async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     await user.update({ isActive: true });
+    logAudit(req, 'update', 'user', user.id, { isActive: true });
     return res.json({ message: 'Usuario activado exitosamente' });
   } catch (error) {
     console.error('Error en activateUser:', error);
@@ -203,6 +216,7 @@ const permanentDeleteUser = async (req, res) => {
     }
 
     await user.destroy();
+    logAudit(req, 'delete', 'user', req.params.id, { name: user.name, email: user.email, role: user.role });
     return res.json({ message: 'Usuario eliminado permanentemente' });
   } catch (error) {
     console.error('Error en permanentDeleteUser:', error);

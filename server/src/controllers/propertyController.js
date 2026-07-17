@@ -401,6 +401,8 @@ const uploadImages = async (req, res) => {
       })
     );
 
+    logAudit(req, 'create', 'property', property.id, { imagesAdded: images.length });
+
     return res.status(201).json({
       message: `${images.length} imagen(es) subida(s) exitosamente`,
       data: images,
@@ -436,6 +438,8 @@ const deleteImage = async (req, res) => {
       if (nextImage) await nextImage.update({ isCover: true });
     }
 
+    logAudit(req, 'delete', 'property', req.params.id, { imageId: image.id });
+
     return res.json({ message: 'Imagen eliminada exitosamente' });
   } catch (error) {
     console.error('Error en deleteImage:', error);
@@ -459,6 +463,8 @@ const setCoverImage = async (req, res) => {
 
     await image.update({ isCover: true });
 
+    logAudit(req, 'update', 'property', req.params.id, { coverImageId: image.id });
+
     return res.json({ message: 'Imagen de portada actualizada', data: image });
   } catch (error) {
     console.error('Error en setCoverImage:', error);
@@ -480,6 +486,8 @@ const reorderImages = async (req, res) => {
     }
 
     await Promise.all(imageIds.map((imgId, index) => Image.update({ order: index }, { where: { id: imgId, propertyId: req.params.id } })));
+
+    logAudit(req, 'update', 'property', req.params.id, { imageIds });
 
     return res.json({ message: 'Orden de imágenes actualizado' });
   } catch (error) {
@@ -518,6 +526,7 @@ const promoteProperty = async (req, res) => {
     if (property.isPromoted) {
       await property.update({ isPromoted: false }, { transaction });
       await transaction.commit();
+      logAudit(req, 'update', 'property', property.id, { isPromoted: false });
       return res.json({ message: 'Propiedad quitada de promoción', data: property });
     }
 
@@ -526,6 +535,7 @@ const promoteProperty = async (req, res) => {
     await property.update({ isPromoted: true }, { transaction });
 
     await transaction.commit();
+    logAudit(req, 'update', 'property', property.id, { isPromoted: true });
     return res.json({ message: 'Propiedad promocionada exitosamente', data: property });
   } catch (error) {
     await transaction.rollback();

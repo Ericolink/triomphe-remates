@@ -2,6 +2,7 @@ const { Feedback } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendFeedbackNotification } = require('../services/emailService');
 const { paginate } = require('../utils/pagination');
+const { logAudit } = require('../utils/audit');
 
 const VALID_FEEDBACK_STATUS = ['nuevo', 'leido', 'archivado'];
 
@@ -78,6 +79,7 @@ const updateFeedback = async (req, res) => {
     if (req.body.notes !== undefined) updates.notes = req.body.notes;
 
     await feedback.update(updates);
+    logAudit(req, 'update', 'feedback', feedback.id, updates);
     return res.json({ message: 'Feedback actualizado', data: feedback });
   } catch (error) {
     console.error('Error en updateFeedback:', error);
@@ -92,6 +94,7 @@ const deleteFeedback = async (req, res) => {
     if (!feedback) return res.status(404).json({ error: 'Feedback no encontrado' });
 
     await feedback.destroy();
+    logAudit(req, 'delete', 'feedback', req.params.id, { subject: feedback.subject });
     return res.json({ message: 'Feedback eliminado exitosamente' });
   } catch (error) {
     console.error('Error en deleteFeedback:', error);
@@ -109,6 +112,7 @@ const batchUpdateFeedback = async (req, res) => {
       return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_FEEDBACK_STATUS.join(', ')}` });
     }
     await Feedback.update({ status }, { where: { id: ids } });
+    logAudit(req, 'update', 'feedback', null, { ids, status });
     return res.json({ message: `${ids.length} mensaje(s) actualizados` });
   } catch (error) {
     console.error('Error en batchUpdateFeedback:', error);
@@ -122,6 +126,7 @@ const batchDeleteFeedback = async (req, res) => {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
     await Feedback.destroy({ where: { id: ids } });
+    logAudit(req, 'delete', 'feedback', null, { ids });
     return res.json({ message: `${ids.length} mensaje(s) eliminados` });
   } catch (error) {
     console.error('Error en batchDeleteFeedback:', error);

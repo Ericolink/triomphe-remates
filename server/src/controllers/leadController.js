@@ -259,8 +259,8 @@ const updateLead = async (req, res) => {
     const previousStage = lead.pipelineStage;
     const previousAssignee = lead.assignedToUserId;
 
+    const updates = {};
     await sequelize.transaction(async (transaction) => {
-      const updates = {};
       if (status !== undefined) updates.status = status;
       if (notes !== undefined) updates.notes = notes;
       if (appointmentDate !== undefined) updates.appointmentDate = appointmentDate;
@@ -300,6 +300,8 @@ const updateLead = async (req, res) => {
         }
       }
     });
+
+    logAudit(req, 'update', 'lead', lead.id, updates);
 
     return res.json({ message: 'Lead actualizado exitosamente', data: lead });
   } catch (error) {
@@ -449,6 +451,7 @@ const deleteLead = async (req, res) => {
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
     await lead.destroy();
+    logAudit(req, 'delete', 'lead', req.params.id, { name: lead.name });
     return res.json({ message: 'Lead eliminado exitosamente' });
   } catch (error) {
     console.error('Error en deleteLead:', error);
@@ -473,6 +476,7 @@ const batchUpdateLeads = async (req, res) => {
       { pipelineStage, status: legacyStatusFor(pipelineStage) },
       { where: { id: ids } }
     );
+    logAudit(req, 'update', 'lead', null, { ids, pipelineStage });
     return res.json({ message: `${ids.length} lead(s) actualizados` });
   } catch (error) {
     console.error('Error en batchUpdateLeads:', error);
@@ -486,6 +490,7 @@ const batchDeleteLeads = async (req, res) => {
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
     await Lead.destroy({ where: { id: ids } });
+    logAudit(req, 'delete', 'lead', null, { ids });
     return res.json({ message: `${ids.length} lead(s) eliminados` });
   } catch (error) {
     console.error('Error en batchDeleteLeads:', error);
@@ -562,6 +567,8 @@ const addLeadNote = async (req, res) => {
       authorName: req.user?.name || null,
     });
 
+    logAudit(req, 'update', 'lead', lead.id, { addedNote: note.id });
+
     return res.status(201).json({ data: note });
   } catch (error) {
     console.error('Error en addLeadNote:', error);
@@ -578,6 +585,7 @@ const deleteLeadNote = async (req, res) => {
     if (!note) return res.status(404).json({ error: 'Nota no encontrada' });
 
     await note.destroy();
+    logAudit(req, 'update', 'lead', req.params.id, { removedNote: req.params.noteId });
     return res.json({ message: 'Nota eliminada' });
   } catch (error) {
     console.error('Error en deleteLeadNote:', error);
