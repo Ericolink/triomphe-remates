@@ -6,7 +6,7 @@ const { getLeadAppointments } = require('../controllers/appointmentController');
 const { getLeadTasks } = require('../controllers/taskController');
 const { authenticate, authenticateSSE } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
-const { apiLimiter, authLimiter } = require('../middleware/rateLimitMiddleware');
+const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
  * @swagger
@@ -15,7 +15,7 @@ const { apiLimiter, authLimiter } = require('../middleware/rateLimitMiddleware')
  *   description: Gestión de contactos y citas (CRM Comercial — "Prospectos" en la UI)
  */
 
-router.post('/',          authLimiter, createLead);
+router.post('/',          publicFormLimiter, createLead);
 router.get('/stream',     apiLimiter, authenticateSSE, authorize('admin', 'editor'), streamLeads);
 router.get('/',           apiLimiter, authenticate, authorize('admin', 'editor'), getLeads);
 router.patch('/batch',    apiLimiter, authenticate, authorize('admin', 'editor'), batchUpdateLeads);

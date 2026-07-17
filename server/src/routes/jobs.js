@@ -6,7 +6,7 @@ const {
 } = require('../controllers/jobController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
-const { apiLimiter, authLimiter } = require('../middleware/rateLimitMiddleware');
+const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
  * @swagger
@@ -20,7 +20,7 @@ router.get('/', apiLimiter, getPositions);
 router.get('/applications', apiLimiter, authenticate, authorize('admin', 'editor'), getApplications);
 router.get('/admin/all', apiLimiter, authenticate, authorize('admin', 'editor'), getAllPositions);
 router.get('/:id', apiLimiter, getPositionById);
-router.post('/:id/apply', authLimiter, applyToPosition);
+router.post('/:id/apply', publicFormLimiter, applyToPosition);
 
 // Rutas admin
 router.post('/', apiLimiter, authenticate, authorize('admin', 'editor'), createPosition);

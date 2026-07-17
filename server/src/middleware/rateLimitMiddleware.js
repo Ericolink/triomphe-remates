@@ -22,6 +22,17 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Instancia independiente de authLimiter: protege los formularios públicos de conversión
+// (leads, feedback, postulaciones, alertas) sin compartir contador con el login, para que
+// intentos de login desde una IP (oficina/NAT) no bloqueen envíos legítimos de estos formularios.
+const publicFormLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 20,
+  message: { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // AUDIT: 200/15min se agotaba con uso normal del panel admin — el Kanban de 8 columnas
 // hace 2 queries por columna solo al montar (leads-column + open-tasks-column), y cada
 // cambio de etapa/responsable las vuelve a pedir todas. Todas estas rutas ya están detrás
@@ -51,4 +62,11 @@ const exportLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { authLimiter, apiLimiter, uploadLimiter, exportLimiter, alertSubscribeLimiter };
+module.exports = {
+  authLimiter,
+  publicFormLimiter,
+  apiLimiter,
+  uploadLimiter,
+  exportLimiter,
+  alertSubscribeLimiter,
+};

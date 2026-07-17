@@ -113,8 +113,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Swagger docs
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger docs — solo fuera de producción, para no exponer el mapa de rutas/schemas públicamente
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 
 // Rutas
 app.use('/api/auth',       require('./src/routes/auth'));
