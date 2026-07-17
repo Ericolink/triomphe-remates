@@ -1,7 +1,12 @@
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
 const { cloudinary } = require('../config/cloudinary');
-const { Property, Image, Analytics } = require('../models/index');
+const { sequelize, Property, Image, Analytics, PropertyStatusHistory } = require('../models/index');
 const { generateSlug } = require('../utils/helpers');
+const alertService = require('../services/alertService');
+const { isValidImageBuffer } = require('../utils/fileSignature');
+const { paginate } = require('../utils/pagination');
+const { logAudit } = require('../utils/audit');
+const logger = require('../utils/logger');
 
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined) ? null : val;
@@ -17,8 +22,12 @@ const getProperties = async (req, res) => {
       status,
       minPrice,
       maxPrice,
-      minM2,
-      maxM2,
+      minTerrainM2,
+      maxTerrainM2,
+      minConstructionM2,
+      maxConstructionM2,
+      minBedrooms,
+      minBathrooms,
       featured,
       search,
     } = req.query;
@@ -37,40 +46,70 @@ const getProperties = async (req, res) => {
       if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
     }
 
-    if (minM2 || maxM2) {
-      where.squareMeters = {};
-      if (minM2) where.squareMeters[Op.gte] = parseFloat(minM2);
-      if (maxM2) where.squareMeters[Op.lte] = parseFloat(maxM2);
+    if (minTerrainM2 || maxTerrainM2) {
+      where.terrainMeters = {};
+      if (minTerrainM2) where.terrainMeters[Op.gte] = parseFloat(minTerrainM2);
+      if (maxTerrainM2) where.terrainMeters[Op.lte] = parseFloat(maxTerrainM2);
     }
+
+    if (minConstructionM2 || maxConstructionM2) {
+      where.constructionMeters = {};
+      if (minConstructionM2) where.constructionMeters[Op.gte] = parseFloat(minConstructionM2);
+      if (maxConstructionM2) where.constructionMeters[Op.lte] = parseFloat(maxConstructionM2);
+    }
+
+    const andConditions = [];
+
+    if (minBedrooms) where.bedrooms = { [Op.gte]: parseInt(minBedrooms) };
+    if (minBathrooms) where.bathrooms = { [Op.gte]: parseInt(minBathrooms) };
 
     if (search) {
-      where[Op.or] = [
-        { title: { [Op.like]: `%${search}%` } },
-        { address: { [Op.like]: `%${search}%` } },
-      ];
+      andConditions.push({
+        [Op.or]: [
+          { title:       { [Op.like]: `%${search}%` } },
+          { address:     { [Op.like]: `%${search}%` } },
+          { description: { [Op.like]: `%${search}%` } },
+        ],
+      });
     }
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    if (andConditions.length > 0) where[Op.and] = andConditions;
 
-    const { count, rows } = await Property.findAndCountAll({
+    const result = await paginate(Property, {
+      page,
+      limit,
       where,
+      attributes: { exclude: ['internalNotes'] },
       include: [{ model: Image, as: 'images', where: { isCover: true }, required: false }],
       order: [['isFeatured', 'DESC'], ['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset,
     });
 
-    return res.json({
-      data: rows,
-      pagination: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(count / parseInt(limit)),
-      },
-    });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getProperties:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// GET /api/properties/stats
+const getPropertyStats = async (req, res) => {
+  try {
+    const where = { status: { [Op.ne]: 'vendido' } };
+
+    const total = await Property.count({ where });
+    const byCityRaw = await Property.findAll({
+      where,
+      attributes: ['city', [fn('COUNT', col('id')), 'total']],
+      group: ['city'],
+      raw: true,
+    });
+
+    const byCity = { juarez: 0, chihuahua: 0, queretaro: 0 };
+    byCityRaw.forEach((row) => { byCity[row.city] = parseInt(row.total); });
+
+    return res.json({ total, byCity });
+  } catch (error) {
+    console.error('Error en getPropertyStats:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -78,8 +117,10 @@ const getProperties = async (req, res) => {
 // GET /api/properties/:id
 const getPropertyById = async (req, res) => {
   try {
+    const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
     const property = await Property.findByPk(req.params.id, {
-      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+      attributes: isStaff ? undefined : { exclude: ['internalNotes'] },
+      include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
     });
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
@@ -107,7 +148,8 @@ const getPropertyBySlug = async (req, res) => {
   try {
     const property = await Property.findOne({
       where: { slug: req.params.slug },
-      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+      attributes: { exclude: ['internalNotes'] },
+      include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
     });
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
@@ -135,7 +177,7 @@ const createProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address,  auctionDate, isFeatured,
+      address, auctionDate, acquisitionStage, isFeatured, internalNotes, code,
     } = req.body;
 
     if (!title || !city || !type) {
@@ -148,27 +190,53 @@ const createProperty = async (req, res) => {
     const existing = await Property.findOne({ where: { slug } });
     if (existing) slug = `${slug}-${Date.now()}`;
 
-    const property = await Property.create({
-      title, description,
-      price: nullIfEmpty(price),
-      city, type,
-      status: status || 'disponible',
-      squareMeters: nullIfEmpty(squareMeters),
-      terrainMeters: nullIfEmpty(terrainMeters),
-      constructionMeters: nullIfEmpty(constructionMeters),
-      bedrooms: nullIfEmpty(bedrooms),
-      bathrooms: nullIfEmpty(bathrooms),
-      address, auctionDate,
-      isFeatured: isFeatured || false,
-      slug,
+    // AUDIT-018: Property + su primer registro de historial deben crearse juntos —
+    // sin transacción, un fallo en PropertyStatusHistory.create dejaba la propiedad
+    // creada sin su historial inicial.
+    const property = await sequelize.transaction(async (transaction) => {
+      const created = await Property.create({
+        title, description,
+        price: nullIfEmpty(price),
+        city, type,
+        status: status || 'disponible',
+        squareMeters: nullIfEmpty(squareMeters),
+        terrainMeters: nullIfEmpty(terrainMeters),
+        constructionMeters: nullIfEmpty(constructionMeters),
+        bedrooms: nullIfEmpty(bedrooms),
+        bathrooms: nullIfEmpty(bathrooms),
+        address, auctionDate: auctionDate || null,
+        acquisitionStage: acquisitionStage || 'sin_proceso',
+        isFeatured: isFeatured || false,
+        internalNotes: internalNotes || null,
+        code: nullIfEmpty(code),
+        slug,
+      }, { transaction });
+
+      await PropertyStatusHistory.create({
+        propertyId: created.id,
+        fromStatus: null,
+        toStatus: created.status,
+        userName: req.user?.name || null,
+      }, { transaction });
+
+      return created;
     });
+
+    logger.info('Propiedad creada', { propertyId: property.id, userId: req.user?.id, city, type, status: property.status });
+
+    // Notificar a suscriptores con alertas coincidentes (sin bloquear la respuesta)
+    if ((status || 'disponible') === 'disponible') {
+      alertService.notifyAndSend(property);
+    }
+
+    logAudit(req, 'create', 'property', property.id, { title: property.title, city, type });
 
     return res.status(201).json({
       message: 'Propiedad creada exitosamente',
       data: property,
     });
   } catch (error) {
-    console.error('Error en createProperty:', error);
+    logger.error('Error en createProperty', { userId: req.user?.id, error: error.message });
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -182,7 +250,7 @@ const updateProperty = async (req, res) => {
     const {
       title, description, price, city, type,
       status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address,  auctionDate, isFeatured,
+      address, auctionDate, acquisitionStage, isFeatured, internalNotes, code,
     } = req.body;
 
     if (title && title !== property.title) {
@@ -192,18 +260,67 @@ const updateProperty = async (req, res) => {
       req.body.slug = slug;
     }
 
-    await property.update({
-      title, description,
-      price: nullIfEmpty(price),
-      city, type, status,
-      squareMeters: nullIfEmpty(squareMeters),
-      terrainMeters: nullIfEmpty(terrainMeters),
-      constructionMeters: nullIfEmpty(constructionMeters),
-      bedrooms: nullIfEmpty(bedrooms),
-      bathrooms: nullIfEmpty(bathrooms),
-      address, auctionDate,
-      isFeatured, slug: req.body.slug,
-    });
+    const previousStatus = property.status;
+    const previousPrice  = property.price;
+
+    // AUDIT-021: solo se incluyen en el UPDATE los campos que el request realmente
+    // envió. Antes se pasaban TODOS los campos desestructurados (incluyendo los
+    // ausentes, como `undefined`), y nullIfEmpty() convertía esos `undefined` en
+    // `null` — cada actualización parcial (ej. arrastrar una propiedad en el Kanban
+    // para solo cambiar `status`) borraba silenciosamente price/m²/recámaras/baños/code.
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (description !== undefined) updates.description = description;
+    if (price !== undefined) updates.price = nullIfEmpty(price);
+    if (city !== undefined) updates.city = city;
+    if (type !== undefined) updates.type = type;
+    if (status !== undefined) updates.status = status;
+    if (squareMeters !== undefined) updates.squareMeters = nullIfEmpty(squareMeters);
+    if (terrainMeters !== undefined) updates.terrainMeters = nullIfEmpty(terrainMeters);
+    if (constructionMeters !== undefined) updates.constructionMeters = nullIfEmpty(constructionMeters);
+    if (bedrooms !== undefined) updates.bedrooms = nullIfEmpty(bedrooms);
+    if (bathrooms !== undefined) updates.bathrooms = nullIfEmpty(bathrooms);
+    if (address !== undefined) updates.address = address;
+    if (auctionDate !== undefined) updates.auctionDate = auctionDate || null;
+    if (acquisitionStage !== undefined) updates.acquisitionStage = acquisitionStage || 'sin_proceso';
+    if (isFeatured !== undefined) updates.isFeatured = isFeatured;
+    if (internalNotes !== undefined) updates.internalNotes = internalNotes || null;
+    if (code !== undefined) updates.code = nullIfEmpty(code);
+    if (req.body.slug) updates.slug = req.body.slug;
+
+    await property.update(updates);
+
+    if (status && status !== previousStatus) {
+      PropertyStatusHistory.create({
+        propertyId: property.id,
+        changeType: 'status',
+        fromStatus: previousStatus,
+        toStatus: status,
+        userName: req.user?.name || null,
+      }).catch((e) => console.error('Error registrando historial de estatus:', e));
+
+      // AUDIT-005: createProperty ya notificaba a suscriptores con alertas coincidentes,
+      // pero updateProperty nunca lo hacía — una propiedad reactivada vía edición no
+      // disparaba ningún email/WhatsApp. Ahora ambos comparten alertService.
+      if (status === 'disponible' && previousStatus !== 'disponible') {
+        alertService.notifyAndSend(property);
+      }
+    }
+
+    const newPrice = nullIfEmpty(price);
+    const prevPrice = previousPrice !== null && previousPrice !== undefined ? parseFloat(previousPrice) : null;
+    const nextPrice = newPrice !== null && newPrice !== undefined ? parseFloat(newPrice) : null;
+    if (price !== undefined && prevPrice !== nextPrice) {
+      PropertyStatusHistory.create({
+        propertyId: property.id,
+        changeType: 'price',
+        fromPrice: prevPrice,
+        toPrice: nextPrice,
+        userName: req.user?.name || null,
+      }).catch((e) => console.error('Error registrando historial de precio:', e));
+    }
+
+    logAudit(req, 'update', 'property', property.id, { title: property.title });
 
     return res.json({
       message: 'Propiedad actualizada exitosamente',
@@ -231,6 +348,7 @@ const deleteProperty = async (req, res) => {
       }
     }
 
+    logAudit(req, 'delete', 'property', property.id, { title: property.title });
     await property.destroy();
 
     return res.json({ message: 'Propiedad eliminada exitosamente' });
@@ -248,6 +366,12 @@ const uploadImages = async (req, res) => {
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No se enviaron imágenes' });
+    }
+
+    // AUDIT-008: multer ya filtró por extensión/mimetype declarado (falsificable); esto
+    // verifica los bytes reales del archivo antes de subirlo a Cloudinary.
+    if (req.files.some((file) => !isValidImageBuffer(file.buffer))) {
+      return res.status(400).json({ error: 'Uno o más archivos no son imágenes válidas (JPG, PNG o WEBP)' });
     }
 
     const existingImages = await Image.count({ where: { propertyId: property.id } });
@@ -342,12 +466,34 @@ const setCoverImage = async (req, res) => {
   }
 };
 
+// PUT /api/properties/:id/images/reorder — recibe { imageIds: [id1, id2, ...] } en el orden deseado
+const reorderImages = async (req, res) => {
+  try {
+    const { imageIds } = req.body;
+    if (!Array.isArray(imageIds) || imageIds.length === 0) {
+      return res.status(400).json({ error: 'imageIds debe ser un arreglo no vacío' });
+    }
+
+    const images = await Image.findAll({ where: { propertyId: req.params.id } });
+    if (images.length !== imageIds.length || !images.every((img) => imageIds.includes(img.id))) {
+      return res.status(400).json({ error: 'El listado de imágenes no coincide con la propiedad' });
+    }
+
+    await Promise.all(imageIds.map((imgId, index) => Image.update({ order: index }, { where: { id: imgId, propertyId: req.params.id } })));
+
+    return res.json({ message: 'Orden de imágenes actualizado' });
+  } catch (error) {
+    console.error('Error en reorderImages:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 // GET /api/properties/promoted
 const getPromotedProperty = async (req, res) => {
   try {
     const property = await Property.findOne({
       where: { isPromoted: true },
-      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+      include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
     });
     return res.json({ data: property || null });
   } catch (error) {
@@ -358,22 +504,78 @@ const getPromotedProperty = async (req, res) => {
 
 // PUT /api/properties/:id/promote
 const promoteProperty = async (req, res) => {
+  // AUDIT-004: las dos operaciones (quitar promoción anterior + activar la nueva) deben
+  // ser atómicas — sin transacción, dos admins promoviendo propiedades distintas casi al
+  // mismo tiempo pueden terminar con 0 o 2 propiedades isPromoted:true.
+  const transaction = await sequelize.transaction();
   try {
-    const property = await Property.findByPk(req.params.id);
-    if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+    const property = await Property.findByPk(req.params.id, { transaction });
+    if (!property) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Propiedad no encontrada' });
+    }
 
     if (property.isPromoted) {
-      await property.update({ isPromoted: false });
+      await property.update({ isPromoted: false }, { transaction });
+      await transaction.commit();
       return res.json({ message: 'Propiedad quitada de promoción', data: property });
     }
 
     // Quitar la promoción a cualquier otra propiedad y activar esta
-    await Property.update({ isPromoted: false }, { where: { isPromoted: true } });
-    await property.update({ isPromoted: true });
+    await Property.update({ isPromoted: false }, { where: { isPromoted: true }, transaction });
+    await property.update({ isPromoted: true }, { transaction });
 
+    await transaction.commit();
     return res.json({ message: 'Propiedad promocionada exitosamente', data: property });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error en promoteProperty:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// GET /api/properties/:id/status-history
+const getStatusHistory = async (req, res) => {
+  try {
+    const history = await PropertyStatusHistory.findAll({
+      where: { propertyId: req.params.id },
+      order: [['createdAt', 'DESC']],
+    });
+    return res.json({ data: history });
+  } catch (error) {
+    console.error('Error en getStatusHistory:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// GET /api/properties/:id/price-history (público — sin datos internos)
+const getPublicPriceHistory = async (req, res) => {
+  try {
+    const history = await PropertyStatusHistory.findAll({
+      where: { propertyId: req.params.id },
+      attributes: ['id', 'fromStatus', 'toStatus', 'changeType', 'fromPrice', 'toPrice', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+    });
+    return res.json({ data: history });
+  } catch (error) {
+    console.error('Error en getPublicPriceHistory:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// POST /api/properties/:id/share — registra evento de compartir
+const trackShare = async (req, res) => {
+  try {
+    await Analytics.create({
+      event: 'share',
+      propertyId: req.params.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      referrer: req.headers['referer'] || null,
+    });
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error en trackShare:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
@@ -388,6 +590,11 @@ module.exports = {
   uploadImages,
   deleteImage,
   setCoverImage,
+  reorderImages,
   getPromotedProperty,
   promoteProperty,
+  getStatusHistory,
+  getPublicPriceHistory,
+  trackShare,
+  getPropertyStats,
 };

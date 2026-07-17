@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Eye, Search, FileSpreadsheet, FileText, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,31 +9,24 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { formatPrice, formatDate } from '../../utils/formatters';
+import { CITY_LABELS } from '../../utils/constants';
 
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
 const statusColors = {
   disponible: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   apartado:   'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   vendido:    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
-const formatPrice = (price) => {
-  if (price === null || price === undefined || price === '') return 'PENDIENTE';
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
-};
-
-const formatDate = (date) => {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
-
 export default function AdminPropertiesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { token } = useAuthStore();
   const [search, setSearch]   = useState('');
   const [city, setCity]       = useState('');
-  const [status, setStatus]   = useState('');
+  // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Disponibles").
+  const [status, setStatus]   = useState(location.state?.status || '');
   const [page, setPage]       = useState(1);
   const [exporting, setExporting] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -72,6 +65,23 @@ export default function AdminPropertiesPage() {
     });
   };
 
+  // Marcar "vendido" es un cambio de negocio poco frecuente y difícil de deshacer por
+  // error (a diferencia de disponible ↔ apartado, que son ajustes rutinarios) — pide
+  // confirmación solo para esta transición.
+  const handleStatusChange = (property, newStatus) => {
+    if (newStatus === 'vendido' && property.status !== 'vendido') {
+      setConfirm({
+        title: `¿Marcar "${property.title}" como vendida?`,
+        message: 'Dejará de mostrarse como disponible en el sitio público.',
+        confirmLabel: 'Marcar como vendida',
+        danger: false,
+        onConfirm: () => { statusMutation.mutate({ id: property.id, status: newStatus }); setConfirm(null); },
+      });
+    } else {
+      statusMutation.mutate({ id: property.id, status: newStatus });
+    }
+  };
+
   const handleExport = async (format) => {
     try {
       setExporting(format);
@@ -81,7 +91,11 @@ export default function AdminPropertiesPage() {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/export/${format}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        let msg = 'No se pudo generar el archivo. Intenta de nuevo.';
+        try { const body = await res.json(); if (body?.error) msg = body.error; } catch { /* respuesta no era JSON */ }
+        throw new Error(msg);
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -90,7 +104,9 @@ export default function AdminPropertiesPage() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success(`Exportado a ${format === 'excel' ? 'Excel' : 'PDF'}`);
-    } catch { toast.error('Error al exportar'); }
+    } catch (err) {
+      toast.error(err.message || 'Error al exportar. Verifica tu conexión e intenta de nuevo.');
+    }
     finally { setExporting(null); }
   };
 
@@ -103,17 +119,19 @@ export default function AdminPropertiesPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Propiedades</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{data?.pagination?.total ?? 0} en total</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <motion.button whileHover={buttonHover} whileTap={buttonTap}
-            onClick={() => handleExport('excel')} disabled={exporting === 'excel'}
-            className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50">
-            <FileSpreadsheet size={14} /> {exporting === 'excel' ? 'Generando...' : 'Excel'}
-          </motion.button>
-          <motion.button whileHover={buttonHover} whileTap={buttonTap}
-            onClick={() => handleExport('pdf')} disabled={exporting === 'pdf'}
-            className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50">
-            <FileText size={14} /> {exporting === 'pdf' ? 'Generando...' : 'PDF'}
-          </motion.button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-2 mr-2">
+            <motion.button whileHover={buttonHover} whileTap={buttonTap}
+              onClick={() => handleExport('excel')} disabled={exporting === 'excel'}
+              className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50">
+              <FileSpreadsheet size={14} /> {exporting === 'excel' ? 'Generando...' : 'Excel'}
+            </motion.button>
+            <motion.button whileHover={buttonHover} whileTap={buttonTap}
+              onClick={() => handleExport('pdf')} disabled={exporting === 'pdf'}
+              className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50">
+              <FileText size={14} /> {exporting === 'pdf' ? 'Generando...' : 'PDF'}
+            </motion.button>
+          </div>
           <motion.button whileHover={buttonHover} whileTap={buttonTap}
             onClick={() => navigate('/admin/propiedades/nueva')}
             className="flex items-center gap-1.5 bg-blue-900 dark:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-blue-700 transition-colors">
@@ -150,7 +168,7 @@ export default function AdminPropertiesPage() {
             <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 dark:bg-[#1a1f2e] border-b border-gray-100 dark:border-[#2e3650]">
                 <tr>
-                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Fecha alta', 'Última modif.', 'Promo', 'Acciones'].map((h) => (
+                  {['Propiedad', 'Ciudad', 'Precio', 'Estatus', 'Visitas', 'Actualizado', 'Destacada', 'Acciones'].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -168,10 +186,12 @@ export default function AdminPropertiesPage() {
                       className="hover:bg-gray-50 dark:hover:bg-[#2e3650]/40 transition-colors">
                       <td className="px-4 py-3 max-w-xs">
                         <p className="font-medium text-gray-800 dark:text-gray-100 truncate">{property.title}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">{property.type}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+                          {property.type}{property.code ? ` · ${property.code}` : ''}
+                        </p>
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                        {cityLabel[property.city]}
+                        {CITY_LABELS[property.city]}
                       </td>
                       <td className="px-4 py-3 font-semibold whitespace-nowrap"
                         style={{ color: property.price ? undefined : '#f59e0b' }}
@@ -180,7 +200,7 @@ export default function AdminPropertiesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <select value={property.status}
-                          onChange={(e) => statusMutation.mutate({ id: property.id, status: e.target.value })}
+                          onChange={(e) => handleStatusChange(property, e.target.value)}
                           className={`text-xs border-0 rounded-lg px-2 py-1 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 ${statusColors[property.status]}`}>
                           <option value="disponible">Disponible</option>
                           <option value="apartado">Apartado</option>
@@ -190,10 +210,8 @@ export default function AdminPropertiesPage() {
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
                         {property.views ?? 0}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
-                        {formatDate(property.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs"
+                        title={`Alta: ${formatDate(property.createdAt)}`}>
                         {formatDate(property.updatedAt)}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -232,7 +250,24 @@ export default function AdminPropertiesPage() {
             {data?.data?.length === 0 && (
               <motion.div variants={fadeIn} initial="hidden" animate="visible"
                 className="text-center py-16 text-gray-400 dark:text-gray-500">
-                No se encontraron propiedades
+                {search || city || status ? (
+                  <>
+                    <p>Ningún resultado coincide con los filtros actuales.</p>
+                    <button type="button"
+                      onClick={() => { setSearch(''); setCity(''); setStatus(''); setPage(1); }}
+                      className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">
+                      Quitar filtros
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p>Todavía no hay propiedades cargadas.</p>
+                    <button type="button" onClick={() => navigate('/admin/propiedades/nueva')}
+                      className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">
+                      Crear la primera propiedad
+                    </button>
+                  </>
+                )}
               </motion.div>
             )}
           </div>
@@ -255,7 +290,8 @@ export default function AdminPropertiesPage() {
         open={!!confirm}
         title={confirm?.title}
         message={confirm?.message}
-        confirmLabel="Eliminar"
+        confirmLabel={confirm?.confirmLabel || 'Eliminar'}
+        danger={confirm?.danger ?? true}
         onConfirm={confirm?.onConfirm}
         onCancel={() => setConfirm(null)}
       />

@@ -6,17 +6,15 @@ import toast from 'react-hot-toast';
 import { getUsers, createUser, updateUser, deactivateUser, activateUser, permanentDeleteUser } from '../../services/usersService';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import OverflowMenu from '../../components/ui/OverflowMenu';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { formatDate } from '../../utils/formatters';
+import { buildImageUrl } from '../../utils/images';
 
 const roleColors = {
   admin:  'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   editor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-};
-
-const formatDate = (date) => {
-  if (!date) return 'Nunca';
-  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'editor', currentPassword: '', newPassword: '' };
@@ -46,7 +44,7 @@ function PasswordInput({ value, onChange, placeholder, required, showPass, onTog
 }
 
 export default function UsersPage() {
-  const { user: currentUser, updateUser: updateAuthUser } = useAuthStore();
+  const { user: currentUser, updateUser: updateAuthUser, setToken } = useAuthStore();
   const queryClient = useQueryClient();
   const [modal, setModal] = useState(null); // null | 'create' | { user }
   const [confirm, setConfirm] = useState(null);
@@ -72,7 +70,12 @@ export default function UsersPage() {
     onSuccess: (res) => {
       toast.success('Usuario actualizado');
       queryClient.invalidateQueries(['users']);
-      if (res.data?.id === currentUser?.id) updateAuthUser(res.data);
+      if (res.data?.id === currentUser?.id) {
+        updateAuthUser(res.data);
+        // Cambiar la propia contraseña/rol invalida el token anterior (tokenVersion) —
+        // el backend reemite uno nuevo para no cerrar la sesión, hay que guardarlo.
+        if (res.token) setToken(res.token);
+      }
       closeModal();
     },
     onError: (err) => toast.error(err?.response?.data?.error || 'Error al actualizar'),
@@ -148,7 +151,18 @@ export default function UsersPage() {
     setConfirm({
       title: `¿Eliminar a "${u.name}"?`,
       message: 'Esta acción no se puede deshacer. El usuario será eliminado permanentemente.',
+      confirmLabel: 'Eliminar',
       onConfirm: () => { deleteMutation.mutate(u.id); setConfirm(null); },
+    });
+  };
+
+  const confirmDeactivate = (u) => {
+    setConfirm({
+      title: `¿Desactivar a "${u.name}"?`,
+      message: 'No podrá iniciar sesión hasta que alguien lo reactive, pero sus datos, leads atendidos y bitácora se conservan intactos. A diferencia de "Eliminar", esta acción se puede revertir.',
+      confirmLabel: 'Desactivar',
+      danger: false,
+      onConfirm: () => { deactivateMutation.mutate(u.id); setConfirm(null); },
     });
   };
 
@@ -194,30 +208,26 @@ export default function UsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {u.profilePhoto ? (
-                          <img src={u.profilePhoto} alt={u.name}
+                          <img src={buildImageUrl(u.profilePhoto, 80)} alt={u.name}
                             className="w-9 h-9 rounded-full object-cover ring-2 ring-gray-100 dark:ring-[#2e3650]" />
                         ) : (
                           <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm font-bold">
                             {u.name?.[0]?.toUpperCase()}
                           </div>
                         )}
-                        <div>
-                          <p className="font-medium text-gray-800 dark:text-gray-100">{u.name}</p>
-                          <div className="flex items-center gap-1">
-                            {u.id === currentUser?.id && <span className="text-xs text-blue-500">Tú</span>}
-                            {u.id === masterAdminId && <span className="text-xs text-yellow-500">Principal</span>}
-                          </div>
-                        </div>
+                        <p className="font-medium text-gray-800 dark:text-gray-100">{u.name}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{u.email}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${roleColors[u.role]}`}>
-                        {u.role === 'admin' ? <><ShieldCheck size={11} /> Admin</> : 'Editor'}
+                        {u.role === 'admin' && <ShieldCheck size={11} />}
+                        {u.role === 'admin' ? 'Admin' : 'Editor'}
+                        {u.id === currentUser?.id ? ' · Tú' : u.id === masterAdminId ? ' · Principal' : ''}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
-                      {formatDate(u.lastLogin)}
+                      {formatDate(u.lastLogin, 'Nunca')}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ${
@@ -237,34 +247,17 @@ export default function UsersPage() {
                           <Pencil size={16} />
                         </motion.button>
 
-                        {canModify(u) && (
-                          u.isActive ? (
-                            <motion.button onClick={() => deactivateMutation.mutate(u.id)}
-                              whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
-                              disabled={deactivateMutation.isPending}
-                              className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors disabled:opacity-50"
-                              title="Desactivar">
-                              <UserX size={16} />
-                            </motion.button>
-                          ) : (
-                            <motion.button onClick={() => activateMutation.mutate(u.id)}
-                              whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
-                              disabled={activateMutation.isPending}
-                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors disabled:opacity-50"
-                              title="Activar">
-                              <UserCheck size={16} />
-                            </motion.button>
-                          )
-                        )}
-
-                        {canDelete(u) && (
-                          <motion.button onClick={() => confirmDelete(u)}
-                            whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
-                            disabled={deleteMutation.isPending}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
-                            title="Eliminar permanentemente">
-                            <Trash2 size={16} />
-                          </motion.button>
+                        {(canModify(u) || canDelete(u)) && (
+                          <OverflowMenu items={[
+                            ...(canModify(u) ? [
+                              u.isActive
+                                ? { label: 'Desactivar', icon: <UserX size={14} />, onClick: () => confirmDeactivate(u) }
+                                : { label: 'Activar', icon: <UserCheck size={14} />, onClick: () => activateMutation.mutate(u.id) },
+                            ] : []),
+                            ...(canDelete(u) ? [
+                              { label: 'Eliminar', icon: <Trash2 size={14} />, danger: true, onClick: () => confirmDelete(u) },
+                            ] : []),
+                          ]} />
                         )}
                       </div>
                     </td>
@@ -280,7 +273,8 @@ export default function UsersPage() {
         open={!!confirm}
         title={confirm?.title}
         message={confirm?.message}
-        confirmLabel="Eliminar"
+        confirmLabel={confirm?.confirmLabel || 'Eliminar'}
+        danger={confirm?.danger ?? true}
         onConfirm={confirm?.onConfirm}
         onCancel={() => setConfirm(null)}
       />

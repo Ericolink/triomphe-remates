@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Share2, Copy, Check } from 'lucide-react';
+import { trackShare } from '../../services/propertyService';
 
 const FacebookIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -14,15 +15,21 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
-export default function ShareButton({ title, url }) {
+export default function ShareButton({ title, subtitle, url, propertyId }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const fullUrl = `${import.meta.env.VITE_SITE_URL || window.location.origin}${url}`;
+  const shareText = subtitle ? `${title} — ${subtitle}` : title;
+
+  const notifyShare = () => {
+    if (propertyId) trackShare(propertyId).catch(() => {});
+  };
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(fullUrl);
     setCopied(true);
+    notifyShare();
     setTimeout(() => { setCopied(false); setOpen(false); }, 2000);
   };
 
@@ -31,13 +38,13 @@ export default function ShareButton({ title, url }) {
       label: 'WhatsApp',
       icon: <WhatsAppIcon />,
       color: 'hover:bg-green-50 hover:text-green-600',
-      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(`${title} — ${fullUrl}`)}`, '_blank'),
+      action: () => { notifyShare(); window.open(`https://wa.me/?text=${encodeURIComponent(`${shareText}\n${fullUrl}`)}`, '_blank'); },
     },
     {
       label: 'Facebook',
       icon: <FacebookIcon />,
       color: 'hover:bg-blue-50 hover:text-blue-600',
-      action: () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fullUrl)}`, '_blank'),
+      action: () => { notifyShare(); window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fullUrl)}`, '_blank'); },
     },
     {
       label: copied ? '¡Copiado!' : 'Copiar enlace',

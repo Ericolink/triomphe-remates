@@ -1,5 +1,6 @@
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { WHATSAPP_NUMBER } from '../../utils/constants';
 
 const FacebookIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -25,7 +26,7 @@ export default function Footer() {
   const socialLinks = [
     { icon: <FacebookIcon />, href: 'https://www.facebook.com/TriomphePagOficial', label: 'Facebook' },
     { icon: <InstagramIcon />, href: 'https://www.instagram.com/triomphejrz', label: 'Instagram' },
-    { icon: <WhatsAppIcon />, href: 'https://wa.me/526565792750', label: 'WhatsApp' },
+    { icon: <WhatsAppIcon />, href: `https://wa.me/${WHATSAPP_NUMBER}`, label: 'WhatsApp' },
   ];
 
   return (
@@ -54,6 +55,8 @@ export default function Footer() {
               { to: '/propiedades', label: 'Propiedades' },
               { to: '/nosotros', label: 'Sobre Nosotros' },
               { to: '/contacto', label: 'Contacto' },
+              { to: '/preguntas-frecuentes', label: 'Preguntas Frecuentes' },
+              { to: '/buzon', label: 'Buzón de opiniones' },
             ].map(({ to, label }) => (
               <li key={to}>
                 <Link to={to} className="hover:text-yellow-400 transition-colors">{label}</Link>

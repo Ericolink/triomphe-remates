@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Users, Briefcase, Star } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Plus, Pencil, Trash2, Users, Briefcase, Star, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { getAllPositions, createPosition, updatePosition, deletePosition } from '../../services/jobService';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import OverflowMenu from '../../components/ui/OverflowMenu';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { CITY_LABELS } from '../../utils/constants';
 
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro', todas: 'Todas' };
+// 'todas' es propio del dominio de vacantes (no existe en CITY_LABELS, que es para propiedades)
+const cityLabel = { ...CITY_LABELS, todas: 'Todas' };
 const typeLabel = { tiempo_completo: 'Tiempo completo', medio_tiempo: 'Medio tiempo', por_comision: 'Por comisión' };
+const statusLabel = { activa: 'Activa', cerrada: 'Cerrada', pausada: 'Pausada' };
 const statusColors = {
   activa: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   cerrada: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
@@ -77,7 +81,7 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
             className={textareaClass} />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Beneficios</label>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Beneficios (opcional)</label>
           <textarea value={form.benefits} rows={2} placeholder="Lista los beneficios..."
             onChange={(e) => setForm((f) => ({ ...f, benefits: e.target.value }))}
             className={textareaClass} />
@@ -100,8 +104,7 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
 
 export default function JobsAdminPage() {
   const queryClient = useQueryClient();
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState(null);
+  const [modal, setModal] = useState(null); // null | 'create' | position
   const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading } = useQuery({
@@ -111,13 +114,13 @@ export default function JobsAdminPage() {
 
   const createMutation = useMutation({
     mutationFn: createPosition,
-    onSuccess: () => { toast.success('Vacante creada'); queryClient.invalidateQueries(['admin-jobs']); setCreating(false); },
+    onSuccess: () => { toast.success('Vacante creada'); queryClient.invalidateQueries(['admin-jobs']); setModal(null); },
     onError: () => toast.error('Error al crear'),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => updatePosition(id, data),
-    onSuccess: () => { toast.success('Vacante actualizada'); queryClient.invalidateQueries(['admin-jobs']); setEditing(null); },
+    onSuccess: () => { toast.success('Vacante actualizada'); queryClient.invalidateQueries(['admin-jobs']); setModal(null); },
     onError: () => toast.error('Error al actualizar'),
   });
 
@@ -126,6 +129,8 @@ export default function JobsAdminPage() {
     onSuccess: () => { toast.success('Vacante eliminada'); queryClient.invalidateQueries(['admin-jobs']); },
     onError: () => toast.error('Error al eliminar'),
   });
+
+  const isEditing = modal && modal !== 'create';
 
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
@@ -136,77 +141,46 @@ export default function JobsAdminPage() {
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{data?.data?.length ?? 0} vacantes en total</p>
         </div>
         <motion.button whileHover={buttonHover} whileTap={buttonTap}
-          onClick={() => { setCreating(true); setEditing(null); }}
+          onClick={() => setModal('create')}
           className="flex items-center gap-2 bg-blue-900 dark:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
           <Plus size={16} /> Nueva vacante
         </motion.button>
       </motion.div>
-
-      {/* Formulario de creación */}
-      {creating && (
-        <motion.div variants={fadeInUp} initial="hidden" animate="visible"
-          className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-blue-200 dark:border-blue-800 mb-6">
-          <h2 className="font-bold text-blue-900 dark:text-white mb-4">Nueva vacante</h2>
-          <PositionForm
-            onSave={(form) => createMutation.mutate(form)}
-            onCancel={() => setCreating(false)}
-            isPending={createMutation.isPending}
-          />
-        </motion.div>
-      )}
 
       {/* Lista de vacantes */}
       {isLoading ? <Spinner size="lg" className="py-16" /> : (
         <motion.div className="space-y-4" variants={staggerContainer} initial="hidden" animate="visible">
           {data?.data?.map((position) => (
             <motion.div key={position.id} variants={fadeInUp}
-              className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] overflow-hidden">
-              {editing?.id === position.id ? (
-                <div className="p-6">
-                  <h2 className="font-bold text-blue-900 dark:text-white mb-4">Editar vacante</h2>
-                  <PositionForm
-                    initial={editing}
-                    onSave={(form) => updateMutation.mutate({ id: position.id, data: form })}
-                    onCancel={() => setEditing(null)}
-                    isPending={updateMutation.isPending}
-                  />
-                </div>
-              ) : (
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        {position.isUrgent && (
-                          <span className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
-                            <Star size={10} /> Urgente
-                          </span>
-                        )}
-                        <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${statusColors[position.status]}`}>
-                          {position.status}
-                        </span>
-                      </div>
-                      <h3 className="font-bold text-gray-800 dark:text-gray-100">{position.title}</h3>
-                      <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        <span className="flex items-center gap-1"><Briefcase size={11} /> {typeLabel[position.type]}</span>
-                        <span className="flex items-center gap-1"><Users size={11} /> {position.applications?.length ?? 0} postulaciones</span>
-                        <span>{cityLabel[position.city]}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                        onClick={() => { setEditing(position); setCreating(false); }}
-                        className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors">
-                        <Pencil size={20} />
-                      </motion.button>
-                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                        onClick={() => setConfirm({ title: `¿Eliminar "${position.title}"?`, message: 'La vacante y sus postulaciones asociadas serán eliminadas permanentemente.', onConfirm: () => { deleteMutation.mutate(position.id); setConfirm(null); } })}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                        <Trash2 size={20} />
-                      </motion.button>
-                    </div>
+              className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                      position.isUrgent ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : statusColors[position.status]
+                    }`}>
+                      {position.isUrgent && <Star size={10} />}
+                      {position.isUrgent ? `Urgente · ${statusLabel[position.status]}` : statusLabel[position.status]}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-gray-800 dark:text-gray-100">{position.title}</h3>
+                  <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <span className="flex items-center gap-1"><Briefcase size={11} /> {typeLabel[position.type]}</span>
+                    <span className="flex items-center gap-1"><Users size={11} /> {position.applications?.length ?? 0} postulaciones</span>
+                    <span>{cityLabel[position.city]}</span>
                   </div>
                 </div>
-              )}
+                <div className="flex items-center gap-1">
+                  <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                    onClick={() => setModal(position)}
+                    className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors">
+                    <Pencil size={20} />
+                  </motion.button>
+                  <OverflowMenu items={[
+                    { label: 'Eliminar', icon: <Trash2 size={14} />, danger: true, onClick: () => setConfirm({ title: `¿Eliminar "${position.title}"?`, message: 'La vacante y sus postulaciones asociadas serán eliminadas permanentemente.', onConfirm: () => { deleteMutation.mutate(position.id); setConfirm(null); } }) },
+                  ]} />
+                </div>
+              </div>
             </motion.div>
           ))}
           {data?.data?.length === 0 && (
@@ -225,6 +199,39 @@ export default function JobsAdminPage() {
         onConfirm={confirm?.onConfirm}
         onCancel={() => setConfirm(null)}
       />
+
+      <AnimatePresence>
+        {modal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.2 }}
+              className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-[#2e3650]">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+                  {isEditing ? 'Editar vacante' : 'Nueva vacante'}
+                </h2>
+                <button onClick={() => setModal(null)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2e3650] transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-6">
+                <PositionForm
+                  initial={isEditing ? modal : undefined}
+                  onSave={(form) => isEditing ? updateMutation.mutate({ id: modal.id, data: form }) : createMutation.mutate(form)}
+                  onCancel={() => setModal(null)}
+                  isPending={createMutation.isPending || updateMutation.isPending}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

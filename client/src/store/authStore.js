@@ -11,6 +11,13 @@ const useAuthStore = create((set) => ({
     set({ user, token, isAuthenticated: true });
   },
 
+  // Reemplaza solo el token (ej. tras un cambio de password/rol propio que invalida
+  // el anterior vía tokenVersion) sin tocar los datos de usuario ya guardados.
+  setToken: (token) => {
+    localStorage.setItem('token', token);
+    set({ token });
+  },
+
   updateUser: (updatedFields) => set((state) => {
     const user = { ...state.user, ...updatedFields };
     localStorage.setItem('user', JSON.stringify(user));

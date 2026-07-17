@@ -1,111 +1,22 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
-const path = require('path');
-const fs = require('fs');
-const { Property, Image } = require('../models/index');
+const { Property, Image, Feedback, Lead } = require('../models/index');
+const { CITY_LABEL: cityLabel, PROPERTY_TYPE_LABEL: typeLabel, STATUS_LABEL: statusLabel } = require('../utils/labels');
 
-const cityLabel   = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
-const typeLabel   = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', local: 'Local', bodega: 'Bodega' };
-const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
-
-const PRIMARY   = '#1a3a5c';
-const ACCENT    = '#c8a96e';
-const BG_ALT    = '#f0f4f8';
-const TEXT      = '#374151';
-const ST_GREEN  = '#10b981';
-const ST_YELLOW = '#f59e0b';
-const ST_RED    = '#ef4444';
-
-const PRIMARY_ARGB   = 'FF1a3a5c';
-const ACCENT_ARGB    = 'FFc8a96e';
-const BG_ALT_ARGB    = 'FFf0f4f8';
-const WHITE_ARGB     = 'FFFFFFFF';
-const TEXT_ARGB      = 'FF374151';
-const ST_GREEN_ARGB  = 'FF10b981';
-const ST_YELLOW_ARGB = 'FFf59e0b';
-const ST_RED_ARGB    = 'FFef4444';
-
-const statusArgb = { disponible: ST_GREEN_ARGB, apartado: ST_YELLOW_ARGB, vendido: ST_RED_ARGB };
-const statusHex  = { disponible: ST_GREEN,      apartado: ST_YELLOW,      vendido: ST_RED      };
-
-const formatPrice = (price) => {
-  if (price === null || price === undefined || price === '') return 'PENDIENTE';
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
-};
-
-const formatDate = (date) => {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
-
-const dash = (val) => (val !== null && val !== undefined && val !== '') ? String(val) : '—';
-
-const getLogoPath = () => {
-  const candidates = [
-    path.join(__dirname, '../../../client/public/logo.png'),
-    path.join(__dirname, '../../client/public/logo.png'),
-    path.join(__dirname, '../client/public/logo.png'),
-    path.join(__dirname, '../../public/logo.png'),
-  ];
-  return candidates.find((p) => fs.existsSync(p)) || null;
-};
-
-// Logo blanco (brightness-0 invert) para fondos oscuros
-const getWhiteLogoBuffer = async (logoPath) => {
-  try {
-    const { Jimp: JimpClass } = require('jimp');
-    const img = await JimpClass.read(logoPath);
-    for (let y = 0; y < img.height; y++) {
-      for (let x = 0; x < img.width; x++) {
-        const idx = (img.width * y + x) * 4;
-        if (img.bitmap.data[idx + 3] > 10) {
-          img.bitmap.data[idx]     = 255;
-          img.bitmap.data[idx + 1] = 255;
-          img.bitmap.data[idx + 2] = 255;
-        }
-      }
-    }
-    return await img.getBuffer('image/png');
-  } catch (e) {
-    console.error('Jimp error:', e.message);
-    return null;
-  }
-};
-
-const getFilteredProperties = async (query) => {
-  const { city, type, status } = query;
-  const where = {};
-  if (city)   where.city   = city;
-  if (type)   where.type   = type;
-  if (status) where.status = status;
-
-  return Property.findAll({
-    where,
-    order: [['city', 'ASC'], ['createdAt', 'DESC']],
-    attributes: [
-      'id', 'title', 'city', 'type', 'status', 'price',
-      'squareMeters', 'terrainMeters', 'constructionMeters',
-      'bedrooms', 'bathrooms', 'address',
-      'views', 'createdAt', 'updatedAt',
-    ],
-    include: [{
-      model: Image,
-      as: 'images',
-      attributes: ['url', 'isCover'],
-      separate: true,
-      order: [['isCover', 'DESC'], ['createdAt', 'ASC']],
-      limit: 1,
-    }],
-  });
-};
-
-const getFirstImagePath = (property) => {
-  const img = property.images?.[0];
-  if (!img) return null;
-  const base = path.join(__dirname, '../../../');
-  const p = path.join(base, img.url);
-  return fs.existsSync(p) ? p : null;
-};
+// AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
+// ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
+// exports que antes, sin convertirlo en Router).
+const {
+  PRIMARY, ACCENT, BG_ALT, TEXT,
+  PRIMARY_ARGB, ACCENT_ARGB, BG_ALT_ARGB, WHITE_ARGB, TEXT_ARGB, ST_GREEN_ARGB, ST_YELLOW_ARGB,
+  statusArgb, statusHex,
+  COMPANY_PHONE, COMPANY_WHATSAPP, COMPANY_EMAIL,
+} = require('../services/exportBranding');
+const {
+  formatPrice, formatDate, dash,
+  getLogoPath, getWhiteLogoBuffer, getFilteredProperties, getFirstImagePath, getImageBuffer,
+  stripUnsupported,
+} = require('../services/exportHelpers');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCEL
@@ -388,4 +299,430 @@ const exportPDF = async (req, res) => {
   }
 };
 
-module.exports = { exportExcel, exportPDF };
+// ─────────────────────────────────────────────────────────────────────────────
+// EXCEL — Buzón de feedback
+// ─────────────────────────────────────────────────────────────────────────────
+const categoryLabel = { queja: 'Queja', comentario: 'Comentario', sugerencia: 'Sugerencia' };
+const feedbackStatusLabel = { nuevo: 'Nuevo', leido: 'Leído', archivado: 'Archivado' };
+
+const exportFeedbackExcel = async (req, res) => {
+  try {
+    const { status, category } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (category) where.category = category;
+
+    const items = await Feedback.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+    });
+
+    const generatedAt = new Date().toLocaleDateString('es-MX', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Triomphe Bienes Raíces';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Buzón', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+
+    const headers = [
+      { header: '#',          key: 'num',       width: 5  },
+      { header: 'Categoría',  key: 'category',  width: 13 },
+      { header: 'Nombre',     key: 'name',      width: 22 },
+      { header: 'Email',      key: 'email',     width: 28 },
+      { header: 'Asunto',     key: 'subject',   width: 36 },
+      { header: 'Mensaje',    key: 'message',   width: 50 },
+      { header: 'Estatus',    key: 'status',    width: 12 },
+      { header: 'Notas',      key: 'notes',     width: 30 },
+      { header: 'Fecha',      key: 'createdAt', width: 16 },
+    ];
+    sheet.columns = headers;
+
+    const LAST_COL = String.fromCharCode(64 + headers.length);
+
+    // Fila 1: header azul con título
+    sheet.mergeCells(`A1:${LAST_COL}1`);
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = '                                         TRIOMPHE BIENES RAÍCES — Buzón de Opiniones';
+    titleCell.font  = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+    titleCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(1).height = 42;
+
+    const logoPath = getLogoPath();
+    if (logoPath) {
+      try {
+        const whiteBuf = await getWhiteLogoBuffer(logoPath);
+        if (whiteBuf) {
+          const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
+          sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
+        }
+      } catch { /* ignorado */ }
+    }
+
+    // Fila 2: subtítulo
+    sheet.mergeCells(`A2:${LAST_COL}2`);
+    const subCell = sheet.getCell('A2');
+    subCell.value = `Generado el ${generatedAt}   ·   Total: ${items.length} mensajes`;
+    subCell.font  = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+    subCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(2).height = 18;
+
+    // Fila 3: encabezados
+    const headerRow = sheet.getRow(3);
+    headerRow.values = headers.map((h) => h.header);
+    headerRow.height = 22;
+    headerRow.eachCell((cell) => {
+      cell.font      = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border    = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+    });
+
+    const categoryArgb = { queja: 'FFEF4444', comentario: 'FF3B82F6', sugerencia: 'FF10B981' };
+    const statusArgbFeedback = { nuevo: 'FF3B82F6', leido: ST_YELLOW_ARGB, archivado: 'FF9CA3AF' };
+
+    items.forEach((item, i) => {
+      const isAlt = i % 2 === 0;
+      const row = sheet.addRow({
+        num:       i + 1,
+        category:  categoryLabel[item.category] || item.category,
+        name:      dash(item.name),
+        email:     dash(item.email),
+        subject:   dash(item.subject),
+        message:   item.message ? item.message.slice(0, 200) : '—',
+        status:    feedbackStatusLabel[item.status] || item.status,
+        notes:     dash(item.notes),
+        createdAt: formatDate(item.createdAt),
+      });
+
+      row.height = 18;
+      row.eachCell((cell) => {
+        cell.font      = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.alignment = { vertical: 'middle', wrapText: false };
+        cell.border    = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+      });
+
+      row.getCell(2).font = { bold: true, size: 9, color: { argb: categoryArgb[item.category] || TEXT_ARGB } };
+      row.getCell(7).font = { bold: true, size: 9, color: { argb: statusArgbFeedback[item.status] || TEXT_ARGB } };
+    });
+
+    // Fila total
+    const totalRow = sheet.addRow({ num: '', name: `TOTAL: ${items.length} mensajes` });
+    totalRow.height = 20;
+    totalRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
+    });
+    totalRow.getCell(3).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=triomphe-buzon-${Date.now()}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error en exportFeedbackExcel:', error);
+    res.status(500).json({ error: 'Error al generar Excel del buzón' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXCEL — Leads
+// ─────────────────────────────────────────────────────────────────────────────
+const leadTypeLabel   = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
+const leadStatusLabel = { nuevo: 'Nuevo', contactado: 'Contactado', cerrado: 'Cerrado', descartado: 'Descartado' };
+const leadStatusArgb  = { nuevo: 'FF3B82F6', contactado: ST_YELLOW_ARGB, cerrado: ST_GREEN_ARGB, descartado: 'FF9CA3AF' };
+const paymentMethodLabel = { credito_hipotecario: 'Crédito hipotecario', contado: 'Contado' };
+
+const exportLeadsExcel = async (req, res) => {
+  try {
+    const { status, type } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (type)   where.type   = type;
+
+    const leads = await Lead.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      include: [{ model: Property, as: 'property', attributes: ['title'] }],
+    });
+
+    const generatedAt = new Date().toLocaleDateString('es-MX', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Triomphe Bienes Raíces';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Leads', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+
+    const headers = [
+      { header: '#',               key: 'num',             width: 5  },
+      { header: 'Nombre',          key: 'name',            width: 22 },
+      { header: 'Email',           key: 'email',           width: 28 },
+      { header: 'Teléfono',        key: 'phone',           width: 16 },
+      { header: 'Propiedad',       key: 'property',        width: 30 },
+      { header: 'Tipo',            key: 'type',            width: 13 },
+      { header: 'Estatus',         key: 'status',          width: 13 },
+      { header: 'Forma de pago',   key: 'paymentMethod',   width: 18 },
+      { header: 'Monto disponible', key: 'budgetAmount',   width: 18 },
+      { header: 'Primer contacto', key: 'firstContactDate', width: 16 },
+      { header: 'Fecha de cita',   key: 'appointmentDate', width: 16 },
+      { header: 'Mensaje',         key: 'message',         width: 40 },
+      { header: 'Notas',           key: 'notes',           width: 30 },
+      { header: 'Fecha',           key: 'createdAt',       width: 16 },
+    ];
+    sheet.columns = headers;
+
+    const LAST_COL = String.fromCharCode(64 + headers.length);
+
+    // Fila 1: header azul con título
+    sheet.mergeCells(`A1:${LAST_COL}1`);
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = '                                         TRIOMPHE BIENES RAÍCES — Leads';
+    titleCell.font  = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+    titleCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    sheet.getRow(1).height = 42;
+
+    const logoPath = getLogoPath();
+    if (logoPath) {
+      try {
+        const whiteBuf = await getWhiteLogoBuffer(logoPath);
+        if (whiteBuf) {
+          const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
+          sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
+        }
+      } catch { /* ignorado */ }
+    }
+
+    // Fila 2: subtítulo
+    sheet.mergeCells(`A2:${LAST_COL}2`);
+    const subCell = sheet.getCell('A2');
+    subCell.value = `Generado el ${generatedAt}   ·   Total: ${leads.length} leads`;
+    subCell.font  = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+    subCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(2).height = 18;
+
+    // Fila 3: encabezados
+    const headerRow = sheet.getRow(3);
+    headerRow.values = headers.map((h) => h.header);
+    headerRow.height = 22;
+    headerRow.eachCell((cell) => {
+      cell.font      = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border    = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+    });
+
+    leads.forEach((lead, i) => {
+      const isAlt = i % 2 === 0;
+      const row = sheet.addRow({
+        num:             i + 1,
+        name:            dash(lead.name),
+        email:           dash(lead.email),
+        phone:           dash(lead.phone),
+        property:        dash(lead.property?.title),
+        type:            leadTypeLabel[lead.type]     || lead.type,
+        status:          leadStatusLabel[lead.status] || lead.status,
+        paymentMethod:   lead.paymentMethod ? (paymentMethodLabel[lead.paymentMethod] || lead.paymentMethod) : '—',
+        budgetAmount:    lead.budgetNotSpecified ? 'No especificó' : (lead.budgetAmount != null ? formatPrice(lead.budgetAmount) : '—'),
+        firstContactDate: lead.firstContactDate ? formatDate(lead.firstContactDate) : '—',
+        appointmentDate: lead.appointmentDate ? formatDate(lead.appointmentDate) : '—',
+        message:         lead.message ? lead.message.slice(0, 200) : '—',
+        notes:           dash(lead.notes),
+        createdAt:       formatDate(lead.createdAt),
+      });
+
+      row.height = 18;
+      row.eachCell((cell) => {
+        cell.font      = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.alignment = { vertical: 'middle', wrapText: false };
+        cell.border    = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+      });
+
+      row.getCell(7).font = { bold: true, size: 9, color: { argb: leadStatusArgb[lead.status] || TEXT_ARGB } };
+    });
+
+    // Fila total
+    const totalRow = sheet.addRow({ num: '', name: `TOTAL: ${leads.length} leads` });
+    totalRow.height = 20;
+    totalRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
+    });
+    totalRow.getCell(2).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=triomphe-leads-${Date.now()}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error en exportLeadsExcel:', error);
+    res.status(500).json({ error: 'Error al generar Excel de leads' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PDF — Cotización / ficha de propiedad
+// ─────────────────────────────────────────────────────────────────────────────
+const exportPropertyQuotePDF = async (req, res) => {
+  try {
+    const property = await Property.findByPk(req.params.id, {
+      attributes: { exclude: ['internalNotes'] },
+      include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
+    });
+    if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+
+    const generatedAt = new Date().toLocaleDateString('es-MX', {
+      day: '2-digit', month: 'long', year: 'numeric',
+    });
+
+    const doc = new PDFDocument({ margin: 0, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=ficha-${property.slug || property.id}-${Date.now()}.pdf`);
+    doc.pipe(res);
+
+    const PW = doc.page.width;
+    const MX = 40;
+
+    // Encabezado
+    doc.rect(0, 0, PW, 88).fill(PRIMARY);
+    const logoPath = getLogoPath();
+    if (logoPath) {
+      try {
+        const whiteBuf = await getWhiteLogoBuffer(logoPath);
+        if (whiteBuf) doc.image(whiteBuf, MX, 22, { height: 44 });
+      } catch { /* ignorado */ }
+    }
+    doc.fillColor(ACCENT).fontSize(10).font('Helvetica-Bold')
+      .text('FICHA DE PROPIEDAD EN REMATE', PW - 240, 38, { width: 200, align: 'right' });
+    doc.fillColor('white').fontSize(8).font('Helvetica')
+      .text(`Generado el ${generatedAt}`, PW - 240, 54, { width: 200, align: 'right' });
+
+    // Imagen principal
+    let y = 88;
+    const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
+    const coverUrl = coverImage?.url;
+    const imgBuf = await getImageBuffer(coverUrl);
+    const IMG_H = 240;
+    if (imgBuf) {
+      try {
+        // doc.image con `cover` solo calcula el escalado, no recorta — hay que
+        // limitar el área dibujable o la imagen se desborda sobre el contenido siguiente
+        doc.save();
+        doc.rect(0, y, PW, IMG_H).clip();
+        doc.image(imgBuf, 0, y, { width: PW, height: IMG_H, cover: [PW, IMG_H], align: 'center', valign: 'center' });
+        doc.restore();
+      } catch { /* ignorado */ }
+    } else {
+      doc.rect(0, y, PW, IMG_H).fill(BG_ALT);
+      doc.fillColor('#9ca3af').fontSize(11).font('Helvetica')
+        .text('Sin imagen disponible', 0, y + IMG_H / 2 - 6, { width: PW, align: 'center' });
+    }
+    y += IMG_H + 24;
+
+    // Estatus + título + precio
+    doc.roundedRect(MX, y, 90, 22, 11).fill(statusHex[property.status] || PRIMARY);
+    doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
+      .text(statusLabel[property.status] || property.status, MX, y + 6, { width: 90, align: 'center' });
+
+    if (property.code) {
+      doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
+        .text(stripUnsupported(property.code), MX + 100, y + 6, { width: PW - MX * 2 - 100, align: 'right' });
+    }
+
+    const cleanTitle = stripUnsupported(property.title);
+    doc.fillColor(PRIMARY).fontSize(20).font('Helvetica-Bold')
+      .text(cleanTitle, MX, y + 34, { width: PW - MX * 2 });
+
+    const titleHeight = doc.heightOfString(cleanTitle, { width: PW - MX * 2, fontSize: 20 });
+    y += 34 + titleHeight + 10;
+
+    doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
+      .text(`${cityLabel[property.city] || property.city}  ·  ${typeLabel[property.type] || property.type}${property.address ? `  ·  ${stripUnsupported(property.address)}` : ''}`,
+        MX, y, { width: PW - MX * 2 });
+    y += 22;
+
+    doc.fillColor(ACCENT).fontSize(26).font('Helvetica-Bold')
+      .text(formatPrice(property.price), MX, y);
+    y += 44;
+
+    // Características
+    const features = [
+      property.terrainMeters      ? `${property.terrainMeters} m² de terreno`      : null,
+      property.constructionMeters ? `${property.constructionMeters} m² de construcción` : null,
+      (!property.terrainMeters && !property.constructionMeters && property.squareMeters) ? `${property.squareMeters} m²` : null,
+      property.bedrooms  ? `${property.bedrooms} recámaras` : null,
+      property.bathrooms ? `${property.bathrooms} baños`    : null,
+    ].filter(Boolean);
+
+    if (features.length) {
+      doc.moveTo(MX, y).lineTo(PW - MX, y).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      y += 16;
+      let fx = MX;
+      features.forEach((f) => {
+        const w = doc.widthOfString(f, { fontSize: 10 }) + 28;
+        doc.roundedRect(fx, y, w, 24, 12).fill(BG_ALT);
+        doc.fillColor(TEXT).fontSize(10).font('Helvetica')
+          .text(f, fx + 14, y + 7);
+        fx += w + 10;
+        if (fx > PW - MX - 100) { fx = MX; y += 32; }
+      });
+      y += 40;
+    }
+
+    // Descripción
+    const FOOTER_H = 86;
+    if (property.description) {
+      const cleanDesc = stripUnsupported(property.description);
+      const descW = PW - MX * 2;
+      doc.moveTo(MX, y).lineTo(PW - MX, y).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      y += 16;
+      doc.fillColor(PRIMARY).fontSize(12).font('Helvetica-Bold').text('Descripción', MX, y);
+      y += 18;
+
+      // Set the body font before measuring — heightOfString uses the current doc font
+      doc.font('Helvetica').fontSize(10);
+      const descH = doc.heightOfString(cleanDesc, { width: descW, lineGap: 2 });
+      if (y + descH + FOOTER_H + 12 > doc.page.height) {
+        doc.addPage({ size: 'A4', margin: 0 });
+        doc.rect(0, 0, PW, 32).fill(PRIMARY);
+        doc.fillColor('white').fontSize(7.5).font('Helvetica')
+          .text(cleanTitle, MX, 10, { width: PW - MX * 2, align: 'center' });
+        y = 48;
+      }
+
+      doc.fillColor(TEXT).fontSize(10).font('Helvetica')
+        .text(cleanDesc, MX, y, { width: descW, align: 'justify', lineGap: 2 });
+    }
+
+    // Pie de página — contacto
+    doc.rect(0, doc.page.height - FOOTER_H, PW, FOOTER_H).fill(PRIMARY);
+    doc.fillColor(ACCENT).fontSize(11).font('Helvetica-Bold')
+      .text('¿Te interesa esta propiedad? Contáctanos:', MX, doc.page.height - FOOTER_H + 16);
+    doc.fillColor('white').fontSize(9.5).font('Helvetica')
+      .text(`Tel / WhatsApp: ${COMPANY_PHONE}`, MX, doc.page.height - FOOTER_H + 38)
+      .text(`Email: ${COMPANY_EMAIL}`, MX, doc.page.height - FOOTER_H + 54)
+      .text(`https://wa.me/${COMPANY_WHATSAPP}`, MX, doc.page.height - FOOTER_H + 70);
+    doc.fillColor(ACCENT).fontSize(7).font('Helvetica')
+      .text('© Triomphe Bienes Raíces — Documento informativo. Precio e información sujetos a cambios sin previo aviso.',
+        MX, doc.page.height - 16, { width: PW - MX * 2, align: 'right' });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error en exportPropertyQuotePDF:', error);
+    res.status(500).json({ error: 'Error al generar la cotización' });
+  }
+};
+
+module.exports = { exportExcel, exportPDF, exportFeedbackExcel, exportLeadsExcel, exportPropertyQuotePDF };

@@ -1,25 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { SlidersHorizontal, X, Bell, ChevronDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
-import Spinner from '../../components/ui/Spinner';
+import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkeleton';
 import SEO from '../../components/ui/SEO';
+import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
+import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, labelsToOptions } from '../../utils/constants';
 
-const CITIES = [{ value: '', label: 'Todas las ciudades' }, { value: 'juarez', label: 'Cd. Juárez' }, { value: 'chihuahua', label: 'Chihuahua' }, { value: 'queretaro', label: 'Querétaro' }];
-const TYPES = [{ value: '', label: 'Todos los tipos' }, { value: 'casa', label: 'Casa' }, { value: 'departamento', label: 'Departamento' }, { value: 'terreno', label: 'Terreno' }, { value: 'local', label: 'Local' }, { value: 'bodega', label: 'Bodega' }];
-const STATUS = [{ value: '', label: 'Todos los estatus' }, { value: 'disponible', label: 'Disponible' }, { value: 'apartado', label: 'Apartado' }];
+const CITIES = [{ value: '', label: 'Todas las ciudades' }, ...labelsToOptions(CITY_LABELS, ['otra'])];
+const TYPES = [{ value: '', label: 'Todos los tipos' }, ...labelsToOptions(TYPE_LABELS)];
+const STATUS = [{ value: '', label: 'Todos los estatus' }, ...labelsToOptions(STATUS_LABELS, ['vendido'])];
+const BEDROOMS = [{ value: '', label: 'Cualquier cantidad' }, { value: '1', label: '1+ recámara' }, { value: '2', label: '2+ recámaras' }, { value: '3', label: '3+ recámaras' }, { value: '4', label: '4+ recámaras' }];
+const BATHROOMS = [{ value: '', label: 'Cualquier cantidad' }, { value: '1', label: '1+ baño' }, { value: '2', label: '2+ baños' }, { value: '3', label: '3+ baños' }];
 
 export default function PropertiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
-  const [page, setPage] = useState(1);
+  const [showAlertForm, setShowAlertForm] = useState(false);
   const [localFilters, setLocalFilters] = useState({
     city: '', type: '', status: '', maxPrice: '', search: '',
+    minBedrooms: '', minBathrooms: '',
+    minTerrainM2: '', maxTerrainM2: '', minConstructionM2: '', maxConstructionM2: '',
   });
+  const sentinelRef = useRef(null);
 
   const filters = {
     city: searchParams.get('city') || localFilters.city,
@@ -27,18 +34,41 @@ export default function PropertiesPage() {
     status: localFilters.status,
     maxPrice: localFilters.maxPrice,
     search: searchParams.get('search') || localFilters.search,
-    page,
+    minBedrooms: localFilters.minBedrooms,
+    minBathrooms: localFilters.minBathrooms,
+    minTerrainM2: localFilters.minTerrainM2,
+    maxTerrainM2: localFilters.maxTerrainM2,
+    minConstructionM2: localFilters.minConstructionM2,
+    maxConstructionM2: localFilters.maxConstructionM2,
   };
 
-  const { data, isLoading } = useQuery({
+  const {
+    data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['properties', filters],
-    queryFn: () => getProperties({ ...filters, limit: 12 }),
-    keepPreviousData: true,
+    queryFn: ({ pageParam }) => getProperties({ ...filters, page: pageParam, limit: 12 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.pagination;
+      return page < totalPages ? page + 1 : undefined;
+    },
   });
+
+  const properties = data?.pages?.flatMap((p) => p.data) ?? [];
+  const total = data?.pages?.[0]?.pagination?.total ?? 0;
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return undefined;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    }, { rootMargin: '400px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const setFilter = (key, value) => {
     setLocalFilters((f) => ({ ...f, [key]: value }));
-    setPage(1);
     if (searchParams.has(key)) {
       const next = new URLSearchParams(searchParams);
       next.delete(key);
@@ -47,12 +77,17 @@ export default function PropertiesPage() {
   };
 
   const clearFilters = () => {
-    setLocalFilters({ city: '', type: '', status: '', maxPrice: '', search: '' });
+    setLocalFilters({
+      city: '', type: '', status: '', maxPrice: '', search: '',
+      minBedrooms: '', minBathrooms: '',
+      minTerrainM2: '', maxTerrainM2: '', minConstructionM2: '', maxConstructionM2: '',
+    });
     setSearchParams({});
-    setPage(1);
   };
 
-  const hasFilters = filters.city || filters.type || filters.status || filters.maxPrice || filters.search;
+  const hasFilters = filters.city || filters.type || filters.status || filters.maxPrice || filters.search
+    || filters.minBedrooms || filters.minBathrooms
+    || filters.minTerrainM2 || filters.maxTerrainM2 || filters.minConstructionM2 || filters.maxConstructionM2;
 
   return (
     <motion.div
@@ -66,7 +101,7 @@ export default function PropertiesPage() {
       <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
         <h1 className="text-3xl font-bold text-blue-900 dark:text-white">Propiedades en Remate</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          {data?.pagination?.total ?? '...'} propiedades disponibles
+          {total || '...'} propiedades disponibles
           {filters.search && <span className="ml-2 text-blue-600 font-medium">· Buscando: &quot;{filters.search}&quot;</span>}
         </p>
       </motion.div>
@@ -136,15 +171,77 @@ export default function PropertiesPage() {
                   className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
                 {filters.maxPrice && <p className="text-xs text-blue-600 mt-1">$ {Number(filters.maxPrice).toLocaleString('es-MX')} MXN</p>}
               </div>
+              {[
+                { key: 'minBedrooms', options: BEDROOMS, label: 'Recámaras' },
+                { key: 'minBathrooms', options: BATHROOMS, label: 'Baños' },
+              ].map(({ key, options, label }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+                  <select value={filters[key]} onChange={(e) => setFilter(key, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white">
+                    {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Terreno m² mín.</label>
+                <input type="number" placeholder="Ej: 80" min="0"
+                  value={filters.minTerrainM2}
+                  onChange={(e) => setFilter('minTerrainM2', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Terreno m² máx.</label>
+                <input type="number" placeholder="Ej: 300" min="0"
+                  value={filters.maxTerrainM2}
+                  onChange={(e) => setFilter('maxTerrainM2', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Construcción m² mín.</label>
+                <input type="number" placeholder="Ej: 80" min="0"
+                  value={filters.minConstructionM2}
+                  onChange={(e) => setFilter('minConstructionM2', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Construcción m² máx.</label>
+                <input type="number" placeholder="Ej: 300" min="0"
+                  value={filters.maxConstructionM2}
+                  onChange={(e) => setFilter('maxConstructionM2', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500" />
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Alertas por email */}
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-6">
+        <button onClick={() => setShowAlertForm((v) => !v)}
+          className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400 font-medium hover:underline">
+          <Bell size={15} /> Recibir alerta cuando llegue una propiedad
+          <ChevronDown size={14} className={`transition-transform ${showAlertForm ? 'rotate-180' : ''}`} />
+        </button>
+        <AnimatePresence>
+          {showAlertForm && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }} className="overflow-hidden mt-4">
+              <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 shadow-sm max-w-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Te notificaremos por email cuando publiquemos una propiedad que coincida con tu búsqueda.
+                </p>
+                <AlertSubscriptionForm />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
       {/* Grid */}
       {isLoading ? (
-        <Spinner size="lg" className="py-20" />
-      ) : data?.data?.length === 0 ? (
+        <PropertyCardSkeletonGrid count={6} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" />
+      ) : properties.length === 0 ? (
         <motion.div variants={fadeIn} initial="hidden" animate="visible" className="text-center py-20 text-gray-400">
           <p className="text-xl font-medium">No se encontraron propiedades</p>
           <p className="text-sm mt-2">Intenta con otros filtros</p>
@@ -161,28 +258,26 @@ export default function PropertiesPage() {
             initial="hidden"
             animate="visible"
           >
-            {data?.data?.map((property) => (
+            {properties.map((property) => (
               <motion.div key={property.id} variants={fadeInUp}>
                 <PropertyCard property={property} />
               </motion.div>
             ))}
           </motion.div>
 
-          {data?.pagination?.totalPages > 1 && (
-            <motion.div
-              variants={fadeIn} initial="hidden" animate="visible"
-              className="flex justify-center gap-2 mt-10"
-            >
-              {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((p) => (
-                <motion.button key={p} onClick={() => setPage(p)}
-                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
-                  className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                    page === p ? 'bg-blue-900 text-white' : 'bg-gray-100 dark:bg-[#242938] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#2e3650]'
-                  }`}>
-                  {p}
-                </motion.button>
-              ))}
+          {/* Disparador de scroll infinito */}
+          <div ref={sentinelRef} className="h-1" />
+
+          {isFetchingNextPage && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center items-center gap-2 mt-10 text-gray-400 text-sm">
+              <Loader2 size={18} className="animate-spin" /> Cargando más propiedades…
             </motion.div>
+          )}
+
+          {!hasNextPage && properties.length > 0 && (
+            <p className="text-center text-gray-400 dark:text-gray-500 text-sm mt-10">
+              Has llegado al final · {properties.length} de {total} propiedades
+            </p>
           )}
         </>
       )}

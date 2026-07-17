@@ -1,25 +1,59 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, LogOut, Menu, Briefcase, UserCheck, ShieldCheck, MessageSquare, Bell, ClipboardList, MessageSquareQuote } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
+import { buildImageUrl } from '../../utils/images';
 import toast from 'react-hot-toast';
 
-const baseLinks = [
-  { to: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-  { to: '/admin/propiedades', icon: <Building2 size={18} />, label: 'Propiedades' },
-  { to: '/admin/leads', icon: <Users size={18} />, label: 'Leads' },
-  { to: '/admin/vacantes', icon: <Briefcase size={18} />, label: 'Vacantes' },
-  { to: '/admin/postulaciones', icon: <UserCheck size={18} />, label: 'Postulaciones' },
+// Agrupado por tema (en vez de una lista plana de 11 ítems) para que la ubicación de
+// cada sección sea predecible sin tener que leer cada label — ver auditoría UX admin.
+const navGroups = [
+  {
+    label: null,
+    links: [
+      { to: '/admin/dashboard',     icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+    ],
+  },
+  {
+    label: 'Propiedades',
+    links: [{ to: '/admin/propiedades', icon: <Building2 size={18} />, label: 'Propiedades' }],
+  },
+  {
+    label: 'CRM Comercial',
+    links: [{ to: '/admin/crm', icon: <Users size={18} />, label: 'CRM Comercial' }],
+  },
+  {
+    label: 'Comunicación',
+    links: [
+      { to: '/admin/buzon',   icon: <MessageSquare size={18} />, label: 'Buzón de opiniones' },
+      { to: '/admin/alertas', icon: <Bell size={18} />,          label: 'Alertas de propiedad' },
+    ],
+  },
+  {
+    label: 'Reclutamiento',
+    links: [
+      { to: '/admin/vacantes',      icon: <Briefcase size={18} />, label: 'Vacantes' },
+      { to: '/admin/postulaciones', icon: <UserCheck size={18} />, label: 'Postulaciones' },
+    ],
+  },
+  {
+    label: 'Contenido',
+    links: [{ to: '/admin/testimonios', icon: <MessageSquareQuote size={18} />, label: 'Testimonios' }],
+  },
 ];
 
-const adminLinks = [
-  { to: '/admin/usuarios', icon: <ShieldCheck size={18} />, label: 'Usuarios' },
-];
+const adminOnlyGroup = {
+  label: 'Sistema',
+  links: [
+    { to: '/admin/usuarios',  icon: <ShieldCheck size={18} />,   label: 'Usuarios' },
+    { to: '/admin/auditoria', icon: <ClipboardList size={18} />, label: 'Auditoría' },
+  ],
+};
 
 function Sidebar({ user, onClose, onLogout }) {
-  const links = [...baseLinks, ...(user?.role === 'admin' ? adminLinks : [])];
+  const groups = [...navGroups, ...(user?.role === 'admin' ? [adminOnlyGroup] : [])];
   return (
     <div className="flex flex-col h-full bg-blue-900 text-white w-64">
       <div className="p-6 border-b border-blue-800">
@@ -28,16 +62,27 @@ function Sidebar({ user, onClose, onLogout }) {
         </a>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
-        {links.map(({ to, icon, label }) => (
-          <NavLink key={to} to={to} onClick={onClose}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                isActive ? 'bg-yellow-400 text-blue-900' : 'text-blue-200 hover:bg-blue-800 hover:text-white'
-              }`
-            }>
-            {icon} {label}
-          </NavLink>
+      <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
+        {groups.map((group, gi) => (
+          <div key={gi}>
+            {group.label && (
+              <p className="px-4 mb-1 text-[11px] font-semibold uppercase tracking-wider text-blue-300/70">
+                {group.label}
+              </p>
+            )}
+            <div className="space-y-1">
+              {group.links.map(({ to, icon, label }) => (
+                <NavLink key={to} to={to} onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                      isActive ? 'bg-yellow-400 text-blue-900' : 'text-blue-200 hover:bg-blue-800 hover:text-white'
+                    }`
+                  }>
+                  {icon} {label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
@@ -95,7 +140,7 @@ export default function AdminLayout() {
             <NotificationBell />
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
               {user?.profilePhoto ? (
-                <img src={user.profilePhoto} alt={user.name}
+                <img src={buildImageUrl(user.profilePhoto, 80)} alt={user.name}
                   className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900/40" />
               ) : (
                 <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center text-white text-xs font-bold">

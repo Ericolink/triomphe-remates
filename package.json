@@ -1,8 +1,11 @@
 {
   "name": "triomphe-remates",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node server/server.js",
-    "build": "cd client && npm install --include=dev && npm run build && cp -r dist ../server/client && cd ../server && npm install --omit=dev"
+    "build": "cd client && npm install --include=dev && npm run build && rm -rf ../server/client && mkdir -p ../server/client && cp -r dist/. ../server/client && cd ../server && npm install --omit=dev"
   }
 }

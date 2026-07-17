@@ -14,7 +14,6 @@ const User = sequelize.define('User', {
   email: {
     type: DataTypes.STRING(150),
     allowNull: false,
-    unique: true,
     validate: { isEmail: true },
   },
   password: {
@@ -38,9 +37,20 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  tokenVersion: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'Se incrementa al cambiar password/rol/desactivar — invalida JWT ya emitidos',
+  },
 }, {
   tableName: 'users',
   timestamps: true,
+  // Índice único con nombre fijo — ver migración fix-duplicate-unique-indexes y el mismo
+  // comentario en Property.js (mismo bug de Sequelize+MySQL con unique:true inline).
+  indexes: [
+    { unique: true, fields: ['email'], name: 'users_email_unique' },
+  ],
 });
 
 module.exports = User;

@@ -2,25 +2,13 @@ import { Link } from 'react-router-dom';
 import { MapPin, Maximize2, Bed, Bath, Star, ArrowRight, Building } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Badge from './Badge';
-
-const cityLabel = { juarez: 'Cd. Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
-const statusVariant = { disponible: 'success', apartado: 'warning', vendido: 'danger' };
-const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
-
-const buildUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${import.meta.env.VITE_API_URL?.replace('/api', '')}${url}`;
-};
+import { buildImageUrl } from '../../utils/images';
+import { formatPrice } from '../../utils/formatters';
+import { CITY_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
 
 export default function PromotedPropertyBanner({ property }) {
   const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
-  const imageUrl = buildUrl(coverImage?.url);
-
-  const formatPrice = (price) => {
-    if (price === null || price === undefined || price === '') return 'PENDIENTE';
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
-  };
+  const imageUrl = buildImageUrl(coverImage?.url, 800);
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-10">
@@ -60,11 +48,11 @@ export default function PromotedPropertyBanner({ property }) {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
             <div className="absolute top-4 left-4 flex gap-2">
-              <Badge variant={statusVariant[property.status]}>{statusLabel[property.status]}</Badge>
+              <Badge variant={STATUS_VARIANTS[property.status]}>{STATUS_LABELS[property.status]}</Badge>
             </div>
             <div className="absolute bottom-4 left-4 flex items-center gap-1 text-white text-sm font-medium bg-black/50 rounded-lg px-3 py-1 backdrop-blur-sm">
               <MapPin size={14} />
-              {cityLabel[property.city]}
+              {CITY_LABELS[property.city]}
             </div>
           </div>
 

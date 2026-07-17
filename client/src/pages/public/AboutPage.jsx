@@ -1,8 +1,10 @@
 import { Shield, Users, Building2, TrendingDown, Award, MapPin, CheckCircle, Handshake, CalendarDays, Info, Search, Tag, FileSignature, Banknote, PenLine, Scale, ScrollText, Home } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import SEO from '../../components/ui/SEO';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { fadeInUp, fadeInLeft, fadeInRight, staggerContainer } from '../../utils/animations';
+import { getPropertyStats } from '../../services/propertyService';
 
 const processSteps = [
   { step: 1,  icon: Handshake,     title: 'Primera información',       desc: 'El asesor contacta al cliente, explica qué es un remate bancario, sus ventajas, riesgos y el proceso. Se agenda una cita y se informan los requisitos: INE y monto requerido.' },
@@ -24,6 +26,11 @@ const values = [
 ];
 
 export default function AboutPage() {
+  const { data: stats } = useQuery({
+    queryKey: ['property-stats'],
+    queryFn: getPropertyStats,
+  });
+
   return (
     <div>
       <SEO
@@ -71,7 +78,7 @@ export default function AboutPage() {
           <motion.div className="grid grid-cols-2 gap-4"
             variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
             {[
-              { icon: <Building2 size={28} className="text-yellow-500" />, value: '146+', label: 'Propiedades en inventario' },
+              { icon: <Building2 size={28} className="text-yellow-500" />, value: stats?.total ? `${stats.total}+` : '...', label: 'Propiedades en inventario' },
               { icon: <Users size={28} className="text-yellow-500" />, value: '500+', label: 'Clientes satisfechos' },
               { icon: <Award size={28} className="text-yellow-500" />, value: '27+', label: 'Años de experiencia' },
               { icon: <MapPin size={28} className="text-yellow-500" />, value: '3', label: 'Ciudades de operación' },
@@ -235,9 +242,9 @@ export default function AboutPage() {
           <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-6"
             variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }}>
             {[
-              { city: 'Ciudad Juárez', state: 'Chihuahua', properties: '71+', desc: 'La ciudad fronteriza más grande del norte con el mayor inventario de remates bancarios.' },
-              { city: 'Chihuahua', state: 'Chihuahua', properties: '65+', desc: 'Capital del estado con amplia oferta de casas y departamentos en remate a excelentes precios.' },
-              { city: 'Querétaro', state: 'Querétaro', properties: '10+', desc: 'Una de las ciudades con mayor crecimiento económico del país y oportunidades de inversión.' },
+              { city: 'Ciudad Juárez', state: 'Chihuahua', properties: stats?.byCity?.juarez ? `${stats.byCity.juarez}+` : '...', desc: 'La ciudad fronteriza más grande del norte con el mayor inventario de remates bancarios.' },
+              { city: 'Chihuahua', state: 'Chihuahua', properties: stats?.byCity?.chihuahua ? `${stats.byCity.chihuahua}+` : '...', desc: 'Capital del estado con amplia oferta de casas y departamentos en remate a excelentes precios.' },
+              { city: 'Querétaro', state: 'Querétaro', properties: stats?.byCity?.queretaro ? `${stats.byCity.queretaro}+` : '...', desc: 'Una de las ciudades con mayor crecimiento económico del país y oportunidades de inversión.' },
             ].map(({ city, state, properties, desc }) => (
               <motion.div key={city} variants={fadeInUp}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}

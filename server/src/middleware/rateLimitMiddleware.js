@@ -1,4 +1,18 @@
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
+
+// Limita intentos de suscripción por email (además del límite por IP) para evitar
+// que se use el formulario para enviar correos de confirmación en cadena a una misma dirección
+const alertSubscribeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 3,
+  message: { error: 'Demasiados intentos de suscripción con este email. Intenta de nuevo en 1 hora.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req, res) => {
+    const email = (req.body?.email || '').trim().toLowerCase();
+    return email || ipKeyGenerator(req, res);
+  },
+});
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
@@ -8,9 +22,14 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// AUDIT: 200/15min se agotaba con uso normal del panel admin — el Kanban de 8 columnas
+// hace 2 queries por columna solo al montar (leads-column + open-tasks-column), y cada
+// cambio de etapa/responsable las vuelve a pedir todas. Todas estas rutas ya están detrás
+// de authenticate/authorize (JWT), así que este límite es una segunda capa, no el control
+// de acceso principal — subirlo no abre una puerta nueva.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 500,
   message: { error: 'Demasiadas peticiones. Intenta de nuevo en 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -32,4 +51,4 @@ const exportLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { authLimiter, apiLimiter, uploadLimiter, exportLimiter };
+module.exports = { authLimiter, apiLimiter, uploadLimiter, exportLimiter, alertSubscribeLimiter };

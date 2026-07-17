@@ -1,26 +1,82 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 require('dotenv').config();
 
 const app = express();
 
+// AUDIT-003: IIS/httpPlatformHandler (SmarterASP.NET) actúa como proxy inverso — sin esto,
+// req.ip resuelve siempre a la IP interna del proxy, lo que inutiliza el rate limiting por IP
+// y falsea los logs de auditoría.
+app.set('trust proxy', 1);
+
+// Cabeceras de seguridad HTTP (helmet). El servidor sirve dos tipos de página muy distintos
+// bajo el mismo Express: la SPA de React (CSP estricta) y la documentación de Swagger en
+// /api/docs (necesita scripts/estilos inline para inicializar su propio bundle — sin esto
+// la página de docs queda en blanco). Por eso se aplican dos políticas CSP según la ruta.
+//
+// crossOriginEmbedderPolicy se deja explícitamente desactivado: todas las imágenes de
+// propiedades se sirven desde Cloudinary (res.cloudinary.com), que NO envía la cabecera
+// Cross-Origin-Resource-Policy (verificado contra su CDN). Si se activara COEP, todas las
+// fotos del sitio dejarían de cargar.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false, hsts: false }));
+
+const publicCsp = helmet.contentSecurityPolicy({
+  useDefaults: false,
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com'],
+    fontSrc: ["'self'", 'data:'],
+    connectSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"],
+    frameAncestors: ["'self'"],
+  },
+});
+
+// Swagger UI (swagger-ui-express) inyecta un <script> y <style> inline para arrancar su
+// bundle — no soporta nonces. Se acepta 'unsafe-inline' solo en esta ruta de documentación
+// (no es contenido producido por usuarios, es generado por la librería) en vez de relajar
+// la política para todo el sitio.
+const docsCsp = helmet.contentSecurityPolicy({
+  useDefaults: false,
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", 'data:'],
+    connectSrc: ["'self'"],
+  },
+});
+
+app.use((req, res, next) => (req.path.startsWith('/api/docs') ? docsCsp(req, res, next) : publicCsp(req, res, next)));
+
 // CORS primero — así las respuestas de rate limit también llevan los headers correctos
 // CLIENT_URLS acepta múltiples orígenes separados por coma
 const allowedOrigins = [
   ...(process.env.CLIENT_URLS ? process.env.CLIENT_URLS.split(',').map((u) => u.trim()) : []),
   process.env.CLIENT_URL,
-  'https://triomphedemo.netlify.app',
   'http://localhost:5173',
   'http://localhost:4173',
 ].filter(Boolean);
 
+// Vite incrementa el puerto (5174, 5175...) si 5173 ya está ocupado (ej. otra instancia
+// de `npm run dev` corriendo en paralelo) — fijar un solo puerto en la whitelist es frágil
+// en desarrollo. Solo aplica fuera de producción; en producción la whitelist explícita
+// (CLIENT_URL/CLIENT_URLS) sigue siendo la única fuente de verdad.
+const isDevLocalOrigin = (origin) =>
+  process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin) || isDevLocalOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error('No permitido por CORS'));
@@ -36,6 +92,20 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes, intenta más tarde.' },
+  // IIS/httpPlatformHandler envía IP:puerto en X-Forwarded-For — quitar el puerto. El
+  // regex viejo (`.replace(/:\d+$/, '')`) también mutilaba direcciones IPv6 crudas (ej.
+  // "::1" → ":", colapsando clientes IPv6 distintos a la misma key) — express-rate-limit
+  // ahora lo detecta en build/arranque (ERR_ERL_KEY_GEN_IPV6) porque el keyGenerator usa
+  // req.ip sin pasar por su helper de normalización. Solo se quita el puerto en los dos
+  // formatos reales que puede mandar el proxy (IPv4:puerto o [IPv6]:puerto); cualquier
+  // otra cosa se deja intacta y siempre se normaliza con ipKeyGenerator.
+  keyGenerator: (req) => {
+    const raw = req.ip || req.socket.remoteAddress || '';
+    const bracketedIpv6 = raw.match(/^\[(.+)\]:\d+$/);
+    const ipv4WithPort = raw.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+$/);
+    const ip = bracketedIpv6?.[1] || ipv4WithPort?.[1] || raw;
+    return ipKeyGenerator(ip);
+  },
 });
 app.use(limiter);
 
@@ -55,6 +125,15 @@ app.use('/api/jobs',       require('./src/routes/jobs'));
 app.use('/api/export',     require('./src/routes/export'));
 app.use('/api/analytics',  require('./src/routes/analytics'));
 app.use('/api/users',      require('./src/routes/users'));
+app.use('/api/feedback',   require('./src/routes/feedback'));
+app.use('/api/alerts',     require('./src/routes/alerts'));
+app.use('/api/audit',      require('./src/routes/audit'));
+app.use('/api/testimonials', require('./src/routes/testimonials'));
+app.use('/api/campaigns',    require('./src/routes/campaigns'));
+app.use('/api/appointments', require('./src/routes/appointments'));
+app.use('/api/tasks',        require('./src/routes/tasks'));
+app.use('/api/deals',        require('./src/routes/deals'));
+app.use('/api/crm',          require('./src/routes/crm'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -67,5 +146,9 @@ app.use(express.static(clientBuildPath));
 app.get('*path', (req, res) => {
   res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
+
+// AUDIT-014: middleware de error centralizado — debe ir al final. Disponible para
+// controllers nuevos vía next(error)/ApiError; los controllers existentes no se tocaron.
+app.use(require('./src/middleware/errorHandler').errorHandler);
 
 module.exports = app;

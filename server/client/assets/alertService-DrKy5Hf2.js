@@ -1,0 +1,1 @@
+import{t as e}from"./api-S5x6h2VW.js";var t=async t=>{let{data:n}=await e.post(`/alerts`,t);return n},n=async(t={})=>{let{data:n}=await e.get(`/alerts`,{params:t});return n},r=async t=>{let{data:n}=await e.delete(`/alerts/${t}`);return n},i=async t=>{let{data:n}=await e.get(`/alerts/unsubscribe`,{params:{token:t}});return n};export{i,n,t as r,r as t};
