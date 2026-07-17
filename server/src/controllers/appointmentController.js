@@ -64,6 +64,11 @@ const createAppointment = async (req, res) => {
     const lead = await Lead.findByPk(leadId);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
+    if (propertyId) {
+      const property = await Property.findByPk(propertyId);
+      if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+    }
+
     const appointment = await sequelize.transaction(async (transaction) => {
       const created = await Appointment.create({
         leadId, propertyId: propertyId || null, scheduledAt,

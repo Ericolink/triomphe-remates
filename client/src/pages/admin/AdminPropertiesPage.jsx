@@ -7,10 +7,11 @@ import toast from 'react-hot-toast';
 import { getProperties, deleteProperty, updateProperty, promoteProperty } from '../../services/propertyService';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
-import useAuthStore from '../../store/authStore';
+import api from '../../services/api';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatPrice, formatDate } from '../../utils/formatters';
 import { CITY_LABELS } from '../../utils/constants';
+import { downloadBlob } from '../../utils/download';
 
 const statusColors = {
   disponible: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -22,7 +23,6 @@ export default function AdminPropertiesPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { token } = useAuthStore();
   const [search, setSearch]   = useState('');
   const [city, setCity]       = useState('');
   // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Disponibles").
@@ -88,24 +88,18 @@ export default function AdminPropertiesPage() {
       const params = new URLSearchParams();
       if (city)   params.set('city', city);
       if (status) params.set('status', status);
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/export/${format}?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        let msg = 'No se pudo generar el archivo. Intenta de nuevo.';
-        try { const body = await res.json(); if (body?.error) msg = body.error; } catch { /* respuesta no era JSON */ }
-        throw new Error(msg);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `triomphe-inventario-${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const response = await api.get(`/export/${format}?${params.toString()}`, { responseType: 'blob' });
+      downloadBlob(response.data, `triomphe-inventario-${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`);
       toast.success(`Exportado a ${format === 'excel' ? 'Excel' : 'PDF'}`);
     } catch (err) {
-      toast.error(err.message || 'Error al exportar. Verifica tu conexión e intenta de nuevo.');
+      let msg = 'Error al exportar. Verifica tu conexión e intenta de nuevo.';
+      if (err.response?.data instanceof Blob) {
+        try {
+          const body = JSON.parse(await err.response.data.text());
+          if (body?.error) msg = body.error;
+        } catch { /* respuesta no era JSON */ }
+      }
+      toast.error(msg);
     }
     finally { setExporting(null); }
   };

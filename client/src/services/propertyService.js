@@ -1,4 +1,5 @@
 import api from './api';
+import { downloadBlob } from '../utils/download';
 
 export const getProperties = async (params = {}) => {
   const { data } = await api.get('/properties', { params });
@@ -117,10 +118,5 @@ export const deleteDocument = async (propertyId, docId) => {
 
 export const downloadPropertyQuotePDF = async (id, filename) => {
   const response = await api.get(`/export/property/${id}/pdf`, { responseType: 'blob' });
-  const url = window.URL.createObjectURL(new Blob([response.data]));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  window.URL.revokeObjectURL(url);
+  downloadBlob(response.data, filename);
 };

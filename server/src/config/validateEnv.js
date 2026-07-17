@@ -5,9 +5,16 @@
 // sequelize.authenticate() falla con un error genérico más difícil de diagnosticar.
 const REQUIRED = ['DB_HOST', 'DB_USER', 'DB_NAME', 'JWT_SECRET'];
 
-// Variables de features que ya degradan con gracia si faltan (emailService.verifyConnection,
-// whatsappService.isConfigured) — solo se advierte, no se bloquea el arranque.
-const RECOMMENDED = ['EMAIL_USER', 'EMAIL_PASS', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'];
+// Variables de features/comportamiento que ya degradan con gracia si faltan (emailService
+// .verifyConnection, whatsappService.isConfigured, CORS cayendo solo a los orígenes de
+// localhost, JWT sin expiración explícita) — solo se advierte, no se bloquea el arranque.
+const RECOMMENDED = [
+  'EMAIL_USER', 'EMAIL_PASS', 'EMAIL_TO',
+  'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
+  'CLIENT_URL',
+  'WHATSAPP_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID',
+  'JWT_EXPIRES_IN',
+];
 
 const validateEnvironment = () => {
   const missing = REQUIRED.filter((key) => !process.env[key]);

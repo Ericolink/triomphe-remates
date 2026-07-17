@@ -8,6 +8,8 @@ node_modules/
 # Builds
 dist/
 build/
+# Frontend compilado por el build raíz (npm run build lo regenera por completo en cada corrida)
+server/client/
 
 # Logs
 *.log

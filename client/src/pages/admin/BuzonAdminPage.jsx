@@ -11,6 +11,7 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
+import { downloadBlob } from '../../utils/download';
 import { FEEDBACK_CATEGORY_LABELS, FEEDBACK_CATEGORY_VARIANTS, FEEDBACK_CATEGORY_GRADIENT, FEEDBACK_STATUS_LABELS } from '../../utils/constants';
 
 const categoryIcon = {
@@ -96,12 +97,7 @@ export default function BuzonAdminPage() {
       if (statusFilter) params.append('status', statusFilter);
       if (categoryFilter) params.append('category', categoryFilter);
       const response = await api.get(`/export/feedback/excel?${params}`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `triomphe-buzon-${Date.now()}.xlsx`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response.data, `triomphe-buzon-${Date.now()}.xlsx`);
     } catch {
       toast.error('Error al exportar');
     }

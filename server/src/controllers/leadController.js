@@ -102,6 +102,16 @@ const createLead = async (req, res) => {
       if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
     }
 
+    if (campaignId) {
+      const campaign = await Campaign.findByPk(campaignId);
+      if (!campaign) return res.status(404).json({ error: 'Campaña no encontrada' });
+    }
+
+    if (assignedToUserId) {
+      const assignedUser = await User.findByPk(assignedToUserId);
+      if (!assignedUser) return res.status(404).json({ error: 'Usuario asignado no encontrado' });
+    }
+
     const lead = await sequelize.transaction(async (transaction) => {
       const created = await Lead.create({
         name: resolvedName, email: email || null, phone, message,
@@ -255,6 +265,16 @@ const updateLead = async (req, res) => {
 
     const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);
     if (commercialError) return res.status(400).json({ error: commercialError });
+
+    if (campaignId) {
+      const campaign = await Campaign.findByPk(campaignId);
+      if (!campaign) return res.status(404).json({ error: 'Campaña no encontrada' });
+    }
+
+    if (assignedToUserId) {
+      const assignedUser = await User.findByPk(assignedToUserId);
+      if (!assignedUser) return res.status(404).json({ error: 'Usuario asignado no encontrado' });
+    }
 
     const previousStage = lead.pipelineStage;
     const previousAssignee = lead.assignedToUserId;

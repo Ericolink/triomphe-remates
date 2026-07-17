@@ -109,6 +109,9 @@ const reassignTask = async (req, res) => {
     const { assignedToUserId } = req.body;
     if (!assignedToUserId) return res.status(400).json({ error: 'assignedToUserId requerido' });
 
+    const assignedUser = await User.findByPk(assignedToUserId);
+    if (!assignedUser) return res.status(404).json({ error: 'Usuario asignado no encontrado' });
+
     await sequelize.transaction(async (transaction) => {
       await task.update({ assignedToUserId }, { transaction });
       await logActivity({

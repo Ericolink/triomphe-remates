@@ -12,6 +12,7 @@ import { getTasks, completeTask } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
 import { getProperties } from '../../../services/propertyService';
 import useAuthStore from '../../../store/authStore';
+import { downloadBlob } from '../../../utils/download';
 import Badge from '../../ui/Badge';
 import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
@@ -679,12 +680,7 @@ export default function ProspectosSection() {
       const params = new URLSearchParams();
       if (stage) params.append('status', stage);
       const response = await api.get(`/export/leads/excel?${params}`, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `triomphe-prospectos-${Date.now()}.xlsx`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response.data, `triomphe-prospectos-${Date.now()}.xlsx`);
     } catch {
       toast.error('Error al exportar');
     }

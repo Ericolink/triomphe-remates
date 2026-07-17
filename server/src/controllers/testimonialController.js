@@ -1,4 +1,4 @@
-const { Testimonial } = require('../models/index');
+const { Testimonial, Property } = require('../models/index');
 const { cloudinary } = require('../config/cloudinary');
 const { logAudit } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
@@ -68,6 +68,11 @@ const createTestimonial = async (req, res) => {
       return res.status(400).json({ error: 'Nombre del cliente y texto del testimonio son requeridos' });
     }
 
+    if (propertyId) {
+      const property = await Property.findByPk(propertyId);
+      if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+    }
+
     const data = {
       clientName: clientName.trim(),
       clientRole: clientRole?.trim() || null,
@@ -107,6 +112,11 @@ const updateTestimonial = async (req, res) => {
     if (!testimonial) return res.status(404).json({ error: 'Testimonio no encontrado' });
 
     const { clientName, clientRole, clientCity, testimonialText, rating, status, order, propertyId } = req.body;
+
+    if (propertyId) {
+      const property = await Property.findByPk(propertyId);
+      if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+    }
 
     const updates = {};
     if (clientName !== undefined) updates.clientName = clientName.trim();
