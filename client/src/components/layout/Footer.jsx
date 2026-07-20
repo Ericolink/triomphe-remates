@@ -33,7 +33,7 @@ export default function Footer() {
     <footer className="bg-blue-900 text-white mt-20">
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="md:col-span-1">
-          <img src="/logo.png" alt="Triomphe Bienes Raíces" className="h-12 w-auto mb-4 brightness-0 invert" />
+          <img src="/logo.png" alt="Triomphe Bienes Raíces" loading="lazy" decoding="async" className="h-12 w-auto mb-4 brightness-0 invert" />
           <p className="text-gray-300 text-sm leading-relaxed">
             Especialistas en remates bancarios en Chihuahua, Ciudad Juárez y Querétaro.
           </p>

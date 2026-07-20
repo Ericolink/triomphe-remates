@@ -35,7 +35,7 @@ export default function ComparatorBar() {
                   <div key={p.id} className="relative flex-shrink-0">
                     <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-[#2e3650]">
                       {imgUrl
-                        ? <img src={imgUrl} alt={p.title} className="w-full h-full object-cover" />
+                        ? <img src={imgUrl} alt={p.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         : <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30" />}
                     </div>
                     <button onClick={() => toggle(p)}

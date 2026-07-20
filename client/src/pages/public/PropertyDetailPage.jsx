@@ -173,6 +173,8 @@ export default function PropertyDetailPage() {
                 <img
                   src={buildImageUrl(images[imgIndex]?.url, 1000)}
                   alt={`${property.title} - imagen ${imgIndex + 1}`}
+                  fetchPriority="high"
+                  decoding="async"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -207,7 +209,7 @@ export default function PropertyDetailPage() {
               {images.map((img, i) => (
                 <button key={img.id} onClick={() => setImgIndex(i)}
                   className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${i === imgIndex ? 'border-blue-600' : 'border-transparent hover:border-gray-300'}`}>
-                  <img src={buildImageUrl(img.url, 120)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  <img src={buildImageUrl(img.url, 120)} alt={`Miniatura ${i + 1} de ${property.title}`} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

@@ -241,13 +241,13 @@ export default function HomePage() {
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     {t.beforeImageUrl && (
                       <div className="relative">
-                        <img src={buildImageUrl(t.beforeImageUrl, 300)} alt="Antes" className="w-full h-32 object-cover rounded-xl" />
+                        <img src={buildImageUrl(t.beforeImageUrl, 300)} alt={`Antes - ${t.clientName}`} loading="lazy" decoding="async" className="w-full h-32 object-cover rounded-xl" />
                         <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">Antes</span>
                       </div>
                     )}
                     {t.afterImageUrl && (
                       <div className="relative">
-                        <img src={buildImageUrl(t.afterImageUrl, 300)} alt="Después" className="w-full h-32 object-cover rounded-xl" />
+                        <img src={buildImageUrl(t.afterImageUrl, 300)} alt={`Después - ${t.clientName}`} loading="lazy" decoding="async" className="w-full h-32 object-cover rounded-xl" />
                         <span className="absolute top-2 left-2 bg-yellow-500 text-blue-900 text-xs px-2 py-0.5 rounded-full font-medium">Después</span>
                       </div>
                     )}
