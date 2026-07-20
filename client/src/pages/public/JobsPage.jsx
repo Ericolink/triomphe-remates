@@ -8,11 +8,10 @@ import SEO from '../../components/ui/SEO';
 import Spinner from '../../components/ui/Spinner';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
-import { CITY_LABELS } from '../../utils/constants';
+import { CITY_LABELS, JOB_TYPE_LABELS } from '../../utils/constants';
 
 // 'todas' es propio del dominio de vacantes (no existe en CITY_LABELS, que es para propiedades)
 const cityLabel = { ...CITY_LABELS, todas: 'Todas las ciudades' };
-const typeLabel = { tiempo_completo: 'Tiempo completo', medio_tiempo: 'Medio tiempo', por_comision: 'Por comisión' };
 const typeColor = { tiempo_completo: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', medio_tiempo: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300', por_comision: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' };
 
 const emptyForm = { name: '', email: '', phone: '', city: 'juarez', experience: 'sin_experiencia', hasVehicle: false, motivation: '' };
@@ -135,7 +134,7 @@ function PositionCard({ position }) {
                   </span>
                 )}
                 <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${typeColor[position.type]}`}>
-                  {typeLabel[position.type]}
+                  {JOB_TYPE_LABELS[position.type]}
                 </span>
               </div>
               <h3 className="text-lg font-bold text-blue-900 dark:text-white">{position.title}</h3>
@@ -149,7 +148,7 @@ function PositionCard({ position }) {
 
           <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400 mb-4">
             <span className="flex items-center gap-1"><MapPin size={12} /> {cityLabel[position.city]}</span>
-            <span className="flex items-center gap-1"><Clock size={12} /> {typeLabel[position.type]}</span>
+            <span className="flex items-center gap-1"><Clock size={12} /> {JOB_TYPE_LABELS[position.type]}</span>
             <span className="flex items-center gap-1"><Briefcase size={12} /> Ventas inmobiliarias</span>
           </div>
 

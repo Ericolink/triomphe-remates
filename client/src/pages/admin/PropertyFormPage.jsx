@@ -13,6 +13,7 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { safeBlobUrl } from '../../utils/sanitize';
 import { buildImageUrl } from '../../utils/images';
+import { STATUS_LABELS } from '../../utils/constants';
 
 // Cada campo se agrupa por sección para que el formulario se lea como bloques
 // con propósito claro (Datos básicos, Ubicación, Detalles, Remate) en vez de una
@@ -63,7 +64,6 @@ const propertyToForm = (p) => ({
   code: p.code || '', noCode: !p.code,
 });
 
-const statusLabel = { disponible: 'Disponible', apartado: 'Apartado', vendido: 'Vendido' };
 const statusDot = { disponible: 'bg-green-500', apartado: 'bg-yellow-500', vendido: 'bg-red-500' };
 
 const inputClass ='w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
@@ -521,12 +521,12 @@ export default function PropertyFormPage() {
                       <span className="text-gray-600 dark:text-gray-300">
                         {h.fromStatus ? (
                           <>
-                            <span className="text-gray-400 dark:text-gray-500">{statusLabel[h.fromStatus]}</span>
+                            <span className="text-gray-400 dark:text-gray-500">{STATUS_LABELS[h.fromStatus]}</span>
                             {' → '}
-                            <span className="font-medium text-gray-800 dark:text-gray-100">{statusLabel[h.toStatus]}</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-100">{STATUS_LABELS[h.toStatus]}</span>
                           </>
                         ) : (
-                          <>Publicada como <span className="font-medium text-gray-800 dark:text-gray-100">{statusLabel[h.toStatus]}</span></>
+                          <>Publicada como <span className="font-medium text-gray-800 dark:text-gray-100">{STATUS_LABELS[h.toStatus]}</span></>
                         )}
                       </span>
                     </>

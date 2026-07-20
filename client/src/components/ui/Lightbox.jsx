@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { buildImageUrl } from '../../utils/images';
+import useModalA11y from '../../hooks/useModalA11y';
 
 export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext }) {
+  const isOpen = Boolean(images[currentIndex]);
+  const panelRef = useModalA11y(isOpen, onClose);
+
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowLeft') onPrev();
       if (e.key === 'ArrowRight') onNext();
     };
@@ -15,14 +18,15 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
       window.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
     };
-  }, [onClose, onPrev, onNext]);
+  }, [onPrev, onNext]);
 
-  if (!images[currentIndex]) return null;
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Galería de imágenes" tabIndex={-1}
+      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
       onClick={onClose}>
-      <button onClick={onClose}
+      <button onClick={onClose} aria-label="Cerrar galería"
         className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors z-10">
         <X size={20} />
       </button>
@@ -33,11 +37,11 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
 
       {images.length > 1 && (
         <>
-          <button onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          <button onClick={(e) => { e.stopPropagation(); onPrev(); }} aria-label="Imagen anterior"
             className="absolute left-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors">
             <ChevronLeft size={24} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext(); }}
+          <button onClick={(e) => { e.stopPropagation(); onNext(); }} aria-label="Imagen siguiente"
             className="absolute right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors">
             <ChevronRight size={24} />
           </button>

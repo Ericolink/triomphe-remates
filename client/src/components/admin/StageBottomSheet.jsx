@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { PIPELINE_STAGE_LABELS } from '../../utils/constants';
+import useModalA11y from '../../hooks/useModalA11y';
 
 // Alternativa táctil al drag & drop del Kanban — en mobile arrastrar tarjetas con el dedo
 // es impreciso, así que tocar la tarjeta abre esta hoja inferior con las etapas como
@@ -8,6 +9,8 @@ import { PIPELINE_STAGE_LABELS } from '../../utils/constants';
 // callback que el drop de escritorio (onSelectStage), así que la lógica de "si es una
 // etapa terminal, abre CloseLeadModal" vive en un solo lugar (LeadsPage), no duplicada.
 export default function StageBottomSheet({ open, lead, onClose, onSelectStage }) {
+  const panelRef = useModalA11y(Boolean(open && lead), onClose);
+
   if (!lead) return null;
 
   return (
@@ -16,7 +19,7 @@ export default function StageBottomSheet({ open, lead, onClose, onSelectStage })
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
           onClick={onClose}>
-          <motion.div
+          <motion.div ref={panelRef} role="dialog" aria-modal="true" aria-label={`Cambiar etapa de ${lead.name}`} tabIndex={-1}
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             onClick={(e) => e.stopPropagation()}

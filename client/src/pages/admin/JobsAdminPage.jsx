@@ -8,11 +8,10 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import OverflowMenu from '../../components/ui/OverflowMenu';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
-import { CITY_LABELS } from '../../utils/constants';
+import { CITY_LABELS, JOB_TYPE_LABELS } from '../../utils/constants';
 
 // 'todas' es propio del dominio de vacantes (no existe en CITY_LABELS, que es para propiedades)
 const cityLabel = { ...CITY_LABELS, todas: 'Todas' };
-const typeLabel = { tiempo_completo: 'Tiempo completo', medio_tiempo: 'Medio tiempo', por_comision: 'Por comisión' };
 const statusLabel = { activa: 'Activa', cerrada: 'Cerrada', pausada: 'Pausada' };
 const statusColors = {
   activa: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -165,7 +164,7 @@ export default function JobsAdminPage() {
                   </div>
                   <h3 className="font-bold text-gray-800 dark:text-gray-100">{position.title}</h3>
                   <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    <span className="flex items-center gap-1"><Briefcase size={11} /> {typeLabel[position.type]}</span>
+                    <span className="flex items-center gap-1"><Briefcase size={11} /> {JOB_TYPE_LABELS[position.type]}</span>
                     <span className="flex items-center gap-1"><Users size={11} /> {position.applications?.length ?? 0} postulaciones</span>
                     <span>{cityLabel[position.city]}</span>
                   </div>

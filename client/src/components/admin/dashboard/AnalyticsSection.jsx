@@ -8,10 +8,9 @@ import Badge from '../../ui/Badge';
 import { BarChart, AreaChart } from '../../ui/MiniChart';
 import { staggerContainer, fadeInUp } from '../../../utils/animations';
 import { formatPrice } from '../../../utils/formatters';
-import { CITY_LABELS, TYPE_LABELS_SHORT, SOURCE_LABELS, SOURCE_COLORS, STATUS_LABELS, STATUS_VARIANTS } from '../../../utils/constants';
+import { CITY_LABELS, TYPE_LABELS_SHORT, SOURCE_LABELS, SOURCE_COLORS, STATUS_LABELS, STATUS_VARIANTS, LEAD_TYPE_LABELS } from '../../../utils/constants';
 
 const leadStatusLabel = { nuevo: 'Nuevos', contactado: 'Contactados', cerrado: 'Cerrados', descartado: 'Descartados' };
-const leadTypeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
 
 const TABS = [
   { key: 'inventario', label: 'Inventario y tráfico' },
@@ -212,7 +211,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
               <div className="space-y-3">
                 {d?.leadsByType?.map(({ type, total }) => (
                   <div key={type} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{leadTypeLabel[type] || type}</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{LEAD_TYPE_LABELS[type] || type}</span>
                     <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full">{total}</span>
                   </div>
                 ))}

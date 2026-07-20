@@ -216,6 +216,13 @@ export const FEEDBACK_CATEGORY_GRADIENT = {
 
 export const FEEDBACK_STATUS_LABELS = { nuevo: 'Nuevo', leido: 'Leído', archivado: 'Archivado' };
 
+// AUDIT: estaba duplicado idénticamente en JobsAdminPage.jsx y JobsPage.jsx
+export const JOB_TYPE_LABELS = {
+  tiempo_completo: 'Tiempo completo',
+  medio_tiempo: 'Medio tiempo',
+  por_comision: 'Por comisión',
+};
+
 export const CAMPAIGN_PLATFORM_LABELS = {
   facebook: 'Facebook',
   google: 'Google',

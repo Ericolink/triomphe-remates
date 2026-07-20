@@ -1,8 +1,13 @@
+import { useId } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { buttonHover, buttonTap } from '../../utils/animations';
+import useModalA11y from '../../hooks/useModalA11y';
 
 export default function ConfirmDialog({ open, title, message, confirmLabel = 'Eliminar', onConfirm, onCancel, danger = true }) {
+  const panelRef = useModalA11y(open, onCancel);
+  const titleId = useId();
+
   return (
     <AnimatePresence>
       {open && (
@@ -14,6 +19,11 @@ export default function ConfirmDialog({ open, title, message, confirmLabel = 'El
           onClick={onCancel}
         >
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
             initial={{ scale: 0.9, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 12 }}
@@ -29,7 +39,7 @@ export default function ConfirmDialog({ open, title, message, confirmLabel = 'El
             </div>
 
             {/* Texto */}
-            <h3 className="text-base font-bold text-gray-800 dark:text-gray-100 text-center mb-2">
+            <h3 id={titleId} className="text-base font-bold text-gray-800 dark:text-gray-100 text-center mb-2">
               {title}
             </h3>
             {message && (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, X, Megaphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,6 +10,7 @@ import OverflowMenu from '../../ui/OverflowMenu';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../../utils/animations';
 import { formatPrice, formatDate } from '../../../utils/formatters';
 import { CAMPAIGN_PLATFORM_LABELS } from '../../../utils/constants';
+import useModalA11y from '../../../hooks/useModalA11y';
 
 const emptyForm = { platform: 'facebook', name: '', startDate: '', endDate: '', budget: '' };
 
@@ -69,16 +70,19 @@ function CampaignDetail({ campaignId, onClose }) {
     enabled: !!campaignId,
   });
   const c = data?.data;
+  const titleId = useId();
+  const panelRef = useModalA11y(true, onClose);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+      <motion.div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
+        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
         className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">{c?.name || '...'}</h2>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2e3650]"><X size={18} /></button>
+          <h2 id={titleId} className="text-lg font-bold text-gray-800 dark:text-gray-100">{c?.name || '...'}</h2>
+          <button onClick={onClose} aria-label="Cerrar" className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2e3650]"><X size={18} /></button>
         </div>
         {isLoading || !c ? <Spinner size="md" className="py-8" /> : (
           <div className="grid grid-cols-2 gap-3">
@@ -107,6 +111,7 @@ export default function CampanasSection() {
   const [modal, setModal] = useState(null); // null | 'create' | campaign
   const [confirm, setConfirm] = useState(null);
   const [detailId, setDetailId] = useState(null);
+  const modalTitleId = useId();
 
   const { data, isLoading } = useQuery({ queryKey: ['campaigns'], queryFn: () => getCampaigns({ limit: 100 }) });
   const campaigns = data?.data ?? [];
@@ -130,6 +135,7 @@ export default function CampanasSection() {
   });
 
   const isEditing = modal && modal !== 'create';
+  const modalPanelRef = useModalA11y(Boolean(modal), () => setModal(null));
 
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
@@ -190,12 +196,13 @@ export default function CampanasSection() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
             onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+            <motion.div ref={modalPanelRef} role="dialog" aria-modal="true" aria-labelledby={modalTitleId} tabIndex={-1}
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-[#2e3650]">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">{isEditing ? 'Editar campaña' : 'Nueva campaña'}</h2>
-                <button onClick={() => setModal(null)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2e3650] transition-colors"><X size={18} /></button>
+                <h2 id={modalTitleId} className="text-lg font-bold text-gray-800 dark:text-gray-100">{isEditing ? 'Editar campaña' : 'Nueva campaña'}</h2>
+                <button onClick={() => setModal(null)} aria-label="Cerrar" className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2e3650] transition-colors"><X size={18} /></button>
               </div>
               <div className="p-6">
                 <CampaignForm

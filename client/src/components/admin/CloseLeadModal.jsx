@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { buttonHover, buttonTap } from '../../utils/animations';
 import { formatPrice } from '../../utils/formatters';
 import { CLOSE_REASON_LABELS } from '../../utils/constants';
+import useModalA11y from '../../hooks/useModalA11y';
 
 // Modal obligatorio y mínimo al cerrar un prospecto (drag a una columna terminal del
 // Kanban, o botón directo en el detalle) — mismo patrón visual que ConfirmDialog, pero
@@ -14,6 +15,11 @@ export default function CloseLeadModal({ open, lead, targetStage, onClose, onCon
   const [amount, setAmount] = useState('');
   const [closeReason, setCloseReason] = useState('');
   const [closeReasonDetail, setCloseReasonDetail] = useState('');
+  const titleId = useId();
+
+  const reset = () => { setPropertyId(''); setAmount(''); setCloseReason(''); setCloseReasonDetail(''); };
+  const handleClose = () => { reset(); onClose(); };
+  const panelRef = useModalA11y(open, handleClose);
 
   if (!lead) return null;
 
@@ -26,10 +32,6 @@ export default function CloseLeadModal({ open, lead, targetStage, onClose, onCon
   const canSubmit = isWon
     ? propertyId && amount
     : closeReason && (closeReason !== 'otro' || closeReasonDetail.trim());
-
-  const reset = () => { setPropertyId(''); setAmount(''); setCloseReason(''); setCloseReasonDetail(''); };
-
-  const handleClose = () => { reset(); onClose(); };
 
   // Preasigna el monto con el precio de la propiedad elegida (si lo tiene — puede estar
   // en "PENDIENTE"/null) para no obligar a ir a buscarlo aparte; sigue siendo editable
@@ -58,15 +60,16 @@ export default function CloseLeadModal({ open, lead, targetStage, onClose, onCon
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           onClick={handleClose}>
-          <motion.div initial={{ scale: 0.95, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+          <motion.div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
+            initial={{ scale: 0.95, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 12 }} transition={{ duration: 0.2, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
             className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">
+              <h3 id={titleId} className="text-base font-bold text-gray-800 dark:text-gray-100">
                 {isWon ? 'Registrar venta' : 'Marcar como no interesado'}
               </h3>
-              <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg">
+              <button onClick={handleClose} aria-label="Cerrar" className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg">
                 <X size={18} />
               </button>
             </div>
