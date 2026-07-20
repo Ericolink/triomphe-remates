@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads, getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp, closeLeadAsWon, closeLeadAsLost } = require('../controllers/leadController');
+const { createLead, getLeads, getLeadById, updateLead, deleteLead, batchUpdateLeads, batchDeleteLeads, streamLeads, getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp, closeLeadAsWon, closeLeadAsLost, reopenLead } = require('../controllers/leadController');
 const { addLeadProperty, removeLeadProperty } = require('../controllers/leadPropertyController');
 const { getLeadActivities, createLeadActivity } = require('../controllers/activityController');
 const { getLeadAppointments } = require('../controllers/appointmentController');
@@ -25,6 +25,7 @@ router.put('/:id',             apiLimiter, authenticate, authorize('admin', 'edi
 router.delete('/:id',          apiLimiter, authenticate, authorize('admin'), deleteLead);
 router.put('/:id/close-won',   apiLimiter, authenticate, authorize('admin', 'editor'), closeLeadAsWon);
 router.put('/:id/close-lost',  apiLimiter, authenticate, authorize('admin', 'editor'), closeLeadAsLost);
+router.put('/:id/reopen',      apiLimiter, authenticate, authorize('admin', 'editor'), reopenLead);
 router.get('/:id/notes',       apiLimiter, authenticate, authorize('admin', 'editor'), getLeadNotes);
 router.post('/:id/notes',      apiLimiter, authenticate, authorize('admin', 'editor'), addLeadNote);
 router.delete('/:id/notes/:noteId', apiLimiter, authenticate, authorize('admin', 'editor'), deleteLeadNote);

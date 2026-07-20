@@ -74,6 +74,9 @@ const leadEvents = require('../utils/leadEvents');
 const { paginate } = require('../utils/pagination');
 const logger = require('../utils/logger');
 const { TERMINAL_STAGES, logActivity, ensureOpenTask, closeOpenTask, legacyStatusFor } = require('../utils/pipelineHelpers');
+// Etapas a las que un prospecto cerrado puede volver al reabrirse — cualquier etapa no
+// terminal es un destino válido para PUT /:id/reopen.
+const REOPEN_STAGES = VALID_PIPELINE_STAGES.filter((s) => !TERMINAL_STAGES.includes(s));
 
 // POST /api/leads
 const createLead = async (req, res) => {
@@ -260,6 +263,12 @@ const updateLead = async (req, res) => {
       // capturan los datos obligatorios (monto+propiedad, o motivo) en la misma transacción.
       if (TERMINAL_STAGES.includes(pipelineStage)) {
         return res.status(400).json({ error: 'Para cerrar un prospecto usa PUT /:id/close-won o PUT /:id/close-lost' });
+      }
+      // AUDIT: simétrico al bloqueo de arriba — un lead ya cerrado tampoco puede salir de
+      // su etapa terminal por esta vía genérica, porque cerrar/reabrir tiene efectos
+      // colaterales (Deal, Task, Activity) que este endpoint no conoce. Usa PUT /:id/reopen.
+      if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
+        return res.status(400).json({ error: 'Este prospecto está cerrado — usa PUT /:id/reopen para reactivarlo' });
       }
     }
 
@@ -464,6 +473,75 @@ const closeLeadAsLost = async (req, res) => {
   }
 };
 
+// PUT /api/leads/:id/reopen — única vía para sacar un prospecto de una etapa terminal.
+// Reabrir no es "cambiar un campo": si venía de venta_realizada implica que la venta
+// registrada ya no es válida (mismo criterio que closeLeadAsLost usa al corregir un cierre
+// equivocado), y todo prospecto activo debe recuperar su Task abierta si tiene responsable.
+const reopenLead = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const lead = await Lead.findByPk(req.params.id, { transaction });
+    if (!lead) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Lead no encontrado' });
+    }
+    if (!TERMINAL_STAGES.includes(lead.pipelineStage)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Este prospecto no está cerrado' });
+    }
+
+    const { pipelineStage: targetStage } = req.body;
+    const resolvedTarget = targetStage || 'contactado';
+    if (!REOPEN_STAGES.includes(resolvedTarget)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: `Etapa de reapertura inválida. Valores permitidos: ${REOPEN_STAGES.join(', ')}` });
+    }
+
+    const previousStage = lead.pipelineStage;
+    const wasWon = previousStage === 'venta_realizada';
+
+    // La venta registrada deja de ser válida si el prospecto se reabre — igual que al
+    // corregir un cierre equivocado en closeLeadAsLost.
+    if (wasWon) {
+      await Deal.destroy({ where: { leadId: lead.id }, transaction });
+    }
+
+    await lead.update({
+      pipelineStage: resolvedTarget,
+      status: legacyStatusFor(resolvedTarget),
+      closeReason: null,
+      closeReasonDetail: null,
+    }, { transaction });
+
+    await logActivity({
+      leadId: lead.id,
+      type: 'sistema',
+      content: wasWon
+        ? `Prospecto reabierto (antes: ${previousStage} — se eliminó la venta registrada)`
+        : `Prospecto reabierto (antes: ${previousStage})`,
+      userId: req.user?.id ?? null,
+      transaction,
+    });
+
+    // Restaura la invariante "todo prospecto activo con responsable tiene una task
+    // abierta" — closeOpenTask la había cerrado al cerrar el prospecto y nada más la
+    // vuelve a crear automáticamente.
+    if (lead.assignedToUserId) {
+      await ensureOpenTask({ leadId: lead.id, assignedToUserId: lead.assignedToUserId, type: 'llamar', transaction });
+    }
+
+    await transaction.commit();
+
+    logAudit(req, 'update', 'lead', lead.id, { reopened: true, fromStage: previousStage, toStage: resolvedTarget, dealDeleted: wasWon });
+
+    return res.json({ message: 'Prospecto reabierto exitosamente', data: lead });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error en reopenLead:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 // DELETE /api/leads/:id
 const deleteLead = async (req, res) => {
   try {
@@ -663,5 +741,5 @@ module.exports = {
   createLead, getLeads, getLeadById, updateLead, deleteLead,
   batchUpdateLeads, batchDeleteLeads, streamLeads,
   getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp,
-  closeLeadAsWon, closeLeadAsLost,
+  closeLeadAsWon, closeLeadAsLost, reopenLead,
 };
