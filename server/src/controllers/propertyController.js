@@ -91,6 +91,39 @@ const getProperties = async (req, res) => {
   }
 };
 
+// GET /api/properties/sync?ids=1,2,3
+// Revalida en lote precio/estatus de propiedades guardadas localmente
+// (Favoritos, Comparador). Solo devuelve los campos dinámicos — nunca
+// filtra por status, a diferencia de getProperties, porque el cliente
+// necesita saber también si una propiedad pasó a "vendido". Los ids que
+// no vienen en la respuesta ya no existen (fueron eliminadas).
+const MAX_SYNC_IDS = 200;
+const getPropertiesSync = async (req, res) => {
+  try {
+    const idsParam = req.query.ids;
+    if (!idsParam) return res.status(400).json({ error: 'Parámetro ids requerido' });
+
+    const ids = [...new Set(
+      String(idsParam).split(',').map((v) => parseInt(v, 10)).filter((n) => Number.isInteger(n) && n > 0)
+    )];
+
+    if (ids.length === 0) return res.json({ data: [] });
+    if (ids.length > MAX_SYNC_IDS) {
+      return res.status(400).json({ error: `Máximo ${MAX_SYNC_IDS} propiedades por consulta` });
+    }
+
+    const properties = await Property.findAll({
+      where: { id: { [Op.in]: ids } },
+      attributes: ['id', 'price', 'status'],
+    });
+
+    return res.json({ data: properties });
+  } catch (error) {
+    console.error('Error en getPropertiesSync:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 // GET /api/properties/stats
 const getPropertyStats = async (req, res) => {
   try {
@@ -607,4 +640,5 @@ module.exports = {
   getPublicPriceHistory,
   trackShare,
   getPropertyStats,
+  getPropertiesSync,
 };

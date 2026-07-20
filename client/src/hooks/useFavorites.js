@@ -45,6 +45,16 @@ const useFavoritesStore = create((set, get) => ({
     set({ favorites: next });
   },
 
+  // Aplica campos dinámicos revalidados contra el servidor (precio, status)
+  // sobre el snapshot local, sin tocar el resto de los campos guardados.
+  patchMany: (updates) => {
+    if (!updates.length) return;
+    const map = new Map(updates.map((u) => [u.id, u]));
+    const next = get().favorites.map((f) => (map.has(f.id) ? { ...f, ...map.get(f.id) } : f));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    set({ favorites: next });
+  },
+
   clear: () => {
     localStorage.removeItem(STORAGE_KEY);
     set({ favorites: [] });
@@ -52,6 +62,6 @@ const useFavoritesStore = create((set, get) => ({
 }));
 
 export default function useFavorites() {
-  const { favorites, isFavorite, toggle, remove, clear } = useFavoritesStore();
-  return { favorites, isFavorite, toggle, remove, clear, count: favorites.length };
+  const { favorites, isFavorite, toggle, remove, clear, patchMany } = useFavoritesStore();
+  return { favorites, isFavorite, toggle, remove, clear, patchMany, count: favorites.length };
 }

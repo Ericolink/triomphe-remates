@@ -1,15 +1,18 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GitCompare, X, MapPin, Building } from 'lucide-react';
+import { GitCompare, X, MapPin, Building, PackageX } from 'lucide-react';
 import useComparator from '../../hooks/useComparator';
+import usePropertySync from '../../hooks/usePropertySync';
 import SEO from '../../components/ui/SEO';
 import Badge from '../../components/ui/Badge';
+import SyncStatusBar from '../../components/ui/SyncStatusBar';
 import { fadeInUp, staggerContainer } from '../../utils/animations';
 import { buildImageUrl } from '../../utils/images';
 import { formatPrice } from '../../utils/formatters';
 import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
 
 const val = (v, unit = '') => (v != null && v !== '') ? `${v}${unit}` : <span className="text-gray-300 dark:text-gray-600">—</span>;
+const notAvailable = () => <span className="text-gray-300 dark:text-gray-600 italic">No disponible</span>;
 
 const ROWS = [
   { label: 'Precio',         render: (p) => <span className="font-bold text-blue-900 dark:text-yellow-400">{formatPrice(p.price)}</span> },
@@ -24,7 +27,8 @@ const ROWS = [
 ];
 
 export default function ComparatorPage() {
-  const { items, clear, toggle } = useComparator();
+  const { items: stored, clear, toggle, patchMany } = useComparator();
+  const { items, syncState, retry } = usePropertySync(stored, { onUpdate: patchMany });
 
   if (items.length < 2) {
     return (
@@ -59,6 +63,8 @@ export default function ComparatorPage() {
         </motion.button>
       </motion.div>
 
+      <SyncStatusBar syncState={syncState} onRetry={retry} />
+
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         <table className="w-full min-w-[480px]">
           <thead>
@@ -66,9 +72,13 @@ export default function ComparatorPage() {
               <th className="w-24 sm:w-32 md:w-40" />
               {items.map((p) => (
                 <th key={p.id} className="px-2 sm:px-3 pb-4 align-top">
-                  <div className="bg-white dark:bg-[#242938] rounded-2xl overflow-hidden border border-gray-100 dark:border-[#2e3650] shadow-sm">
+                  <div className={`bg-white dark:bg-[#242938] rounded-2xl overflow-hidden border shadow-sm ${p.unavailable ? 'border-dashed border-gray-200 dark:border-[#2e3650] opacity-60' : 'border-gray-100 dark:border-[#2e3650]'}`}>
                     <div className="relative h-24 sm:h-32 md:h-40 bg-gray-100 dark:bg-[#2e3650]">
-                      {p.images?.[0] ? (
+                      {p.unavailable ? (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
+                          <PackageX size={32} />
+                        </div>
+                      ) : p.images?.[0] ? (
                         <img src={buildImageUrl(p.images[0].url, 300)} alt={p.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-600">
@@ -81,12 +91,20 @@ export default function ComparatorPage() {
                       </button>
                     </div>
                     <div className="p-2 sm:p-3">
-                      <Link to={`/propiedades/${p.slug}`} className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-gray-100 hover:text-blue-600 line-clamp-2 block">
-                        {p.title}
-                      </Link>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
-                        <MapPin size={10} className="flex-shrink-0" /> {CITY_LABELS[p.city] || p.city}
-                      </p>
+                      {p.unavailable ? (
+                        <p className="font-semibold text-xs sm:text-sm text-gray-400 dark:text-gray-500 line-clamp-2">{p.title}</p>
+                      ) : (
+                        <Link to={`/propiedades/${p.slug}`} className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-gray-100 hover:text-blue-600 line-clamp-2 block">
+                          {p.title}
+                        </Link>
+                      )}
+                      {p.unavailable ? (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Ya no disponible</p>
+                      ) : (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+                          <MapPin size={10} className="flex-shrink-0" /> {CITY_LABELS[p.city] || p.city}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </th>
@@ -99,7 +117,7 @@ export default function ComparatorPage() {
                 <td className="py-3 pr-2 sm:pr-4 text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">{label}</td>
                 {items.map((p) => (
                   <td key={p.id} className="px-2 sm:px-3 py-3 text-xs sm:text-sm text-gray-700 dark:text-gray-200 text-center">
-                    {render(p)}
+                    {p.unavailable ? notAvailable() : render(p)}
                   </td>
                 ))}
               </tr>
@@ -109,7 +127,7 @@ export default function ComparatorPage() {
       </div>
 
       <div className="mt-8 flex flex-wrap gap-3 justify-center">
-        {items.map((p) => (
+        {items.filter((p) => !p.unavailable).map((p) => (
           <Link key={p.id} to={`/propiedades/${p.slug}`}
             className="px-5 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors">
             Ver {p.title.slice(0, 20)}…

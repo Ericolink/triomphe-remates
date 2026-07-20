@@ -2,14 +2,19 @@ import { motion } from 'framer-motion';
 import { Heart, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import useFavorites from '../../hooks/useFavorites';
+import usePropertySync from '../../hooks/usePropertySync';
 import PropertyCard from '../../components/ui/PropertyCard';
+import UnavailablePropertyCard from '../../components/ui/UnavailablePropertyCard';
+import SyncStatusBar from '../../components/ui/SyncStatusBar';
 import SEO from '../../components/ui/SEO';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { useState } from 'react';
 import { fadeInUp, staggerContainer } from '../../utils/animations';
 
 export default function FavoritesPage() {
-  const { favorites, clear, count } = useFavorites();
+  const { favorites, clear, remove, patchMany } = useFavorites();
+  const { items, syncState, retry } = usePropertySync(favorites, { onUpdate: patchMany });
+  const count = items.length;
   const [confirmClear, setConfirmClear] = useState(false);
 
   return (
@@ -39,6 +44,8 @@ export default function FavoritesPage() {
         </motion.div>
       </motion.div>
 
+      <SyncStatusBar syncState={syncState} onRetry={retry} />
+
       {count === 0 ? (
         <motion.div variants={fadeInUp} initial="hidden" animate="visible"
           className="text-center py-24 text-gray-400 dark:text-gray-500">
@@ -57,9 +64,13 @@ export default function FavoritesPage() {
           variants={staggerContainer} initial="hidden" animate="visible"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
         >
-          {favorites.map((property) => (
+          {items.map((property) => (
             <motion.div key={property.id} variants={fadeInUp}>
-              <PropertyCard property={property} />
+              {property.unavailable ? (
+                <UnavailablePropertyCard title={property.title} onRemove={() => remove(property.id)} />
+              ) : (
+                <PropertyCard property={property} />
+              )}
             </motion.div>
           ))}
         </motion.div>

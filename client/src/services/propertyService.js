@@ -55,6 +55,14 @@ export const reorderImages = async (propertyId, imageIds) => {
   return data;
 };
 
+// Revalida en un solo request los campos dinámicos (precio, status) de una
+// lista de propiedades guardadas localmente. Usado por Favoritos/Comparador.
+export const syncProperties = async (ids) => {
+  if (!ids.length) return [];
+  const { data } = await api.get('/properties/sync', { params: { ids: ids.join(',') } });
+  return data.data;
+};
+
 export const getPropertyStats = async () => {
   const { data } = await api.get('/properties/stats');
   return data;

@@ -4,6 +4,7 @@ const {
   createProperty, updateProperty, deleteProperty,
   uploadImages, deleteImage, setCoverImage, reorderImages,
   getPromotedProperty, promoteProperty, getStatusHistory, getPublicPriceHistory, trackShare, getPropertyStats,
+  getPropertiesSync,
 } = require('../controllers/propertyController');
 const { getDocuments, getAllDocuments, uploadDocument, deleteDocument, setDocumentVisibility } = require('../controllers/documentController');
 const { authenticate, attachUserIfPresent } = require('../middleware/authMiddleware');
@@ -22,6 +23,7 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
 router.get('/', apiLimiter, getProperties);
 router.get('/stats', apiLimiter, getPropertyStats);
 router.get('/promoted', apiLimiter, getPromotedProperty);
+router.get('/sync', apiLimiter, getPropertiesSync);
 router.get('/slug/:slug', apiLimiter, getPropertyBySlug);
 router.get('/:id', apiLimiter, attachUserIfPresent, getPropertyById);
 

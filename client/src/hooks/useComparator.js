@@ -39,9 +39,19 @@ const useComparatorStore = create((set, get) => ({
     localStorage.removeItem(STORAGE_KEY);
     set({ items: [] });
   },
+
+  // Aplica campos dinámicos revalidados contra el servidor (precio, status)
+  // sobre el snapshot local, sin tocar el resto de los campos guardados.
+  patchMany: (updates) => {
+    if (!updates.length) return;
+    const map = new Map(updates.map((u) => [u.id, u]));
+    const next = get().items.map((p) => (map.has(p.id) ? { ...p, ...map.get(p.id) } : p));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    set({ items: next });
+  },
 }));
 
 export default function useComparator() {
-  const { items, toggle, clear, isInComparator } = useComparatorStore();
-  return { items, toggle, clear, isInComparator, count: items.length, isFull: items.length >= MAX };
+  const { items, toggle, clear, isInComparator, patchMany } = useComparatorStore();
+  return { items, toggle, clear, isInComparator, patchMany, count: items.length, isFull: items.length >= MAX };
 }
