@@ -19,7 +19,6 @@ const {
   PRIMARY_ARGB,
   ACCENT_ARGB,
   BG_ALT_ARGB,
-  WHITE_ARGB,
   TEXT_ARGB,
   ST_GREEN_ARGB,
   ST_YELLOW_ARGB,
@@ -35,6 +34,7 @@ const {
   dash,
   getLogoPath,
   getWhiteLogoBuffer,
+  buildExcelHeader,
   getFilteredProperties,
   getFirstImagePath,
   getImageBuffer,
@@ -86,50 +86,13 @@ const exportExcel = async (req, res) => {
     ];
     sheet.columns = headers;
 
-    const LAST_COL = String.fromCharCode(64 + headers.length); // 'N'
-
-    // Fila 1: fondo azul + logo blanco + título
-    sheet.mergeCells(`A1:${LAST_COL}1`);
-    const titleCell = sheet.getCell('A1');
-    titleCell.value =
-      '                                         TRIOMPHE BIENES RAÍCES — Inventario de Remates Bancarios';
-    titleCell.font = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
-    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
-    sheet.getRow(1).height = 42;
-
-    // Logo blanco en fila 1
-    const logoPath = getLogoPath();
-    if (logoPath) {
-      try {
-        const whiteBuf = await getWhiteLogoBuffer(logoPath);
-        if (whiteBuf) {
-          const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
-          sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
-        }
-      } catch {
-        /* ignorado */
-      }
-    }
-
-    // Fila 2: subtítulo
-    sheet.mergeCells(`A2:${LAST_COL}2`);
-    const subCell = sheet.getCell('A2');
-    subCell.value = `Generado el ${generatedAt}   ·   Total: ${properties.length} propiedades`;
-    subCell.font = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
-    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
-    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    sheet.getRow(2).height = 18;
-
-    // Fila 3: encabezados
-    const headerRow = sheet.getRow(3);
-    headerRow.values = headers.map((h) => h.header);
-    headerRow.height = 22;
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+    await buildExcelHeader({
+      workbook,
+      sheet,
+      headers,
+      title:
+        '                                         TRIOMPHE BIENES RAÍCES — Inventario de Remates Bancarios',
+      subtitle: `Generado el ${generatedAt}   ·   Total: ${properties.length} propiedades`,
     });
 
     // Datos
@@ -438,49 +401,13 @@ const exportFeedbackExcel = async (req, res) => {
     ];
     sheet.columns = headers;
 
-    const LAST_COL = String.fromCharCode(64 + headers.length);
-
-    // Fila 1: header azul con título
-    sheet.mergeCells(`A1:${LAST_COL}1`);
-    const titleCell = sheet.getCell('A1');
-    titleCell.value =
-      '                                         TRIOMPHE BIENES RAÍCES — Buzón de Opiniones';
-    titleCell.font = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
-    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
-    sheet.getRow(1).height = 42;
-
-    const logoPath = getLogoPath();
-    if (logoPath) {
-      try {
-        const whiteBuf = await getWhiteLogoBuffer(logoPath);
-        if (whiteBuf) {
-          const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
-          sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
-        }
-      } catch {
-        /* ignorado */
-      }
-    }
-
-    // Fila 2: subtítulo
-    sheet.mergeCells(`A2:${LAST_COL}2`);
-    const subCell = sheet.getCell('A2');
-    subCell.value = `Generado el ${generatedAt}   ·   Total: ${items.length} mensajes`;
-    subCell.font = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
-    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
-    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    sheet.getRow(2).height = 18;
-
-    // Fila 3: encabezados
-    const headerRow = sheet.getRow(3);
-    headerRow.values = headers.map((h) => h.header);
-    headerRow.height = 22;
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+    await buildExcelHeader({
+      workbook,
+      sheet,
+      headers,
+      title:
+        '                                         TRIOMPHE BIENES RAÍCES — Buzón de Opiniones',
+      subtitle: `Generado el ${generatedAt}   ·   Total: ${items.length} mensajes`,
     });
 
     const categoryArgb = { queja: 'FFEF4444', comentario: 'FF3B82F6', sugerencia: 'FF10B981' };
@@ -612,48 +539,12 @@ const exportLeadsExcel = async (req, res) => {
     ];
     sheet.columns = headers;
 
-    const LAST_COL = String.fromCharCode(64 + headers.length);
-
-    // Fila 1: header azul con título
-    sheet.mergeCells(`A1:${LAST_COL}1`);
-    const titleCell = sheet.getCell('A1');
-    titleCell.value = '                                         TRIOMPHE BIENES RAÍCES — Leads';
-    titleCell.font = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
-    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
-    sheet.getRow(1).height = 42;
-
-    const logoPath = getLogoPath();
-    if (logoPath) {
-      try {
-        const whiteBuf = await getWhiteLogoBuffer(logoPath);
-        if (whiteBuf) {
-          const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
-          sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
-        }
-      } catch {
-        /* ignorado */
-      }
-    }
-
-    // Fila 2: subtítulo
-    sheet.mergeCells(`A2:${LAST_COL}2`);
-    const subCell = sheet.getCell('A2');
-    subCell.value = `Generado el ${generatedAt}   ·   Total: ${leads.length} leads`;
-    subCell.font = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
-    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
-    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    sheet.getRow(2).height = 18;
-
-    // Fila 3: encabezados
-    const headerRow = sheet.getRow(3);
-    headerRow.values = headers.map((h) => h.header);
-    headerRow.height = 22;
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+    await buildExcelHeader({
+      workbook,
+      sheet,
+      headers,
+      title: '                                         TRIOMPHE BIENES RAÍCES — Leads',
+      subtitle: `Generado el ${generatedAt}   ·   Total: ${leads.length} leads`,
     });
 
     leads.forEach((lead, i) => {

@@ -4,6 +4,7 @@
 const path = require('path');
 const fs = require('fs');
 const { Property, Image } = require('../models/index');
+const { PRIMARY_ARGB, ACCENT_ARGB, WHITE_ARGB } = require('./exportBranding');
 
 const formatPrice = (price) => {
   if (price === null || price === undefined || price === '') return 'PENDIENTE';
@@ -55,6 +56,55 @@ const getWhiteLogoBuffer = async (logoPath) => {
     console.error('Jimp error:', e.message);
     return null;
   }
+};
+
+// Filas 1-3 compartidas por las exportaciones Excel: título+logo, subtítulo y
+// encabezado de columnas. Solo el texto de título/subtítulo y las columnas cambian
+// entre reportes — el resto (colores, tamaños, alturas) es idéntico en los tres.
+const buildExcelHeader = async ({ workbook, sheet, headers, title, subtitle }) => {
+  const LAST_COL = String.fromCharCode(64 + headers.length);
+
+  // Fila 1: fondo azul + logo blanco + título
+  sheet.mergeCells(`A1:${LAST_COL}1`);
+  const titleCell = sheet.getCell('A1');
+  titleCell.value = title;
+  titleCell.font = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+  titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+  sheet.getRow(1).height = 42;
+
+  const logoPath = getLogoPath();
+  if (logoPath) {
+    try {
+      const whiteBuf = await getWhiteLogoBuffer(logoPath);
+      if (whiteBuf) {
+        const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
+        sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
+      }
+    } catch {
+      /* ignorado */
+    }
+  }
+
+  // Fila 2: subtítulo
+  sheet.mergeCells(`A2:${LAST_COL}2`);
+  const subCell = sheet.getCell('A2');
+  subCell.value = subtitle;
+  subCell.font = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+  subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+  subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getRow(2).height = 18;
+
+  // Fila 3: encabezados de columna
+  const headerRow = sheet.getRow(3);
+  headerRow.values = headers.map((h) => h.header);
+  headerRow.height = 22;
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+  });
 };
 
 const getFilteredProperties = async (query) => {
@@ -145,6 +195,7 @@ module.exports = {
   dash,
   getLogoPath,
   getWhiteLogoBuffer,
+  buildExcelHeader,
   getFilteredProperties,
   getFirstImagePath,
   getImageBuffer,
