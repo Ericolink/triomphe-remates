@@ -29,10 +29,13 @@ export const formatDateTime = (date, fallback = '—') =>
 
 // Deja solo dígitos y antepone 52 si es un número mexicano de 10 dígitos sin lada —
 // mismo criterio que validatePhone en el backend (server/src/utils/validators.js).
-export const toWhatsAppLink = (phone) => {
+// Única fuente de verdad para enlaces de WhatsApp: todo componente que arme un
+// href a wa.me debe pasar por aquí, nunca replicar el sanitizado manualmente.
+export const toWhatsAppLink = (phone, message) => {
   const digits = (phone || '').replace(/\D/g, '');
   const withCountry = digits.length === 10 ? `52${digits}` : digits;
-  return `https://wa.me/${withCountry}`;
+  const query = message ? `?text=${encodeURIComponent(message)}` : '';
+  return `https://wa.me/${withCountry}${query}`;
 };
 
 // Monto disponible de un prospecto: distingue "no especificó" (explícito) de "sin dato"

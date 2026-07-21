@@ -1,6 +1,7 @@
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { WHATSAPP_NUMBER } from '../../utils/constants';
+import { toWhatsAppLink } from '../../utils/formatters';
 
 const FacebookIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -30,7 +31,7 @@ export default function Footer() {
       label: 'Facebook',
     },
     { icon: <InstagramIcon />, href: 'https://www.instagram.com/triomphejrz', label: 'Instagram' },
-    { icon: <WhatsAppIcon />, href: `https://wa.me/${WHATSAPP_NUMBER}`, label: 'WhatsApp' },
+    { icon: <WhatsAppIcon />, href: toWhatsAppLink(WHATSAPP_NUMBER), label: 'WhatsApp' },
   ];
 
   return (

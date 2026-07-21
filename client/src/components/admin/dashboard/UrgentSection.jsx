@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CalendarClock, PhoneCall, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '../../../utils/animations';
-import { formatDateTime } from '../../../utils/formatters';
+import { formatDateTime, toWhatsAppLink } from '../../../utils/formatters';
 import { TASK_TYPE_LABELS } from '../../../utils/constants';
 
 // Nivel 1 — lo urgente: seguimientos vencidos, prospectos sin atender, mensajes nuevos y
@@ -95,7 +95,7 @@ export default function UrgentSection({
                   )}
                   {task.lead?.phone && (
                     <a
-                      href={`https://wa.me/${task.lead.phone.replace(/\D/g, '')}`}
+                      href={toWhatsAppLink(task.lead.phone)}
                       target="_blank"
                       rel="noopener noreferrer"
                       title="WhatsApp"

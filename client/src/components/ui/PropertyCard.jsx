@@ -6,7 +6,7 @@ import Badge from './Badge';
 import FavoriteButton from './FavoriteButton';
 import ComparatorButton from './ComparatorButton';
 import { buildImageUrl } from '../../utils/images';
-import { formatPrice } from '../../utils/formatters';
+import { formatPrice, toWhatsAppLink } from '../../utils/formatters';
 import {
   CITY_LABELS,
   STATUS_LABELS,
@@ -33,7 +33,7 @@ export default function PropertyCard({ property }) {
   const countdownLabel = daysLeft > 100 ? '+100' : `${daysLeft}d`;
 
   const waMessage = `Hola, me interesa esta propiedad: ${property.title}${property.price ? ` (${formatPrice(property.price)})` : ''}\n${window.location.origin}/propiedades/${property.slug}`;
-  const waHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waMessage)}`;
+  const waHref = toWhatsAppLink(WHATSAPP_NUMBER, waMessage);
 
   return (
     <Link to={`/propiedades/${property.slug}`} className="block">

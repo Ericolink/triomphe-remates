@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { WHATSAPP_NUMBER } from '../../utils/constants';
+import { toWhatsAppLink } from '../../utils/formatters';
 import { buttonHover, buttonTap } from '../../utils/animations';
 
 const WhatsAppIcon = () => (
@@ -12,7 +13,7 @@ const WhatsAppIcon = () => (
 export default function WhatsAppButton({ title, priceLabel, url, className = '' }) {
   const fullUrl = `${import.meta.env.VITE_SITE_URL || window.location.origin}${url}`;
   const message = `Hola, me interesa esta propiedad: ${title}${priceLabel ? ` (${priceLabel})` : ''}\n${fullUrl}`;
-  const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  const href = toWhatsAppLink(WHATSAPP_NUMBER, message);
 
   return (
     <motion.a
