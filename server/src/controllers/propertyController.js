@@ -11,6 +11,22 @@ const logger = require('../utils/logger');
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined ? null : val);
 
+// Arma el query en IN BOOLEAN MODE para el índice FULLTEXT de properties (title, address,
+// description). Tokens <3 caracteres se descartan porque innodb_ft_min_token_size (default 3)
+// nunca los indexa — incluirlos con '+' forzaría el AND a fallar siempre. Se despojan los
+// operadores propios de BOOLEAN MODE (+ - > < ( ) ~ * ") del texto del usuario antes de
+// envolver cada token con '+' (requerido) y '*' (prefijo), para que un search como "casa-remate"
+// no se interprete como sintaxis de MySQL. Devuelve null si no queda ningún token indexable,
+// señal para que el caller use directamente el fallback LIKE.
+const buildFulltextBooleanQuery = (search) => {
+  const tokens = search
+    .split(/\s+/)
+    .map((t) => t.replace(/[+\-><()~*"@]/g, ''))
+    .filter((t) => t.length >= 3);
+  if (tokens.length === 0) return null;
+  return tokens.map((t) => `+${t}*`).join(' ');
+};
+
 // GET /api/properties
 const getProperties = async (req, res) => {
   try {
@@ -64,13 +80,32 @@ const getProperties = async (req, res) => {
     if (minBathrooms) where.bathrooms = { [Op.gte]: parseInt(minBathrooms) };
 
     if (search) {
-      andConditions.push({
-        [Op.or]: [
-          { title: { [Op.like]: `%${search}%` } },
-          { address: { [Op.like]: `%${search}%` } },
-          { description: { [Op.like]: `%${search}%` } },
-        ],
-      });
+      // Camino rápido: FULLTEXT usa el índice invertido idx_properties_fulltext_search en
+      // vez de escanear la tabla completa. Solo cuando no encuentra nada (término corto,
+      // código con guion, substring a mitad de palabra) se cae al LIKE '%search%' original
+      // como red de seguridad — así nunca se pierden resultados que antes sí aparecían.
+      const booleanQuery = buildFulltextBooleanQuery(search);
+      let matchedIds = null;
+
+      if (booleanQuery) {
+        const matches = await sequelize.query(
+          'SELECT id FROM properties WHERE MATCH(title, address, description) AGAINST(:query IN BOOLEAN MODE)',
+          { replacements: { query: booleanQuery }, type: sequelize.QueryTypes.SELECT }
+        );
+        if (matches.length > 0) matchedIds = matches.map((m) => m.id);
+      }
+
+      if (matchedIds) {
+        andConditions.push({ id: { [Op.in]: matchedIds } });
+      } else {
+        andConditions.push({
+          [Op.or]: [
+            { title: { [Op.like]: `%${search}%` } },
+            { address: { [Op.like]: `%${search}%` } },
+            { description: { [Op.like]: `%${search}%` } },
+          ],
+        });
+      }
     }
 
     if (andConditions.length > 0) where[Op.and] = andConditions;
