@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const { sequelize, Lead, Task, User } = require('../models/index');
 const { TERMINAL_STAGES, logActivity, ensureOpenTask } = require('../utils/pipelineHelpers');
 const { logAudit } = require('../utils/audit');
+const { MAX_BATCH_IDS } = require('../utils/batchValidation');
 
 // GET /api/tasks — filtros para el panel "seguimientos vencidos" y para pintar la
 // "próxima acción" en cada tarjeta del Kanban (leadIds CSV + done=false)
@@ -16,12 +17,16 @@ const getTasks = async (req, res) => {
       where.dueDate = { [Op.lt]: new Date() };
     }
     if (leadIds) {
-      where.leadId = {
-        [Op.in]: leadIds
-          .split(',')
-          .map((id) => parseInt(id, 10))
-          .filter(Boolean),
-      };
+      const parsedLeadIds = leadIds
+        .split(',')
+        .map((id) => parseInt(id, 10))
+        .filter(Boolean);
+      if (parsedLeadIds.length > MAX_BATCH_IDS) {
+        return res
+          .status(400)
+          .json({ error: `No se pueden consultar más de ${MAX_BATCH_IDS} leadIds por solicitud` });
+      }
+      where.leadId = { [Op.in]: parsedLeadIds };
     }
 
     const tasks = await Task.findAll({

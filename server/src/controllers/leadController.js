@@ -99,6 +99,7 @@ const leadEvents = require('../utils/leadEvents');
 const { paginate } = require('../utils/pagination');
 const logger = require('../utils/logger');
 const { isOriginAllowed } = require('../utils/corsOrigins');
+const { validateBatchIds } = require('../utils/batchValidation');
 const {
   TERMINAL_STAGES,
   logActivity,
@@ -681,9 +682,9 @@ const deleteLead = async (req, res) => {
 // cierre individuales para venta_realizada/no_interesado (necesitan datos adicionales).
 const batchUpdateLeads = async (req, res) => {
   try {
-    const { ids, pipelineStage } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0)
-      return res.status(400).json({ error: 'ids requeridos' });
+    const { pipelineStage } = req.body;
+    const { error: idsError, ids } = validateBatchIds(req.body.ids);
+    if (idsError) return res.status(400).json({ error: idsError });
     if (!pipelineStage) return res.status(400).json({ error: 'pipelineStage requerido' });
     if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
       return res
@@ -711,9 +712,8 @@ const batchUpdateLeads = async (req, res) => {
 // DELETE /api/leads/batch
 const batchDeleteLeads = async (req, res) => {
   try {
-    const { ids } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0)
-      return res.status(400).json({ error: 'ids requeridos' });
+    const { error: idsError, ids } = validateBatchIds(req.body.ids);
+    if (idsError) return res.status(400).json({ error: idsError });
     await Lead.destroy({ where: { id: ids } });
     logAudit(req, 'delete', 'lead', null, { ids });
     return res.json({ message: `${ids.length} lead(s) eliminados` });

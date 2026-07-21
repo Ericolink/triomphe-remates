@@ -3,6 +3,7 @@ const { validateEmail } = require('../utils/validators');
 const { sendFeedbackNotification } = require('../services/emailService');
 const { paginate } = require('../utils/pagination');
 const { logAudit } = require('../utils/audit');
+const { validateBatchIds } = require('../utils/batchValidation');
 
 const VALID_FEEDBACK_STATUS = ['nuevo', 'leido', 'archivado'];
 
@@ -107,9 +108,9 @@ const deleteFeedback = async (req, res) => {
 // PATCH /api/feedback/batch
 const batchUpdateFeedback = async (req, res) => {
   try {
-    const { ids, status } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0)
-      return res.status(400).json({ error: 'ids requeridos' });
+    const { status } = req.body;
+    const { error: idsError, ids } = validateBatchIds(req.body.ids);
+    if (idsError) return res.status(400).json({ error: idsError });
     if (!status) return res.status(400).json({ error: 'status requerido' });
     if (!VALID_FEEDBACK_STATUS.includes(status)) {
       return res.status(400).json({
@@ -128,9 +129,8 @@ const batchUpdateFeedback = async (req, res) => {
 // DELETE /api/feedback/batch
 const batchDeleteFeedback = async (req, res) => {
   try {
-    const { ids } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0)
-      return res.status(400).json({ error: 'ids requeridos' });
+    const { error: idsError, ids } = validateBatchIds(req.body.ids);
+    if (idsError) return res.status(400).json({ error: idsError });
     await Feedback.destroy({ where: { id: ids } });
     logAudit(req, 'delete', 'feedback', null, { ids });
     return res.json({ message: `${ids.length} mensaje(s) eliminados` });
