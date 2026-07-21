@@ -16,7 +16,7 @@ async function createUser(overrides = {}) {
   return User.create({
     name: overrides.name || `Usuario Test ${n}`,
     email: overrides.email || `usuario-test-${RUN_TAG}-${n}@triomphe.test`,
-    password: overrides.password || await hashPassword('Password123'),
+    password: overrides.password || (await hashPassword('Password123')),
     role: overrides.role || 'admin',
     isActive: overrides.isActive ?? true,
     tokenVersion: overrides.tokenVersion ?? 0,

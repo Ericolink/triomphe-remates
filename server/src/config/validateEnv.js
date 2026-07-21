@@ -9,10 +9,15 @@ const REQUIRED = ['DB_HOST', 'DB_USER', 'DB_NAME', 'JWT_SECRET'];
 // .verifyConnection, whatsappService.isConfigured, CORS cayendo solo a los orígenes de
 // localhost, JWT sin expiración explícita) — solo se advierte, no se bloquea el arranque.
 const RECOMMENDED = [
-  'EMAIL_USER', 'EMAIL_PASS', 'EMAIL_TO',
-  'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
+  'EMAIL_USER',
+  'EMAIL_PASS',
+  'EMAIL_TO',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
   'CLIENT_URL',
-  'WHATSAPP_TOKEN', 'WHATSAPP_PHONE_NUMBER_ID',
+  'WHATSAPP_TOKEN',
+  'WHATSAPP_PHONE_NUMBER_ID',
   'JWT_EXPIRES_IN',
 ];
 
@@ -24,7 +29,9 @@ const validateEnvironment = () => {
 
   const missingRecommended = RECOMMENDED.filter((key) => !process.env[key]);
   if (missingRecommended.length > 0) {
-    console.warn(`⚠️  Variables de entorno recomendadas ausentes (features degradadas): ${missingRecommended.join(', ')}`);
+    console.warn(
+      `⚠️  Variables de entorno recomendadas ausentes (features degradadas): ${missingRecommended.join(', ')}`
+    );
   }
 };
 

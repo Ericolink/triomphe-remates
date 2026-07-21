@@ -59,7 +59,8 @@ const getLeadAppointments = async (req, res) => {
 const createAppointment = async (req, res) => {
   try {
     const { leadId, propertyId, scheduledAt } = req.body;
-    if (!leadId || !scheduledAt) return res.status(400).json({ error: 'leadId y scheduledAt son requeridos' });
+    if (!leadId || !scheduledAt)
+      return res.status(400).json({ error: 'leadId y scheduledAt son requeridos' });
 
     const lead = await Lead.findByPk(leadId);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
@@ -70,14 +71,21 @@ const createAppointment = async (req, res) => {
     }
 
     const appointment = await sequelize.transaction(async (transaction) => {
-      const created = await Appointment.create({
-        leadId, propertyId: propertyId || null, scheduledAt,
-      }, { transaction });
+      const created = await Appointment.create(
+        {
+          leadId,
+          propertyId: propertyId || null,
+          scheduledAt,
+        },
+        { transaction }
+      );
 
       await logActivity({
-        leadId, type: 'sistema',
+        leadId,
+        type: 'sistema',
         content: `Cita agendada para ${new Date(scheduledAt).toLocaleString('es-MX')}`,
-        userId: req.user?.id ?? null, transaction,
+        userId: req.user?.id ?? null,
+        transaction,
       });
 
       return created;
@@ -102,7 +110,9 @@ const updateAppointmentStatus = async (req, res) => {
 
     const { status, outcome } = req.body;
     if (status !== undefined && !VALID_APPOINTMENT_STATUS.includes(status)) {
-      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_APPOINTMENT_STATUS.join(', ')}` });
+      return res.status(400).json({
+        error: `Estatus inválido. Valores permitidos: ${VALID_APPOINTMENT_STATUS.join(', ')}`,
+      });
     }
 
     await sequelize.transaction(async (transaction) => {
@@ -113,14 +123,19 @@ const updateAppointmentStatus = async (req, res) => {
 
       if (status !== undefined) {
         await logActivity({
-          leadId: appointment.leadId, type: 'sistema',
+          leadId: appointment.leadId,
+          type: 'sistema',
           content: `Cita ${status}`,
-          userId: req.user?.id ?? null, transaction,
+          userId: req.user?.id ?? null,
+          transaction,
         });
 
         // Una cita cancelada o a la que no se presentó el prospecto necesita una nueva
         // próxima acción — sin esto, el prospecto se queda "olvidado" sin seguimiento.
-        if ((status === 'cancelada' || status === 'no_show') && appointment.lead?.assignedToUserId) {
+        if (
+          (status === 'cancelada' || status === 'no_show') &&
+          appointment.lead?.assignedToUserId
+        ) {
           await ensureOpenTask({
             leadId: appointment.leadId,
             assignedToUserId: appointment.lead.assignedToUserId,
@@ -153,17 +168,22 @@ const rescheduleAppointment = async (req, res) => {
     const newAppointment = await sequelize.transaction(async (transaction) => {
       await oldAppointment.update({ status: 'cancelada' }, { transaction });
 
-      const created = await Appointment.create({
-        leadId: oldAppointment.leadId,
-        propertyId: oldAppointment.propertyId,
-        scheduledAt,
-        rescheduledFromId: oldAppointment.id,
-      }, { transaction });
+      const created = await Appointment.create(
+        {
+          leadId: oldAppointment.leadId,
+          propertyId: oldAppointment.propertyId,
+          scheduledAt,
+          rescheduledFromId: oldAppointment.id,
+        },
+        { transaction }
+      );
 
       await logActivity({
-        leadId: oldAppointment.leadId, type: 'sistema',
+        leadId: oldAppointment.leadId,
+        type: 'sistema',
         content: `Cita reagendada de ${new Date(oldAppointment.scheduledAt).toLocaleString('es-MX')} a ${new Date(scheduledAt).toLocaleString('es-MX')}`,
-        userId: req.user?.id ?? null, transaction,
+        userId: req.user?.id ?? null,
+        transaction,
       });
 
       return created;
@@ -194,4 +214,11 @@ const deleteAppointment = async (req, res) => {
   }
 };
 
-module.exports = { getAppointments, getLeadAppointments, createAppointment, updateAppointmentStatus, rescheduleAppointment, deleteAppointment };
+module.exports = {
+  getAppointments,
+  getLeadAppointments,
+  createAppointment,
+  updateAppointmentStatus,
+  rescheduleAppointment,
+  deleteAppointment,
+};

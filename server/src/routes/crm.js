@@ -12,6 +12,6 @@ const { apiLimiter } = require('../middleware/rateLimitMiddleware');
  */
 
 router.get('/dashboard', apiLimiter, authenticate, authorize('admin', 'editor'), getCrmDashboard);
-router.get('/reports',   apiLimiter, authenticate, authorize('admin', 'editor'), getCrmReports);
+router.get('/reports', apiLimiter, authenticate, authorize('admin', 'editor'), getCrmReports);
 
 module.exports = router;

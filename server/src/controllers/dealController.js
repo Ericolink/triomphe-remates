@@ -7,7 +7,9 @@ const { Deal, Lead, Property, Image } = require('../models/index');
 // que un Deal siempre tiene un Lead asociado.
 const propertyAttributes = ['id', 'title', 'city'];
 const propertyInclude = {
-  model: Property, as: 'property', attributes: propertyAttributes,
+  model: Property,
+  as: 'property',
+  attributes: propertyAttributes,
   include: [{ model: Image, as: 'images', attributes: ['id', 'url', 'isCover'] }],
 };
 
@@ -44,10 +46,7 @@ const getDeals = async (req, res) => {
 const getDealById = async (req, res) => {
   try {
     const deal = await Deal.findByPk(req.params.id, {
-      include: [
-        { model: Lead, as: 'lead' },
-        propertyInclude,
-      ],
+      include: [{ model: Lead, as: 'lead' }, propertyInclude],
     });
     if (!deal) return res.status(404).json({ error: 'Venta no encontrada' });
 

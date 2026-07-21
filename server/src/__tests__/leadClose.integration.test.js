@@ -6,7 +6,16 @@ jest.mock('../services/emailService', () => ({
 const { Op } = require('sequelize');
 const request = require('supertest');
 const app = require('../../app');
-const { sequelize, Lead, Deal, Task, Activity, AuditLog, User, Property } = require('../models/index');
+const {
+  sequelize,
+  Lead,
+  Deal,
+  Task,
+  Activity,
+  AuditLog,
+  User,
+  Property,
+} = require('../models/index');
 const { createUser, authToken, createProperty, createLead } = require('./helpers/factories');
 
 // AuditLog se escribe en logAudit() sin esperar la promesa (fire-and-forget) — se sondea
@@ -53,8 +62,10 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       const openTask = await Task.findOne({ where: { leadId: lead.id, done: false } });
       expect(openTask).not.toBeNull();
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 800000 });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 800000,
+      });
 
       expect(res.status).toBe(200);
       expect(Number(res.body.data.deal.amount)).toBe(800000);
@@ -76,8 +87,10 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       const property = await createProperty();
       const lead = await createLead();
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
 
       const auditRow = await waitForAuditLog({ resource: 'lead', resourceId: lead.id });
       expect(auditRow).not.toBeNull();
@@ -89,11 +102,15 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
     test('rechaza cerrar dos veces la misma venta: no crea un segundo Deal', async () => {
       const property = await createProperty();
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
 
-      const second = await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 999999 });
+      const second = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 999999,
+      });
 
       expect(second.status).toBe(400);
       const deals = await Deal.findAll({ where: { leadId: lead.id } });
@@ -104,11 +121,14 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
     test('corrige un cierre erróneo como perdido: limpia closeReason y lo marca como venta', async () => {
       const property = await createProperty();
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`))
-        .send({ closeReason: 'sin_presupuesto' });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'sin_presupuesto',
+      });
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
 
       expect(res.status).toBe(200);
       await lead.reload();
@@ -116,7 +136,10 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       expect(lead.closeReason).toBeNull();
       expect(lead.closeReasonDetail).toBeNull();
 
-      const activity = await Activity.findOne({ where: { leadId: lead.id }, order: [['id', 'DESC']] });
+      const activity = await Activity.findOne({
+        where: { leadId: lead.id },
+        order: [['id', 'DESC']],
+      });
       expect(activity.content).toMatch(/corrección de cierre anterior/i);
     });
 
@@ -134,8 +157,10 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
 
     test('propiedad inexistente devuelve 404 y no crea Deal', async () => {
       const lead = await createLead();
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: 999999, amount: 500000 });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: 999999,
+        amount: 500000,
+      });
 
       expect(res.status).toBe(404);
       const count = await Deal.count({ where: { leadId: lead.id } });
@@ -143,8 +168,10 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
     });
 
     test('lead inexistente devuelve 404', async () => {
-      const res = await authed(request(app).put('/api/leads/999999/close-won'))
-        .send({ propertyId: 1, amount: 500000 });
+      const res = await authed(request(app).put('/api/leads/999999/close-won')).send({
+        propertyId: 1,
+        amount: 500000,
+      });
       expect(res.status).toBe(404);
     });
 
@@ -157,8 +184,10 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       // dentro de la misma transacción — forzar su fallo prueba que lo anterior se revierte.
       const spy = jest.spyOn(Task, 'update').mockRejectedValueOnce(new Error('fallo simulado'));
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 700000 });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 700000,
+      });
 
       spy.mockRestore();
 
@@ -177,8 +206,9 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       await authed(request(app).put(`/api/leads/${lead.id}`)).send({ assignedToUserId: admin.id });
       const openTask = await Task.findOne({ where: { leadId: lead.id, done: false } });
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`))
-        .send({ closeReason: 'no_respondio' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'no_respondio',
+      });
 
       expect(res.status).toBe(200);
       await lead.reload();
@@ -192,8 +222,13 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
 
     test('rechaza cerrar dos veces como perdido', async () => {
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'otro', closeReasonDetail: 'x' });
-      const second = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'no_respondio' });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'otro',
+        closeReasonDetail: 'x',
+      });
+      const second = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'no_respondio',
+      });
 
       expect(second.status).toBe(400);
       await lead.reload();
@@ -203,42 +238,55 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
     test('corrige una venta registrada por error: destruye el Deal existente', async () => {
       const property = await createProperty();
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
       expect(await Deal.count({ where: { leadId: lead.id } })).toBe(1);
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`))
-        .send({ closeReason: 'compro_competencia' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'compro_competencia',
+      });
 
       expect(res.status).toBe(200);
       expect(await Deal.count({ where: { leadId: lead.id } })).toBe(0);
 
-      const activity = await Activity.findOne({ where: { leadId: lead.id }, order: [['id', 'DESC']] });
+      const activity = await Activity.findOne({
+        where: { leadId: lead.id },
+        order: [['id', 'DESC']],
+      });
       expect(activity.content).toMatch(/corrección de venta registrada por error/i);
     });
 
     test('rechaza motivo inválido', async () => {
       const lead = await createLead();
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'motivo-inventado' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'motivo-inventado',
+      });
       expect(res.status).toBe(400);
     });
 
     test('motivo "otro" sin detalle es rechazado', async () => {
       const lead = await createLead();
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'otro' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'otro',
+      });
       expect(res.status).toBe(400);
     });
 
     test('rollback de transacción: si falla un paso posterior, el Deal destruido se restaura', async () => {
       const property = await createProperty();
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
 
       const spy = jest.spyOn(Task, 'update').mockRejectedValueOnce(new Error('fallo simulado'));
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`))
-        .send({ closeReason: 'no_respondio' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'no_respondio',
+      });
 
       spy.mockRestore();
 
@@ -263,7 +311,9 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
 
     test('reabre desde no_interesado: limpia closeReason y vuelve a contactado por defecto', async () => {
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'sin_presupuesto' });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'sin_presupuesto',
+      });
 
       const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
 
@@ -274,15 +324,20 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       expect(lead.closeReason).toBeNull();
       expect(lead.closeReasonDetail).toBeNull();
 
-      const activity = await Activity.findOne({ where: { leadId: lead.id }, order: [['id', 'DESC']] });
+      const activity = await Activity.findOne({
+        where: { leadId: lead.id },
+        order: [['id', 'DESC']],
+      });
       expect(activity.content).toMatch(/reabierto/i);
     });
 
     test('reabre desde venta_realizada: destruye el Deal existente', async () => {
       const property = await createProperty();
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
       expect(await Deal.count({ where: { leadId: lead.id } })).toBe(1);
 
       const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
@@ -290,15 +345,22 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       expect(res.status).toBe(200);
       expect(await Deal.count({ where: { leadId: lead.id } })).toBe(0);
 
-      const activity = await Activity.findOne({ where: { leadId: lead.id }, order: [['id', 'DESC']] });
+      const activity = await Activity.findOne({
+        where: { leadId: lead.id },
+        order: [['id', 'DESC']],
+      });
       expect(activity.content).toMatch(/se eliminó la venta registrada/i);
     });
 
     test('acepta una etapa destino explícita no terminal', async () => {
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'perdio_interes' });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'perdio_interes',
+      });
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({ pipelineStage: 'negociacion' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({
+        pipelineStage: 'negociacion',
+      });
 
       expect(res.status).toBe(200);
       await lead.reload();
@@ -307,9 +369,13 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
 
     test('rechaza reabrir hacia otra etapa terminal', async () => {
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'perdio_interes' });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'perdio_interes',
+      });
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({ pipelineStage: 'venta_realizada' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({
+        pipelineStage: 'venta_realizada',
+      });
 
       expect(res.status).toBe(400);
       await lead.reload();
@@ -319,7 +385,9 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
     test('restaura la invariante de la task: recrea una task abierta si el lead tiene responsable', async () => {
       const lead = await createLead();
       await authed(request(app).put(`/api/leads/${lead.id}`)).send({ assignedToUserId: admin.id });
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'no_respondio' });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'no_respondio',
+      });
       expect(await Task.count({ where: { leadId: lead.id, done: false } })).toBe(0);
 
       const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
@@ -332,7 +400,9 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
 
     test('sin responsable asignado, reabrir no crea ninguna task (misma regla que al crear)', async () => {
       const lead = await createLead(); // sin assignedToUserId
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'no_respondio' });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'no_respondio',
+      });
 
       await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
 
@@ -343,15 +413,21 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
     test('registra la auditoría de la reapertura', async () => {
       const property = await createProperty();
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
       // El close-won ya generó una fila de auditoría — hay que esperar una MÁS reciente
       // que esa, o el poll podría devolver la del close-won por error.
       const closeWonAudit = await waitForAuditLog({ resource: 'lead', resourceId: lead.id });
 
       await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
 
-      const auditRow = await waitForAuditLog({ resource: 'lead', resourceId: lead.id, id: { [Op.gt]: closeWonAudit.id } });
+      const auditRow = await waitForAuditLog({
+        resource: 'lead',
+        resourceId: lead.id,
+        id: { [Op.gt]: closeWonAudit.id },
+      });
       const detail = JSON.parse(auditRow.detail);
       expect(detail.reopened).toBe(true);
       expect(detail.fromStage).toBe('venta_realizada');
@@ -363,8 +439,10 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       const property = await createProperty();
       const lead = await createLead();
       await authed(request(app).put(`/api/leads/${lead.id}`)).send({ assignedToUserId: admin.id });
-      await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
 
       // ensureOpenTask (Task.create) corre al final, después de destruir el Deal y
       // actualizar el lead dentro de la misma transacción.
@@ -385,10 +463,14 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
     test('no permite cambiar pipelineStage de un lead cerrado — exige pasar por /reopen', async () => {
       const property = await createProperty();
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-won`))
-        .send({ propertyId: property.id, amount: 500000 });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}`)).send({ pipelineStage: 'contactado' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}`)).send({
+        pipelineStage: 'contactado',
+      });
 
       expect(res.status).toBe(400);
       await lead.reload();
@@ -398,9 +480,13 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
 
     test('sigue permitiendo actualizar otros campos (notas) en un lead cerrado', async () => {
       const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({ closeReason: 'no_respondio' });
+      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
+        closeReason: 'no_respondio',
+      });
 
-      const res = await authed(request(app).put(`/api/leads/${lead.id}`)).send({ notes: 'Llamó de nuevo, sigue sin interés' });
+      const res = await authed(request(app).put(`/api/leads/${lead.id}`)).send({
+        notes: 'Llamó de nuevo, sigue sin interés',
+      });
 
       expect(res.status).toBe(200);
       await lead.reload();

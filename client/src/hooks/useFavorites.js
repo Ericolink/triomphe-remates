@@ -3,7 +3,11 @@ import { create } from 'zustand';
 const STORAGE_KEY = 'triomphe_favorites';
 
 const readStorage = () => {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch {
+    return [];
+  }
 };
 
 // Store compartido — Navbar (contador), FavoriteButton y FavoritesPage
@@ -19,22 +23,25 @@ const useFavoritesStore = create((set, get) => ({
     const { favorites } = get();
     const next = favorites.some((f) => f.id === property.id)
       ? favorites.filter((f) => f.id !== property.id)
-      : [...favorites, {
-          id: property.id,
-          slug: property.slug,
-          title: property.title,
-          price: property.price,
-          city: property.city,
-          status: property.status,
-          type: property.type,
-          images: property.images?.slice(0, 1) ?? [],
-          squareMeters: property.squareMeters,
-          constructionMeters: property.constructionMeters,
-          terrainMeters: property.terrainMeters,
-          bedrooms: property.bedrooms,
-          bathrooms: property.bathrooms,
-          isFeatured: property.isFeatured,
-        }];
+      : [
+          ...favorites,
+          {
+            id: property.id,
+            slug: property.slug,
+            title: property.title,
+            price: property.price,
+            city: property.city,
+            status: property.status,
+            type: property.type,
+            images: property.images?.slice(0, 1) ?? [],
+            squareMeters: property.squareMeters,
+            constructionMeters: property.constructionMeters,
+            terrainMeters: property.terrainMeters,
+            bedrooms: property.bedrooms,
+            bathrooms: property.bathrooms,
+            isFeatured: property.isFeatured,
+          },
+        ];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     set({ favorites: next });
   },

@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
 export default function ThemeToggle({ className = '' }) {
-  const [isDark, setIsDark] = useState(
-    () => document.documentElement.classList.contains('dark')
-  );
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -26,10 +24,12 @@ export default function ThemeToggle({ className = '' }) {
   };
 
   return (
-    <button onClick={toggle}
+    <button
+      onClick={toggle}
       className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${className}`}
       title={isDark ? 'Modo claro' : 'Modo oscuro'}
-      aria-label="Cambiar tema">
+      aria-label="Cambiar tema"
+    >
       {isDark ? (
         <Sun size={18} className="text-yellow-400" />
       ) : (

@@ -11,7 +11,9 @@ export default function UnavailablePropertyCard({ title, onRemove }) {
       <PackageX size={32} className="text-gray-300 dark:text-gray-600" />
       <div>
         <p className="font-medium text-gray-500 dark:text-gray-400 line-clamp-2">{title}</p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Esta propiedad ya no está disponible</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          Esta propiedad ya no está disponible
+        </p>
       </div>
       <button
         type="button"

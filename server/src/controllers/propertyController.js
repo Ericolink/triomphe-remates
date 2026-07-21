@@ -9,7 +9,7 @@ const { logAudit } = require('../utils/audit');
 const logger = require('../utils/logger');
 
 // Convierte string vacío a null para campos numéricos
-const nullIfEmpty = (val) => (val === '' || val === undefined) ? null : val;
+const nullIfEmpty = (val) => (val === '' || val === undefined ? null : val);
 
 // GET /api/properties
 const getProperties = async (req, res) => {
@@ -66,8 +66,8 @@ const getProperties = async (req, res) => {
     if (search) {
       andConditions.push({
         [Op.or]: [
-          { title:       { [Op.like]: `%${search}%` } },
-          { address:     { [Op.like]: `%${search}%` } },
+          { title: { [Op.like]: `%${search}%` } },
+          { address: { [Op.like]: `%${search}%` } },
           { description: { [Op.like]: `%${search}%` } },
         ],
       });
@@ -81,7 +81,10 @@ const getProperties = async (req, res) => {
       where,
       attributes: { exclude: ['internalNotes'] },
       include: [{ model: Image, as: 'images', where: { isCover: true }, required: false }],
-      order: [['isFeatured', 'DESC'], ['createdAt', 'DESC']],
+      order: [
+        ['isFeatured', 'DESC'],
+        ['createdAt', 'DESC'],
+      ],
     });
 
     return res.json(result);
@@ -103,9 +106,14 @@ const getPropertiesSync = async (req, res) => {
     const idsParam = req.query.ids;
     if (!idsParam) return res.status(400).json({ error: 'Parámetro ids requerido' });
 
-    const ids = [...new Set(
-      String(idsParam).split(',').map((v) => parseInt(v, 10)).filter((n) => Number.isInteger(n) && n > 0)
-    )];
+    const ids = [
+      ...new Set(
+        String(idsParam)
+          .split(',')
+          .map((v) => parseInt(v, 10))
+          .filter((n) => Number.isInteger(n) && n > 0)
+      ),
+    ];
 
     if (ids.length === 0) return res.json({ data: [] });
     if (ids.length > MAX_SYNC_IDS) {
@@ -138,7 +146,9 @@ const getPropertyStats = async (req, res) => {
     });
 
     const byCity = { juarez: 0, chihuahua: 0, queretaro: 0 };
-    byCityRaw.forEach((row) => { byCity[row.city] = parseInt(row.total); });
+    byCityRaw.forEach((row) => {
+      byCity[row.city] = parseInt(row.total);
+    });
 
     return res.json({ total, byCity });
   } catch (error) {
@@ -208,9 +218,23 @@ const getPropertyBySlug = async (req, res) => {
 const createProperty = async (req, res) => {
   try {
     const {
-      title, description, price, city, type,
-      status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address, auctionDate, acquisitionStage, isFeatured, internalNotes, code,
+      title,
+      description,
+      price,
+      city,
+      type,
+      status,
+      squareMeters,
+      terrainMeters,
+      constructionMeters,
+      bedrooms,
+      bathrooms,
+      address,
+      auctionDate,
+      acquisitionStage,
+      isFeatured,
+      internalNotes,
+      code,
     } = req.body;
 
     if (!title || !city || !type) {
@@ -227,35 +251,50 @@ const createProperty = async (req, res) => {
     // sin transacción, un fallo en PropertyStatusHistory.create dejaba la propiedad
     // creada sin su historial inicial.
     const property = await sequelize.transaction(async (transaction) => {
-      const created = await Property.create({
-        title, description,
-        price: nullIfEmpty(price),
-        city, type,
-        status: status || 'disponible',
-        squareMeters: nullIfEmpty(squareMeters),
-        terrainMeters: nullIfEmpty(terrainMeters),
-        constructionMeters: nullIfEmpty(constructionMeters),
-        bedrooms: nullIfEmpty(bedrooms),
-        bathrooms: nullIfEmpty(bathrooms),
-        address, auctionDate: auctionDate || null,
-        acquisitionStage: acquisitionStage || 'sin_proceso',
-        isFeatured: isFeatured || false,
-        internalNotes: internalNotes || null,
-        code: nullIfEmpty(code),
-        slug,
-      }, { transaction });
+      const created = await Property.create(
+        {
+          title,
+          description,
+          price: nullIfEmpty(price),
+          city,
+          type,
+          status: status || 'disponible',
+          squareMeters: nullIfEmpty(squareMeters),
+          terrainMeters: nullIfEmpty(terrainMeters),
+          constructionMeters: nullIfEmpty(constructionMeters),
+          bedrooms: nullIfEmpty(bedrooms),
+          bathrooms: nullIfEmpty(bathrooms),
+          address,
+          auctionDate: auctionDate || null,
+          acquisitionStage: acquisitionStage || 'sin_proceso',
+          isFeatured: isFeatured || false,
+          internalNotes: internalNotes || null,
+          code: nullIfEmpty(code),
+          slug,
+        },
+        { transaction }
+      );
 
-      await PropertyStatusHistory.create({
-        propertyId: created.id,
-        fromStatus: null,
-        toStatus: created.status,
-        userName: req.user?.name || null,
-      }, { transaction });
+      await PropertyStatusHistory.create(
+        {
+          propertyId: created.id,
+          fromStatus: null,
+          toStatus: created.status,
+          userName: req.user?.name || null,
+        },
+        { transaction }
+      );
 
       return created;
     });
 
-    logger.info('Propiedad creada', { propertyId: property.id, userId: req.user?.id, city, type, status: property.status });
+    logger.info('Propiedad creada', {
+      propertyId: property.id,
+      userId: req.user?.id,
+      city,
+      type,
+      status: property.status,
+    });
 
     // Notificar a suscriptores con alertas coincidentes (sin bloquear la respuesta)
     if ((status || 'disponible') === 'disponible') {
@@ -281,9 +320,23 @@ const updateProperty = async (req, res) => {
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
     const {
-      title, description, price, city, type,
-      status, squareMeters, terrainMeters, constructionMeters, bedrooms, bathrooms,
-      address, auctionDate, acquisitionStage, isFeatured, internalNotes, code,
+      title,
+      description,
+      price,
+      city,
+      type,
+      status,
+      squareMeters,
+      terrainMeters,
+      constructionMeters,
+      bedrooms,
+      bathrooms,
+      address,
+      auctionDate,
+      acquisitionStage,
+      isFeatured,
+      internalNotes,
+      code,
     } = req.body;
 
     if (title && title !== property.title) {
@@ -294,7 +347,7 @@ const updateProperty = async (req, res) => {
     }
 
     const previousStatus = property.status;
-    const previousPrice  = property.price;
+    const previousPrice = property.price;
 
     // AUDIT-021: solo se incluyen en el UPDATE los campos que el request realmente
     // envió. Antes se pasaban TODOS los campos desestructurados (incluyendo los
@@ -310,12 +363,14 @@ const updateProperty = async (req, res) => {
     if (status !== undefined) updates.status = status;
     if (squareMeters !== undefined) updates.squareMeters = nullIfEmpty(squareMeters);
     if (terrainMeters !== undefined) updates.terrainMeters = nullIfEmpty(terrainMeters);
-    if (constructionMeters !== undefined) updates.constructionMeters = nullIfEmpty(constructionMeters);
+    if (constructionMeters !== undefined)
+      updates.constructionMeters = nullIfEmpty(constructionMeters);
     if (bedrooms !== undefined) updates.bedrooms = nullIfEmpty(bedrooms);
     if (bathrooms !== undefined) updates.bathrooms = nullIfEmpty(bathrooms);
     if (address !== undefined) updates.address = address;
     if (auctionDate !== undefined) updates.auctionDate = auctionDate || null;
-    if (acquisitionStage !== undefined) updates.acquisitionStage = acquisitionStage || 'sin_proceso';
+    if (acquisitionStage !== undefined)
+      updates.acquisitionStage = acquisitionStage || 'sin_proceso';
     if (isFeatured !== undefined) updates.isFeatured = isFeatured;
     if (internalNotes !== undefined) updates.internalNotes = internalNotes || null;
     if (code !== undefined) updates.code = nullIfEmpty(code);
@@ -341,7 +396,8 @@ const updateProperty = async (req, res) => {
     }
 
     const newPrice = nullIfEmpty(price);
-    const prevPrice = previousPrice !== null && previousPrice !== undefined ? parseFloat(previousPrice) : null;
+    const prevPrice =
+      previousPrice !== null && previousPrice !== undefined ? parseFloat(previousPrice) : null;
     const nextPrice = newPrice !== null && newPrice !== undefined ? parseFloat(newPrice) : null;
     if (price !== undefined && prevPrice !== nextPrice) {
       PropertyStatusHistory.create({
@@ -377,7 +433,11 @@ const deleteProperty = async (req, res) => {
     // Eliminar imágenes de Cloudinary
     for (const image of property.images) {
       if (image.filename) {
-        try { await cloudinary.uploader.destroy(image.filename); } catch { /* ignorado */ }
+        try {
+          await cloudinary.uploader.destroy(image.filename);
+        } catch {
+          /* ignorado */
+        }
       }
     }
 
@@ -404,7 +464,9 @@ const uploadImages = async (req, res) => {
     // AUDIT-008: multer ya filtró por extensión/mimetype declarado (falsificable); esto
     // verifica los bytes reales del archivo antes de subirlo a Cloudinary.
     if (req.files.some((file) => !isValidImageBuffer(file.buffer))) {
-      return res.status(400).json({ error: 'Uno o más archivos no son imágenes válidas (JPG, PNG o WEBP)' });
+      return res
+        .status(400)
+        .json({ error: 'Uno o más archivos no son imágenes válidas (JPG, PNG o WEBP)' });
     }
 
     const existingImages = await Image.count({ where: { propertyId: property.id } });
@@ -412,7 +474,10 @@ const uploadImages = async (req, res) => {
     const uploadToCloudinary = (buffer) =>
       new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: 'triomphe/properties', transformation: [{ quality: 'auto', fetch_format: 'auto' }] },
+          {
+            folder: 'triomphe/properties',
+            transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+          },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
@@ -457,7 +522,11 @@ const deleteImage = async (req, res) => {
 
     // Eliminar de Cloudinary si tiene public_id
     if (image.filename) {
-      try { await cloudinary.uploader.destroy(image.filename); } catch { /* ignorado */ }
+      try {
+        await cloudinary.uploader.destroy(image.filename);
+      } catch {
+        /* ignorado */
+      }
     }
 
     await image.destroy();
@@ -518,7 +587,11 @@ const reorderImages = async (req, res) => {
       return res.status(400).json({ error: 'El listado de imágenes no coincide con la propiedad' });
     }
 
-    await Promise.all(imageIds.map((imgId, index) => Image.update({ order: index }, { where: { id: imgId, propertyId: req.params.id } })));
+    await Promise.all(
+      imageIds.map((imgId, index) =>
+        Image.update({ order: index }, { where: { id: imgId, propertyId: req.params.id } })
+      )
+    );
 
     logAudit(req, 'update', 'property', req.params.id, { imageIds });
 
@@ -596,7 +669,15 @@ const getPublicPriceHistory = async (req, res) => {
   try {
     const history = await PropertyStatusHistory.findAll({
       where: { propertyId: req.params.id },
-      attributes: ['id', 'fromStatus', 'toStatus', 'changeType', 'fromPrice', 'toPrice', 'createdAt'],
+      attributes: [
+        'id',
+        'fromStatus',
+        'toStatus',
+        'changeType',
+        'fromPrice',
+        'toPrice',
+        'createdAt',
+      ],
       order: [['createdAt', 'DESC']],
     });
     return res.json({ data: history });

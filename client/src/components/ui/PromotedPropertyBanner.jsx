@@ -50,7 +50,9 @@ export default function PromotedPropertyBanner({ property }) {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
             <div className="absolute top-4 left-4 flex gap-2">
-              <Badge variant={STATUS_VARIANTS[property.status]}>{STATUS_LABELS[property.status]}</Badge>
+              <Badge variant={STATUS_VARIANTS[property.status]}>
+                {STATUS_LABELS[property.status]}
+              </Badge>
             </div>
             <div className="absolute bottom-4 left-4 flex items-center gap-1 text-white text-sm font-medium bg-black/50 rounded-lg px-3 py-1 backdrop-blur-sm">
               <MapPin size={14} />
@@ -85,12 +87,14 @@ export default function PromotedPropertyBanner({ property }) {
                     {property.terrainMeters} m² ter.
                   </span>
                 )}
-                {!property.constructionMeters && !property.terrainMeters && property.squareMeters && (
-                  <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <Maximize2 size={15} className="text-blue-600 dark:text-blue-400" />
-                    {property.squareMeters} m²
-                  </span>
-                )}
+                {!property.constructionMeters &&
+                  !property.terrainMeters &&
+                  property.squareMeters && (
+                    <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
+                      <Maximize2 size={15} className="text-blue-600 dark:text-blue-400" />
+                      {property.squareMeters} m²
+                    </span>
+                  )}
                 {property.bedrooms && (
                   <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
                     <Bed size={15} className="text-blue-600 dark:text-blue-400" />

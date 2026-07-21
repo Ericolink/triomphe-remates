@@ -63,11 +63,14 @@ exports.uploadDocument = async (req, res) => {
 
     // AUDIT-008: validar bytes reales, no solo la extensión declarada por el cliente
     if (!isValidDocumentBuffer(req.file.buffer)) {
-      return res.status(400).json({ error: 'El archivo no es un documento válido (PDF, DOC, DOCX, XLS o XLSX)' });
+      return res
+        .status(400)
+        .json({ error: 'El archivo no es un documento válido (PDF, DOC, DOCX, XLS o XLSX)' });
     }
 
     const existing = await PropertyDocument.count({ where: { propertyId: property.id } });
-    if (existing >= 10) return res.status(400).json({ error: 'Máximo 10 documentos por propiedad' });
+    if (existing >= 10)
+      return res.status(400).json({ error: 'Máximo 10 documentos por propiedad' });
 
     const originalName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
     const result = await uploadToCloudinary(req.file.buffer, originalName);
@@ -78,7 +81,10 @@ exports.uploadDocument = async (req, res) => {
       url: result.secure_url,
       filename: result.public_id,
       size: req.file.size,
-      isPublic: req.body.isPublic === undefined ? true : req.body.isPublic === 'true' || req.body.isPublic === true,
+      isPublic:
+        req.body.isPublic === undefined
+          ? true
+          : req.body.isPublic === 'true' || req.body.isPublic === true,
     });
 
     logAudit(req, 'create', 'property', property.id, `Documento subido: ${doc.name}`);
@@ -98,7 +104,13 @@ exports.setDocumentVisibility = async (req, res) => {
     if (!doc) return res.status(404).json({ error: 'Documento no encontrado' });
 
     await doc.update({ isPublic: Boolean(req.body.isPublic) });
-    logAudit(req, 'update', 'property', req.params.id, `Visibilidad de documento cambiada: ${doc.name} → ${doc.isPublic ? 'público' : 'privado'}`);
+    logAudit(
+      req,
+      'update',
+      'property',
+      req.params.id,
+      `Visibilidad de documento cambiada: ${doc.name} → ${doc.isPublic ? 'público' : 'privado'}`
+    );
     res.json(doc);
   } catch (err) {
     console.error(err);
@@ -113,7 +125,11 @@ exports.deleteDocument = async (req, res) => {
     });
     if (!doc) return res.status(404).json({ error: 'Documento no encontrado' });
 
-    try { await cloudinary.uploader.destroy(doc.filename, { resource_type: 'raw' }); } catch { /* ignorado */ }
+    try {
+      await cloudinary.uploader.destroy(doc.filename, { resource_type: 'raw' });
+    } catch {
+      /* ignorado */
+    }
 
     await doc.destroy();
     logAudit(req, 'delete', 'property', req.params.id, `Documento eliminado: ${doc.name}`);

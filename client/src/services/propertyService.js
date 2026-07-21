@@ -115,7 +115,9 @@ export const uploadDocument = async (id, file, name, isPublic = true) => {
 };
 
 export const setDocumentVisibility = async (propertyId, docId, isPublic) => {
-  const { data } = await api.patch(`/properties/${propertyId}/documents/${docId}/visibility`, { isPublic });
+  const { data } = await api.patch(`/properties/${propertyId}/documents/${docId}/visibility`, {
+    isPublic,
+  });
   return data;
 };
 

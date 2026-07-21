@@ -3,7 +3,9 @@ export const WHATSAPP_NUMBER = '526565792750';
 // Convierte un mapa de labels (CITY_LABELS, TYPE_LABELS, etc.) en opciones para <select>,
 // preservando el orden de inserción y excluyendo claves que no aplican como filtro.
 export const labelsToOptions = (labels, exclude = []) =>
-  Object.entries(labels).filter(([value]) => !exclude.includes(value)).map(([value, label]) => ({ value, label }));
+  Object.entries(labels)
+    .filter(([value]) => !exclude.includes(value))
+    .map(([value, label]) => ({ value, label }));
 
 export const CITY_LABELS = {
   juarez: 'Cd. Juárez',
@@ -49,21 +51,21 @@ export const LEAD_TYPE_LABELS = {
 };
 
 export const SOURCE_LABELS = {
-  google:    'Google',
-  facebook:  'Facebook',
-  whatsapp:  'WhatsApp',
-  directo:   'Directo',
-  referido:  'Referido',
-  otro:      'Otro',
+  google: 'Google',
+  facebook: 'Facebook',
+  whatsapp: 'WhatsApp',
+  directo: 'Directo',
+  referido: 'Referido',
+  otro: 'Otro',
 };
 
 export const SOURCE_COLORS = {
-  google:   'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  google: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   facebook: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
   whatsapp: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  directo:  'bg-gray-100 text-gray-600 dark:bg-gray-700/40 dark:text-gray-300',
+  directo: 'bg-gray-100 text-gray-600 dark:bg-gray-700/40 dark:text-gray-300',
   referido: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-  otro:     'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  otro: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
 };
 
 // CRM Comercial — embudo de 8 etapas (reemplaza el status de 4 valores en la UI; el
@@ -104,14 +106,14 @@ export const TERMINAL_STAGES = ['venta_realizada', 'no_interesado'];
 // y contraste normal) contra ambos fondos — solo el gris "sin datos" queda fuera del piso
 // de croma a propósito (siempre va acompañado de su etiqueta de texto visible).
 export const PIPELINE_STAGE_BAR_COLORS = {
-  nuevo:            'bg-blue-600 dark:bg-blue-500',
-  contactado:       'bg-teal-600 dark:bg-teal-400',
-  interesado:       'bg-orange-600 dark:bg-orange-400',
-  cita_agendada:    'bg-pink-600 dark:bg-pink-400',
-  cita_realizada:   'bg-amber-600 dark:bg-amber-400',
-  negociacion:      'bg-violet-600 dark:bg-violet-400',
-  venta_realizada:  'bg-green-600 dark:bg-green-400',
-  no_interesado:    'bg-gray-400 dark:bg-gray-500',
+  nuevo: 'bg-blue-600 dark:bg-blue-500',
+  contactado: 'bg-teal-600 dark:bg-teal-400',
+  interesado: 'bg-orange-600 dark:bg-orange-400',
+  cita_agendada: 'bg-pink-600 dark:bg-pink-400',
+  cita_realizada: 'bg-amber-600 dark:bg-amber-400',
+  negociacion: 'bg-violet-600 dark:bg-violet-400',
+  venta_realizada: 'bg-green-600 dark:bg-green-400',
+  no_interesado: 'bg-gray-400 dark:bg-gray-500',
 };
 
 export const CLOSE_REASON_LABELS = {
@@ -127,13 +129,13 @@ export const CLOSE_REASON_LABELS = {
 // Mismo criterio de orden categórico fijo que PIPELINE_STAGE_BAR_COLORS, validado aparte
 // (7 categorías, orden de adyacencia propio de esta lista).
 export const CLOSE_REASON_BAR_COLORS = {
-  compro:              'bg-pink-600 dark:bg-pink-400',
-  no_respondio:        'bg-amber-600 dark:bg-amber-400',
-  sin_presupuesto:     'bg-blue-600 dark:bg-blue-500',
-  compro_competencia:  'bg-teal-600 dark:bg-teal-400',
-  solo_info:           'bg-violet-600 dark:bg-violet-400',
-  perdio_interes:      'bg-orange-600 dark:bg-orange-400',
-  otro:                'bg-gray-400 dark:bg-gray-500',
+  compro: 'bg-pink-600 dark:bg-pink-400',
+  no_respondio: 'bg-amber-600 dark:bg-amber-400',
+  sin_presupuesto: 'bg-blue-600 dark:bg-blue-500',
+  compro_competencia: 'bg-teal-600 dark:bg-teal-400',
+  solo_info: 'bg-violet-600 dark:bg-violet-400',
+  perdio_interes: 'bg-orange-600 dark:bg-orange-400',
+  otro: 'bg-gray-400 dark:bg-gray-500',
 };
 
 export const ACTIVITY_TYPE_LABELS = {
@@ -146,12 +148,12 @@ export const ACTIVITY_TYPE_LABELS = {
 };
 
 export const ACTIVITY_TYPE_COLORS = {
-  llamada:  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  llamada: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   whatsapp: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  email:    'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-  visita:   'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  nota:     'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-  sistema:  'bg-gray-100 text-gray-500 dark:bg-gray-700/40 dark:text-gray-400',
+  email: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+  visita: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  nota: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  sistema: 'bg-gray-100 text-gray-500 dark:bg-gray-700/40 dark:text-gray-400',
 };
 
 export const APPOINTMENT_STATUS_LABELS = {
@@ -172,8 +174,8 @@ export const APPOINTMENT_STATUS_BAR_COLORS = {
   programada: 'bg-cyan-600 dark:bg-cyan-400',
   confirmada: 'bg-blue-600 dark:bg-blue-500',
   completada: 'bg-emerald-600 dark:bg-emerald-400',
-  no_show:    'bg-red-600 dark:bg-red-400',
-  cancelada:  'bg-gray-400 dark:bg-gray-500',
+  no_show: 'bg-red-600 dark:bg-red-400',
+  cancelada: 'bg-gray-400 dark:bg-gray-500',
 };
 
 export const APPOINTMENT_STATUS_VARIANTS = {
@@ -200,16 +202,24 @@ export const PAYMENT_METHOD_LABELS = {
   contado: 'Contado',
 };
 
-export const FEEDBACK_CATEGORY_LABELS = { queja: 'Queja', comentario: 'Comentario', sugerencia: 'Sugerencia' };
+export const FEEDBACK_CATEGORY_LABELS = {
+  queja: 'Queja',
+  comentario: 'Comentario',
+  sugerencia: 'Sugerencia',
+};
 
 // Mapeadas a las 5 variantes que soporta Badge, mismo criterio que PIPELINE_STAGE_VARIANTS
-export const FEEDBACK_CATEGORY_VARIANTS = { queja: 'danger', comentario: 'primary', sugerencia: 'success' };
+export const FEEDBACK_CATEGORY_VARIANTS = {
+  queja: 'danger',
+  comentario: 'primary',
+  sugerencia: 'success',
+};
 
 // Franja de degradado del lado derecho de la tarjeta (BuzonAdminPage) — opacidad baja para
 // que el contenido siga siendo legible encima; el Badge de categoría es opaco así que no
 // se ve afectado por estar sobre la franja.
 export const FEEDBACK_CATEGORY_GRADIENT = {
-  queja:      'from-red-400/50 dark:from-red-500/25',
+  queja: 'from-red-400/50 dark:from-red-500/25',
   comentario: 'from-blue-400/50 dark:from-blue-500/25',
   sugerencia: 'from-green-400/50 dark:from-green-500/25',
 };

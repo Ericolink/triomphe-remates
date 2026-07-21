@@ -1,6 +1,9 @@
 const { JobPosition, JobApplication } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
-const { sendJobApplicationNotification, sendJobApplicationConfirmation } = require('../services/emailService');
+const {
+  sendJobApplicationNotification,
+  sendJobApplicationConfirmation,
+} = require('../services/emailService');
 const { logAudit } = require('../utils/audit');
 
 const VALID_APPLICATION_STATUS = ['nueva', 'en_revision', 'entrevista', 'aceptada', 'rechazada'];
@@ -18,7 +21,10 @@ const getPositions = async (req, res) => {
 
     const positions = await JobPosition.findAll({
       where,
-      order: [['isUrgent', 'DESC'], ['createdAt', 'DESC']],
+      order: [
+        ['isUrgent', 'DESC'],
+        ['createdAt', 'DESC'],
+      ],
     });
 
     return res.json({ data: positions });
@@ -32,11 +38,13 @@ const getPositions = async (req, res) => {
 const getAllPositions = async (req, res) => {
   try {
     const positions = await JobPosition.findAll({
-      include: [{
-        model: JobApplication,
-        as: 'applications',
-        attributes: ['id', 'status'],
-      }],
+      include: [
+        {
+          model: JobApplication,
+          as: 'applications',
+          attributes: ['id', 'status'],
+        },
+      ],
       order: [['createdAt', 'DESC']],
     });
 
@@ -67,7 +75,10 @@ const createPosition = async (req, res) => {
       return res.status(400).json({ error: 'Título, descripción y requisitos son requeridos' });
     }
     const position = await JobPosition.create({
-      title, description, requirements, benefits,
+      title,
+      description,
+      requirements,
+      benefits,
       city: city || 'todas',
       type: type || 'por_comision',
       isUrgent: isUrgent || false,
@@ -127,7 +138,9 @@ const applyToPosition = async (req, res) => {
     const { name, email, phone, city, experience, hasVehicle, motivation } = req.body;
 
     if (!name || !email || !phone || !city || !experience) {
-      return res.status(400).json({ error: 'Nombre, email, teléfono, ciudad y experiencia son requeridos' });
+      return res
+        .status(400)
+        .json({ error: 'Nombre, email, teléfono, ciudad y experiencia son requeridos' });
     }
 
     if (!validateEmail(email)) {
@@ -145,15 +158,23 @@ const applyToPosition = async (req, res) => {
     }
 
     const application = await JobApplication.create({
-      name, email, phone, city, experience,
+      name,
+      email,
+      phone,
+      city,
+      experience,
       hasVehicle: hasVehicle || false,
       motivation,
       jobPositionId: position ? position.id : null,
     });
 
     Promise.all([
-      sendJobApplicationNotification(application, position).catch((e) => console.error('Error email notif:', e)),
-      sendJobApplicationConfirmation(application, position).catch((e) => console.error('Error email confirm:', e)),
+      sendJobApplicationNotification(application, position).catch((e) =>
+        console.error('Error email notif:', e)
+      ),
+      sendJobApplicationConfirmation(application, position).catch((e) =>
+        console.error('Error email confirm:', e)
+      ),
     ]);
 
     return res.status(201).json({
@@ -176,12 +197,14 @@ const getApplications = async (req, res) => {
 
     const applications = await JobApplication.findAll({
       where,
-      include: [{
-        model: JobPosition,
-        as: 'position',
-        attributes: ['id', 'title', 'city'],
-        required: false,
-      }],
+      include: [
+        {
+          model: JobPosition,
+          as: 'position',
+          attributes: ['id', 'title', 'city'],
+          required: false,
+        },
+      ],
       order: [['createdAt', 'DESC']],
     });
 
@@ -199,7 +222,9 @@ const updateApplication = async (req, res) => {
     if (!application) return res.status(404).json({ error: 'Postulación no encontrada' });
     const { status, notes } = req.body;
     if (status !== undefined && !VALID_APPLICATION_STATUS.includes(status)) {
-      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_APPLICATION_STATUS.join(', ')}` });
+      return res.status(400).json({
+        error: `Estatus inválido. Valores permitidos: ${VALID_APPLICATION_STATUS.join(', ')}`,
+      });
     }
     // AUDIT-025: mismo bug que updateProperty (AUDIT-021) — pasar status/notes sin
     // filtrar sobreescribía el campo ausente a null en cada actualización parcial
@@ -222,7 +247,10 @@ const deleteApplication = async (req, res) => {
     const application = await JobApplication.findByPk(req.params.id);
     if (!application) return res.status(404).json({ error: 'Postulación no encontrada' });
     await application.destroy();
-    logAudit(req, 'delete', 'application', req.params.id, { name: application.name, email: application.email });
+    logAudit(req, 'delete', 'application', req.params.id, {
+      name: application.name,
+      email: application.email,
+    });
     return res.json({ message: 'Postulación eliminada' });
   } catch (error) {
     console.error('Error en deleteApplication:', error);
@@ -231,7 +259,14 @@ const deleteApplication = async (req, res) => {
 };
 
 module.exports = {
-  getPositions, getAllPositions, getPositionById,
-  createPosition, updatePosition, deletePosition,
-  applyToPosition, getApplications, updateApplication, deleteApplication,
+  getPositions,
+  getAllPositions,
+  getPositionById,
+  createPosition,
+  updatePosition,
+  deletePosition,
+  applyToPosition,
+  getApplications,
+  updateApplication,
+  deleteApplication,
 };

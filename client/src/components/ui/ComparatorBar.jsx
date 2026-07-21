@@ -34,12 +34,22 @@ export default function ComparatorBar() {
                 return (
                   <div key={p.id} className="relative flex-shrink-0">
                     <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-[#2e3650]">
-                      {imgUrl
-                        ? <img src={imgUrl} alt={p.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                        : <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30" />}
+                      {imgUrl ? (
+                        <img
+                          src={imgUrl}
+                          alt={p.title}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30" />
+                      )}
                     </div>
-                    <button onClick={() => toggle(p)}
-                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center">
+                    <button
+                      onClick={() => toggle(p)}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"
+                    >
                       <X size={9} />
                     </button>
                   </div>
@@ -50,18 +60,25 @@ export default function ComparatorBar() {
               {count}/3 propiedades
             </span>
             {count >= 2 ? (
-              <Link to="/comparar"
-                className="px-4 py-1.5 bg-blue-900 text-white text-sm font-medium rounded-xl hover:bg-blue-800 transition-colors whitespace-nowrap flex-shrink-0">
+              <Link
+                to="/comparar"
+                className="px-4 py-1.5 bg-blue-900 text-white text-sm font-medium rounded-xl hover:bg-blue-800 transition-colors whitespace-nowrap flex-shrink-0"
+              >
                 Comparar →
               </Link>
             ) : (
               <span
                 title="Selecciona al menos 2 propiedades para comparar"
-                className="px-4 py-1.5 bg-gray-100 dark:bg-[#2e3650] text-gray-400 dark:text-gray-500 text-sm font-medium rounded-xl whitespace-nowrap cursor-not-allowed select-none flex-shrink-0">
+                className="px-4 py-1.5 bg-gray-100 dark:bg-[#2e3650] text-gray-400 dark:text-gray-500 text-sm font-medium rounded-xl whitespace-nowrap cursor-not-allowed select-none flex-shrink-0"
+              >
                 Comparar →
               </span>
             )}
-            <button onClick={clear} className="p-1 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0" title="Limpiar comparador">
+            <button
+              onClick={clear}
+              className="p-1 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+              title="Limpiar comparador"
+            >
               <X size={16} />
             </button>
           </motion.div>

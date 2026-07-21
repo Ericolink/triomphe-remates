@@ -83,11 +83,16 @@ const faqGroups = [
 function FAQItem({ q, a, isOpen, onToggle }) {
   return (
     <div className="border border-gray-100 dark:border-[#2e3650] rounded-2xl overflow-hidden bg-white dark:bg-[#1a1f2e]">
-      <button onClick={onToggle}
-        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
+      >
         <span className="font-medium text-blue-900 dark:text-gray-100">{q}</span>
-        <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}
-          className="flex-shrink-0 text-gray-400">
+        <motion.span
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex-shrink-0 text-gray-400"
+        >
           <ChevronDown size={20} />
         </motion.span>
       </button>
@@ -100,7 +105,9 @@ function FAQItem({ q, a, isOpen, onToggle }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <p className="px-5 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{a}</p>
+            <p className="px-5 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              {a}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -120,16 +127,24 @@ export default function FAQPage() {
       />
 
       <section className="bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#1a1f2e] text-white py-20">
-        <motion.div className="max-w-4xl mx-auto px-4 text-center"
-          variants={staggerContainer} initial="hidden" animate="visible">
+        <motion.div
+          className="max-w-4xl mx-auto px-4 text-center"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           <motion.div variants={fadeInUp} className="flex justify-center mb-4">
             <HelpCircle size={48} className="text-yellow-400" />
           </motion.div>
           <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-bold mb-4">
             Preguntas Frecuentes
           </motion.h1>
-          <motion.p variants={fadeInUp} className="text-blue-200 dark:text-gray-400 text-lg max-w-2xl mx-auto">
-            Todo lo que necesitas saber sobre remates bancarios, cesión de derechos y el proceso de compra.
+          <motion.p
+            variants={fadeInUp}
+            className="text-blue-200 dark:text-gray-400 text-lg max-w-2xl mx-auto"
+          >
+            Todo lo que necesitas saber sobre remates bancarios, cesión de derechos y el proceso de
+            compra.
           </motion.p>
         </motion.div>
       </section>
@@ -137,14 +152,20 @@ export default function FAQPage() {
       <section className="max-w-4xl mx-auto px-4 py-16 space-y-12">
         {faqGroups.map((group) => (
           <AnimatedSection key={group.category}>
-            <h2 className="text-2xl font-bold text-blue-900 dark:text-white mb-6">{group.category}</h2>
+            <h2 className="text-2xl font-bold text-blue-900 dark:text-white mb-6">
+              {group.category}
+            </h2>
             <div className="space-y-3">
               {group.items.map((item) => {
                 const key = `${group.category}-${item.q}`;
                 return (
-                  <FAQItem key={key} q={item.q} a={item.a}
+                  <FAQItem
+                    key={key}
+                    q={item.q}
+                    a={item.a}
                     isOpen={openKey === key}
-                    onToggle={() => setOpenKey(openKey === key ? null : key)} />
+                    onToggle={() => setOpenKey(openKey === key ? null : key)}
+                  />
                 );
               })}
             </div>

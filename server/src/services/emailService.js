@@ -20,7 +20,7 @@ const getLogoAttachment = async () => {
       for (let x = 0; x < img.width; x++) {
         const idx = (img.width * y + x) * 4;
         if (img.bitmap.data[idx + 3] > 10) {
-          img.bitmap.data[idx]     = 255;
+          img.bitmap.data[idx] = 255;
           img.bitmap.data[idx + 1] = 255;
           img.bitmap.data[idx + 2] = 255;
         }
@@ -36,13 +36,17 @@ const getLogoAttachment = async () => {
 // Escapa caracteres especiales antes de interpolar datos de usuario en HTML de correo —
 // los formularios públicos (leads, postulaciones, feedback, alertas) no sanitizan su input.
 const escapeHtml = (value) =>
-  String(value ?? '').replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  })[c]);
+  String(value ?? '').replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[c]
+  );
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -76,8 +80,17 @@ const buildEmail = ({ title, subtitle, badge = '', body, cta = '', footerNote = 
   </html>
 `;
 
-const typeLabel = { contacto: 'Solicitud de información', cita: 'Agendar visita', informacion: 'Información del remate' };
-const expLabel = { sin_experiencia: 'Sin experiencia', 'menos_1_año': 'Menos de 1 año', '1_3_años': '1 a 3 años', 'mas_3_años': 'Más de 3 años' };
+const typeLabel = {
+  contacto: 'Solicitud de información',
+  cita: 'Agendar visita',
+  informacion: 'Información del remate',
+};
+const expLabel = {
+  sin_experiencia: 'Sin experiencia',
+  menos_1_año: 'Menos de 1 año',
+  '1_3_años': '1 a 3 años',
+  mas_3_años: 'Más de 3 años',
+};
 
 const ctaButton = (href, label) =>
   `<a href="${href}" style="display:inline-block;background:#c8a96e;color:#1a3a5c;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:13px;font-weight:700;letter-spacing:0.3px">${label}</a>`;
@@ -102,10 +115,20 @@ const verifyConnection = async () => {
 
 const sendNewLeadNotification = async (lead, property) => {
   const propertyRow = property
-    ? tableRow('Propiedad', `<strong style="color:#1a3a5c">${escapeHtml(property.title)} — ${escapeHtml(CITY_LABEL[property.city] || property.city)}</strong>`)
+    ? tableRow(
+        'Propiedad',
+        `<strong style="color:#1a3a5c">${escapeHtml(property.title)} — ${escapeHtml(CITY_LABEL[property.city] || property.city)}</strong>`
+      )
     : '';
   const appointmentRow = lead.appointmentDate
-    ? tableRow('Fecha cita', new Date(lead.appointmentDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' }))
+    ? tableRow(
+        'Fecha cita',
+        new Date(lead.appointmentDate).toLocaleDateString('es-MX', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        })
+      )
     : '';
 
   const html = buildEmail({
@@ -223,14 +246,15 @@ const sendJobApplicationConfirmation = async (application, position) => {
 
 const categoryLabel = { queja: 'Queja', comentario: 'Comentario', sugerencia: 'Sugerencia' };
 const categoryBadgeStyle = {
-  queja:      'background:#fef2f2;border-bottom:1px solid #fecaca',
+  queja: 'background:#fef2f2;border-bottom:1px solid #fecaca',
   comentario: 'background:#eff6ff;border-bottom:1px solid #bfdbfe',
   sugerencia: 'background:#f0fdf4;border-bottom:1px solid #bbf7d0',
 };
 const categoryTextColor = { queja: '#991b1b', comentario: '#1e40af', sugerencia: '#166534' };
 
 const sendFeedbackNotification = async (feedback) => {
-  const badgeStyle = categoryBadgeStyle[feedback.category] || 'background:#f3f4f6;border-bottom:1px solid #e5e7eb';
+  const badgeStyle =
+    categoryBadgeStyle[feedback.category] || 'background:#f3f4f6;border-bottom:1px solid #e5e7eb';
   const textColor = categoryTextColor[feedback.category] || '#374151';
 
   const html = buildEmail({
@@ -258,7 +282,14 @@ const sendFeedbackNotification = async (feedback) => {
 };
 
 const sendPropertyAlertNotification = async (alert, property) => {
-  const formatPrice = (p) => p ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(p) : 'Consultar';
+  const formatPrice = (p) =>
+    p
+      ? new Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: 'MXN',
+          maximumFractionDigits: 0,
+        }).format(p)
+      : 'Consultar';
   const unsubscribeUrl = `${process.env.CLIENT_URL}/cancelar-alerta?token=${alert.token}`;
   const propertyUrl = `${process.env.CLIENT_URL}/propiedades/${property.slug}`;
 
@@ -294,4 +325,12 @@ const sendPropertyAlertNotification = async (alert, property) => {
   });
 };
 
-module.exports = { sendNewLeadNotification, sendLeadConfirmation, sendJobApplicationNotification, sendJobApplicationConfirmation, sendFeedbackNotification, sendPropertyAlertNotification, verifyConnection };
+module.exports = {
+  sendNewLeadNotification,
+  sendLeadConfirmation,
+  sendJobApplicationNotification,
+  sendJobApplicationConfirmation,
+  sendFeedbackNotification,
+  sendPropertyAlertNotification,
+  verifyConnection,
+};

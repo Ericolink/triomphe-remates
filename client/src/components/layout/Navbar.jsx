@@ -45,10 +45,13 @@ export default function Navbar() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + i * 0.07 }}
               >
-                <NavLink to={to} end={to === '/'}
+                <NavLink
+                  to={to}
+                  end={to === '/'}
                   className={({ isActive }) =>
                     `text-sm font-medium transition-colors hover:text-yellow-400 ${isActive ? 'text-yellow-400' : 'text-gray-200'}`
-                  }>
+                  }
+                >
                   {label}
                 </NavLink>
               </motion.div>
@@ -57,8 +60,11 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/favoritos" title="Mis favoritos"
-              className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-blue-800 transition-colors">
+            <Link
+              to="/favoritos"
+              title="Mis favoritos"
+              className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-blue-800 transition-colors"
+            >
               <Heart size={18} className="text-gray-200" />
               {count > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
@@ -73,8 +79,10 @@ export default function Navbar() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
             >
-              <Link to="/admin/login"
-                className="text-sm font-medium bg-yellow-400 text-blue-900 px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors">
+              <Link
+                to="/admin/login"
+                className="text-sm font-medium bg-yellow-400 text-blue-900 px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors"
+              >
                 Acceso Admin
               </Link>
             </motion.div>
@@ -85,11 +93,23 @@ export default function Navbar() {
             <button className="p-2" onClick={() => setOpen(!open)}>
               <AnimatePresence mode="wait">
                 {open ? (
-                  <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <motion.div
+                    key="close"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <X size={24} />
                   </motion.div>
                 ) : (
-                  <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <motion.div
+                    key="menu"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
                     <Menu size={24} />
                   </motion.div>
                 )}
@@ -117,17 +137,28 @@ export default function Navbar() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.06 }}
                 >
-                  <NavLink to={to} end={to === '/'} onClick={() => setOpen(false)}
+                  <NavLink
+                    to={to}
+                    end={to === '/'}
+                    onClick={() => setOpen(false)}
                     className={({ isActive }) =>
                       `block py-2 text-sm font-medium border-b border-blue-700 ${isActive ? 'text-yellow-400' : 'text-gray-200'}`
-                    }>
+                    }
+                  >
                     {label}
                   </NavLink>
                 </motion.div>
               ))}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
-                <Link to="/admin/login" onClick={() => setOpen(false)}
-                  className="block py-2 text-sm font-medium text-yellow-400 border-b border-blue-700">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.25 }}
+              >
+                <Link
+                  to="/admin/login"
+                  onClick={() => setOpen(false)}
+                  className="block py-2 text-sm font-medium text-yellow-400 border-b border-blue-700"
+                >
                   Acceso Admin
                 </Link>
               </motion.div>

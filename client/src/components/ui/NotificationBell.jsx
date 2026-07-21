@@ -3,8 +3,16 @@ import { Bell, X, User, Building2, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useNotifications from '../../hooks/useNotifications';
 
-const typeLabel = { contacto: 'Solicitud de info', cita: 'Agendar visita', informacion: 'Información' };
-const typeColor = { contacto: 'bg-blue-100 text-blue-700', cita: 'bg-yellow-100 text-yellow-700', informacion: 'bg-purple-100 text-purple-700' };
+const typeLabel = {
+  contacto: 'Solicitud de info',
+  cita: 'Agendar visita',
+  informacion: 'Información',
+};
+const typeColor = {
+  contacto: 'bg-blue-100 text-blue-700',
+  cita: 'bg-yellow-100 text-yellow-700',
+  informacion: 'bg-purple-100 text-purple-700',
+};
 
 export default function NotificationBell() {
   const { unreadCount, notifications, clearNotifications } = useNotifications();
@@ -18,8 +26,10 @@ export default function NotificationBell() {
 
   const formatDate = (date) =>
     new Date(date).toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'short',
-      hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
   return (
@@ -41,7 +51,6 @@ export default function NotificationBell() {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-20 overflow-hidden">
-
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
@@ -67,9 +76,13 @@ export default function NotificationBell() {
                 </div>
               ) : (
                 notifications.map((lead) => (
-                  <div key={lead.id}
+                  <div
+                    key={lead.id}
                     className="px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 cursor-pointer"
-                    onClick={() => { navigate('/admin/crm?tab=prospectos'); setOpen(false); }}
+                    onClick={() => {
+                      navigate('/admin/crm?tab=prospectos');
+                      setOpen(false);
+                    }}
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -78,7 +91,9 @@ export default function NotificationBell() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <p className="font-medium text-gray-800 text-sm truncate">{lead.name}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2 ${typeColor[lead.type]}`}>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2 ${typeColor[lead.type]}`}
+                          >
                             {typeLabel[lead.type]}
                           </span>
                         </div>
@@ -101,7 +116,10 @@ export default function NotificationBell() {
             {/* Footer */}
             <div className="px-4 py-3 border-t border-gray-100">
               <button
-                onClick={() => { navigate('/admin/crm?tab=prospectos'); setOpen(false); }}
+                onClick={() => {
+                  navigate('/admin/crm?tab=prospectos');
+                  setOpen(false);
+                }}
                 className="w-full text-center text-sm text-blue-700 font-medium hover:text-blue-900 transition-colors"
               >
                 Ver todos los leads →

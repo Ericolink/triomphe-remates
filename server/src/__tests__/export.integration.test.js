@@ -13,7 +13,9 @@ const { statusArgb } = require('../services/exportBranding');
 function binaryParser(res, callback) {
   res.setEncoding('binary');
   let data = '';
-  res.on('data', (chunk) => { data += chunk; });
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
   res.on('end', () => callback(null, Buffer.from(data, 'binary')));
 }
 const binary = (req) => req.buffer(true).parse(binaryParser);
@@ -89,9 +91,20 @@ describe('exportController', () => {
 
       const headerRow = sheet.getRow(3).values.filter(Boolean);
       expect(headerRow).toEqual([
-        '#', 'Título', 'Ciudad', 'Tipo', 'Estatus', 'Precio',
-        'M² Terreno', 'M² Construcción', 'Recámaras', 'Baños',
-        'Dirección', 'Visitas', 'Fecha alta', 'Última modif.',
+        '#',
+        'Título',
+        'Ciudad',
+        'Tipo',
+        'Estatus',
+        'Precio',
+        'M² Terreno',
+        'M² Construcción',
+        'Recámaras',
+        'Baños',
+        'Dirección',
+        'Visitas',
+        'Fecha alta',
+        'Última modif.',
       ]);
 
       // No asume orden de filas por índice: el ORDER BY city ASC de MySQL ordena por el
@@ -123,7 +136,10 @@ describe('exportController', () => {
       const totalRow = sheet.getRow(sheet.rowCount).values;
       expect(totalRow[2]).toBe('TOTAL: 2 propiedades');
 
-      const auditRow = await AuditLog.findOne({ where: { resource: 'property', action: 'export' }, order: [['id', 'DESC']] });
+      const auditRow = await AuditLog.findOne({
+        where: { resource: 'property', action: 'export' },
+        order: [['id', 'DESC']],
+      });
       expect(auditRow).not.toBeNull();
       expect(JSON.parse(auditRow.detail).count).toBe(2);
 
@@ -174,12 +190,12 @@ describe('exportController', () => {
     });
 
     test('caracteres especiales y acentos se preservan tal cual (Excel no los recorta)', async () => {
-      await createProperty({ title: 'Ñoño\'s Café — Depto. 🏡 <especial>' });
+      await createProperty({ title: "Ñoño's Café — Depto. 🏡 <especial>" });
 
       const res = await authed('/api/export/excel');
       const workbook = await readWorkbook(res.body);
       const sheet = workbook.getWorksheet('Inventario');
-      expect(sheet.getRow(4).values[2]).toBe('Ñoño\'s Café — Depto. 🏡 <especial>');
+      expect(sheet.getRow(4).values[2]).toBe("Ñoño's Café — Depto. 🏡 <especial>");
     });
   });
 
@@ -226,7 +242,9 @@ describe('exportController', () => {
       expect(conPresupuesto.values[5]).toBe('Interesada'); // columna Propiedad
       expect(conPresupuesto.values[8]).toBe('Contado');
       expect(conPresupuesto.values[9]).toBe(formatPrice(900000));
-      expect(conPresupuesto.getCell(7).font.color.argb).toBe(statusArgb.cerrado ?? conPresupuesto.getCell(7).font.color.argb);
+      expect(conPresupuesto.getCell(7).font.color.argb).toBe(
+        statusArgb.cerrado ?? conPresupuesto.getCell(7).font.color.argb
+      );
 
       const sinEspecificar = rows.find((r) => r.values[2] === 'Sin especificar');
       expect(sinEspecificar.values[9]).toBe('No especificó');
@@ -296,7 +314,11 @@ describe('exportController', () => {
 
   describe('GET /api/export/property/:id/pdf — ficha individual (ruta pública)', () => {
     test('genera la ficha con precio y ciudad de la propiedad', async () => {
-      const property = await createProperty({ title: 'Ficha de prueba', price: 500000, city: 'chihuahua' });
+      const property = await createProperty({
+        title: 'Ficha de prueba',
+        price: 500000,
+        city: 'chihuahua',
+      });
 
       const res = await binary(request(app).get(`/api/export/property/${property.id}/pdf`));
       expect(res.status).toBe(200);

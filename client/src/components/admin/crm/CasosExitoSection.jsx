@@ -14,8 +14,9 @@ import { formatPrice, formatDate, formatDateTime } from '../../../utils/formatte
 import { CITY_LABELS, ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_COLORS } from '../../../utils/constants';
 import { buildImageUrl } from '../../../utils/images';
 
-const sectionLabelClass = "text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5";
-const cardClass = "rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3";
+const sectionLabelClass =
+  'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5';
+const cardClass = 'rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3';
 
 function dealCover(deal) {
   const cover = deal.property?.images?.find((i) => i.isCover) || deal.property?.images?.[0];
@@ -25,25 +26,38 @@ function dealCover(deal) {
 function DealCard({ deal, isSelected, onSelect }) {
   const imageUrl = dealCover(deal);
   return (
-    <motion.div variants={fadeInUp} layout onClick={() => onSelect(deal)}
+    <motion.div
+      variants={fadeInUp}
+      layout
+      onClick={() => onSelect(deal)}
       whileHover={{ y: -3, transition: { duration: 0.15 } }}
       className={`bg-white dark:bg-[#242938] rounded-2xl overflow-hidden shadow-sm border cursor-pointer transition-all ${
-        isSelected ? 'border-blue-500 dark:border-blue-400 ring-1 ring-blue-500' : 'border-gray-100 dark:border-[#2e3650]'
-      }`}>
+        isSelected
+          ? 'border-blue-500 dark:border-blue-400 ring-1 ring-blue-500'
+          : 'border-gray-100 dark:border-[#2e3650]'
+      }`}
+    >
       <div className="h-32 bg-gray-100 dark:bg-[#1a1f2e] flex items-center justify-center overflow-hidden">
-        {imageUrl
-          ? <img src={imageUrl} alt={deal.property?.title} className="w-full h-full object-cover" />
-          : <Building2 size={28} className="text-gray-300 dark:text-gray-600" />}
+        {imageUrl ? (
+          <img src={imageUrl} alt={deal.property?.title} className="w-full h-full object-cover" />
+        ) : (
+          <Building2 size={28} className="text-gray-300 dark:text-gray-600" />
+        )}
       </div>
       <div className="p-4">
         <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">{deal.lead?.name}</p>
         <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1 mt-0.5">
           <Building2 size={11} className="flex-shrink-0" />
-          {deal.property?.title}{deal.property?.city ? ` · ${CITY_LABELS[deal.property.city] || deal.property.city}` : ''}
+          {deal.property?.title}
+          {deal.property?.city ? ` · ${CITY_LABELS[deal.property.city] || deal.property.city}` : ''}
         </p>
         <div className="flex items-center justify-between mt-3">
-          <span className="text-base font-bold text-green-600 dark:text-green-400">{formatPrice(deal.amount)}</span>
-          <span className="text-xs text-gray-400 dark:text-gray-500">{formatDate(deal.closedAt)}</span>
+          <span className="text-base font-bold text-green-600 dark:text-green-400">
+            {formatPrice(deal.amount)}
+          </span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {formatDate(deal.closedAt)}
+          </span>
         </div>
       </div>
     </motion.div>
@@ -57,21 +71,36 @@ function DealCard({ deal, isSelected, onSelect }) {
 function DealDetailPanel({ deal, users, onDeselect }) {
   const leadId = deal.leadId;
 
-  const { data: activitiesData } = useQuery({ queryKey: ['lead-activities', leadId], queryFn: () => getLeadActivities(leadId) });
+  const { data: activitiesData } = useQuery({
+    queryKey: ['lead-activities', leadId],
+    queryFn: () => getLeadActivities(leadId),
+  });
   const activities = activitiesData?.data ?? [];
 
-  const { data: notesData } = useQuery({ queryKey: ['lead-notes', leadId], queryFn: () => getLeadNotes(leadId) });
+  const { data: notesData } = useQuery({
+    queryKey: ['lead-notes', leadId],
+    queryFn: () => getLeadNotes(leadId),
+  });
   const notes = notesData?.data ?? [];
 
-  const { data: appointmentsData } = useQuery({ queryKey: ['lead-appointments', leadId], queryFn: () => getLeadAppointments(leadId) });
+  const { data: appointmentsData } = useQuery({
+    queryKey: ['lead-appointments', leadId],
+    queryFn: () => getLeadAppointments(leadId),
+  });
   const appointments = appointmentsData?.data ?? [];
 
   const advisor = users.find((u) => u.id === deal.lead?.assignedToUserId);
   const imageUrl = dealCover(deal);
 
   return (
-    <motion.div key={deal.id} variants={fadeInRight} initial="hidden" animate="visible" exit={{ opacity: 0, x: 20 }}
-      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-170px)]">
+    <motion.div
+      key={deal.id}
+      variants={fadeInRight}
+      initial="hidden"
+      animate="visible"
+      exit={{ opacity: 0, x: 20 }}
+      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-170px)]"
+    >
       {imageUrl && (
         <div className="h-36 overflow-hidden rounded-t-2xl">
           <img src={imageUrl} alt={deal.property?.title} className="w-full h-full object-cover" />
@@ -80,59 +109,105 @@ function DealDetailPanel({ deal, users, onDeselect }) {
       <div className="p-6">
         <div className="flex items-start justify-between gap-2 mb-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Caso de éxito</p>
-            <h2 className="font-bold text-gray-800 dark:text-gray-100 truncate">{deal.lead?.name}</h2>
+            <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+              Caso de éxito
+            </p>
+            <h2 className="font-bold text-gray-800 dark:text-gray-100 truncate">
+              {deal.lead?.name}
+            </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1 min-w-0">
-              <Building2 size={11} className="flex-shrink-0" /><span className="truncate">{deal.property?.title}</span>
+              <Building2 size={11} className="flex-shrink-0" />
+              <span className="truncate">{deal.property?.title}</span>
             </p>
           </div>
-          <button onClick={onDeselect} title="Cerrar detalle"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-lg transition-colors flex-shrink-0">
+          <button
+            onClick={onDeselect}
+            title="Cerrar detalle"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-lg transition-colors flex-shrink-0"
+          >
             <X size={20} />
           </button>
         </div>
 
         <div className={`space-y-2.5 mb-4 ${cardClass}`}>
-          <p className={sectionLabelClass}><Wallet size={13} /> Datos de la venta</p>
+          <p className={sectionLabelClass}>
+            <Wallet size={13} /> Datos de la venta
+          </p>
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500 dark:text-gray-400">Monto</span>
-            <span className="text-lg font-bold text-green-600 dark:text-green-400">{formatPrice(deal.amount)}</span>
+            <span className="text-lg font-bold text-green-600 dark:text-green-400">
+              {formatPrice(deal.amount)}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500 dark:text-gray-400">Fecha de cierre</span>
-            <span className="text-sm text-gray-700 dark:text-gray-200">{formatDate(deal.closedAt)}</span>
+            <span className="text-sm text-gray-700 dark:text-gray-200">
+              {formatDate(deal.closedAt)}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500 dark:text-gray-400">Asesor</span>
-            <span className="text-sm text-gray-700 dark:text-gray-200">{advisor?.name || 'Sin asignar'}</span>
+            <span className="text-sm text-gray-700 dark:text-gray-200">
+              {advisor?.name || 'Sin asignar'}
+            </span>
           </div>
         </div>
 
         <div className="mb-4">
-          <p className={sectionLabelClass}><Activity size={13} /> Seguimiento realizado</p>
+          <p className={sectionLabelClass}>
+            <Activity size={13} /> Seguimiento realizado
+          </p>
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {activities.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">Sin actividad registrada.</p>
-            ) : activities.map((a) => (
-              <div key={a.id} className="flex items-start gap-2 text-xs">
-                <span className={`px-1.5 py-0.5 rounded-full flex-shrink-0 ${ACTIVITY_TYPE_COLORS[a.type]}`}>{ACTIVITY_TYPE_LABELS[a.type]}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-gray-700 dark:text-gray-300">{a.content}</p>
-                  <p className="text-gray-400 mt-0.5">{formatDateTime(a.occurredAt)}{a.user ? ` · ${a.user.name}` : ''}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+                Sin actividad registrada.
+              </p>
+            ) : (
+              activities.map((a) => (
+                <div key={a.id} className="flex items-start gap-2 text-xs">
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full flex-shrink-0 ${ACTIVITY_TYPE_COLORS[a.type]}`}
+                  >
+                    {ACTIVITY_TYPE_LABELS[a.type]}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-700 dark:text-gray-300">{a.content}</p>
+                    <p className="text-gray-400 mt-0.5">
+                      {formatDateTime(a.occurredAt)}
+                      {a.user ? ` · ${a.user.name}` : ''}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         {appointments.length > 0 && (
           <div className="mb-4">
-            <p className={sectionLabelClass}><Calendar size={13} /> Citas</p>
+            <p className={sectionLabelClass}>
+              <Calendar size={13} /> Citas
+            </p>
             <div className="space-y-1.5">
               {appointments.map((a) => (
-                <div key={a.id} className="bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between">
-                  <span className="text-gray-700 dark:text-gray-300">{formatDateTime(a.scheduledAt)}</span>
-                  <Badge variant={a.status === 'completada' ? 'success' : a.status === 'cancelada' ? 'default' : 'primary'}>{a.status}</Badge>
+                <div
+                  key={a.id}
+                  className="bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between"
+                >
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {formatDateTime(a.scheduledAt)}
+                  </span>
+                  <Badge
+                    variant={
+                      a.status === 'completada'
+                        ? 'success'
+                        : a.status === 'cancelada'
+                          ? 'default'
+                          : 'primary'
+                    }
+                  >
+                    {a.status}
+                  </Badge>
                 </div>
               ))}
             </div>
@@ -141,10 +216,15 @@ function DealDetailPanel({ deal, users, onDeselect }) {
 
         {notes.length > 0 && (
           <div>
-            <p className={sectionLabelClass}><FileText size={13} /> Notas</p>
+            <p className={sectionLabelClass}>
+              <FileText size={13} /> Notas
+            </p>
             <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
               {notes.map((note) => (
-                <div key={note.id} className="bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-2 text-xs">
+                <div
+                  key={note.id}
+                  className="bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-2 text-xs"
+                >
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{note.content}</p>
                   <span className="text-gray-400 block mt-1">{formatDateTime(note.createdAt)}</span>
                 </div>
@@ -164,13 +244,22 @@ function DealDetailSlot({ selected, users, onDeselect }) {
     <>
       <AnimatePresence>
         {selected && (
-          <motion.div key="deal-detail-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <motion.div
+            key="deal-detail-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={onDeselect}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-end xl:hidden">
-            <motion.div onClick={(e) => e.stopPropagation()}
-              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-end xl:hidden"
+          >
+            <motion.div
+              onClick={(e) => e.stopPropagation()}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
               transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-              className="w-full max-w-md h-full overflow-y-auto bg-white dark:bg-[#242938]">
+              className="w-full max-w-md h-full overflow-y-auto bg-white dark:bg-[#242938]"
+            >
               <DealDetailPanel deal={selected} users={users} onDeselect={onDeselect} />
             </motion.div>
           </motion.div>
@@ -180,10 +269,21 @@ function DealDetailSlot({ selected, users, onDeselect }) {
       <div className="hidden xl:block">
         <AnimatePresence mode="wait">
           {selected ? (
-            <DealDetailPanel key={selected.id} deal={selected} users={users} onDeselect={onDeselect} />
+            <DealDetailPanel
+              key={selected.id}
+              deal={selected}
+              users={users}
+              onDeselect={onDeselect}
+            />
           ) : (
-            <motion.div key="deal-empty" variants={fadeIn} initial="hidden" animate="visible" exit={{ opacity: 0 }}
-              className="bg-white dark:bg-[#242938] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center text-gray-400 dark:text-gray-500">
+            <motion.div
+              key="deal-empty"
+              variants={fadeIn}
+              initial="hidden"
+              animate="visible"
+              exit={{ opacity: 0 }}
+              className="bg-white dark:bg-[#242938] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center text-gray-400 dark:text-gray-500"
+            >
               <Trophy size={32} className="mx-auto mb-2 opacity-30" />
               <p className="text-sm">Selecciona un caso para ver el seguimiento completo</p>
             </motion.div>
@@ -210,41 +310,74 @@ export default function CasosExitoSection() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return deals;
-    return deals.filter((d) => d.lead?.name?.toLowerCase().includes(q) || d.property?.title?.toLowerCase().includes(q));
+    return deals.filter(
+      (d) => d.lead?.name?.toLowerCase().includes(q) || d.property?.title?.toLowerCase().includes(q)
+    );
   }, [deals, search]);
 
-  const totalAmount = useMemo(() => deals.reduce((sum, d) => sum + Number(d.amount || 0), 0), [deals]);
+  const totalAmount = useMemo(
+    () => deals.reduce((sum, d) => sum + Number(d.amount || 0), 0),
+    [deals]
+  );
 
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
-      <motion.div variants={fadeInUp} initial="hidden" animate="visible"
-        className="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-wrap items-center justify-between gap-3 mb-6"
+      >
         <p className="text-gray-500 dark:text-gray-400 text-sm">
-          {deals.length} venta{deals.length === 1 ? '' : 's'} registrada{deals.length === 1 ? '' : 's'} · {formatPrice(totalAmount)} en total
+          {deals.length} venta{deals.length === 1 ? '' : 's'} registrada
+          {deals.length === 1 ? '' : 's'} · {formatPrice(totalAmount)} en total
         </p>
         <div className="flex items-center gap-2 bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-xl px-3 py-2 w-full sm:w-auto">
           <Search size={16} className="text-gray-400 flex-shrink-0" />
-          <input type="text" placeholder="Buscar por cliente o propiedad..." value={search}
+          <input
+            type="text"
+            placeholder="Buscar por cliente o propiedad..."
+            value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 sm:w-56 text-sm focus:outline-none bg-transparent dark:text-gray-100 dark:placeholder-gray-500" />
+            className="flex-1 sm:w-56 text-sm focus:outline-none bg-transparent dark:text-gray-100 dark:placeholder-gray-500"
+          />
         </div>
       </motion.div>
 
-      {isLoading ? <Spinner size="lg" className="py-16" /> : (
+      {isLoading ? (
+        <Spinner size="lg" className="py-16" />
+      ) : (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-2">
             {filtered.length === 0 ? (
-              <motion.div variants={fadeIn} initial="hidden" animate="visible"
-                className="text-center py-16 text-gray-400 dark:text-gray-500">
+              <motion.div
+                variants={fadeIn}
+                initial="hidden"
+                animate="visible"
+                className="text-center py-16 text-gray-400 dark:text-gray-500"
+              >
                 <Trophy size={32} className="mx-auto mb-2 opacity-30" />
-                <p>{deals.length === 0 ? 'Aún no hay ventas registradas.' : 'Ningún caso coincide con la búsqueda.'}</p>
+                <p>
+                  {deals.length === 0
+                    ? 'Aún no hay ventas registradas.'
+                    : 'Ningún caso coincide con la búsqueda.'}
+                </p>
               </motion.div>
             ) : (
-              <motion.div variants={staggerContainer} initial="hidden" animate="visible"
-                className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              >
                 <AnimatePresence>
                   {filtered.map((deal) => (
-                    <DealCard key={deal.id} deal={deal} isSelected={selected?.id === deal.id} onSelect={setSelected} />
+                    <DealCard
+                      key={deal.id}
+                      deal={deal}
+                      isSelected={selected?.id === deal.id}
+                      onSelect={setSelected}
+                    />
                   ))}
                 </AnimatePresence>
               </motion.div>
@@ -252,7 +385,11 @@ export default function CasosExitoSection() {
           </div>
 
           <div className="xl:col-span-1">
-            <DealDetailSlot selected={selected} users={users} onDeselect={() => setSelected(null)} />
+            <DealDetailSlot
+              selected={selected}
+              users={users}
+              onDeselect={() => setSelected(null)}
+            />
           </div>
         </div>
       )}

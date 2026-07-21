@@ -17,7 +17,11 @@ if (isProd) {
 
   const rotation = { maxsize: 5 * 1024 * 1024, maxFiles: 5, tailable: true };
   transports.push(
-    new winston.transports.File({ filename: path.join(logsDir, 'error.log'), level: 'error', ...rotation }),
+    new winston.transports.File({
+      filename: path.join(logsDir, 'error.log'),
+      level: 'error',
+      ...rotation,
+    }),
     new winston.transports.File({ filename: path.join(logsDir, 'combined.log'), ...rotation })
   );
 }

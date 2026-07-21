@@ -7,15 +7,23 @@ const { Property, Image } = require('../models/index');
 
 const formatPrice = (price) => {
   if (price === null || price === undefined || price === '') return 'PENDIENTE';
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    maximumFractionDigits: 0,
+  }).format(price);
 };
 
 const formatDate = (date) => {
   if (!date) return '—';
-  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(date).toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 };
 
-const dash = (val) => (val !== null && val !== undefined && val !== '') ? String(val) : '—';
+const dash = (val) => (val !== null && val !== undefined && val !== '' ? String(val) : '—');
 
 const getLogoPath = () => {
   const candidates = [
@@ -36,7 +44,7 @@ const getWhiteLogoBuffer = async (logoPath) => {
       for (let x = 0; x < img.width; x++) {
         const idx = (img.width * y + x) * 4;
         if (img.bitmap.data[idx + 3] > 10) {
-          img.bitmap.data[idx]     = 255;
+          img.bitmap.data[idx] = 255;
           img.bitmap.data[idx + 1] = 255;
           img.bitmap.data[idx + 2] = 255;
         }
@@ -52,27 +60,46 @@ const getWhiteLogoBuffer = async (logoPath) => {
 const getFilteredProperties = async (query) => {
   const { city, type, status } = query;
   const where = {};
-  if (city)   where.city   = city;
-  if (type)   where.type   = type;
+  if (city) where.city = city;
+  if (type) where.type = type;
   if (status) where.status = status;
 
   return Property.findAll({
     where,
-    order: [['city', 'ASC'], ['createdAt', 'DESC']],
-    attributes: [
-      'id', 'title', 'city', 'type', 'status', 'price',
-      'squareMeters', 'terrainMeters', 'constructionMeters',
-      'bedrooms', 'bathrooms', 'address',
-      'views', 'createdAt', 'updatedAt',
+    order: [
+      ['city', 'ASC'],
+      ['createdAt', 'DESC'],
     ],
-    include: [{
-      model: Image,
-      as: 'images',
-      attributes: ['url', 'isCover'],
-      separate: true,
-      order: [['isCover', 'DESC'], ['createdAt', 'ASC']],
-      limit: 1,
-    }],
+    attributes: [
+      'id',
+      'title',
+      'city',
+      'type',
+      'status',
+      'price',
+      'squareMeters',
+      'terrainMeters',
+      'constructionMeters',
+      'bedrooms',
+      'bathrooms',
+      'address',
+      'views',
+      'createdAt',
+      'updatedAt',
+    ],
+    include: [
+      {
+        model: Image,
+        as: 'images',
+        attributes: ['url', 'isCover'],
+        separate: true,
+        order: [
+          ['isCover', 'DESC'],
+          ['createdAt', 'ASC'],
+        ],
+        limit: 1,
+      },
+    ],
   });
 };
 
@@ -104,16 +131,22 @@ const getImageBuffer = async (url) => {
 const stripUnsupported = (str) => {
   if (!str) return str;
   return str
-    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')   // Supplementary planes (emoji, symbols)
-    .replace(/[\u{2600}-\u{27BF}]/gu, '')       // Misc symbols, dingbats
-    .replace(/️/gu, '')                     // Emoji variation selector
-    .replace(/‍/gu, '')                     // Zero-width joiner
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // Supplementary planes (emoji, symbols)
+    .replace(/[\u{2600}-\u{27BF}]/gu, '') // Misc symbols, dingbats
+    .replace(/️/gu, '') // Emoji variation selector
+    .replace(/‍/gu, '') // Zero-width joiner
     .replace(/\s+/g, ' ')
     .trim();
 };
 
 module.exports = {
-  formatPrice, formatDate, dash,
-  getLogoPath, getWhiteLogoBuffer, getFilteredProperties, getFirstImagePath, getImageBuffer,
+  formatPrice,
+  formatDate,
+  dash,
+  getLogoPath,
+  getWhiteLogoBuffer,
+  getFilteredProperties,
+  getFirstImagePath,
+  getImageBuffer,
   stripUnsupported,
 };

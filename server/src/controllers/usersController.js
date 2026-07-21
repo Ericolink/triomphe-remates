@@ -51,7 +51,11 @@ const createUser = async (req, res) => {
       role: role || 'editor',
     });
 
-    logAudit(req, 'create', 'user', user.id, { name: user.name, email: user.email, role: user.role });
+    logAudit(req, 'create', 'user', user.id, {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
 
     return res.status(201).json({ message: 'Usuario creado exitosamente', data: safeUser(user) });
   } catch (error) {
@@ -78,13 +82,16 @@ const updateUser = async (req, res) => {
     if ((role && role !== 'admin') || isActive === false) {
       const masterAdmin = await User.findOne({ order: [['id', 'ASC']] });
       if (masterAdmin && masterAdmin.id === user.id) {
-        return res.status(403).json({ error: 'No se puede quitar el rol de admin ni desactivar al admin principal' });
+        return res
+          .status(403)
+          .json({ error: 'No se puede quitar el rol de admin ni desactivar al admin principal' });
       }
     }
 
     // AUDIT-023: cambios sensibles (password/rol/desactivación) invalidan los JWT ya
     // emitidos para este usuario, incrementando tokenVersion — ver authMiddleware.js.
-    const isSensitiveChange = Boolean(newPassword) || (role && role !== user.role) || isActive === false;
+    const isSensitiveChange =
+      Boolean(newPassword) || (role && role !== user.role) || isActive === false;
 
     // Cambio de contraseña requiere verificar la actual si lo hace el propio usuario
     if (newPassword) {
@@ -92,7 +99,8 @@ const updateUser = async (req, res) => {
         return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
       }
       if (req.user.id === user.id) {
-        if (!currentPassword) return res.status(400).json({ error: 'Se requiere la contraseña actual' });
+        if (!currentPassword)
+          return res.status(400).json({ error: 'Se requiere la contraseña actual' });
         const isMatch = await comparePassword(currentPassword, user.password);
         if (!isMatch) return res.status(401).json({ error: 'Contraseña actual incorrecta' });
       }
@@ -106,8 +114,14 @@ const updateUser = async (req, res) => {
       const uploadToCloudinary = (buffer) =>
         new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
-            { folder: 'triomphe/avatars', transformation: [{ width: 200, height: 200, crop: 'fill', quality: 'auto' }] },
-            (error, result) => { if (error) reject(error); else resolve(result); }
+            {
+              folder: 'triomphe/avatars',
+              transformation: [{ width: 200, height: 200, crop: 'fill', quality: 'auto' }],
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
           );
           stream.end(buffer);
         });
@@ -115,8 +129,15 @@ const updateUser = async (req, res) => {
       // Eliminar foto anterior si existe
       if (user.profilePhoto) {
         const parts = user.profilePhoto.split('/');
-        const filename = parts.slice(-2).join('/').replace(/\.[^.]+$/, '');
-        try { await cloudinary.uploader.destroy(filename); } catch { /* ignorado */ }
+        const filename = parts
+          .slice(-2)
+          .join('/')
+          .replace(/\.[^.]+$/, '');
+        try {
+          await cloudinary.uploader.destroy(filename);
+        } catch {
+          /* ignorado */
+        }
       }
 
       const result = await uploadToCloudinary(req.file.buffer);
@@ -144,7 +165,11 @@ const updateUser = async (req, res) => {
     // por el incremento de tokenVersion — se reemite uno nuevo para no cerrarle la sesión.
     const response = { message: 'Usuario actualizado exitosamente', data: safeUser(user) };
     if (isSensitiveChange && req.user.id === user.id) {
-      response.token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+      response.token = generateToken({
+        id: user.id,
+        role: user.role,
+        tokenVersion: user.tokenVersion,
+      });
     }
 
     return res.json(response);
@@ -211,12 +236,23 @@ const permanentDeleteUser = async (req, res) => {
 
     if (user.profilePhoto) {
       const parts = user.profilePhoto.split('/');
-      const filename = parts.slice(-2).join('/').replace(/\.[^.]+$/, '');
-      try { await cloudinary.uploader.destroy(filename); } catch { /* ignorado */ }
+      const filename = parts
+        .slice(-2)
+        .join('/')
+        .replace(/\.[^.]+$/, '');
+      try {
+        await cloudinary.uploader.destroy(filename);
+      } catch {
+        /* ignorado */
+      }
     }
 
     await user.destroy();
-    logAudit(req, 'delete', 'user', req.params.id, { name: user.name, email: user.email, role: user.role });
+    logAudit(req, 'delete', 'user', req.params.id, {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
     return res.json({ message: 'Usuario eliminado permanentemente' });
   } catch (error) {
     console.error('Error en permanentDeleteUser:', error);
@@ -224,4 +260,11 @@ const permanentDeleteUser = async (req, res) => {
   }
 };
 
-module.exports = { getUsers, createUser, updateUser, deactivateUser, activateUser, permanentDeleteUser };
+module.exports = {
+  getUsers,
+  createUser,
+  updateUser,
+  deactivateUser,
+  activateUser,
+  permanentDeleteUser,
+};

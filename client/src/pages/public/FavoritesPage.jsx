@@ -19,7 +19,11 @@ export default function FavoritesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-16">
-      <SEO title="Mis favoritos" description="Propiedades guardadas en tu lista de favoritos." url="/favoritos" />
+      <SEO
+        title="Mis favoritos"
+        description="Propiedades guardadas en tu lista de favoritos."
+        url="/favoritos"
+      />
 
       <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="mb-10">
         <motion.div variants={fadeInUp} className="flex items-center justify-between">
@@ -29,12 +33,15 @@ export default function FavoritesPage() {
               Mis favoritos
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              {count === 0 ? 'No tienes propiedades guardadas' : `${count} propiedad${count !== 1 ? 'es' : ''} guardada${count !== 1 ? 's' : ''}`}
+              {count === 0
+                ? 'No tienes propiedades guardadas'
+                : `${count} propiedad${count !== 1 ? 'es' : ''} guardada${count !== 1 ? 's' : ''}`}
             </p>
           </div>
           {count > 0 && (
             <motion.button
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setConfirmClear(true)}
               className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
@@ -47,27 +54,41 @@ export default function FavoritesPage() {
       <SyncStatusBar syncState={syncState} onRetry={retry} />
 
       {count === 0 ? (
-        <motion.div variants={fadeInUp} initial="hidden" animate="visible"
-          className="text-center py-24 text-gray-400 dark:text-gray-500">
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          className="text-center py-24 text-gray-400 dark:text-gray-500"
+        >
           <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 2.5, repeat: Infinity }}>
             <Heart size={56} className="mx-auto mb-4 opacity-20" />
           </motion.div>
           <p className="text-lg font-medium mb-2">Aún no guardas ninguna propiedad</p>
-          <p className="text-sm mb-8">Presiona el ícono <Heart size={14} className="inline" /> en cualquier propiedad para guardarla aquí.</p>
-          <Link to="/propiedades"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors">
+          <p className="text-sm mb-8">
+            Presiona el ícono <Heart size={14} className="inline" /> en cualquier propiedad para
+            guardarla aquí.
+          </p>
+          <Link
+            to="/propiedades"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors"
+          >
             Ver propiedades
           </Link>
         </motion.div>
       ) : (
         <motion.div
-          variants={staggerContainer} initial="hidden" animate="visible"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
         >
           {items.map((property) => (
             <motion.div key={property.id} variants={fadeInUp}>
               {property.unavailable ? (
-                <UnavailablePropertyCard title={property.title} onRemove={() => remove(property.id)} />
+                <UnavailablePropertyCard
+                  title={property.title}
+                  onRemove={() => remove(property.id)}
+                />
               ) : (
                 <PropertyCard property={property} />
               )}
@@ -81,7 +102,10 @@ export default function FavoritesPage() {
         title="¿Limpiar lista de favoritos?"
         message="Se eliminarán todas las propiedades guardadas. Esta acción no se puede deshacer."
         confirmLabel="Limpiar"
-        onConfirm={() => { clear(); setConfirmClear(false); }}
+        onConfirm={() => {
+          clear();
+          setConfirmClear(false);
+        }}
         onCancel={() => setConfirmClear(false)}
       />
     </div>

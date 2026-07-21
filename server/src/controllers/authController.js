@@ -88,7 +88,9 @@ const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
     if (!newPassword || newPassword.length < 8) {
-      return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+      return res
+        .status(400)
+        .json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
     }
 
     const user = await User.findByPk(req.user.id);

@@ -39,7 +39,13 @@ describe('paginate', () => {
   });
 
   test('respeta los filtros where', async () => {
-    await Property.create({ title: 'Única en Chihuahua', city: 'chihuahua', type: 'terreno', price: 50000, status: 'disponible' });
+    await Property.create({
+      title: 'Única en Chihuahua',
+      city: 'chihuahua',
+      type: 'terreno',
+      price: 50000,
+      status: 'disponible',
+    });
     const result = await paginate(Property, { page: 1, limit: 10, where: { city: 'chihuahua' } });
     expect(result.data).toHaveLength(1);
     expect(result.data[0].city).toBe('chihuahua');

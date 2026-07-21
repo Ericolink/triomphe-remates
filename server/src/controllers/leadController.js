@@ -1,5 +1,14 @@
 const { Op } = require('sequelize');
-const { sequelize, Lead, LeadNote, Property, Analytics, Campaign, User, Deal } = require('../models/index');
+const {
+  sequelize,
+  Lead,
+  LeadNote,
+  Property,
+  Analytics,
+  Campaign,
+  User,
+  Deal,
+} = require('../models/index');
 
 // AUDIT-024: valores permitidos explícitos en vez de confiar solo en el ENUM de MySQL —
 // falla con un 400 claro en vez de un error 500 genérico de Sequelize si llega un valor inválido.
@@ -7,12 +16,23 @@ const VALID_LEAD_STATUS = ['nuevo', 'contactado', 'cerrado', 'descartado'];
 const VALID_LEAD_SOURCE = ['google', 'facebook', 'whatsapp', 'directo', 'referido', 'otro'];
 // CRM Comercial — mismo patrón de arrays explícitos para las nuevas ENUMs.
 const VALID_PIPELINE_STAGES = [
-  'nuevo', 'contactado', 'interesado', 'cita_agendada',
-  'cita_realizada', 'negociacion', 'venta_realizada', 'no_interesado',
+  'nuevo',
+  'contactado',
+  'interesado',
+  'cita_agendada',
+  'cita_realizada',
+  'negociacion',
+  'venta_realizada',
+  'no_interesado',
 ];
 const VALID_CLOSE_REASONS = [
-  'compro', 'no_respondio', 'sin_presupuesto',
-  'compro_competencia', 'solo_info', 'perdio_interes', 'otro',
+  'compro',
+  'no_respondio',
+  'sin_presupuesto',
+  'compro_competencia',
+  'solo_info',
+  'perdio_interes',
+  'otro',
 ];
 const VALID_PAYMENT_METHODS = ['credito_hipotecario', 'contado'];
 
@@ -24,7 +44,9 @@ function parseCommercialFields(body) {
 
   if (body.paymentMethod !== undefined) {
     if (body.paymentMethod !== null && !VALID_PAYMENT_METHODS.includes(body.paymentMethod)) {
-      return { error: `Forma de pago inválida. Valores permitidos: ${VALID_PAYMENT_METHODS.join(', ')}` };
+      return {
+        error: `Forma de pago inválida. Valores permitidos: ${VALID_PAYMENT_METHODS.join(', ')}`,
+      };
     }
     values.paymentMethod = body.paymentMethod || null;
   }
@@ -68,12 +90,21 @@ function parseCommercialFields(body) {
 }
 const { validateEmail, validatePhone } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
-const { sendLeadFollowUpWhatsApp, isConfigured: isWhatsappConfigured } = require('../services/whatsappService');
+const {
+  sendLeadFollowUpWhatsApp,
+  isConfigured: isWhatsappConfigured,
+} = require('../services/whatsappService');
 const { logAudit } = require('../utils/audit');
 const leadEvents = require('../utils/leadEvents');
 const { paginate } = require('../utils/pagination');
 const logger = require('../utils/logger');
-const { TERMINAL_STAGES, logActivity, ensureOpenTask, closeOpenTask, legacyStatusFor } = require('../utils/pipelineHelpers');
+const {
+  TERMINAL_STAGES,
+  logActivity,
+  ensureOpenTask,
+  closeOpenTask,
+  legacyStatusFor,
+} = require('../utils/pipelineHelpers');
 // Etapas a las que un prospecto cerrado puede volver al reabrirse — cualquier etapa no
 // terminal es un destino válido para PUT /:id/reopen.
 const REOPEN_STAGES = VALID_PIPELINE_STAGES.filter((s) => !TERMINAL_STAGES.includes(s));
@@ -81,7 +112,18 @@ const REOPEN_STAGES = VALID_PIPELINE_STAGES.filter((s) => !TERMINAL_STAGES.inclu
 // POST /api/leads
 const createLead = async (req, res) => {
   try {
-    const { name, email, phone, message, type, propertyId, appointmentDate, source, campaignId, assignedToUserId } = req.body;
+    const {
+      name,
+      email,
+      phone,
+      message,
+      type,
+      propertyId,
+      appointmentDate,
+      source,
+      campaignId,
+      assignedToUserId,
+    } = req.body;
 
     // Nombre ya no es obligatorio: un prospecto capturado de prisa (llamada, feria) a
     // veces solo trae teléfono. Se usa un placeholder en vez de dejarlo null para no
@@ -116,18 +158,29 @@ const createLead = async (req, res) => {
     }
 
     const lead = await sequelize.transaction(async (transaction) => {
-      const created = await Lead.create({
-        name: resolvedName, email: email || null, phone, message,
-        type: type || 'contacto',
-        source: source || 'directo',
-        propertyId: propertyId || null,
-        appointmentDate: appointmentDate || null,
-        campaignId: campaignId || null,
-        assignedToUserId: assignedToUserId || null,
-        ...commercialFields,
-      }, { transaction });
+      const created = await Lead.create(
+        {
+          name: resolvedName,
+          email: email || null,
+          phone,
+          message,
+          type: type || 'contacto',
+          source: source || 'directo',
+          propertyId: propertyId || null,
+          appointmentDate: appointmentDate || null,
+          campaignId: campaignId || null,
+          assignedToUserId: assignedToUserId || null,
+          ...commercialFields,
+        },
+        { transaction }
+      );
 
-      await logActivity({ leadId: created.id, type: 'sistema', content: 'Prospecto creado', transaction });
+      await logActivity({
+        leadId: created.id,
+        type: 'sistema',
+        content: 'Prospecto creado',
+        transaction,
+      });
 
       // Diferido hasta asignar: un prospecto público sin responsable no tiene "próxima
       // acción" todavía (ver CRM_UX_DESIGN.md / plan de Fase 1).
@@ -139,7 +192,9 @@ const createLead = async (req, res) => {
     });
 
     Promise.all([
-      sendNewLeadNotification(lead, property).catch((e) => console.error('Error email notificación:', e)),
+      sendNewLeadNotification(lead, property).catch((e) =>
+        console.error('Error email notificación:', e)
+      ),
       sendLeadConfirmation(lead).catch((e) => console.error('Error email confirmación:', e)),
     ]);
 
@@ -176,7 +231,18 @@ const createLead = async (req, res) => {
 // GET /api/leads
 const getLeads = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, type, propertyId, source, pipelineStage, campaignId, assignedToUserId, search } = req.query;
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      type,
+      propertyId,
+      source,
+      pipelineStage,
+      campaignId,
+      assignedToUserId,
+      search,
+    } = req.query;
     const where = {};
 
     if (status) where.status = status;
@@ -200,8 +266,18 @@ const getLeads = async (req, res) => {
       limit,
       where,
       include: [
-        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'slug'], required: false },
-        { model: Campaign, as: 'campaign', attributes: ['id', 'name', 'platform'], required: false },
+        {
+          model: Property,
+          as: 'property',
+          attributes: ['id', 'title', 'city', 'slug'],
+          required: false,
+        },
+        {
+          model: Campaign,
+          as: 'campaign',
+          attributes: ['id', 'name', 'platform'],
+          required: false,
+        },
         { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
       ],
       order: [['createdAt', 'DESC']],
@@ -220,10 +296,16 @@ const getLeadById = async (req, res) => {
     const lead = await Lead.findByPk(req.params.id, {
       include: [
         { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'slug', 'price'] },
-        { model: Campaign, as: 'campaign', attributes: ['id', 'name', 'platform'], required: false },
+        {
+          model: Campaign,
+          as: 'campaign',
+          attributes: ['id', 'name', 'platform'],
+          required: false,
+        },
         { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
         {
-          model: Property, as: 'interestedProperties',
+          model: Property,
+          as: 'interestedProperties',
           // `price` viaja para que CloseLeadModal pueda preasignar el monto de venta al
           // elegir la propiedad (evita que el usuario tenga que ir a buscarlo aparte).
           attributes: ['id', 'title', 'city', 'slug', 'price'],
@@ -248,27 +330,38 @@ const updateLead = async (req, res) => {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
 
-    const { status, notes, appointmentDate, source, pipelineStage, assignedToUserId, campaignId } = req.body;
+    const { status, notes, appointmentDate, source, pipelineStage, assignedToUserId, campaignId } =
+      req.body;
     if (status !== undefined && !VALID_LEAD_STATUS.includes(status)) {
-      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}` });
+      return res
+        .status(400)
+        .json({ error: `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}` });
     }
     if (source !== undefined && !VALID_LEAD_SOURCE.includes(source)) {
-      return res.status(400).json({ error: `Fuente inválida. Valores permitidos: ${VALID_LEAD_SOURCE.join(', ')}` });
+      return res
+        .status(400)
+        .json({ error: `Fuente inválida. Valores permitidos: ${VALID_LEAD_SOURCE.join(', ')}` });
     }
     if (pipelineStage !== undefined) {
       if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
-        return res.status(400).json({ error: `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}` });
+        return res.status(400).json({
+          error: `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}`,
+        });
       }
       // Las etapas terminales solo se alcanzan a través de /close-won o /close-lost, que
       // capturan los datos obligatorios (monto+propiedad, o motivo) en la misma transacción.
       if (TERMINAL_STAGES.includes(pipelineStage)) {
-        return res.status(400).json({ error: 'Para cerrar un prospecto usa PUT /:id/close-won o PUT /:id/close-lost' });
+        return res
+          .status(400)
+          .json({ error: 'Para cerrar un prospecto usa PUT /:id/close-won o PUT /:id/close-lost' });
       }
       // AUDIT: simétrico al bloqueo de arriba — un lead ya cerrado tampoco puede salir de
       // su etapa terminal por esta vía genérica, porque cerrar/reabrir tiene efectos
       // colaterales (Deal, Task, Activity) que este endpoint no conoce. Usa PUT /:id/reopen.
       if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
-        return res.status(400).json({ error: 'Este prospecto está cerrado — usa PUT /:id/reopen para reactivarlo' });
+        return res
+          .status(400)
+          .json({ error: 'Este prospecto está cerrado — usa PUT /:id/reopen para reactivarlo' });
       }
     }
 
@@ -369,20 +462,26 @@ const closeLeadAsWon = async (req, res) => {
       return res.status(404).json({ error: 'Propiedad no encontrada' });
     }
 
-    const deal = await Deal.create({
-      leadId: lead.id,
-      propertyId,
-      amount,
-      closedAt: closedAt || new Date(),
-    }, { transaction });
+    const deal = await Deal.create(
+      {
+        leadId: lead.id,
+        propertyId,
+        amount,
+        closedAt: closedAt || new Date(),
+      },
+      { transaction }
+    );
 
-    await lead.update({
-      pipelineStage: 'venta_realizada',
-      status: legacyStatusFor('venta_realizada'),
-      // Limpia el motivo de pérdida si se está corrigiendo un cierre equivocado.
-      closeReason: null,
-      closeReasonDetail: null,
-    }, { transaction });
+    await lead.update(
+      {
+        pipelineStage: 'venta_realizada',
+        status: legacyStatusFor('venta_realizada'),
+        // Limpia el motivo de pérdida si se está corrigiendo un cierre equivocado.
+        closeReason: null,
+        closeReasonDetail: null,
+      },
+      { transaction }
+    );
 
     await logActivity({
       leadId: lead.id,
@@ -429,7 +528,9 @@ const closeLeadAsLost = async (req, res) => {
     const { closeReason, closeReasonDetail } = req.body;
     if (!closeReason || !VALID_CLOSE_REASONS.includes(closeReason)) {
       await transaction.rollback();
-      return res.status(400).json({ error: `Motivo inválido. Valores permitidos: ${VALID_CLOSE_REASONS.join(', ')}` });
+      return res
+        .status(400)
+        .json({ error: `Motivo inválido. Valores permitidos: ${VALID_CLOSE_REASONS.join(', ')}` });
     }
     if (closeReason === 'otro' && !closeReasonDetail?.trim()) {
       await transaction.rollback();
@@ -442,12 +543,15 @@ const closeLeadAsLost = async (req, res) => {
       await Deal.destroy({ where: { leadId: lead.id }, transaction });
     }
 
-    await lead.update({
-      pipelineStage: 'no_interesado',
-      status: legacyStatusFor('no_interesado'),
-      closeReason,
-      closeReasonDetail: closeReasonDetail || null,
-    }, { transaction });
+    await lead.update(
+      {
+        pipelineStage: 'no_interesado',
+        status: legacyStatusFor('no_interesado'),
+        closeReason,
+        closeReasonDetail: closeReasonDetail || null,
+      },
+      { transaction }
+    );
 
     await logActivity({
       leadId: lead.id,
@@ -494,7 +598,9 @@ const reopenLead = async (req, res) => {
     const resolvedTarget = targetStage || 'contactado';
     if (!REOPEN_STAGES.includes(resolvedTarget)) {
       await transaction.rollback();
-      return res.status(400).json({ error: `Etapa de reapertura inválida. Valores permitidos: ${REOPEN_STAGES.join(', ')}` });
+      return res.status(400).json({
+        error: `Etapa de reapertura inválida. Valores permitidos: ${REOPEN_STAGES.join(', ')}`,
+      });
     }
 
     const previousStage = lead.pipelineStage;
@@ -506,12 +612,15 @@ const reopenLead = async (req, res) => {
       await Deal.destroy({ where: { leadId: lead.id }, transaction });
     }
 
-    await lead.update({
-      pipelineStage: resolvedTarget,
-      status: legacyStatusFor(resolvedTarget),
-      closeReason: null,
-      closeReasonDetail: null,
-    }, { transaction });
+    await lead.update(
+      {
+        pipelineStage: resolvedTarget,
+        status: legacyStatusFor(resolvedTarget),
+        closeReason: null,
+        closeReasonDetail: null,
+      },
+      { transaction }
+    );
 
     await logActivity({
       leadId: lead.id,
@@ -527,12 +636,22 @@ const reopenLead = async (req, res) => {
     // abierta" — closeOpenTask la había cerrado al cerrar el prospecto y nada más la
     // vuelve a crear automáticamente.
     if (lead.assignedToUserId) {
-      await ensureOpenTask({ leadId: lead.id, assignedToUserId: lead.assignedToUserId, type: 'llamar', transaction });
+      await ensureOpenTask({
+        leadId: lead.id,
+        assignedToUserId: lead.assignedToUserId,
+        type: 'llamar',
+        transaction,
+      });
     }
 
     await transaction.commit();
 
-    logAudit(req, 'update', 'lead', lead.id, { reopened: true, fromStage: previousStage, toStage: resolvedTarget, dealDeleted: wasWon });
+    logAudit(req, 'update', 'lead', lead.id, {
+      reopened: true,
+      fromStage: previousStage,
+      toStage: resolvedTarget,
+      dealDeleted: wasWon,
+    });
 
     return res.json({ message: 'Prospecto reabierto exitosamente', data: lead });
   } catch (error) {
@@ -562,13 +681,19 @@ const deleteLead = async (req, res) => {
 const batchUpdateLeads = async (req, res) => {
   try {
     const { ids, pipelineStage } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'ids requeridos' });
     if (!pipelineStage) return res.status(400).json({ error: 'pipelineStage requerido' });
     if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
-      return res.status(400).json({ error: `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}` });
+      return res
+        .status(400)
+        .json({ error: `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}` });
     }
     if (TERMINAL_STAGES.includes(pipelineStage)) {
-      return res.status(400).json({ error: 'Para cerrar prospectos usa los endpoints de cierre individuales (/close-won, /close-lost)' });
+      return res.status(400).json({
+        error:
+          'Para cerrar prospectos usa los endpoints de cierre individuales (/close-won, /close-lost)',
+      });
     }
     await Lead.update(
       { pipelineStage, status: legacyStatusFor(pipelineStage) },
@@ -586,7 +711,8 @@ const batchUpdateLeads = async (req, res) => {
 const batchDeleteLeads = async (req, res) => {
   try {
     const { ids } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'ids requeridos' });
     await Lead.destroy({ where: { id: ids } });
     logAudit(req, 'delete', 'lead', null, { ids });
     return res.json({ message: `${ids.length} lead(s) eliminados` });
@@ -699,14 +825,16 @@ const sendLeadWhatsApp = async (req, res) => {
 
     const { message } = req.body;
     if (!message || !message.trim()) return res.status(400).json({ error: 'Mensaje requerido' });
-    if (!lead.phone) return res.status(400).json({ error: 'Este lead no tiene un teléfono registrado' });
+    if (!lead.phone)
+      return res.status(400).json({ error: 'Este lead no tiene un teléfono registrado' });
 
     const agentName = req.user?.name || 'Triomphe Bienes Raíces';
     let warning = null;
     let sendError = null;
 
     if (!isWhatsappConfigured()) {
-      warning = 'WhatsApp no está configurado en el servidor; se guardó la nota de seguimiento pero el mensaje no se envió.';
+      warning =
+        'WhatsApp no está configurado en el servidor; se guardó la nota de seguimiento pero el mensaje no se envió.';
     } else {
       // AUDIT-009: antes, si esto lanzaba (token expirado, plantilla no aprobada, teléfono
       // inválido), el catch exterior se saltaba la creación de LeadNote y el audit log,
@@ -715,8 +843,12 @@ const sendLeadWhatsApp = async (req, res) => {
         await sendLeadFollowUpWhatsApp(lead.phone, lead.name, agentName, message.trim());
       } catch (whatsappError) {
         sendError = whatsappError;
-        logger.error('Error enviando WhatsApp de seguimiento', { leadId: lead.id, error: whatsappError.message });
-        warning = 'No se pudo enviar el mensaje de WhatsApp (revisa el teléfono o la configuración del servicio). Se guardó el intento en el seguimiento.';
+        logger.error('Error enviando WhatsApp de seguimiento', {
+          leadId: lead.id,
+          error: whatsappError.message,
+        });
+        warning =
+          'No se pudo enviar el mensaje de WhatsApp (revisa el teléfono o la configuración del servicio). Se guardó el intento en el seguimiento.';
       }
     }
 
@@ -728,7 +860,11 @@ const sendLeadWhatsApp = async (req, res) => {
       authorName: req.user?.name || null,
     });
 
-    logAudit(req, 'update', 'lead', lead.id, { whatsapp: true, success: !sendError, error: sendError?.message || null });
+    logAudit(req, 'update', 'lead', lead.id, {
+      whatsapp: true,
+      success: !sendError,
+      error: sendError?.message || null,
+    });
 
     return res.json({ message: warning || 'Mensaje de WhatsApp enviado', data: note, warning });
   } catch (error) {
@@ -738,8 +874,19 @@ const sendLeadWhatsApp = async (req, res) => {
 };
 
 module.exports = {
-  createLead, getLeads, getLeadById, updateLead, deleteLead,
-  batchUpdateLeads, batchDeleteLeads, streamLeads,
-  getLeadNotes, addLeadNote, deleteLeadNote, sendLeadWhatsApp,
-  closeLeadAsWon, closeLeadAsLost, reopenLead,
+  createLead,
+  getLeads,
+  getLeadById,
+  updateLead,
+  deleteLead,
+  batchUpdateLeads,
+  batchDeleteLeads,
+  streamLeads,
+  getLeadNotes,
+  addLeadNote,
+  deleteLeadNote,
+  sendLeadWhatsApp,
+  closeLeadAsWon,
+  closeLeadAsLost,
+  reopenLead,
 };

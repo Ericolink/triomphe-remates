@@ -16,7 +16,12 @@ const getTasks = async (req, res) => {
       where.dueDate = { [Op.lt]: new Date() };
     }
     if (leadIds) {
-      where.leadId = { [Op.in]: leadIds.split(',').map((id) => parseInt(id, 10)).filter(Boolean) };
+      where.leadId = {
+        [Op.in]: leadIds
+          .split(',')
+          .map((id) => parseInt(id, 10))
+          .filter(Boolean),
+      };
     }
 
     const tasks = await Task.findAll({
@@ -60,7 +65,10 @@ const getLeadTasks = async (req, res) => {
 const completeTask = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    const task = await Task.findByPk(req.params.id, { include: [{ model: Lead, as: 'lead' }], transaction });
+    const task = await Task.findByPk(req.params.id, {
+      include: [{ model: Lead, as: 'lead' }],
+      transaction,
+    });
     if (!task) {
       await transaction.rollback();
       return res.status(404).json({ error: 'Tarea no encontrada' });
@@ -72,9 +80,11 @@ const completeTask = async (req, res) => {
 
     await task.update({ done: true, doneAt: new Date() }, { transaction });
     await logActivity({
-      leadId: task.leadId, type: 'sistema',
+      leadId: task.leadId,
+      type: 'sistema',
       content: `Tarea completada: ${task.type}`,
-      userId: req.user?.id ?? null, transaction,
+      userId: req.user?.id ?? null,
+      transaction,
     });
 
     const { nextType, nextDueDate } = req.body;
@@ -115,9 +125,11 @@ const reassignTask = async (req, res) => {
     await sequelize.transaction(async (transaction) => {
       await task.update({ assignedToUserId }, { transaction });
       await logActivity({
-        leadId: task.leadId, type: 'sistema',
+        leadId: task.leadId,
+        type: 'sistema',
         content: 'Responsable de tarea cambiado',
-        userId: req.user?.id ?? null, transaction,
+        userId: req.user?.id ?? null,
+        transaction,
       });
     });
 

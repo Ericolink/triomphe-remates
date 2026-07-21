@@ -71,7 +71,9 @@ const updateFeedback = async (req, res) => {
     if (!feedback) return res.status(404).json({ error: 'Feedback no encontrado' });
 
     if (req.body.status !== undefined && !VALID_FEEDBACK_STATUS.includes(req.body.status)) {
-      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_FEEDBACK_STATUS.join(', ')}` });
+      return res.status(400).json({
+        error: `Estatus inválido. Valores permitidos: ${VALID_FEEDBACK_STATUS.join(', ')}`,
+      });
     }
 
     const updates = {};
@@ -106,10 +108,13 @@ const deleteFeedback = async (req, res) => {
 const batchUpdateFeedback = async (req, res) => {
   try {
     const { ids, status } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'ids requeridos' });
     if (!status) return res.status(400).json({ error: 'status requerido' });
     if (!VALID_FEEDBACK_STATUS.includes(status)) {
-      return res.status(400).json({ error: `Estatus inválido. Valores permitidos: ${VALID_FEEDBACK_STATUS.join(', ')}` });
+      return res.status(400).json({
+        error: `Estatus inválido. Valores permitidos: ${VALID_FEEDBACK_STATUS.join(', ')}`,
+      });
     }
     await Feedback.update({ status }, { where: { id: ids } });
     logAudit(req, 'update', 'feedback', null, { ids, status });
@@ -124,7 +129,8 @@ const batchUpdateFeedback = async (req, res) => {
 const batchDeleteFeedback = async (req, res) => {
   try {
     const { ids } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids requeridos' });
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: 'ids requeridos' });
     await Feedback.destroy({ where: { id: ids } });
     logAudit(req, 'delete', 'feedback', null, { ids });
     return res.json({ message: `${ids.length} mensaje(s) eliminados` });
@@ -134,4 +140,11 @@ const batchDeleteFeedback = async (req, res) => {
   }
 };
 
-module.exports = { createFeedback, getFeedbacks, updateFeedback, deleteFeedback, batchUpdateFeedback, batchDeleteFeedback };
+module.exports = {
+  createFeedback,
+  getFeedbacks,
+  updateFeedback,
+  deleteFeedback,
+  batchUpdateFeedback,
+  batchDeleteFeedback,
+};

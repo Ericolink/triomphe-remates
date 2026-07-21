@@ -1,21 +1,43 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { Property, Image, Feedback, Lead } = require('../models/index');
-const { CITY_LABEL: cityLabel, PROPERTY_TYPE_LABEL: typeLabel, STATUS_LABEL: statusLabel } = require('../utils/labels');
+const {
+  CITY_LABEL: cityLabel,
+  PROPERTY_TYPE_LABEL: typeLabel,
+  STATUS_LABEL: statusLabel,
+} = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
 
 // AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
 // ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
 // exports que antes, sin convertirlo en Router).
 const {
-  PRIMARY, ACCENT, BG_ALT, TEXT,
-  PRIMARY_ARGB, ACCENT_ARGB, BG_ALT_ARGB, WHITE_ARGB, TEXT_ARGB, ST_GREEN_ARGB, ST_YELLOW_ARGB,
-  statusArgb, statusHex,
-  COMPANY_PHONE, COMPANY_WHATSAPP, COMPANY_EMAIL,
+  PRIMARY,
+  ACCENT,
+  BG_ALT,
+  TEXT,
+  PRIMARY_ARGB,
+  ACCENT_ARGB,
+  BG_ALT_ARGB,
+  WHITE_ARGB,
+  TEXT_ARGB,
+  ST_GREEN_ARGB,
+  ST_YELLOW_ARGB,
+  statusArgb,
+  statusHex,
+  COMPANY_PHONE,
+  COMPANY_WHATSAPP,
+  COMPANY_EMAIL,
 } = require('../services/exportBranding');
 const {
-  formatPrice, formatDate, dash,
-  getLogoPath, getWhiteLogoBuffer, getFilteredProperties, getFirstImagePath, getImageBuffer,
+  formatPrice,
+  formatDate,
+  dash,
+  getLogoPath,
+  getWhiteLogoBuffer,
+  getFilteredProperties,
+  getFirstImagePath,
+  getImageBuffer,
   stripUnsupported,
 } = require('../services/exportHelpers');
 
@@ -25,9 +47,17 @@ const {
 const exportExcel = async (req, res) => {
   try {
     const properties = await getFilteredProperties(req.query);
-    logAudit(req, 'export', 'property', null, { format: 'excel', count: properties.length, query: req.query });
+    logAudit(req, 'export', 'property', null, {
+      format: 'excel',
+      count: properties.length,
+      query: req.query,
+    });
     const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     const workbook = new ExcelJS.Workbook();
@@ -39,20 +69,20 @@ const exportExcel = async (req, res) => {
     });
 
     const headers = [
-      { header: '#',               key: 'num',                width: 5  },
-      { header: 'Título',          key: 'title',              width: 34 },
-      { header: 'Ciudad',          key: 'city',               width: 13 },
-      { header: 'Tipo',            key: 'type',               width: 13 },
-      { header: 'Estatus',         key: 'status',             width: 12 },
-      { header: 'Precio',          key: 'price',              width: 17 },
-      { header: 'M² Terreno',      key: 'terrainMeters',      width: 12 },
+      { header: '#', key: 'num', width: 5 },
+      { header: 'Título', key: 'title', width: 34 },
+      { header: 'Ciudad', key: 'city', width: 13 },
+      { header: 'Tipo', key: 'type', width: 13 },
+      { header: 'Estatus', key: 'status', width: 12 },
+      { header: 'Precio', key: 'price', width: 17 },
+      { header: 'M² Terreno', key: 'terrainMeters', width: 12 },
       { header: 'M² Construcción', key: 'constructionMeters', width: 16 },
-      { header: 'Recámaras',       key: 'bedrooms',           width: 11 },
-      { header: 'Baños',           key: 'bathrooms',          width: 9  },
-      { header: 'Dirección',       key: 'address',            width: 28 },
-      { header: 'Visitas',         key: 'views',              width: 9  },
-      { header: 'Fecha alta',      key: 'createdAt',          width: 13 },
-      { header: 'Última modif.',   key: 'updatedAt',          width: 13 },
+      { header: 'Recámaras', key: 'bedrooms', width: 11 },
+      { header: 'Baños', key: 'bathrooms', width: 9 },
+      { header: 'Dirección', key: 'address', width: 28 },
+      { header: 'Visitas', key: 'views', width: 9 },
+      { header: 'Fecha alta', key: 'createdAt', width: 13 },
+      { header: 'Última modif.', key: 'updatedAt', width: 13 },
     ];
     sheet.columns = headers;
 
@@ -61,9 +91,10 @@ const exportExcel = async (req, res) => {
     // Fila 1: fondo azul + logo blanco + título
     sheet.mergeCells(`A1:${LAST_COL}1`);
     const titleCell = sheet.getCell('A1');
-    titleCell.value = '                                         TRIOMPHE BIENES RAÍCES — Inventario de Remates Bancarios';
-    titleCell.font  = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
-    titleCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    titleCell.value =
+      '                                         TRIOMPHE BIENES RAÍCES — Inventario de Remates Bancarios';
+    titleCell.font = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
     titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
     sheet.getRow(1).height = 42;
 
@@ -76,15 +107,17 @@ const exportExcel = async (req, res) => {
           const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
           sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
         }
-      } catch { /* ignorado */ }
+      } catch {
+        /* ignorado */
+      }
     }
 
     // Fila 2: subtítulo
     sheet.mergeCells(`A2:${LAST_COL}2`);
     const subCell = sheet.getCell('A2');
     subCell.value = `Generado el ${generatedAt}   ·   Total: ${properties.length} propiedades`;
-    subCell.font  = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
-    subCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+    subCell.font = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
     subCell.alignment = { horizontal: 'center', vertical: 'middle' };
     sheet.getRow(2).height = 18;
 
@@ -93,41 +126,46 @@ const exportExcel = async (req, res) => {
     headerRow.values = headers.map((h) => h.header);
     headerRow.height = 22;
     headerRow.eachCell((cell) => {
-      cell.font      = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
-      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+      cell.font = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border    = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+      cell.border = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
     });
 
     // Datos
     properties.forEach((p, i) => {
       const isAlt = i % 2 === 0;
       const row = sheet.addRow({
-        num:               i + 1,
-        title:             dash(p.title),
-        city:              cityLabel[p.city]     || p.city,
-        type:              typeLabel[p.type]     || p.type,
-        status:            statusLabel[p.status] || p.status,
-        price:             formatPrice(p.price),
-        terrainMeters:     p.terrainMeters       ? `${p.terrainMeters} m²`      : '—',
-        constructionMeters:p.constructionMeters  ? `${p.constructionMeters} m²` : '—',
-        bedrooms:          dash(p.bedrooms),
-        bathrooms:         dash(p.bathrooms),
-        address:           dash(p.address),
-        views:             p.views ?? 0,
-        createdAt:         formatDate(p.createdAt),
-        updatedAt:         formatDate(p.updatedAt),
+        num: i + 1,
+        title: dash(p.title),
+        city: cityLabel[p.city] || p.city,
+        type: typeLabel[p.type] || p.type,
+        status: statusLabel[p.status] || p.status,
+        price: formatPrice(p.price),
+        terrainMeters: p.terrainMeters ? `${p.terrainMeters} m²` : '—',
+        constructionMeters: p.constructionMeters ? `${p.constructionMeters} m²` : '—',
+        bedrooms: dash(p.bedrooms),
+        bathrooms: dash(p.bathrooms),
+        address: dash(p.address),
+        views: p.views ?? 0,
+        createdAt: formatDate(p.createdAt),
+        updatedAt: formatDate(p.updatedAt),
       });
 
       row.height = 18;
       row.eachCell((cell) => {
-        cell.font      = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.font = { size: 9, color: { argb: TEXT_ARGB } };
         cell.alignment = { vertical: 'middle' };
-        cell.border    = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
-        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+        cell.border = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt)
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
       });
 
-      row.getCell(5).font = { bold: true, size: 9, color: { argb: statusArgb[p.status] || TEXT_ARGB } };
+      row.getCell(5).font = {
+        bold: true,
+        size: 9,
+        color: { argb: statusArgb[p.status] || TEXT_ARGB },
+      };
       row.getCell(6).font = { bold: true, size: 9, color: { argb: PRIMARY_ARGB } };
     });
 
@@ -139,8 +177,14 @@ const exportExcel = async (req, res) => {
     });
     totalRow.getCell(2).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=triomphe-inventario-${Date.now()}.xlsx`);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=triomphe-inventario-${Date.now()}.xlsx`
+    );
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
@@ -153,18 +197,18 @@ const exportExcel = async (req, res) => {
 // PDF
 // ─────────────────────────────────────────────────────────────────────────────
 const PDF_COLS = [
-  { label: 'Título',         width: 140 },
-  { label: 'Ciudad',         width: 62  },
-  { label: 'Tipo',           width: 56  },
-  { label: 'Estatus',        width: 62  },
-  { label: 'Precio',         width: 85  },
-  { label: 'M² Terreno',     width: 56  },
-  { label: 'M² Constr.',     width: 56  },
-  { label: 'Recámaras',      width: 50  },
-  { label: 'Baños',          width: 40  },
-  { label: 'Visitas',        width: 38  },
-  { label: 'Alta',           width: 52  },
-  { label: 'Modif.',         width: 52  },
+  { label: 'Título', width: 140 },
+  { label: 'Ciudad', width: 62 },
+  { label: 'Tipo', width: 56 },
+  { label: 'Estatus', width: 62 },
+  { label: 'Precio', width: 85 },
+  { label: 'M² Terreno', width: 56 },
+  { label: 'M² Constr.', width: 56 },
+  { label: 'Recámaras', width: 50 },
+  { label: 'Baños', width: 40 },
+  { label: 'Visitas', width: 38 },
+  { label: 'Alta', width: 52 },
+  { label: 'Modif.', width: 52 },
 ];
 
 const drawPDFHeader = async (doc, properties, generatedAt, logoPath) => {
@@ -177,19 +221,28 @@ const drawPDFHeader = async (doc, properties, generatedAt, logoPath) => {
       if (whiteBuf) {
         doc.image(whiteBuf, 40, 12, { height: 48 });
       }
-    } catch { /* ignorado */ }
+    } catch {
+      /* ignorado */
+    }
   }
 
-  doc.fillColor('white').fontSize(15).font('Helvetica-Bold')
+  doc
+    .fillColor('white')
+    .fontSize(15)
+    .font('Helvetica-Bold')
     .text('TRIOMPHE BIENES RAÍCES', 168, 16);
-  doc.fontSize(9).font('Helvetica')
-    .text('Inventario de Remates Bancarios', 168, 35);
-  doc.fontSize(7.5)
-    .text(`Generado: ${generatedAt}`, 168, 51);
+  doc.fontSize(9).font('Helvetica').text('Inventario de Remates Bancarios', 168, 35);
+  doc.fontSize(7.5).text(`Generado: ${generatedAt}`, 168, 51);
 
   doc.roundedRect(doc.page.width - 152, 20, 112, 32, 5).fill(ACCENT);
-  doc.fillColor(PRIMARY).fontSize(9).font('Helvetica-Bold')
-    .text(`${properties.length} propiedades`, doc.page.width - 148, 30, { width: 104, align: 'center' });
+  doc
+    .fillColor(PRIMARY)
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .text(`${properties.length} propiedades`, doc.page.width - 148, 30, {
+      width: 104,
+      align: 'center',
+    });
 };
 
 const drawPDFTableHeader = (doc, y) => {
@@ -197,7 +250,10 @@ const drawPDFTableHeader = (doc, y) => {
   doc.rect(40, y, pw, 20).fill(PRIMARY);
   let x = 40;
   PDF_COLS.forEach((col) => {
-    doc.fillColor('white').fontSize(7).font('Helvetica-Bold')
+    doc
+      .fillColor('white')
+      .fontSize(7)
+      .font('Helvetica-Bold')
       .text(col.label, x + 3, y + 6, { width: col.width - 6, ellipsis: true, lineBreak: false });
     x += col.width;
   });
@@ -206,22 +262,40 @@ const drawPDFTableHeader = (doc, y) => {
 
 const drawPDFFooter = (doc) => {
   doc.rect(0, doc.page.height - 32, doc.page.width, 32).fill(PRIMARY);
-  doc.fillColor(ACCENT).fontSize(7).font('Helvetica')
-    .text('© Triomphe Bienes Raíces — Documento generado automáticamente. Información sujeta a cambios sin previo aviso.',
-      40, doc.page.height - 18, { width: doc.page.width - 80, align: 'center' });
+  doc
+    .fillColor(ACCENT)
+    .fontSize(7)
+    .font('Helvetica')
+    .text(
+      '© Triomphe Bienes Raíces — Documento generado automáticamente. Información sujeta a cambios sin previo aviso.',
+      40,
+      doc.page.height - 18,
+      { width: doc.page.width - 80, align: 'center' }
+    );
 };
 
 const exportPDF = async (req, res) => {
   try {
     const properties = await getFilteredProperties(req.query);
-    logAudit(req, 'export', 'property', null, { format: 'pdf', count: properties.length, query: req.query });
+    logAudit(req, 'export', 'property', null, {
+      format: 'pdf',
+      count: properties.length,
+      query: req.query,
+    });
     const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=triomphe-inventario-${Date.now()}.pdf`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=triomphe-inventario-${Date.now()}.pdf`
+    );
     doc.pipe(res);
 
     const logoPath = getLogoPath();
@@ -232,7 +306,10 @@ const exportPDF = async (req, res) => {
     // Precalcular xPositions
     const xPositions = [];
     let acc = 40;
-    PDF_COLS.forEach((c) => { xPositions.push(acc); acc += c.width; });
+    PDF_COLS.forEach((c) => {
+      xPositions.push(acc);
+      acc += c.width;
+    });
 
     for (let i = 0; i < properties.length; i++) {
       const p = properties[i];
@@ -257,39 +334,46 @@ const exportPDF = async (req, res) => {
           doc.image(imgPath, xPositions[0] + 2, y + 1.5, { width: thumbSize, height: thumbSize });
           titleX = xPositions[0] + 2 + thumbSize + 2;
           titleW = PDF_COLS[0].width - thumbSize - 8;
-        } catch { /* ignorado */ }
+        } catch {
+          /* ignorado */
+        }
       }
 
       const rowData = [
-        { val: dash(p.title),                                              col: 0, customX: titleX, customW: titleW },
-        { val: cityLabel[p.city]   || p.city,                              col: 1 },
-        { val: typeLabel[p.type]   || p.type,                              col: 2 },
-        { val: statusLabel[p.status] || p.status,                          col: 3, isStatus: true },
-        { val: formatPrice(p.price),                                       col: 4, bold: true, color: PRIMARY },
-        { val: p.terrainMeters      ? `${p.terrainMeters} m²`    : '—',   col: 5 },
+        { val: dash(p.title), col: 0, customX: titleX, customW: titleW },
+        { val: cityLabel[p.city] || p.city, col: 1 },
+        { val: typeLabel[p.type] || p.type, col: 2 },
+        { val: statusLabel[p.status] || p.status, col: 3, isStatus: true },
+        { val: formatPrice(p.price), col: 4, bold: true, color: PRIMARY },
+        { val: p.terrainMeters ? `${p.terrainMeters} m²` : '—', col: 5 },
         { val: p.constructionMeters ? `${p.constructionMeters} m²` : '—', col: 6 },
-        { val: dash(p.bedrooms),                                           col: 7 },
-        { val: dash(p.bathrooms),                                          col: 8 },
-        { val: String(p.views ?? 0),                                       col: 9 },
-        { val: formatDate(p.createdAt),                                    col: 10 },
-        { val: formatDate(p.updatedAt),                                    col: 11 },
+        { val: dash(p.bedrooms), col: 7 },
+        { val: dash(p.bathrooms), col: 8 },
+        { val: String(p.views ?? 0), col: 9 },
+        { val: formatDate(p.createdAt), col: 10 },
+        { val: formatDate(p.updatedAt), col: 11 },
       ];
 
       rowData.forEach(({ val, col, isStatus, bold, color, customX, customW }) => {
         const colDef = PDF_COLS[col];
         const xPos = customX !== undefined ? customX : xPositions[col] + 3;
-        const wid  = customW !== undefined ? customW : colDef.width - 6;
+        const wid = customW !== undefined ? customW : colDef.width - 6;
         let fillColor = TEXT;
         if (isStatus) fillColor = statusHex[p.status] || TEXT;
         else if (color) fillColor = color;
-        doc.fillColor(fillColor)
+        doc
+          .fillColor(fillColor)
           .fontSize(7)
           .font(bold || isStatus ? 'Helvetica-Bold' : 'Helvetica')
           .text(val, xPos, y + 7, { width: wid, ellipsis: true, lineBreak: false });
       });
 
-      doc.moveTo(40, y + ROW_H).lineTo(doc.page.width - 40, y + ROW_H)
-        .strokeColor('#e5e7eb').lineWidth(0.4).stroke();
+      doc
+        .moveTo(40, y + ROW_H)
+        .lineTo(doc.page.width - 40, y + ROW_H)
+        .strokeColor('#e5e7eb')
+        .lineWidth(0.4)
+        .stroke();
 
       y += ROW_H;
     }
@@ -319,10 +403,18 @@ const exportFeedbackExcel = async (req, res) => {
       where,
       order: [['createdAt', 'DESC']],
     });
-    logAudit(req, 'export', 'feedback', null, { format: 'excel', count: items.length, query: req.query });
+    logAudit(req, 'export', 'feedback', null, {
+      format: 'excel',
+      count: items.length,
+      query: req.query,
+    });
 
     const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     const workbook = new ExcelJS.Workbook();
@@ -334,15 +426,15 @@ const exportFeedbackExcel = async (req, res) => {
     });
 
     const headers = [
-      { header: '#',          key: 'num',       width: 5  },
-      { header: 'Categoría',  key: 'category',  width: 13 },
-      { header: 'Nombre',     key: 'name',      width: 22 },
-      { header: 'Email',      key: 'email',     width: 28 },
-      { header: 'Asunto',     key: 'subject',   width: 36 },
-      { header: 'Mensaje',    key: 'message',   width: 50 },
-      { header: 'Estatus',    key: 'status',    width: 12 },
-      { header: 'Notas',      key: 'notes',     width: 30 },
-      { header: 'Fecha',      key: 'createdAt', width: 16 },
+      { header: '#', key: 'num', width: 5 },
+      { header: 'Categoría', key: 'category', width: 13 },
+      { header: 'Nombre', key: 'name', width: 22 },
+      { header: 'Email', key: 'email', width: 28 },
+      { header: 'Asunto', key: 'subject', width: 36 },
+      { header: 'Mensaje', key: 'message', width: 50 },
+      { header: 'Estatus', key: 'status', width: 12 },
+      { header: 'Notas', key: 'notes', width: 30 },
+      { header: 'Fecha', key: 'createdAt', width: 16 },
     ];
     sheet.columns = headers;
 
@@ -351,9 +443,10 @@ const exportFeedbackExcel = async (req, res) => {
     // Fila 1: header azul con título
     sheet.mergeCells(`A1:${LAST_COL}1`);
     const titleCell = sheet.getCell('A1');
-    titleCell.value = '                                         TRIOMPHE BIENES RAÍCES — Buzón de Opiniones';
-    titleCell.font  = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
-    titleCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    titleCell.value =
+      '                                         TRIOMPHE BIENES RAÍCES — Buzón de Opiniones';
+    titleCell.font = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
     titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
     sheet.getRow(1).height = 42;
 
@@ -365,15 +458,17 @@ const exportFeedbackExcel = async (req, res) => {
           const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
           sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
         }
-      } catch { /* ignorado */ }
+      } catch {
+        /* ignorado */
+      }
     }
 
     // Fila 2: subtítulo
     sheet.mergeCells(`A2:${LAST_COL}2`);
     const subCell = sheet.getCell('A2');
     subCell.value = `Generado el ${generatedAt}   ·   Total: ${items.length} mensajes`;
-    subCell.font  = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
-    subCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+    subCell.font = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
     subCell.alignment = { horizontal: 'center', vertical: 'middle' };
     sheet.getRow(2).height = 18;
 
@@ -382,10 +477,10 @@ const exportFeedbackExcel = async (req, res) => {
     headerRow.values = headers.map((h) => h.header);
     headerRow.height = 22;
     headerRow.eachCell((cell) => {
-      cell.font      = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
-      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+      cell.font = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border    = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+      cell.border = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
     });
 
     const categoryArgb = { queja: 'FFEF4444', comentario: 'FF3B82F6', sugerencia: 'FF10B981' };
@@ -394,27 +489,36 @@ const exportFeedbackExcel = async (req, res) => {
     items.forEach((item, i) => {
       const isAlt = i % 2 === 0;
       const row = sheet.addRow({
-        num:       i + 1,
-        category:  categoryLabel[item.category] || item.category,
-        name:      dash(item.name),
-        email:     dash(item.email),
-        subject:   dash(item.subject),
-        message:   item.message ? item.message.slice(0, 200) : '—',
-        status:    feedbackStatusLabel[item.status] || item.status,
-        notes:     dash(item.notes),
+        num: i + 1,
+        category: categoryLabel[item.category] || item.category,
+        name: dash(item.name),
+        email: dash(item.email),
+        subject: dash(item.subject),
+        message: item.message ? item.message.slice(0, 200) : '—',
+        status: feedbackStatusLabel[item.status] || item.status,
+        notes: dash(item.notes),
         createdAt: formatDate(item.createdAt),
       });
 
       row.height = 18;
       row.eachCell((cell) => {
-        cell.font      = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.font = { size: 9, color: { argb: TEXT_ARGB } };
         cell.alignment = { vertical: 'middle', wrapText: false };
-        cell.border    = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
-        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+        cell.border = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt)
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
       });
 
-      row.getCell(2).font = { bold: true, size: 9, color: { argb: categoryArgb[item.category] || TEXT_ARGB } };
-      row.getCell(7).font = { bold: true, size: 9, color: { argb: statusArgbFeedback[item.status] || TEXT_ARGB } };
+      row.getCell(2).font = {
+        bold: true,
+        size: 9,
+        color: { argb: categoryArgb[item.category] || TEXT_ARGB },
+      };
+      row.getCell(7).font = {
+        bold: true,
+        size: 9,
+        color: { argb: statusArgbFeedback[item.status] || TEXT_ARGB },
+      };
     });
 
     // Fila total
@@ -425,7 +529,10 @@ const exportFeedbackExcel = async (req, res) => {
     });
     totalRow.getCell(3).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
     res.setHeader('Content-Disposition', `attachment; filename=triomphe-buzon-${Date.now()}.xlsx`);
     await workbook.xlsx.write(res);
     res.end();
@@ -438,9 +545,19 @@ const exportFeedbackExcel = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCEL — Leads
 // ─────────────────────────────────────────────────────────────────────────────
-const leadTypeLabel   = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
-const leadStatusLabel = { nuevo: 'Nuevo', contactado: 'Contactado', cerrado: 'Cerrado', descartado: 'Descartado' };
-const leadStatusArgb  = { nuevo: 'FF3B82F6', contactado: ST_YELLOW_ARGB, cerrado: ST_GREEN_ARGB, descartado: 'FF9CA3AF' };
+const leadTypeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
+const leadStatusLabel = {
+  nuevo: 'Nuevo',
+  contactado: 'Contactado',
+  cerrado: 'Cerrado',
+  descartado: 'Descartado',
+};
+const leadStatusArgb = {
+  nuevo: 'FF3B82F6',
+  contactado: ST_YELLOW_ARGB,
+  cerrado: ST_GREEN_ARGB,
+  descartado: 'FF9CA3AF',
+};
 const paymentMethodLabel = { credito_hipotecario: 'Crédito hipotecario', contado: 'Contado' };
 
 const exportLeadsExcel = async (req, res) => {
@@ -448,17 +565,25 @@ const exportLeadsExcel = async (req, res) => {
     const { status, type } = req.query;
     const where = {};
     if (status) where.status = status;
-    if (type)   where.type   = type;
+    if (type) where.type = type;
 
     const leads = await Lead.findAll({
       where,
       order: [['createdAt', 'DESC']],
       include: [{ model: Property, as: 'property', attributes: ['title'] }],
     });
-    logAudit(req, 'export', 'lead', null, { format: 'excel', count: leads.length, query: req.query });
+    logAudit(req, 'export', 'lead', null, {
+      format: 'excel',
+      count: leads.length,
+      query: req.query,
+    });
 
     const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     const workbook = new ExcelJS.Workbook();
@@ -470,20 +595,20 @@ const exportLeadsExcel = async (req, res) => {
     });
 
     const headers = [
-      { header: '#',               key: 'num',             width: 5  },
-      { header: 'Nombre',          key: 'name',            width: 22 },
-      { header: 'Email',           key: 'email',           width: 28 },
-      { header: 'Teléfono',        key: 'phone',           width: 16 },
-      { header: 'Propiedad',       key: 'property',        width: 30 },
-      { header: 'Tipo',            key: 'type',            width: 13 },
-      { header: 'Estatus',         key: 'status',          width: 13 },
-      { header: 'Forma de pago',   key: 'paymentMethod',   width: 18 },
-      { header: 'Monto disponible', key: 'budgetAmount',   width: 18 },
+      { header: '#', key: 'num', width: 5 },
+      { header: 'Nombre', key: 'name', width: 22 },
+      { header: 'Email', key: 'email', width: 28 },
+      { header: 'Teléfono', key: 'phone', width: 16 },
+      { header: 'Propiedad', key: 'property', width: 30 },
+      { header: 'Tipo', key: 'type', width: 13 },
+      { header: 'Estatus', key: 'status', width: 13 },
+      { header: 'Forma de pago', key: 'paymentMethod', width: 18 },
+      { header: 'Monto disponible', key: 'budgetAmount', width: 18 },
       { header: 'Primer contacto', key: 'firstContactDate', width: 16 },
-      { header: 'Fecha de cita',   key: 'appointmentDate', width: 16 },
-      { header: 'Mensaje',         key: 'message',         width: 40 },
-      { header: 'Notas',           key: 'notes',           width: 30 },
-      { header: 'Fecha',           key: 'createdAt',       width: 16 },
+      { header: 'Fecha de cita', key: 'appointmentDate', width: 16 },
+      { header: 'Mensaje', key: 'message', width: 40 },
+      { header: 'Notas', key: 'notes', width: 30 },
+      { header: 'Fecha', key: 'createdAt', width: 16 },
     ];
     sheet.columns = headers;
 
@@ -493,8 +618,8 @@ const exportLeadsExcel = async (req, res) => {
     sheet.mergeCells(`A1:${LAST_COL}1`);
     const titleCell = sheet.getCell('A1');
     titleCell.value = '                                         TRIOMPHE BIENES RAÍCES — Leads';
-    titleCell.font  = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
-    titleCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    titleCell.font = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
     titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
     sheet.getRow(1).height = 42;
 
@@ -506,15 +631,17 @@ const exportLeadsExcel = async (req, res) => {
           const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
           sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
         }
-      } catch { /* ignorado */ }
+      } catch {
+        /* ignorado */
+      }
     }
 
     // Fila 2: subtítulo
     sheet.mergeCells(`A2:${LAST_COL}2`);
     const subCell = sheet.getCell('A2');
     subCell.value = `Generado el ${generatedAt}   ·   Total: ${leads.length} leads`;
-    subCell.font  = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
-    subCell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+    subCell.font = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
     subCell.alignment = { horizontal: 'center', vertical: 'middle' };
     sheet.getRow(2).height = 18;
 
@@ -523,40 +650,51 @@ const exportLeadsExcel = async (req, res) => {
     headerRow.values = headers.map((h) => h.header);
     headerRow.height = 22;
     headerRow.eachCell((cell) => {
-      cell.font      = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
-      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+      cell.font = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border    = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+      cell.border = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
     });
 
     leads.forEach((lead, i) => {
       const isAlt = i % 2 === 0;
       const row = sheet.addRow({
-        num:             i + 1,
-        name:            dash(lead.name),
-        email:           dash(lead.email),
-        phone:           dash(lead.phone),
-        property:        dash(lead.property?.title),
-        type:            leadTypeLabel[lead.type]     || lead.type,
-        status:          leadStatusLabel[lead.status] || lead.status,
-        paymentMethod:   lead.paymentMethod ? (paymentMethodLabel[lead.paymentMethod] || lead.paymentMethod) : '—',
-        budgetAmount:    lead.budgetNotSpecified ? 'No especificó' : (lead.budgetAmount != null ? formatPrice(lead.budgetAmount) : '—'),
+        num: i + 1,
+        name: dash(lead.name),
+        email: dash(lead.email),
+        phone: dash(lead.phone),
+        property: dash(lead.property?.title),
+        type: leadTypeLabel[lead.type] || lead.type,
+        status: leadStatusLabel[lead.status] || lead.status,
+        paymentMethod: lead.paymentMethod
+          ? paymentMethodLabel[lead.paymentMethod] || lead.paymentMethod
+          : '—',
+        budgetAmount: lead.budgetNotSpecified
+          ? 'No especificó'
+          : lead.budgetAmount != null
+            ? formatPrice(lead.budgetAmount)
+            : '—',
         firstContactDate: lead.firstContactDate ? formatDate(lead.firstContactDate) : '—',
         appointmentDate: lead.appointmentDate ? formatDate(lead.appointmentDate) : '—',
-        message:         lead.message ? lead.message.slice(0, 200) : '—',
-        notes:           dash(lead.notes),
-        createdAt:       formatDate(lead.createdAt),
+        message: lead.message ? lead.message.slice(0, 200) : '—',
+        notes: dash(lead.notes),
+        createdAt: formatDate(lead.createdAt),
       });
 
       row.height = 18;
       row.eachCell((cell) => {
-        cell.font      = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.font = { size: 9, color: { argb: TEXT_ARGB } };
         cell.alignment = { vertical: 'middle', wrapText: false };
-        cell.border    = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
-        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+        cell.border = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt)
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
       });
 
-      row.getCell(7).font = { bold: true, size: 9, color: { argb: leadStatusArgb[lead.status] || TEXT_ARGB } };
+      row.getCell(7).font = {
+        bold: true,
+        size: 9,
+        color: { argb: leadStatusArgb[lead.status] || TEXT_ARGB },
+      };
     });
 
     // Fila total
@@ -567,7 +705,10 @@ const exportLeadsExcel = async (req, res) => {
     });
     totalRow.getCell(2).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
     res.setHeader('Content-Disposition', `attachment; filename=triomphe-leads-${Date.now()}.xlsx`);
     await workbook.xlsx.write(res);
     res.end();
@@ -589,12 +730,17 @@ const exportPropertyQuotePDF = async (req, res) => {
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
     const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit', month: 'long', year: 'numeric',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
     });
 
     const doc = new PDFDocument({ margin: 0, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=ficha-${property.slug || property.id}-${Date.now()}.pdf`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=ficha-${property.slug || property.id}-${Date.now()}.pdf`
+    );
     doc.pipe(res);
 
     const PW = doc.page.width;
@@ -607,11 +753,19 @@ const exportPropertyQuotePDF = async (req, res) => {
       try {
         const whiteBuf = await getWhiteLogoBuffer(logoPath);
         if (whiteBuf) doc.image(whiteBuf, MX, 22, { height: 44 });
-      } catch { /* ignorado */ }
+      } catch {
+        /* ignorado */
+      }
     }
-    doc.fillColor(ACCENT).fontSize(10).font('Helvetica-Bold')
+    doc
+      .fillColor(ACCENT)
+      .fontSize(10)
+      .font('Helvetica-Bold')
       .text('FICHA DE PROPIEDAD EN REMATE', PW - 240, 38, { width: 200, align: 'right' });
-    doc.fillColor('white').fontSize(8).font('Helvetica')
+    doc
+      .fillColor('white')
+      .fontSize(8)
+      .font('Helvetica')
       .text(`Generado el ${generatedAt}`, PW - 240, 54, { width: 200, align: 'right' });
 
     // Imagen principal
@@ -626,62 +780,111 @@ const exportPropertyQuotePDF = async (req, res) => {
         // limitar el área dibujable o la imagen se desborda sobre el contenido siguiente
         doc.save();
         doc.rect(0, y, PW, IMG_H).clip();
-        doc.image(imgBuf, 0, y, { width: PW, height: IMG_H, cover: [PW, IMG_H], align: 'center', valign: 'center' });
+        doc.image(imgBuf, 0, y, {
+          width: PW,
+          height: IMG_H,
+          cover: [PW, IMG_H],
+          align: 'center',
+          valign: 'center',
+        });
         doc.restore();
-      } catch { /* ignorado */ }
+      } catch {
+        /* ignorado */
+      }
     } else {
       doc.rect(0, y, PW, IMG_H).fill(BG_ALT);
-      doc.fillColor('#9ca3af').fontSize(11).font('Helvetica')
+      doc
+        .fillColor('#9ca3af')
+        .fontSize(11)
+        .font('Helvetica')
         .text('Sin imagen disponible', 0, y + IMG_H / 2 - 6, { width: PW, align: 'center' });
     }
     y += IMG_H + 24;
 
     // Estatus + título + precio
     doc.roundedRect(MX, y, 90, 22, 11).fill(statusHex[property.status] || PRIMARY);
-    doc.fillColor('white').fontSize(9).font('Helvetica-Bold')
-      .text(statusLabel[property.status] || property.status, MX, y + 6, { width: 90, align: 'center' });
+    doc
+      .fillColor('white')
+      .fontSize(9)
+      .font('Helvetica-Bold')
+      .text(statusLabel[property.status] || property.status, MX, y + 6, {
+        width: 90,
+        align: 'center',
+      });
 
     if (property.code) {
-      doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
-        .text(stripUnsupported(property.code), MX + 100, y + 6, { width: PW - MX * 2 - 100, align: 'right' });
+      doc
+        .fillColor('#6b7280')
+        .fontSize(10)
+        .font('Helvetica')
+        .text(stripUnsupported(property.code), MX + 100, y + 6, {
+          width: PW - MX * 2 - 100,
+          align: 'right',
+        });
     }
 
     const cleanTitle = stripUnsupported(property.title);
-    doc.fillColor(PRIMARY).fontSize(20).font('Helvetica-Bold')
+    doc
+      .fillColor(PRIMARY)
+      .fontSize(20)
+      .font('Helvetica-Bold')
       .text(cleanTitle, MX, y + 34, { width: PW - MX * 2 });
 
     const titleHeight = doc.heightOfString(cleanTitle, { width: PW - MX * 2, fontSize: 20 });
     y += 34 + titleHeight + 10;
 
-    doc.fillColor('#6b7280').fontSize(10).font('Helvetica')
-      .text(`${cityLabel[property.city] || property.city}  ·  ${typeLabel[property.type] || property.type}${property.address ? `  ·  ${stripUnsupported(property.address)}` : ''}`,
-        MX, y, { width: PW - MX * 2 });
+    doc
+      .fillColor('#6b7280')
+      .fontSize(10)
+      .font('Helvetica')
+      .text(
+        `${cityLabel[property.city] || property.city}  ·  ${typeLabel[property.type] || property.type}${property.address ? `  ·  ${stripUnsupported(property.address)}` : ''}`,
+        MX,
+        y,
+        { width: PW - MX * 2 }
+      );
     y += 22;
 
-    doc.fillColor(ACCENT).fontSize(26).font('Helvetica-Bold')
+    doc
+      .fillColor(ACCENT)
+      .fontSize(26)
+      .font('Helvetica-Bold')
       .text(formatPrice(property.price), MX, y);
     y += 44;
 
     // Características
     const features = [
-      property.terrainMeters      ? `${property.terrainMeters} m² de terreno`      : null,
+      property.terrainMeters ? `${property.terrainMeters} m² de terreno` : null,
       property.constructionMeters ? `${property.constructionMeters} m² de construcción` : null,
-      (!property.terrainMeters && !property.constructionMeters && property.squareMeters) ? `${property.squareMeters} m²` : null,
-      property.bedrooms  ? `${property.bedrooms} recámaras` : null,
-      property.bathrooms ? `${property.bathrooms} baños`    : null,
+      !property.terrainMeters && !property.constructionMeters && property.squareMeters
+        ? `${property.squareMeters} m²`
+        : null,
+      property.bedrooms ? `${property.bedrooms} recámaras` : null,
+      property.bathrooms ? `${property.bathrooms} baños` : null,
     ].filter(Boolean);
 
     if (features.length) {
-      doc.moveTo(MX, y).lineTo(PW - MX, y).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      doc
+        .moveTo(MX, y)
+        .lineTo(PW - MX, y)
+        .strokeColor('#e5e7eb')
+        .lineWidth(1)
+        .stroke();
       y += 16;
       let fx = MX;
       features.forEach((f) => {
         const w = doc.widthOfString(f, { fontSize: 10 }) + 28;
         doc.roundedRect(fx, y, w, 24, 12).fill(BG_ALT);
-        doc.fillColor(TEXT).fontSize(10).font('Helvetica')
+        doc
+          .fillColor(TEXT)
+          .fontSize(10)
+          .font('Helvetica')
           .text(f, fx + 14, y + 7);
         fx += w + 10;
-        if (fx > PW - MX - 100) { fx = MX; y += 32; }
+        if (fx > PW - MX - 100) {
+          fx = MX;
+          y += 32;
+        }
       });
       y += 40;
     }
@@ -691,7 +894,12 @@ const exportPropertyQuotePDF = async (req, res) => {
     if (property.description) {
       const cleanDesc = stripUnsupported(property.description);
       const descW = PW - MX * 2;
-      doc.moveTo(MX, y).lineTo(PW - MX, y).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      doc
+        .moveTo(MX, y)
+        .lineTo(PW - MX, y)
+        .strokeColor('#e5e7eb')
+        .lineWidth(1)
+        .stroke();
       y += 16;
       doc.fillColor(PRIMARY).fontSize(12).font('Helvetica-Bold').text('Descripción', MX, y);
       y += 18;
@@ -702,26 +910,45 @@ const exportPropertyQuotePDF = async (req, res) => {
       if (y + descH + FOOTER_H + 12 > doc.page.height) {
         doc.addPage({ size: 'A4', margin: 0 });
         doc.rect(0, 0, PW, 32).fill(PRIMARY);
-        doc.fillColor('white').fontSize(7.5).font('Helvetica')
+        doc
+          .fillColor('white')
+          .fontSize(7.5)
+          .font('Helvetica')
           .text(cleanTitle, MX, 10, { width: PW - MX * 2, align: 'center' });
         y = 48;
       }
 
-      doc.fillColor(TEXT).fontSize(10).font('Helvetica')
+      doc
+        .fillColor(TEXT)
+        .fontSize(10)
+        .font('Helvetica')
         .text(cleanDesc, MX, y, { width: descW, align: 'justify', lineGap: 2 });
     }
 
     // Pie de página — contacto
     doc.rect(0, doc.page.height - FOOTER_H, PW, FOOTER_H).fill(PRIMARY);
-    doc.fillColor(ACCENT).fontSize(11).font('Helvetica-Bold')
+    doc
+      .fillColor(ACCENT)
+      .fontSize(11)
+      .font('Helvetica-Bold')
       .text('¿Te interesa esta propiedad? Contáctanos:', MX, doc.page.height - FOOTER_H + 16);
-    doc.fillColor('white').fontSize(9.5).font('Helvetica')
+    doc
+      .fillColor('white')
+      .fontSize(9.5)
+      .font('Helvetica')
       .text(`Tel / WhatsApp: ${COMPANY_PHONE}`, MX, doc.page.height - FOOTER_H + 38)
       .text(`Email: ${COMPANY_EMAIL}`, MX, doc.page.height - FOOTER_H + 54)
       .text(`https://wa.me/${COMPANY_WHATSAPP}`, MX, doc.page.height - FOOTER_H + 70);
-    doc.fillColor(ACCENT).fontSize(7).font('Helvetica')
-      .text('© Triomphe Bienes Raíces — Documento informativo. Precio e información sujetos a cambios sin previo aviso.',
-        MX, doc.page.height - 16, { width: PW - MX * 2, align: 'right' });
+    doc
+      .fillColor(ACCENT)
+      .fontSize(7)
+      .font('Helvetica')
+      .text(
+        '© Triomphe Bienes Raíces — Documento informativo. Precio e información sujetos a cambios sin previo aviso.',
+        MX,
+        doc.page.height - 16,
+        { width: PW - MX * 2, align: 'right' }
+      );
 
     doc.end();
   } catch (error) {
@@ -730,4 +957,10 @@ const exportPropertyQuotePDF = async (req, res) => {
   }
 };
 
-module.exports = { exportExcel, exportPDF, exportFeedbackExcel, exportLeadsExcel, exportPropertyQuotePDF };
+module.exports = {
+  exportExcel,
+  exportPDF,
+  exportFeedbackExcel,
+  exportLeadsExcel,
+  exportPropertyQuotePDF,
+};

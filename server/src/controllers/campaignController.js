@@ -14,11 +14,15 @@ const createCampaign = async (req, res) => {
       return res.status(400).json({ error: 'Plataforma, nombre y fecha de inicio son requeridos' });
     }
     if (!VALID_PLATFORMS.includes(platform)) {
-      return res.status(400).json({ error: `Plataforma inválida. Valores permitidos: ${VALID_PLATFORMS.join(', ')}` });
+      return res
+        .status(400)
+        .json({ error: `Plataforma inválida. Valores permitidos: ${VALID_PLATFORMS.join(', ')}` });
     }
 
     const campaign = await Campaign.create({
-      platform, name, startDate,
+      platform,
+      name,
+      startDate,
       endDate: endDate || null,
       budget: budget ?? null,
     });
@@ -62,14 +66,28 @@ const getCampaignById = async (req, res) => {
     const leadCount = await Lead.count({ where: { campaignId: campaign.id } });
 
     const dealsRaw = await Deal.findAll({
-      include: [{ model: Lead, as: 'lead', attributes: [], where: { campaignId: campaign.id }, required: true }],
-      attributes: [[fn('COUNT', col('Deal.id')), 'dealCount'], [fn('SUM', col('amount')), 'revenue']],
+      include: [
+        {
+          model: Lead,
+          as: 'lead',
+          attributes: [],
+          where: { campaignId: campaign.id },
+          required: true,
+        },
+      ],
+      attributes: [
+        [fn('COUNT', col('Deal.id')), 'dealCount'],
+        [fn('SUM', col('amount')), 'revenue'],
+      ],
       raw: true,
     });
     const dealCount = parseInt(dealsRaw[0]?.dealCount || 0, 10);
     const revenue = parseFloat(dealsRaw[0]?.revenue || 0);
     const conversionRate = leadCount > 0 ? Math.round((dealCount / leadCount) * 1000) / 10 : 0;
-    const costPerSale = campaign.budget && dealCount > 0 ? Math.round((campaign.budget / dealCount) * 100) / 100 : null;
+    const costPerSale =
+      campaign.budget && dealCount > 0
+        ? Math.round((campaign.budget / dealCount) * 100) / 100
+        : null;
 
     return res.json({
       data: {
@@ -91,7 +109,9 @@ const updateCampaign = async (req, res) => {
 
     const { platform, name, startDate, endDate, budget } = req.body;
     if (platform !== undefined && !VALID_PLATFORMS.includes(platform)) {
-      return res.status(400).json({ error: `Plataforma inválida. Valores permitidos: ${VALID_PLATFORMS.join(', ')}` });
+      return res
+        .status(400)
+        .json({ error: `Plataforma inválida. Valores permitidos: ${VALID_PLATFORMS.join(', ')}` });
     }
 
     const updates = {};

@@ -8,10 +8,15 @@ function describeEntry(entry) {
     const to = Number(entry.toPrice);
     const down = to < from;
     return {
-      icon: down ? <TrendingDown size={16} className="text-green-600" /> : <TrendingUp size={16} className="text-red-500" />,
+      icon: down ? (
+        <TrendingDown size={16} className="text-green-600" />
+      ) : (
+        <TrendingUp size={16} className="text-red-500" />
+      ),
       text: (
         <>
-          Precio {down ? 'bajó' : 'subió'} de <span className="font-semibold">{formatPrice(from)}</span> a{' '}
+          Precio {down ? 'bajó' : 'subió'} de{' '}
+          <span className="font-semibold">{formatPrice(from)}</span> a{' '}
           <span className="font-semibold">{formatPrice(to)}</span>
         </>
       ),
@@ -21,7 +26,12 @@ function describeEntry(entry) {
   if (!entry.fromStatus) {
     return {
       icon: <History size={16} className="text-blue-600" />,
-      text: <>Primer ingreso al catálogo como <span className="font-semibold">{STATUS_LABELS[entry.toStatus] || entry.toStatus}</span></>,
+      text: (
+        <>
+          Primer ingreso al catálogo como{' '}
+          <span className="font-semibold">{STATUS_LABELS[entry.toStatus] || entry.toStatus}</span>
+        </>
+      ),
     };
   }
 
@@ -29,8 +39,9 @@ function describeEntry(entry) {
     icon: <History size={16} className="text-blue-600" />,
     text: (
       <>
-        Estatus cambió de <span className="font-semibold">{STATUS_LABELS[entry.fromStatus] || entry.fromStatus}</span> a{' '}
-        <span className="font-semibold">{STATUS_LABELS[entry.toStatus] || entry.toStatus}</span>
+        Estatus cambió de{' '}
+        <span className="font-semibold">{STATUS_LABELS[entry.fromStatus] || entry.fromStatus}</span>{' '}
+        a <span className="font-semibold">{STATUS_LABELS[entry.toStatus] || entry.toStatus}</span>
       </>
     ),
   };

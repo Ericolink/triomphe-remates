@@ -5,7 +5,9 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const alertSubscribeLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
   max: 3,
-  message: { error: 'Demasiados intentos de suscripción con este email. Intenta de nuevo en 1 hora.' },
+  message: {
+    error: 'Demasiados intentos de suscripción con este email. Intenta de nuevo en 1 hora.',
+  },
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req, res) => {

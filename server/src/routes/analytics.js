@@ -12,6 +12,12 @@ const { apiLimiter } = require('../middleware/rateLimitMiddleware');
  */
 
 router.get('/dashboard', apiLimiter, authenticate, authorize('admin', 'editor'), getDashboard);
-router.get('/properties/:id', apiLimiter, authenticate, authorize('admin', 'editor'), getPropertyAnalytics);
+router.get(
+  '/properties/:id',
+  apiLimiter,
+  authenticate,
+  authorize('admin', 'editor'),
+  getPropertyAnalytics
+);
 
 module.exports = router;

@@ -21,7 +21,10 @@ const getPublicTestimonials = async (req, res) => {
     const { limit = 6 } = req.query;
     const testimonials = await Testimonial.findAll({
       where: { status: 'publicado' },
-      order: [['order', 'ASC'], ['createdAt', 'DESC']],
+      order: [
+        ['order', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
       limit: parseInt(limit, 10),
     });
     return res.json({ data: testimonials });
@@ -38,7 +41,15 @@ const getAllTestimonials = async (req, res) => {
     const where = {};
     if (status) where.status = status;
 
-    const result = await paginate(Testimonial, { page, limit, where, order: [['order', 'ASC'], ['createdAt', 'DESC']] });
+    const result = await paginate(Testimonial, {
+      page,
+      limit,
+      where,
+      order: [
+        ['order', 'ASC'],
+        ['createdAt', 'DESC'],
+      ],
+    });
 
     return res.json(result);
   } catch (error) {
@@ -65,7 +76,9 @@ const createTestimonial = async (req, res) => {
     const { clientName, clientRole, clientCity, testimonialText, rating, propertyId } = req.body;
 
     if (!clientName || !testimonialText) {
-      return res.status(400).json({ error: 'Nombre del cliente y texto del testimonio son requeridos' });
+      return res
+        .status(400)
+        .json({ error: 'Nombre del cliente y texto del testimonio son requeridos' });
     }
 
     if (propertyId) {
@@ -84,13 +97,19 @@ const createTestimonial = async (req, res) => {
     };
 
     if (req.files?.beforeImage?.[0]) {
-      const result = await uploadToCloudinary(req.files.beforeImage[0].buffer, 'triomphe/testimonials/before');
+      const result = await uploadToCloudinary(
+        req.files.beforeImage[0].buffer,
+        'triomphe/testimonials/before'
+      );
       data.beforeImageUrl = result.secure_url;
       data.beforeImageFilename = result.public_id;
     }
 
     if (req.files?.afterImage?.[0]) {
-      const result = await uploadToCloudinary(req.files.afterImage[0].buffer, 'triomphe/testimonials/after');
+      const result = await uploadToCloudinary(
+        req.files.afterImage[0].buffer,
+        'triomphe/testimonials/after'
+      );
       data.afterImageUrl = result.secure_url;
       data.afterImageFilename = result.public_id;
     }
@@ -111,7 +130,16 @@ const updateTestimonial = async (req, res) => {
     const testimonial = await Testimonial.findByPk(req.params.id);
     if (!testimonial) return res.status(404).json({ error: 'Testimonio no encontrado' });
 
-    const { clientName, clientRole, clientCity, testimonialText, rating, status, order, propertyId } = req.body;
+    const {
+      clientName,
+      clientRole,
+      clientCity,
+      testimonialText,
+      rating,
+      status,
+      order,
+      propertyId,
+    } = req.body;
 
     if (propertyId) {
       const property = await Property.findByPk(propertyId);
@@ -132,7 +160,10 @@ const updateTestimonial = async (req, res) => {
       if (testimonial.beforeImageFilename) {
         await cloudinary.uploader.destroy(testimonial.beforeImageFilename).catch(console.error);
       }
-      const result = await uploadToCloudinary(req.files.beforeImage[0].buffer, 'triomphe/testimonials/before');
+      const result = await uploadToCloudinary(
+        req.files.beforeImage[0].buffer,
+        'triomphe/testimonials/before'
+      );
       updates.beforeImageUrl = result.secure_url;
       updates.beforeImageFilename = result.public_id;
     }
@@ -141,13 +172,19 @@ const updateTestimonial = async (req, res) => {
       if (testimonial.afterImageFilename) {
         await cloudinary.uploader.destroy(testimonial.afterImageFilename).catch(console.error);
       }
-      const result = await uploadToCloudinary(req.files.afterImage[0].buffer, 'triomphe/testimonials/after');
+      const result = await uploadToCloudinary(
+        req.files.afterImage[0].buffer,
+        'triomphe/testimonials/after'
+      );
       updates.afterImageUrl = result.secure_url;
       updates.afterImageFilename = result.public_id;
     }
 
     await testimonial.update(updates);
-    logAudit(req, 'update', 'testimonial', testimonial.id, { clientName: testimonial.clientName, status: testimonial.status });
+    logAudit(req, 'update', 'testimonial', testimonial.id, {
+      clientName: testimonial.clientName,
+      status: testimonial.status,
+    });
 
     return res.json({ message: 'Testimonio actualizado', data: testimonial });
   } catch (error) {

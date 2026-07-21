@@ -31,7 +31,9 @@ const createLeadActivity = async (req, res) => {
     // 'sistema' está reservado para actividades autogeneradas (ver pipelineHelpers.logActivity)
     // — un humano no puede forjar una entrada de sistema.
     if (!type || !VALID_ACTIVITY_TYPES.includes(type)) {
-      return res.status(400).json({ error: `Tipo inválido. Valores permitidos: ${VALID_ACTIVITY_TYPES.join(', ')}` });
+      return res
+        .status(400)
+        .json({ error: `Tipo inválido. Valores permitidos: ${VALID_ACTIVITY_TYPES.join(', ')}` });
     }
     if (!content || !content.trim()) return res.status(400).json({ error: 'Contenido requerido' });
 

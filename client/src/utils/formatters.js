@@ -1,16 +1,30 @@
 export const formatPrice = (price) =>
-  (price === null || price === undefined || price === '')
+  price === null || price === undefined || price === ''
     ? 'PENDIENTE'
-    : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
+    : new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        maximumFractionDigits: 0,
+      }).format(price);
 
 export const formatDate = (date, fallback = '—') =>
   date
-    ? new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+    ? new Date(date).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
     : fallback;
 
 export const formatDateTime = (date, fallback = '—') =>
   date
-    ? new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    ? new Date(date).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     : fallback;
 
 // Deja solo dígitos y antepone 52 si es un número mexicano de 10 dígitos sin lada —
@@ -26,7 +40,11 @@ export const toWhatsAppLink = (phone) => {
 export const formatBudget = (amount, notSpecified) => {
   if (notSpecified) return 'No especificó';
   if (amount === null || amount === undefined || amount === '') return '—';
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    maximumFractionDigits: 0,
+  }).format(amount);
 };
 
 // Fecha de hoy en formato YYYY-MM-DD, para el atributo `max` de inputs date que no deben

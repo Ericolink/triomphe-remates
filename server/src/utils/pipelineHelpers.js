@@ -7,24 +7,36 @@ const { Activity, Task } = require('../models/index');
 const TERMINAL_STAGES = ['venta_realizada', 'no_interesado'];
 
 async function logActivity({ leadId, type, content, userId = null, transaction }) {
-  return Activity.create({ leadId, type, content, userId, occurredAt: new Date() }, { transaction });
+  return Activity.create(
+    { leadId, type, content, userId, occurredAt: new Date() },
+    { transaction }
+  );
 }
 
 // Decisión de producto: un prospecto sin responsable asignado no tiene "próxima acción"
 // todavía (Task.assignedToUserId es NOT NULL) — la tarea se crea la primera vez que se
 // asigna un responsable, no al crear el prospecto públicamente sin dueño.
-async function ensureOpenTask({ leadId, assignedToUserId, type = 'dar_seguimiento', dueDate, transaction }) {
+async function ensureOpenTask({
+  leadId,
+  assignedToUserId,
+  type = 'dar_seguimiento',
+  dueDate,
+  transaction,
+}) {
   if (!assignedToUserId) return null;
 
   const existingOpen = await Task.findOne({ where: { leadId, done: false }, transaction });
   if (existingOpen) return existingOpen;
 
-  return Task.create({
-    leadId,
-    assignedToUserId,
-    type,
-    dueDate: dueDate || defaultDueDate(),
-  }, { transaction });
+  return Task.create(
+    {
+      leadId,
+      assignedToUserId,
+      type,
+      dueDate: dueDate || defaultDueDate(),
+    },
+    { transaction }
+  );
 }
 
 async function closeOpenTask({ leadId, transaction }) {

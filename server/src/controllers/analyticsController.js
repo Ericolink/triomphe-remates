@@ -111,10 +111,12 @@ const getDashboard = async (req, res) => {
       total: parseInt(leadsByTypeRaw.find((r) => r.type === type)?.total || 0),
     }));
 
-    const leadsBySource = ['google', 'facebook', 'whatsapp', 'directo', 'referido', 'otro'].map((source) => ({
-      source,
-      total: parseInt(leadsBySourceRaw.find((r) => r.source === source)?.total || 0),
-    }));
+    const leadsBySource = ['google', 'facebook', 'whatsapp', 'directo', 'referido', 'otro'].map(
+      (source) => ({
+        source,
+        total: parseInt(leadsBySourceRaw.find((r) => r.source === source)?.total || 0),
+      })
+    );
 
     const conversionRate = totalLeads > 0 ? (closedLeads / totalLeads) * 100 : 0;
     const viewToLeadRate = totalViews > 0 ? (recentLeads / totalViews) * 100 : 0;

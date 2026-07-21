@@ -10,11 +10,17 @@ const subscribe = async (req, res) => {
 
     if (!name || !email) return res.status(400).json({ error: 'Nombre y email son requeridos' });
     if (!validateEmail(email)) return res.status(400).json({ error: 'Email inválido' });
-    if (!validatePhone(phone)) return res.status(400).json({ error: 'Teléfono inválido — usa 10 dígitos, con o sin +52' });
+    if (!validatePhone(phone))
+      return res.status(400).json({ error: 'Teléfono inválido — usa 10 dígitos, con o sin +52' });
 
-    const existing = await PropertyAlert.findOne({ where: { email: email.trim().toLowerCase(), isActive: true } });
+    const existing = await PropertyAlert.findOne({
+      where: { email: email.trim().toLowerCase(), isActive: true },
+    });
     if (existing) {
-      return res.status(409).json({ error: 'Ya tienes una alerta activa con este email. Revisa tu bandeja de entrada para modificarla.' });
+      return res.status(409).json({
+        error:
+          'Ya tienes una alerta activa con este email. Revisa tu bandeja de entrada para modificarla.',
+      });
     }
 
     const alert = await PropertyAlert.create({
@@ -26,7 +32,10 @@ const subscribe = async (req, res) => {
       maxPrice: maxPrice ? parseFloat(maxPrice) : null,
     });
 
-    return res.status(201).json({ message: 'Alerta activada. Te notificaremos cuando llegue una propiedad que coincida.', data: { id: alert.id } });
+    return res.status(201).json({
+      message: 'Alerta activada. Te notificaremos cuando llegue una propiedad que coincida.',
+      data: { id: alert.id },
+    });
   } catch (error) {
     console.error('Error en subscribe:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
@@ -57,7 +66,12 @@ const getAlerts = async (req, res) => {
     const where = {};
     if (isActive !== undefined) where.isActive = isActive === 'true';
 
-    const result = await paginate(PropertyAlert, { page, limit, where, order: [['createdAt', 'DESC']] });
+    const result = await paginate(PropertyAlert, {
+      page,
+      limit,
+      where,
+      order: [['createdAt', 'DESC']],
+    });
 
     return res.json(result);
   } catch (error) {

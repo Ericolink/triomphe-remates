@@ -18,26 +18,35 @@ export default function usePropertySync(storedItems, { onUpdate } = {}) {
   );
   const lastSyncedKeyRef = useRef(null);
 
-  const runSync = useCallback(async (key) => {
-    const ids = key ? key.split(',').map(Number) : [];
-    if (!ids.length) { setSyncMap({}); setSyncState('idle'); return; }
+  const runSync = useCallback(
+    async (key) => {
+      const ids = key ? key.split(',').map(Number) : [];
+      if (!ids.length) {
+        setSyncMap({});
+        setSyncState('idle');
+        return;
+      }
 
-    setSyncState('syncing');
-    try {
-      const fresh = await syncProperties(ids);
-      const freshById = new Map(fresh.map((p) => [p.id, p]));
-      const nextMap = {};
-      ids.forEach((id) => {
-        nextMap[id] = freshById.has(id) ? { ...freshById.get(id), missing: false } : { missing: true };
-      });
-      setSyncMap(nextMap);
-      setSyncState('idle');
-      lastSyncedKeyRef.current = key;
-      onUpdate?.(fresh);
-    } catch {
-      setSyncState('error');
-    }
-  }, [onUpdate]);
+      setSyncState('syncing');
+      try {
+        const fresh = await syncProperties(ids);
+        const freshById = new Map(fresh.map((p) => [p.id, p]));
+        const nextMap = {};
+        ids.forEach((id) => {
+          nextMap[id] = freshById.has(id)
+            ? { ...freshById.get(id), missing: false }
+            : { missing: true };
+        });
+        setSyncMap(nextMap);
+        setSyncState('idle');
+        lastSyncedKeyRef.current = key;
+        onUpdate?.(fresh);
+      } catch {
+        setSyncState('error');
+      }
+    },
+    [onUpdate]
+  );
 
   useEffect(() => {
     if (idsKey === lastSyncedKeyRef.current) return;
@@ -45,12 +54,16 @@ export default function usePropertySync(storedItems, { onUpdate } = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey]);
 
-  const items = useMemo(() => storedItems.map((item) => {
-    const sync = syncMap[item.id];
-    if (!sync) return item;
-    if (sync.missing) return { ...item, unavailable: true };
-    return { ...item, price: sync.price, status: sync.status, unavailable: false };
-  }), [storedItems, syncMap]);
+  const items = useMemo(
+    () =>
+      storedItems.map((item) => {
+        const sync = syncMap[item.id];
+        if (!sync) return item;
+        if (sync.missing) return { ...item, unavailable: true };
+        return { ...item, price: sync.price, status: sync.status, unavailable: false };
+      }),
+    [storedItems, syncMap]
+  );
 
   const retry = useCallback(() => {
     lastSyncedKeyRef.current = null;

@@ -11,7 +11,7 @@ const { apiLimiter } = require('../middleware/rateLimitMiddleware');
  *   description: Ventas cerradas (CRM Comercial) — solo se crean vía PUT /leads/:id/close-won
  */
 
-router.get('/',    apiLimiter, authenticate, authorize('admin', 'editor'), getDeals);
+router.get('/', apiLimiter, authenticate, authorize('admin', 'editor'), getDeals);
 router.get('/:id', apiLimiter, authenticate, authorize('admin', 'editor'), getDealById);
 
 module.exports = router;

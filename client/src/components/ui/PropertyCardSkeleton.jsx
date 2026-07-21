@@ -21,7 +21,9 @@ export default function PropertyCardSkeleton() {
 export function PropertyCardSkeletonGrid({ count = 6, className = '' }) {
   return (
     <div className={className}>
-      {Array.from({ length: count }, (_, i) => <PropertyCardSkeleton key={i} />)}
+      {Array.from({ length: count }, (_, i) => (
+        <PropertyCardSkeleton key={i} />
+      ))}
     </div>
   );
 }

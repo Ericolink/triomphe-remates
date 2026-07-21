@@ -1,6 +1,11 @@
 const { sequelize, Task, Activity, Lead, User } = require('../../models/index');
 const { createUser, createLead } = require('../../__tests__/helpers/factories');
-const { ensureOpenTask, closeOpenTask, legacyStatusFor, logActivity } = require('../pipelineHelpers');
+const {
+  ensureOpenTask,
+  closeOpenTask,
+  legacyStatusFor,
+  logActivity,
+} = require('../pipelineHelpers');
 
 describe('pipelineHelpers', () => {
   let user;
@@ -34,8 +39,16 @@ describe('pipelineHelpers', () => {
 
     test('NUNCA crea una segunda task abierta: devuelve la existente', async () => {
       const lead = await createLead();
-      const first = await ensureOpenTask({ leadId: lead.id, assignedToUserId: user.id, type: 'llamar' });
-      const second = await ensureOpenTask({ leadId: lead.id, assignedToUserId: user.id, type: 'dar_seguimiento' });
+      const first = await ensureOpenTask({
+        leadId: lead.id,
+        assignedToUserId: user.id,
+        type: 'llamar',
+      });
+      const second = await ensureOpenTask({
+        leadId: lead.id,
+        assignedToUserId: user.id,
+        type: 'dar_seguimiento',
+      });
 
       expect(second.id).toBe(first.id);
       expect(second.type).toBe('llamar'); // no se sobrescribió con la segunda llamada
@@ -57,7 +70,11 @@ describe('pipelineHelpers', () => {
       const first = await ensureOpenTask({ leadId: lead.id, assignedToUserId: user.id });
       await closeOpenTask({ leadId: lead.id });
 
-      const second = await ensureOpenTask({ leadId: lead.id, assignedToUserId: user.id, type: 'visita' });
+      const second = await ensureOpenTask({
+        leadId: lead.id,
+        assignedToUserId: user.id,
+        type: 'visita',
+      });
 
       expect(second.id).not.toBe(first.id);
       const openCount = await Task.count({ where: { leadId: lead.id, done: false } });
@@ -151,7 +168,12 @@ describe('pipelineHelpers', () => {
 
     test('acepta userId cuando se provee', async () => {
       const lead = await createLead();
-      const activity = await logActivity({ leadId: lead.id, type: 'sistema', content: 'Prueba', userId: user.id });
+      const activity = await logActivity({
+        leadId: lead.id,
+        type: 'sistema',
+        content: 'Prueba',
+        userId: user.id,
+      });
       expect(activity.userId).toBe(user.id);
     });
   });

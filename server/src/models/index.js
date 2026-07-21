@@ -33,17 +33,33 @@ LeadNote.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });
 Property.hasMany(Analytics, { foreignKey: 'propertyId', as: 'analytics', onDelete: 'CASCADE' });
 Analytics.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
-Property.hasMany(PropertyStatusHistory, { foreignKey: 'propertyId', as: 'statusHistory', onDelete: 'CASCADE' });
+Property.hasMany(PropertyStatusHistory, {
+  foreignKey: 'propertyId',
+  as: 'statusHistory',
+  onDelete: 'CASCADE',
+});
 PropertyStatusHistory.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
-Property.hasMany(PropertyDocument, { foreignKey: 'propertyId', as: 'documents', onDelete: 'CASCADE' });
+Property.hasMany(PropertyDocument, {
+  foreignKey: 'propertyId',
+  as: 'documents',
+  onDelete: 'CASCADE',
+});
 PropertyDocument.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
-Property.hasMany(Testimonial, { foreignKey: 'propertyId', as: 'testimonials', onDelete: 'SET NULL' });
+Property.hasMany(Testimonial, {
+  foreignKey: 'propertyId',
+  as: 'testimonials',
+  onDelete: 'SET NULL',
+});
 Testimonial.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
 // Bolsa de trabajo
-JobPosition.hasMany(JobApplication, { foreignKey: 'jobPositionId', as: 'applications', onDelete: 'SET NULL' });
+JobPosition.hasMany(JobApplication, {
+  foreignKey: 'jobPositionId',
+  as: 'applications',
+  onDelete: 'SET NULL',
+});
 JobApplication.belongsTo(JobPosition, { foreignKey: 'jobPositionId', as: 'position' });
 
 // CRM Comercial
@@ -53,8 +69,18 @@ Lead.belongsTo(Campaign, { foreignKey: 'campaignId', as: 'campaign' });
 User.hasMany(Lead, { foreignKey: 'assignedToUserId', as: 'assignedLeads' });
 Lead.belongsTo(User, { foreignKey: 'assignedToUserId', as: 'assignedUser' });
 
-Lead.belongsToMany(Property, { through: LeadProperty, foreignKey: 'leadId', otherKey: 'propertyId', as: 'interestedProperties' });
-Property.belongsToMany(Lead, { through: LeadProperty, foreignKey: 'propertyId', otherKey: 'leadId', as: 'interestedLeads' });
+Lead.belongsToMany(Property, {
+  through: LeadProperty,
+  foreignKey: 'leadId',
+  otherKey: 'propertyId',
+  as: 'interestedProperties',
+});
+Property.belongsToMany(Lead, {
+  through: LeadProperty,
+  foreignKey: 'propertyId',
+  otherKey: 'leadId',
+  as: 'interestedLeads',
+});
 
 Lead.hasMany(Activity, { foreignKey: 'leadId', as: 'activities', onDelete: 'CASCADE' });
 Activity.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });
@@ -78,4 +104,26 @@ Deal.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });
 Property.hasMany(Deal, { foreignKey: 'propertyId', as: 'deals' });
 Deal.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
-module.exports = { sequelize, User, Property, Image, Lead, LeadNote, Analytics, JobPosition, JobApplication, Feedback, PropertyAlert, AuditLog, PropertyStatusHistory, PropertyDocument, Testimonial, Campaign, LeadProperty, Activity, Appointment, Task, Deal };
+module.exports = {
+  sequelize,
+  User,
+  Property,
+  Image,
+  Lead,
+  LeadNote,
+  Analytics,
+  JobPosition,
+  JobApplication,
+  Feedback,
+  PropertyAlert,
+  AuditLog,
+  PropertyStatusHistory,
+  PropertyDocument,
+  Testimonial,
+  Campaign,
+  LeadProperty,
+  Activity,
+  Appointment,
+  Task,
+  Deal,
+};

@@ -17,7 +17,11 @@ export default function SyncStatusBar({ syncState, onRetry }) {
       <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mb-4">
         <AlertTriangle size={12} />
         No se pudo verificar la disponibilidad más reciente.
-        <button type="button" onClick={onRetry} className="underline hover:no-underline font-medium">
+        <button
+          type="button"
+          onClick={onRetry}
+          className="underline hover:no-underline font-medium"
+        >
           Reintentar
         </button>
       </div>

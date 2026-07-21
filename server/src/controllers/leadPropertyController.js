@@ -36,7 +36,9 @@ const removeLeadProperty = async (req, res) => {
     if (!link) return res.status(404).json({ error: 'Relación no encontrada' });
 
     await link.destroy();
-    logAudit(req, 'update', 'lead', req.params.id, { removedInterestedProperty: req.params.propertyId });
+    logAudit(req, 'update', 'lead', req.params.id, {
+      removedInterestedProperty: req.params.propertyId,
+    });
 
     return res.json({ message: 'Propiedad de interés eliminada' });
   } catch (error) {
