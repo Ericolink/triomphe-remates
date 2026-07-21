@@ -13,15 +13,14 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import OverflowMenu from '../../components/ui/OverflowMenu';
 import AdminFormModal from '../../components/ui/AdminFormModal';
+import Badge from '../../components/ui/Badge';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
-import { CITY_LABELS } from '../../utils/constants';
-
-const statusLabel = { pendiente: 'Pendiente', publicado: 'Publicado', archivado: 'Archivado' };
-const statusColors = {
-  pendiente: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  publicado: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  archivado: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-};
+import {
+  CITY_LABELS,
+  TESTIMONIAL_STATUS_LABELS,
+  TESTIMONIAL_STATUS_VARIANTS,
+  labelsToOptions,
+} from '../../utils/constants';
 
 const emptyForm = {
   clientName: '',
@@ -76,10 +75,13 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
             onChange={(e) => setForm((f) => ({ ...f, clientCity: e.target.value }))}
             className={inputClass}
           >
-            <option value="">Sin ciudad</option>
-            <option value="juarez">Cd. Juárez</option>
-            <option value="chihuahua">Chihuahua</option>
-            <option value="queretaro">Querétaro</option>
+            {[{ value: '', label: 'Sin ciudad' }, ...labelsToOptions(CITY_LABELS, ['otra'])].map(
+              (o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              )
+            )}
           </select>
         </div>
         <div>
@@ -107,9 +109,11 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
             className={inputClass}
           >
-            <option value="pendiente">Pendiente</option>
-            <option value="publicado">Publicado</option>
-            <option value="archivado">Archivado</option>
+            {labelsToOptions(TESTIMONIAL_STATUS_LABELS).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -259,10 +263,13 @@ export default function TestimonialsAdminPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
         >
-          <option value="">Todos</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="publicado">Publicado</option>
-          <option value="archivado">Archivado</option>
+          {[{ value: '', label: 'Todos' }, ...labelsToOptions(TESTIMONIAL_STATUS_LABELS)].map(
+            (o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            )
+          )}
         </select>
       </div>
 
@@ -284,11 +291,9 @@ export default function TestimonialsAdminPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span
-                      className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${statusColors[testimonial.status]}`}
-                    >
-                      {statusLabel[testimonial.status]}
-                    </span>
+                    <Badge variant={TESTIMONIAL_STATUS_VARIANTS[testimonial.status]}>
+                      {TESTIMONIAL_STATUS_LABELS[testimonial.status]}
+                    </Badge>
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                       {testimonial.rating}/5
                     </span>

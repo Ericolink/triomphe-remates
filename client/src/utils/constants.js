@@ -43,6 +43,43 @@ export const STATUS_VARIANTS = {
   vendido: 'danger',
 };
 
+// Fondo del <select> de estatus en la tabla admin (AdminPropertiesPage) — no puede ser un
+// <Badge> porque es el control de formulario mismo, pero usa la misma familia -300 en dark
+// que Badge para que se vea como el mismo estado en todas partes.
+export const STATUS_SELECT_COLORS = {
+  disponible: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  apartado: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  vendido: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+};
+
+// Punto de color del historial de cambios de estatus (PropertyFormPage)
+export const STATUS_DOT_COLORS = {
+  disponible: 'bg-green-500',
+  apartado: 'bg-yellow-500',
+  vendido: 'bg-red-500',
+};
+
+// Tarjetas "Estatus del inventario" del Dashboard — mismo criterio que
+// PIPELINE_STAGE_BAR_COLORS: encoding visual distinto (tile vs. badge), por eso no comparte
+// clases con STATUS_VARIANTS, pero es una sola fuente para las 3 tarjetas.
+export const STATUS_STAT_COLORS = {
+  disponible: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-300',
+  apartado: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-300',
+  vendido: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-300',
+};
+
+// Etapa del trámite legal de adquisición del inmueble — estaba duplicado entre
+// PropertyFormPage.jsx y PropertyDetailPage.jsx (este último sin 'sin_proceso', que es
+// un valor interno de formulario y no tiene sentido mostrar en la barra de progreso pública).
+export const ACQUISITION_STAGE_LABELS = {
+  sin_proceso: 'Sin proceso',
+  documentacion: 'Documentación',
+  avaluo: 'Avalúo',
+  negociacion: 'Negociación',
+  firma: 'Firma',
+  entrega: 'Entrega',
+};
+
 // AUDIT-012: estaba duplicado idénticamente en LeadsPage.jsx y CalendarPage.jsx
 export const LEAD_TYPE_LABELS = {
   contacto: 'Contacto',
@@ -231,6 +268,32 @@ export const JOB_TYPE_LABELS = {
   tiempo_completo: 'Tiempo completo',
   medio_tiempo: 'Medio tiempo',
   por_comision: 'Por comisión',
+};
+
+export const JOB_STATUS_LABELS = {
+  activa: 'Activa',
+  pausada: 'Pausada',
+  cerrada: 'Cerrada',
+};
+
+// Raw classes en vez de variantes de Badge: el pill de JobsAdminPage combina este color con
+// el de "urgente" (que lo pisa), algo que la API simple de Badge no soporta.
+export const JOB_STATUS_COLORS = {
+  activa: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  pausada: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  cerrada: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+};
+
+export const TESTIMONIAL_STATUS_LABELS = {
+  pendiente: 'Pendiente',
+  publicado: 'Publicado',
+  archivado: 'Archivado',
+};
+
+export const TESTIMONIAL_STATUS_VARIANTS = {
+  pendiente: 'warning',
+  publicado: 'success',
+  archivado: 'default',
 };
 
 export const CAMPAIGN_PLATFORM_LABELS = {

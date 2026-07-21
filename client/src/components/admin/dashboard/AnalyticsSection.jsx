@@ -25,6 +25,7 @@ import {
   SOURCE_COLORS,
   STATUS_LABELS,
   STATUS_VARIANTS,
+  STATUS_STAT_COLORS,
   LEAD_TYPE_LABELS,
 } from '../../../utils/constants';
 
@@ -215,23 +216,14 @@ export default function AnalyticsSection({ d, recentProperties }) {
             </h3>
             <div className="grid grid-cols-3 gap-4">
               {[
-                {
-                  label: 'Disponibles',
-                  value: d?.properties?.disponible,
-                  color: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400',
-                },
-                {
-                  label: 'Apartadas',
-                  value: d?.properties?.apartado,
-                  color: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400',
-                },
-                {
-                  label: 'Vendidas',
-                  value: d?.properties?.vendido,
-                  color: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400',
-                },
-              ].map(({ label, value, color }) => (
-                <div key={label} className={`rounded-xl p-4 text-center ${color}`}>
+                { key: 'disponible', label: 'Disponibles', value: d?.properties?.disponible },
+                { key: 'apartado', label: 'Apartadas', value: d?.properties?.apartado },
+                { key: 'vendido', label: 'Vendidas', value: d?.properties?.vendido },
+              ].map(({ key, label, value }) => (
+                <div
+                  key={label}
+                  className={`rounded-xl p-4 text-center ${STATUS_STAT_COLORS[key]}`}
+                >
                   <p className="text-2xl font-bold">{value ?? 0}</p>
                   <p className="text-sm font-medium mt-1">{label}</p>
                 </div>

@@ -15,14 +15,13 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import api from '../../services/api';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatPrice, formatDate } from '../../utils/formatters';
-import { CITY_LABELS } from '../../utils/constants';
+import {
+  CITY_LABELS,
+  STATUS_LABELS,
+  STATUS_SELECT_COLORS,
+  labelsToOptions,
+} from '../../utils/constants';
 import { downloadBlob } from '../../utils/download';
-
-const statusColors = {
-  disponible: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  apartado: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  vendido: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-};
 
 export default function AdminPropertiesPage() {
   const navigate = useNavigate();
@@ -201,21 +200,14 @@ export default function AdminPropertiesPage() {
             value: city,
             onChange: setCity,
             options: [
-              ['', 'Todas las ciudades'],
-              ['juarez', 'Cd. Juárez'],
-              ['chihuahua', 'Chihuahua'],
-              ['queretaro', 'Querétaro'],
+              { value: '', label: 'Todas las ciudades' },
+              ...labelsToOptions(CITY_LABELS, ['otra']),
             ],
           },
           {
             value: status,
             onChange: setStatus,
-            options: [
-              ['', 'Todos'],
-              ['disponible', 'Disponible'],
-              ['apartado', 'Apartado'],
-              ['vendido', 'Vendido'],
-            ],
+            options: [{ value: '', label: 'Todos' }, ...labelsToOptions(STATUS_LABELS)],
           },
         ].map((sel, i) => (
           <select
@@ -227,9 +219,9 @@ export default function AdminPropertiesPage() {
             }}
             className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
           >
-            {sel.options.map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
+            {sel.options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
               </option>
             ))}
           </select>
@@ -309,11 +301,13 @@ export default function AdminPropertiesPage() {
                         <select
                           value={property.status}
                           onChange={(e) => handleStatusChange(property, e.target.value)}
-                          className={`text-xs border-0 rounded-lg px-2 py-1 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 ${statusColors[property.status]}`}
+                          className={`text-xs border-0 rounded-lg px-2 py-1 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 ${STATUS_SELECT_COLORS[property.status]}`}
                         >
-                          <option value="disponible">Disponible</option>
-                          <option value="apartado">Apartado</option>
-                          <option value="vendido">Vendido</option>
+                          {labelsToOptions(STATUS_LABELS).map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
                         </select>
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">

@@ -37,15 +37,18 @@ import Lightbox from '../../components/ui/Lightbox';
 import PriceHistoryTimeline from '../../components/ui/PriceHistoryTimeline';
 import { buildImageUrl } from '../../utils/images';
 import { formatPrice } from '../../utils/formatters';
-import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
+import {
+  CITY_LABELS,
+  TYPE_LABELS,
+  STATUS_LABELS,
+  STATUS_VARIANTS,
+  ACQUISITION_STAGE_LABELS,
+  labelsToOptions,
+} from '../../utils/constants';
 
-const ACQUISITION_STAGES = [
-  { key: 'documentacion', label: 'Documentación' },
-  { key: 'avaluo', label: 'Avalúo' },
-  { key: 'negociacion', label: 'Negociación' },
-  { key: 'firma', label: 'Firma' },
-  { key: 'entrega', label: 'Entrega' },
-];
+const ACQUISITION_STAGES = labelsToOptions(ACQUISITION_STAGE_LABELS, ['sin_proceso']).map(
+  ({ value, label }) => ({ key: value, label })
+);
 
 function AcquisitionProgress({ stage }) {
   const currentIdx = ACQUISITION_STAGES.findIndex((s) => s.key === stage);

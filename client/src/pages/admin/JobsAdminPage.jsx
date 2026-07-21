@@ -14,16 +14,16 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import OverflowMenu from '../../components/ui/OverflowMenu';
 import AdminFormModal from '../../components/ui/AdminFormModal';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
-import { CITY_LABELS, JOB_TYPE_LABELS } from '../../utils/constants';
+import {
+  CITY_LABELS,
+  JOB_TYPE_LABELS,
+  JOB_STATUS_LABELS,
+  JOB_STATUS_COLORS,
+  labelsToOptions,
+} from '../../utils/constants';
 
 // 'todas' es propio del dominio de vacantes (no existe en CITY_LABELS, que es para propiedades)
-const cityLabel = { ...CITY_LABELS, todas: 'Todas' };
-const statusLabel = { activa: 'Activa', cerrada: 'Cerrada', pausada: 'Pausada' };
-const statusColors = {
-  activa: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  cerrada: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  pausada: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-};
+const cityLabel = { todas: 'Todas', ...CITY_LABELS };
 
 const emptyForm = {
   title: '',
@@ -67,10 +67,11 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
             onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
             className={inputClass}
           >
-            <option value="todas">Todas las ciudades</option>
-            <option value="juarez">Cd. Juárez</option>
-            <option value="chihuahua">Chihuahua</option>
-            <option value="queretaro">Querétaro</option>
+            {labelsToOptions(cityLabel, ['otra']).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -82,9 +83,11 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
             onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
             className={inputClass}
           >
-            <option value="por_comision">Por comisión</option>
-            <option value="tiempo_completo">Tiempo completo</option>
-            <option value="medio_tiempo">Medio tiempo</option>
+            {labelsToOptions(JOB_TYPE_LABELS).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -96,9 +99,11 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
             className={inputClass}
           >
-            <option value="activa">Activa</option>
-            <option value="pausada">Pausada</option>
-            <option value="cerrada">Cerrada</option>
+            {labelsToOptions(JOB_STATUS_LABELS).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </div>
         <div className="flex items-center gap-3 pt-4">
@@ -261,13 +266,13 @@ export default function JobsAdminPage() {
                       className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full ${
                         position.isUrgent
                           ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                          : statusColors[position.status]
+                          : JOB_STATUS_COLORS[position.status]
                       }`}
                     >
                       {position.isUrgent && <Star size={10} />}
                       {position.isUrgent
-                        ? `Urgente · ${statusLabel[position.status]}`
-                        : statusLabel[position.status]}
+                        ? `Urgente · ${JOB_STATUS_LABELS[position.status]}`
+                        : JOB_STATUS_LABELS[position.status]}
                     </span>
                   </div>
                   <h3 className="font-bold text-gray-800 dark:text-gray-100">{position.title}</h3>

@@ -39,7 +39,14 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useFilePreviews from '../../hooks/useFilePreviews';
 import { safeBlobUrl } from '../../utils/sanitize';
 import { buildImageUrl } from '../../utils/images';
-import { STATUS_LABELS } from '../../utils/constants';
+import {
+  STATUS_LABELS,
+  CITY_LABELS,
+  TYPE_LABELS,
+  ACQUISITION_STAGE_LABELS,
+  STATUS_DOT_COLORS,
+  labelsToOptions,
+} from '../../utils/constants';
 
 // Cada campo se agrupa por sección para que el formulario se lea como bloques
 // con propósito claro (Datos básicos, Ubicación, Detalles, Remate) en vez de una
@@ -66,11 +73,7 @@ const FIELDS = [
     type: 'select',
     col: 1,
     section: 'ubicacion',
-    options: [
-      { value: 'juarez', label: 'Cd. Juárez' },
-      { value: 'chihuahua', label: 'Chihuahua' },
-      { value: 'queretaro', label: 'Querétaro' },
-    ],
+    options: labelsToOptions(CITY_LABELS, ['otra']),
   },
   {
     key: 'type',
@@ -78,13 +81,7 @@ const FIELDS = [
     type: 'select',
     col: 1,
     section: 'ubicacion',
-    options: [
-      { value: 'casa', label: 'Casa' },
-      { value: 'departamento', label: 'Departamento' },
-      { value: 'terreno', label: 'Terreno' },
-      { value: 'local', label: 'Local' },
-      { value: 'bodega', label: 'Bodega' },
-    ],
+    options: labelsToOptions(TYPE_LABELS),
   },
   { key: 'address', label: 'Dirección (opcional)', type: 'text', col: 2, section: 'ubicacion' },
   {
@@ -109,11 +106,7 @@ const FIELDS = [
     type: 'select',
     col: 1,
     section: 'remate',
-    options: [
-      { value: 'disponible', label: 'Disponible' },
-      { value: 'apartado', label: 'Apartado' },
-      { value: 'vendido', label: 'Vendido' },
-    ],
+    options: labelsToOptions(STATUS_LABELS),
   },
   {
     key: 'auctionDate',
@@ -128,14 +121,7 @@ const FIELDS = [
     type: 'select',
     col: 1,
     section: 'remate',
-    options: [
-      { value: 'sin_proceso', label: 'Sin proceso' },
-      { value: 'documentacion', label: 'Documentación' },
-      { value: 'avaluo', label: 'Avalúo' },
-      { value: 'negociacion', label: 'Negociación' },
-      { value: 'firma', label: 'Firma' },
-      { value: 'entrega', label: 'Entrega' },
-    ],
+    options: labelsToOptions(ACQUISITION_STAGE_LABELS),
   },
   { key: 'price', label: 'Precio (opcional)', type: 'price', col: 1, section: 'remate' },
 ];
@@ -185,8 +171,6 @@ const propertyToForm = (p) => ({
   code: p.code || '',
   noCode: !p.code,
 });
-
-const statusDot = { disponible: 'bg-green-500', apartado: 'bg-yellow-500', vendido: 'bg-red-500' };
 
 const inputClass =
   'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
@@ -755,7 +739,7 @@ export default function PropertyFormPage() {
                   ) : (
                     <>
                       <span
-                        className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusDot[h.toStatus]}`}
+                        className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_DOT_COLORS[h.toStatus]}`}
                       />
                       <span className="text-gray-600 dark:text-gray-300">
                         {h.fromStatus ? (
