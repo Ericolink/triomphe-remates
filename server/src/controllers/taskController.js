@@ -6,9 +6,14 @@ const { MAX_BATCH_IDS } = require('../utils/batchValidation');
 
 // GET /api/tasks — filtros para el panel "seguimientos vencidos" y para pintar la
 // "próxima acción" en cada tarjeta del Kanban (leadIds CSV + done=false)
+// AUDIT: llamado sin `leadIds` (widget "Seguimientos vencidos" del Dashboard) el
+// `findAll` no tenía tope — crece indefinidamente con la vida del negocio. `limit` es
+// opcional y aditivo: si no se manda, el comportamiento es idéntico al de siempre (no
+// rompe a Kanban/detalle de lead, que dependen de recibir *todas* las tareas de su lote
+// acotado de `leadIds`, ya limitado por MAX_BATCH_IDS).
 const getTasks = async (req, res) => {
   try {
-    const { assignedToUserId, done, overdue, leadIds } = req.query;
+    const { assignedToUserId, done, overdue, leadIds, limit } = req.query;
     const where = {};
     if (assignedToUserId) where.assignedToUserId = assignedToUserId;
     if (done !== undefined) where.done = done === 'true';
@@ -29,16 +34,23 @@ const getTasks = async (req, res) => {
       where.leadId = { [Op.in]: parsedLeadIds };
     }
 
-    const tasks = await Task.findAll({
+    const queryOptions = {
       where,
       include: [
         { model: User, as: 'assignedTo', attributes: ['id', 'name'], required: false },
         { model: Lead, as: 'lead', attributes: ['id', 'name', 'phone'], required: false },
       ],
       order: [['dueDate', 'ASC']],
-    });
+    };
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    if (limitNum) queryOptions.limit = limitNum;
 
-    return res.json({ data: tasks });
+    const [tasks, total] = await Promise.all([
+      Task.findAll(queryOptions),
+      limitNum ? Task.count({ where }) : null,
+    ]);
+
+    return res.json({ data: tasks, total: total ?? tasks.length });
   } catch (error) {
     console.error('Error en getTasks:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

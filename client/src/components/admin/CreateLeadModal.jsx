@@ -4,11 +4,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { buttonHover, buttonTap } from '../../utils/animations';
 import { getCampaigns } from '../../services/campaignService';
-import { getProperties } from '../../services/propertyService';
 import { getUsers } from '../../services/usersService';
 import { SOURCE_LABELS, PAYMENT_METHOD_LABELS } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
 import useModalA11y from '../../hooks/useModalA11y';
+import PropertyPicker from './PropertyPicker';
 
 const emptyForm = {
   name: '',
@@ -38,11 +38,6 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
     queryFn: () => getCampaigns({ limit: 100 }),
     enabled: open,
   });
-  const { data: propertiesData } = useQuery({
-    queryKey: ['properties-for-picker'],
-    queryFn: () => getProperties({ limit: 50 }),
-    enabled: open,
-  });
   const { data: usersData } = useQuery({
     queryKey: ['users-all'],
     queryFn: getUsers,
@@ -50,7 +45,6 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
   });
 
   const campaigns = campaignsData?.data ?? [];
-  const properties = propertiesData?.data ?? [];
   const users = (usersData?.data ?? []).filter((u) => u.isActive);
 
   const inputClass =
@@ -257,25 +251,15 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                   </select>
                 </div>
               )}
-              {properties.length > 0 && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Propiedad de interés (opcional)
-                  </label>
-                  <select
-                    value={form.propertyId}
-                    onChange={(e) => setForm((f) => ({ ...f, propertyId: e.target.value }))}
-                    className={inputClass}
-                  >
-                    <option value="">Ninguna</option>
-                    {properties.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Propiedad de interés (opcional)
+                </label>
+                <PropertyPicker
+                  value={form.propertyId}
+                  onChange={(propertyId) => setForm((f) => ({ ...f, propertyId }))}
+                />
+              </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                   Responsable (opcional)

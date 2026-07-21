@@ -34,11 +34,17 @@ export default function DashboardPage() {
   });
   const crm = crmData?.data;
 
+  // AUDIT: sin `limit`, este widget descargaba TODAS las tareas vencidas del sistema desde
+  // siempre — crece indefinidamente con la vida del negocio. `limit` es opcional en
+  // getTasks (ver taskController.js); acotarlo aquí no afecta a Kanban/detalle de lead,
+  // que llaman getTasks con `leadIds` y sin `limit`. `total` viene del backend para poder
+  // avisar cuántas quedan fuera en vez de ocultarlas en silencio.
   const { data: overdueData } = useQuery({
     queryKey: ['tasks-overdue'],
-    queryFn: () => getTasks({ overdue: true }),
+    queryFn: () => getTasks({ overdue: true, limit: 20 }),
   });
   const overdueTasks = overdueData?.data ?? [];
+  const overdueTotal = overdueData?.total ?? overdueTasks.length;
 
   const { data: newFeedbackData } = useQuery({
     queryKey: ['dashboard-new-feedback'],
@@ -75,6 +81,7 @@ export default function DashboardPage() {
 
       <UrgentSection
         overdueTasks={overdueTasks}
+        overdueTotal={overdueTotal}
         onCompleteTask={(id) => completeMutation.mutate(id)}
         prospectosNuevos={crm?.prospectosNuevos ?? 0}
         prospectosPendientes={crm?.prospectosPendientes ?? 0}

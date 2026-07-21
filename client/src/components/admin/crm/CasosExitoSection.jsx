@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Search, X, Building2, Wallet, Activity, FileText, Calendar } from 'lucide-react';
 import { getDeals } from '../../../services/dealService';
@@ -7,6 +7,7 @@ import { getLeadActivities } from '../../../services/activityService';
 import { getLeadNotes } from '../../../services/leadService';
 import { getLeadAppointments } from '../../../services/appointmentService';
 import { getUsers } from '../../../services/usersService';
+import useDebouncedValue from '../../../hooks/useDebouncedValue';
 import Spinner from '../../ui/Spinner';
 import Badge from '../../ui/Badge';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../../utils/animations';
@@ -301,31 +302,38 @@ function DealDetailSlot({ selected, users, onDeselect }) {
   );
 }
 
+const DEALS_PAGE_SIZE = 12;
+
 // Casos de éxito — galería de ventas cerradas (un Deal solo existe si el prospecto llegó
 // a "Venta realizada"; ver leadController.closeLeadAsWon/closeLeadAsLost). Separado de
 // Prospectos porque aquí el objetivo es revisar lo ya ganado, no seguir trabajando el caso.
+// AUDIT: antes pedía getDeals() sin params, descargando todo el historial de ventas en
+// cada visita y filtrando/sumando en el cliente. Ahora pagina con el mismo patrón
+// useInfiniteQuery + "Cargar más" que ya usa el Kanban de Prospectos (useColumnLeads en
+// KanbanBoard.jsx) y la búsqueda va debounced al backend en vez de filtrar localmente —
+// así el conteo y el monto total mostrados reflejan siempre TODO el historial que
+// coincide con la búsqueda, no solo lo que ya se cargó.
 export default function CasosExitoSection() {
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const search = useDebouncedValue(searchInput, 300);
   const [selected, setSelected] = useState(null);
 
-  const { data, isLoading } = useQuery({ queryKey: ['deals'], queryFn: () => getDeals() });
-  const deals = useMemo(() => data?.data ?? [], [data]);
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['deals', search],
+    queryFn: ({ pageParam = 1 }) =>
+      getDeals({ page: pageParam, limit: DEALS_PAGE_SIZE, search: search || undefined }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
+    initialPageParam: 1,
+  });
+  const deals = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const dealsTotal = data?.pages?.[0]?.pagination?.total ?? 0;
+  const totalAmount = Number(data?.pages?.[0]?.totalAmount ?? 0);
 
   const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: getUsers });
   const users = usersData?.data ?? [];
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return deals;
-    return deals.filter(
-      (d) => d.lead?.name?.toLowerCase().includes(q) || d.property?.title?.toLowerCase().includes(q)
-    );
-  }, [deals, search]);
-
-  const totalAmount = useMemo(
-    () => deals.reduce((sum, d) => sum + Number(d.amount || 0), 0),
-    [deals]
-  );
 
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
@@ -336,16 +344,16 @@ export default function CasosExitoSection() {
         className="flex flex-wrap items-center justify-between gap-3 mb-6"
       >
         <p className="text-gray-500 dark:text-gray-400 text-sm">
-          {deals.length} venta{deals.length === 1 ? '' : 's'} registrada
-          {deals.length === 1 ? '' : 's'} · {formatPrice(totalAmount)} en total
+          {dealsTotal} venta{dealsTotal === 1 ? '' : 's'} registrada
+          {dealsTotal === 1 ? '' : 's'} · {formatPrice(totalAmount)} en total
         </p>
         <div className="flex items-center gap-2 bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-xl px-3 py-2 w-full sm:w-auto">
           <Search size={16} className="text-gray-400 flex-shrink-0" />
           <input
             type="text"
             placeholder="Buscar por cliente o propiedad..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="flex-1 sm:w-56 text-sm focus:outline-none bg-transparent dark:text-gray-100 dark:placeholder-gray-500"
           />
         </div>
@@ -356,7 +364,7 @@ export default function CasosExitoSection() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-2">
-            {filtered.length === 0 ? (
+            {deals.length === 0 ? (
               <motion.div
                 variants={fadeIn}
                 initial="hidden"
@@ -365,29 +373,42 @@ export default function CasosExitoSection() {
               >
                 <Trophy size={32} className="mx-auto mb-2 opacity-30" />
                 <p>
-                  {deals.length === 0
-                    ? 'Aún no hay ventas registradas.'
-                    : 'Ningún caso coincide con la búsqueda.'}
+                  {search
+                    ? 'Ningún caso coincide con la búsqueda.'
+                    : 'Aún no hay ventas registradas.'}
                 </p>
               </motion.div>
             ) : (
-              <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-              >
-                <AnimatePresence>
-                  {filtered.map((deal) => (
-                    <DealCard
-                      key={deal.id}
-                      deal={deal}
-                      isSelected={selected?.id === deal.id}
-                      onSelect={setSelected}
-                    />
-                  ))}
-                </AnimatePresence>
-              </motion.div>
+              <>
+                <motion.div
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                >
+                  <AnimatePresence>
+                    {deals.map((deal) => (
+                      <DealCard
+                        key={deal.id}
+                        deal={deal}
+                        isSelected={selected?.id === deal.id}
+                        onSelect={setSelected}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </motion.div>
+                {hasNextPage && (
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                      className="px-4 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 transition-colors"
+                    >
+                      {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

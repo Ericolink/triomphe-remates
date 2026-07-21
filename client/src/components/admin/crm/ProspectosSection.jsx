@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Mail,
   Phone,
@@ -48,7 +48,6 @@ import { getLeadActivities, createLeadActivity } from '../../../services/activit
 import { getLeadAppointments, createAppointment } from '../../../services/appointmentService';
 import { getTasks, completeTask } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
-import { getProperties } from '../../../services/propertyService';
 import useAuthStore from '../../../store/authStore';
 import { downloadBlob } from '../../../utils/download';
 import Badge from '../../ui/Badge';
@@ -59,6 +58,7 @@ import CloseLeadModal from '../CloseLeadModal';
 import StageBottomSheet from '../StageBottomSheet';
 import CreateLeadModal from '../CreateLeadModal';
 import KanbanBoard, { NextActionLine } from '../KanbanBoard';
+import PropertyPicker from '../PropertyPicker';
 import useModalA11y from '../../../hooks/useModalA11y';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../../utils/animations';
 import {
@@ -78,6 +78,8 @@ import {
   ACTIVITY_TYPE_COLORS,
   PAYMENT_METHOD_LABELS,
 } from '../../../utils/constants';
+
+const LEADS_LIST_PAGE_SIZE = 20;
 
 const NON_TERMINAL_STAGE_OPTIONS = Object.entries(PIPELINE_STAGE_LABELS)
   .filter(([value]) => !TERMINAL_STAGES.includes(value))
@@ -139,12 +141,6 @@ function LeadDetailPanel({
     enabled: !!selected?.id,
   });
   const appointments = appointmentsData?.data ?? [];
-
-  const { data: propertiesData } = useQuery({
-    queryKey: ['properties-for-picker'],
-    queryFn: () => getProperties({ limit: 50 }),
-  });
-  const allProperties = propertiesData?.data ?? [];
 
   const addNoteMutation = useMutation({
     mutationFn: ({ id, content }) => addLeadNote(id, content),
@@ -221,9 +217,10 @@ function LeadDetailPanel({
   });
 
   const interestedProperties = lead.interestedProperties || [];
-  const availableToAdd = allProperties.filter(
-    (p) => p.id !== lead.propertyId && !interestedProperties.some((ip) => ip.id === p.id)
-  );
+  const excludePropertyIds = [
+    lead.propertyId,
+    ...interestedProperties.map((ip) => ip.id),
+  ].filter(Boolean);
 
   // Reutilizados por todos los campos de solo-un-control ("Responsable", "Fuente",
   // "Forma de pago") para que compartan tamaño de fuente, radio y foco.
@@ -637,36 +634,31 @@ function LeadDetailPanel({
               </div>
             ))}
           </div>
-          {availableToAdd.length > 0 && (
-            <div className="flex gap-2">
-              <select
+          <div className="flex gap-2">
+            <div className="flex-1 min-w-0">
+              <PropertyPicker
                 value={addPropertyId}
-                onChange={(e) => setAddPropertyId(e.target.value)}
-                className={rowControlClass}
-              >
-                <option value="">Agregar propiedad...</option>
-                {availableToAdd.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() =>
-                  addPropertyId &&
-                  addPropertyMutation.mutate({
-                    leadId: selected.id,
-                    propertyId: Number(addPropertyId),
-                  })
-                }
-                disabled={!addPropertyId}
-                title="Agregar propiedad"
-                className={rowButtonClass}
-              >
-                <Plus size={14} />
-              </button>
+                onChange={setAddPropertyId}
+                excludeIds={excludePropertyIds}
+                placeholder="Agregar propiedad..."
+                className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-blue-500 bg-white dark:bg-[#1a1f2e]"
+              />
             </div>
-          )}
+            <button
+              onClick={() =>
+                addPropertyId &&
+                addPropertyMutation.mutate({
+                  leadId: selected.id,
+                  propertyId: Number(addPropertyId),
+                })
+              }
+              disabled={!addPropertyId}
+              title="Agregar propiedad"
+              className={rowButtonClass}
+            >
+              <Plus size={14} />
+            </button>
+          </div>
         </div>
 
         {/* Citas */}
@@ -908,24 +900,44 @@ export default function ProspectosSection() {
 
   // Búsqueda y "Mis prospectos" son compartidos entre Lista y Kanban — barra persistente
   // por encima de ambas vistas, tal como pide CRM_UX_DESIGN.md §2g.
-  const { data, isLoading } = useQuery({
+  // AUDIT: pedía `limit: 100` y nunca avanzaba de página — el backend (getLeads) ya pagina
+  // correctamente, así que con >100 prospectos el conteo mostrado era real pero la lista
+  // se veía truncada en silencio. Ahora usa el mismo patrón useInfiniteQuery + "Cargar más"
+  // que ya prueba el Kanban de esta misma pantalla (useColumnLeads en KanbanBoard.jsx).
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['leads', stage, search, assignedToUserId],
-    queryFn: () =>
+    queryFn: ({ pageParam = 1 }) =>
       getLeads({
         pipelineStage: stage,
-        limit: 100,
+        page: pageParam,
+        limit: LEADS_LIST_PAGE_SIZE,
         search: search || undefined,
         assignedToUserId: assignedToUserId || undefined,
       }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
+    initialPageParam: 1,
   });
-  const leads = useMemo(() => data?.data ?? [], [data]);
+  const leads = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const leadsTotal = data?.pages?.[0]?.pagination?.total ?? 0;
 
   const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: getUsers });
   const users = usersData?.data ?? [];
 
   // Usada por la vista Lista (que sigue trayendo un solo lote de prospectos). El Kanban
-  // ya no depende de esto: cada columna resuelve sus propias tareas abiertas.
-  const leadIds = useMemo(() => leads.map((l) => l.id), [leads]);
+  // ya no depende de esto: cada columna resuelve sus propias tareas abiertas. `leadIds` se
+  // recorta a MAX_BATCH_IDS (100) porque /api/tasks lo exige — con "Cargar más" acumulando
+  // páginas, una sesión larga puede superar ese tope; el indicador de "próxima acción" solo
+  // deja de calcularse para el excedente, no rompe el resto de la lista.
+  const leadIds = useMemo(() => leads.slice(0, 100).map((l) => l.id), [leads]);
   const { data: openTasksData } = useQuery({
     queryKey: ['open-tasks', leadIds.join(',')],
     queryFn: () => getTasks({ leadIds: leadIds.join(','), done: false }),
@@ -1098,7 +1110,7 @@ export default function ProspectosSection() {
         className="flex flex-wrap items-center justify-between gap-3 mb-6"
       >
         <p className="text-gray-500 dark:text-gray-400 text-sm">
-          {data?.pagination?.total ?? 0} prospectos registrados
+          {leadsTotal} prospectos registrados
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-xl px-3 py-2 w-full sm:w-auto">
@@ -1307,6 +1319,17 @@ export default function ProspectosSection() {
                   ))}
                 </AnimatePresence>
               </motion.div>
+            )}
+            {hasNextPage && (
+              <div className="flex justify-center pt-1">
+                <button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="px-4 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 transition-colors"
+                >
+                  {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+                </button>
+              </div>
             )}
             {!isLoading && leads.length === 0 && (
               <motion.div

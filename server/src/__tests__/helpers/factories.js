@@ -1,7 +1,7 @@
 // Factories compartidas para tests de integración — evitan repetir el boilerplate de
 // crear User/Property/Lead con valores válidos en cada archivo de test.
 const { generateToken, hashPassword } = require('../../utils/helpers');
-const { User, Property, Lead } = require('../../models/index');
+const { User, Property, Lead, Deal } = require('../../models/index');
 
 let counter = 0;
 const nextId = () => ++counter;
@@ -49,4 +49,16 @@ async function createLead(overrides = {}) {
   });
 }
 
-module.exports = { createUser, authToken, createProperty, createLead };
+// Un Deal requiere lead+property ya existentes (FKs allowNull:false) y closedAt/amount
+// válidos — no hay valores por defecto sensatos como en las otras factories, así que el
+// caller siempre debe pasar leadId/propertyId.
+async function createDeal(overrides = {}) {
+  const n = nextId();
+  return Deal.create({
+    amount: overrides.amount === undefined ? 1000000 + n * 1000 : overrides.amount,
+    closedAt: overrides.closedAt ?? new Date(),
+    ...overrides,
+  });
+}
+
+module.exports = { createUser, authToken, createProperty, createLead, createDeal };

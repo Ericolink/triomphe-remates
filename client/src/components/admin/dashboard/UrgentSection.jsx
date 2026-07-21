@@ -9,6 +9,7 @@ import { TASK_TYPE_LABELS } from '../../../utils/constants';
 // citas del día. Es lo único que el usuario debe leer para saber "qué debo atender hoy".
 export default function UrgentSection({
   overdueTasks,
+  overdueTotal,
   onCompleteTask,
   prospectosNuevos,
   prospectosPendientes,
@@ -113,6 +114,14 @@ export default function UrgentSection({
                 </div>
               </div>
             ))}
+            {overdueTotal > overdueTasks.length && (
+              <button
+                onClick={() => navigate('/admin/crm?tab=prospectos')}
+                className="w-full text-center text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 py-1"
+              >
+                Mostrando {overdueTasks.length} de {overdueTotal} vencidas — ver todas
+              </button>
+            )}
             {attentionItems.map(({ key, text, onClick }) => (
               <button
                 key={key}

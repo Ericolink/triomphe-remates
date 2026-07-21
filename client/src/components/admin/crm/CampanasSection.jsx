@@ -1,5 +1,5 @@
-import { useId, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useId, useMemo, useState } from 'react';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, X, Megaphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -25,6 +25,7 @@ import { CAMPAIGN_PLATFORM_LABELS } from '../../../utils/constants';
 import useModalA11y from '../../../hooks/useModalA11y';
 
 const emptyForm = { platform: 'facebook', name: '', startDate: '', endDate: '', budget: '' };
+const CAMPAIGNS_PAGE_SIZE = 20;
 
 function CampaignForm({ initial, onSave, onCancel, isPending }) {
   const [form, setForm] = useState(initial || emptyForm);
@@ -197,11 +198,20 @@ export default function CampanasSection() {
   const [detailId, setDetailId] = useState(null);
   const modalTitleId = useId();
 
-  const { data, isLoading } = useQuery({
+  // AUDIT: pedía `limit: 100` y nunca avanzaba de página aunque el backend
+  // (campaignController.getCampaigns) ya pagina — mismo patrón useInfiniteQuery +
+  // "Cargar más" que el resto de listados del CRM.
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['campaigns'],
-    queryFn: () => getCampaigns({ limit: 100 }),
+    queryFn: ({ pageParam = 1 }) => getCampaigns({ page: pageParam, limit: CAMPAIGNS_PAGE_SIZE }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
+    initialPageParam: 1,
   });
-  const campaigns = data?.data ?? [];
+  const campaigns = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const campaignsTotal = data?.pages?.[0]?.pagination?.total ?? 0;
 
   const createMutation = useMutation({
     mutationFn: createCampaign,
@@ -244,7 +254,7 @@ export default function CampanasSection() {
         className="flex items-center justify-between mb-6"
       >
         <p className="text-gray-500 dark:text-gray-400 text-sm">
-          {campaigns.length} campañas registradas
+          {campaignsTotal} campañas registradas
         </p>
         <motion.button
           whileHover={buttonHover}
@@ -324,6 +334,17 @@ export default function CampanasSection() {
           {campaigns.length === 0 && (
             <div className="text-center py-16 text-gray-400 dark:text-gray-500">
               No hay campañas. Crea la primera.
+            </div>
+          )}
+          {hasNextPage && (
+            <div className="flex justify-center pt-1">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-4 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 transition-colors"
+              >
+                {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+              </button>
             </div>
           )}
         </motion.div>
