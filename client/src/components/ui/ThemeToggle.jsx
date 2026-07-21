@@ -1,31 +1,13 @@
-import { useState, useEffect } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import useThemeStore from '../../store/themeStore';
 
 export default function ThemeToggle({ className = '' }) {
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains('dark'));
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-
-  const toggle = () => {
-    const next = !isDark;
-    if (next) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', next ? 'dark' : 'light');
-    setIsDark(next);
-  };
+  const isDark = useThemeStore((state) => state.theme === 'dark');
+  const toggleTheme = useThemeStore((state) => state.toggleTheme);
 
   return (
     <button
-      onClick={toggle}
+      onClick={toggleTheme}
       className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${className}`}
       title={isDark ? 'Modo claro' : 'Modo oscuro'}
       aria-label="Cambiar tema"
