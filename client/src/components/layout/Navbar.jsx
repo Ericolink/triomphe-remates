@@ -90,7 +90,12 @@ export default function Navbar() {
 
           <div className="flex items-center gap-2 md:hidden">
             <ThemeToggle />
-            <button className="p-2" onClick={() => setOpen(!open)}>
+            <button
+              className="p-2"
+              onClick={() => setOpen(!open)}
+              aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={open}
+            >
               <AnimatePresence mode="wait">
                 {open ? (
                   <motion.div

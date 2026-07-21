@@ -19,6 +19,7 @@ import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
 import { buildImageUrl } from '../../utils/images';
 import toast from 'react-hot-toast';
+import useModalA11y from '../../hooks/useModalA11y';
 
 // Agrupado por tema (en vez de una lista plana de 11 ítems) para que la ubicación de
 // cada sección sea predecible sin tener que leer cada label — ver auditoría UX admin.
@@ -125,6 +126,7 @@ export default function AdminLayout() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const panelRef = useModalA11y(open, () => setOpen(false));
 
   if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
 
@@ -142,7 +144,14 @@ export default function AdminLayout() {
 
       {open && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          <div className="flex-shrink-0">
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menú de navegación"
+            tabIndex={-1}
+            className="flex-shrink-0"
+          >
             <Sidebar user={user} onClose={() => setOpen(false)} onLogout={handleLogout} />
           </div>
           <div className="flex-1 bg-black/50" onClick={() => setOpen(false)} />
@@ -155,8 +164,10 @@ export default function AdminLayout() {
             <button
               className="md:hidden p-1 text-gray-600 dark:text-gray-300"
               onClick={() => setOpen(true)}
+              aria-label="Abrir menú"
+              aria-expanded={open}
             >
-              <Menu size={22} />
+              <Menu size={22} aria-hidden="true" />
             </button>
             <span className="hidden md:inline-block text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold capitalize">
               {user?.role}

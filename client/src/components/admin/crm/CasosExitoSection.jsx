@@ -13,6 +13,7 @@ import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../../utils/
 import { formatPrice, formatDate, formatDateTime } from '../../../utils/formatters';
 import { CITY_LABELS, ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_COLORS } from '../../../utils/constants';
 import { buildImageUrl } from '../../../utils/images';
+import useModalA11y from '../../../hooks/useModalA11y';
 
 const sectionLabelClass =
   'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5';
@@ -240,6 +241,7 @@ function DealDetailPanel({ deal, users, onDeselect }) {
 // Mismo patrón responsive que DetailPanelSlot en ProspectosSection.jsx: overlay a pantalla
 // completa en mobile/tablet, columna lateral fija de xl en adelante.
 function DealDetailSlot({ selected, users, onDeselect }) {
+  const panelRef = useModalA11y(Boolean(selected), onDeselect);
   return (
     <>
       <AnimatePresence>
@@ -253,6 +255,11 @@ function DealDetailSlot({ selected, users, onDeselect }) {
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-end xl:hidden"
           >
             <motion.div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={selected?.lead?.name || 'Detalle de caso de éxito'}
+              tabIndex={-1}
               onClick={(e) => e.stopPropagation()}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}

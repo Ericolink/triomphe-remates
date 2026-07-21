@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -20,6 +20,7 @@ import Spinner from '../../components/ui/Spinner';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { CITY_LABELS, JOB_TYPE_LABELS } from '../../utils/constants';
+import useModalA11y from '../../hooks/useModalA11y';
 
 // 'todas' es propio del dominio de vacantes (no existe en CITY_LABELS, que es para propiedades)
 const cityLabel = { ...CITY_LABELS, todas: 'Todas las ciudades' };
@@ -41,6 +42,8 @@ const emptyForm = {
 
 function ApplicationForm({ positionId, positionTitle, onClose }) {
   const [form, setForm] = useState(emptyForm);
+  const titleId = useId();
+  const panelRef = useModalA11y(true, onClose);
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data) => applyToPosition(positionId, data),
@@ -71,6 +74,11 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
       onClick={onClose}
     >
       <motion.div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
@@ -78,7 +86,9 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
         className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-100 dark:border-[#2e3650]"
       >
         <div className="p-6 border-b border-gray-100 dark:border-[#2e3650]">
-          <h2 className="text-xl font-bold text-blue-900 dark:text-white">Postularme</h2>
+          <h2 id={titleId} className="text-xl font-bold text-blue-900 dark:text-white">
+            Postularme
+          </h2>
           {positionTitle && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{positionTitle}</p>
           )}

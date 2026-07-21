@@ -5,7 +5,6 @@ import {
   Pencil,
   UserX,
   UserCheck,
-  X,
   Camera,
   ShieldCheck,
   User,
@@ -13,7 +12,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
   getUsers,
@@ -26,6 +25,7 @@ import {
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import OverflowMenu from '../../components/ui/OverflowMenu';
+import AdminFormModal from '../../components/ui/AdminFormModal';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
@@ -61,6 +61,8 @@ function PasswordInput({ value, onChange, placeholder, required, showPass, onTog
       <button
         type="button"
         onClick={onToggle}
+        aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        aria-pressed={showPass}
         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
       >
         {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -399,185 +401,161 @@ export default function UsersPage() {
       />
 
       {/* Modal */}
-      <AnimatePresence>
+      <AdminFormModal
+        open={Boolean(modal)}
+        onClose={closeModal}
+        title={isEditing ? 'Editar usuario' : 'Nuevo usuario'}
+        maxWidth="max-w-md"
+      >
         {modal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) closeModal();
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-md max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-[#2e3650]">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                  {isEditing ? 'Editar usuario' : 'Nuevo usuario'}
-                </h2>
-                <button
-                  onClick={closeModal}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2e3650] transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                {/* Foto de perfil (solo en edición) */}
-                {isEditing && (
-                  <div className="flex flex-col items-center gap-3 mb-2">
-                    <div className="relative">
-                      {photoPreview ? (
-                        <img
-                          src={photoPreview}
-                          alt="preview"
-                          className="w-20 h-20 rounded-full object-cover ring-4 ring-blue-100 dark:ring-blue-900/40"
-                        />
-                      ) : (
-                        <div className="w-20 h-20 rounded-full bg-blue-900 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-blue-100 dark:ring-blue-900/40">
-                          {form.name?.[0]?.toUpperCase() || <User size={28} />}
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute -bottom-1 -right-1 bg-yellow-400 text-blue-900 p-1.5 rounded-full hover:bg-yellow-300 transition-colors shadow-md"
-                      >
-                        <Camera size={14} />
-                      </button>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handlePhotoChange}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Foto de perfil (solo en edición) */}
+            {isEditing && (
+              <div className="flex flex-col items-center gap-3 mb-2">
+                <div className="relative">
+                  {photoPreview ? (
+                    <img
+                      src={photoPreview}
+                      alt="preview"
+                      className="w-20 h-20 rounded-full object-cover ring-4 ring-blue-100 dark:ring-blue-900/40"
                     />
-                    <p className="text-xs text-gray-400">Clic en la cámara para cambiar foto</p>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Nombre
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Rol
-                  </label>
-                  <select
-                    value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
-                  >
-                    <option value="editor">Editor</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-
-                {!isEditing ? (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Contraseña
-                    </label>
-                    <PasswordInput
-                      value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
-                      placeholder="Mínimo 8 caracteres"
-                      required
-                      minLength={8}
-                      showPass={showPass.password}
-                      onToggle={() => togglePass('password')}
-                    />
-                  </div>
-                ) : (
-                  <details className="group">
-                    <summary className="text-xs font-medium text-blue-600 dark:text-blue-400 cursor-pointer select-none">
-                      Cambiar contraseña (opcional)
-                    </summary>
-                    <div className="mt-3 space-y-3">
-                      {modal.user.id === currentUser?.id && (
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                            Contraseña actual
-                          </label>
-                          <PasswordInput
-                            value={form.currentPassword}
-                            onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
-                            showPass={showPass.currentPassword}
-                            onToggle={() => togglePass('currentPassword')}
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                          Nueva contraseña
-                        </label>
-                        <PasswordInput
-                          value={form.newPassword}
-                          onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
-                          placeholder="Mínimo 8 caracteres"
-                          minLength={8}
-                          showPass={showPass.newPassword}
-                          onToggle={() => togglePass('newPassword')}
-                        />
-                      </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-blue-900 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-blue-100 dark:ring-blue-900/40">
+                      {form.name?.[0]?.toUpperCase() || <User size={28} />}
                     </div>
-                  </details>
-                )}
-
-                <div className="flex gap-3 pt-2">
+                  )}
                   <button
                     type="button"
-                    onClick={closeModal}
-                    className="flex-1 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Cambiar foto"
+                    className="absolute -bottom-1 -right-1 bg-yellow-400 text-blue-900 p-1.5 rounded-full hover:bg-yellow-300 transition-colors shadow-md"
                   >
-                    Cancelar
+                    <Camera size={14} />
                   </button>
-                  <motion.button
-                    type="submit"
-                    disabled={isBusy}
-                    whileHover={buttonHover}
-                    whileTap={buttonTap}
-                    className="flex-1 py-2.5 bg-blue-900 dark:bg-blue-700 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  >
-                    {isBusy ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear usuario'}
-                  </motion.button>
                 </div>
-              </form>
-            </motion.div>
-          </motion.div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoChange}
+                />
+                <p className="text-xs text-gray-400">Clic en la cámara para cambiar foto</p>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Nombre
+              </label>
+              <input
+                type="text"
+                required
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Rol
+              </label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+              >
+                <option value="editor">Editor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            {!isEditing ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Contraseña
+                </label>
+                <PasswordInput
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  minLength={8}
+                  showPass={showPass.password}
+                  onToggle={() => togglePass('password')}
+                />
+              </div>
+            ) : (
+              <details className="group">
+                <summary className="text-xs font-medium text-blue-600 dark:text-blue-400 cursor-pointer select-none">
+                  Cambiar contraseña (opcional)
+                </summary>
+                <div className="mt-3 space-y-3">
+                  {modal.user.id === currentUser?.id && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Contraseña actual
+                      </label>
+                      <PasswordInput
+                        value={form.currentPassword}
+                        onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+                        showPass={showPass.currentPassword}
+                        onToggle={() => togglePass('currentPassword')}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Nueva contraseña
+                    </label>
+                    <PasswordInput
+                      value={form.newPassword}
+                      onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
+                      placeholder="Mínimo 8 caracteres"
+                      minLength={8}
+                      showPass={showPass.newPassword}
+                      onToggle={() => togglePass('newPassword')}
+                    />
+                  </div>
+                </div>
+              </details>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="flex-1 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+              >
+                Cancelar
+              </button>
+              <motion.button
+                type="submit"
+                disabled={isBusy}
+                whileHover={buttonHover}
+                whileTap={buttonTap}
+                className="flex-1 py-2.5 bg-blue-900 dark:bg-blue-700 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {isBusy ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear usuario'}
+              </motion.button>
+            </div>
+          </form>
         )}
-      </AnimatePresence>
+      </AdminFormModal>
     </motion.div>
   );
 }

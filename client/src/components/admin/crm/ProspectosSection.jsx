@@ -59,6 +59,7 @@ import CloseLeadModal from '../CloseLeadModal';
 import StageBottomSheet from '../StageBottomSheet';
 import CreateLeadModal from '../CreateLeadModal';
 import KanbanBoard, { NextActionLine } from '../KanbanBoard';
+import useModalA11y from '../../../hooks/useModalA11y';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../../utils/animations';
 import {
   formatDate,
@@ -822,6 +823,7 @@ function LeadDetailPanel({
 // se muestra como overlay a pantalla completa (mismo patrón de slide-in que StageBottomSheet).
 // De xl en adelante vuelve a ser la columna lateral fija de siempre.
 function DetailPanelSlot({ selected, emptyText, onDeselect, ...panelProps }) {
+  const panelRef = useModalA11y(Boolean(selected), onDeselect);
   return (
     <>
       <AnimatePresence>
@@ -835,6 +837,11 @@ function DetailPanelSlot({ selected, emptyText, onDeselect, ...panelProps }) {
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-end xl:hidden"
           >
             <motion.div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label={selected?.name || 'Detalle de prospecto'}
+              tabIndex={-1}
               onClick={(e) => e.stopPropagation()}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}

@@ -1,35 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import usePopoverA11y from '../../hooks/usePopoverA11y';
 
 // Agrupa acciones poco frecuentes o destructivas (desactivar, eliminar) detrás de un
 // menú, para que no compitan visualmente con la acción común (editar) en cada fila.
 export default function OverflowMenu({ items }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const triggerRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const handleClickOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
+  const { panelRef, triggerRef } = usePopoverA11y(open, () => setOpen(false));
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={panelRef}>
       <button
         type="button"
         ref={triggerRef}

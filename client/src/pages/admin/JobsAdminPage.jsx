@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Users, Briefcase, Star, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Pencil, Trash2, Users, Briefcase, Star } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
   getAllPositions,
@@ -12,6 +12,7 @@ import {
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import OverflowMenu from '../../components/ui/OverflowMenu';
+import AdminFormModal from '../../components/ui/AdminFormModal';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { CITY_LABELS, JOB_TYPE_LABELS } from '../../utils/constants';
 
@@ -329,51 +330,22 @@ export default function JobsAdminPage() {
         onCancel={() => setConfirm(null)}
       />
 
-      <AnimatePresence>
-        {modal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setModal(null);
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-[#2e3650]">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                  {isEditing ? 'Editar vacante' : 'Nueva vacante'}
-                </h2>
-                <button
-                  onClick={() => setModal(null)}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2e3650] transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="p-6">
-                <PositionForm
-                  initial={isEditing ? modal : undefined}
-                  onSave={(form) =>
-                    isEditing
-                      ? updateMutation.mutate({ id: modal.id, data: form })
-                      : createMutation.mutate(form)
-                  }
-                  onCancel={() => setModal(null)}
-                  isPending={createMutation.isPending || updateMutation.isPending}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <AdminFormModal
+        open={Boolean(modal)}
+        onClose={() => setModal(null)}
+        title={isEditing ? 'Editar vacante' : 'Nueva vacante'}
+      >
+        <PositionForm
+          initial={isEditing ? modal : undefined}
+          onSave={(form) =>
+            isEditing
+              ? updateMutation.mutate({ id: modal.id, data: form })
+              : createMutation.mutate(form)
+          }
+          onCancel={() => setModal(null)}
+          isPending={createMutation.isPending || updateMutation.isPending}
+        />
+      </AdminFormModal>
     </motion.div>
   );
 }
