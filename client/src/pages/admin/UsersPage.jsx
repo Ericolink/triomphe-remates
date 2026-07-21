@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -26,6 +26,7 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import OverflowMenu from '../../components/ui/OverflowMenu';
 import AdminFormModal from '../../components/ui/AdminFormModal';
+import useFilePreviews from '../../hooks/useFilePreviews';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
@@ -79,8 +80,12 @@ export default function UsersPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showPass, setShowPass] = useState(EMPTY_SHOW);
   const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
   const fileInputRef = useRef(null);
+
+  const photoFiles = useMemo(() => (photoFile ? [photoFile] : []), [photoFile]);
+  const localPhotoPreview = useFilePreviews(photoFiles)[0]?.url;
+  const editingUser = modal && modal !== 'create' ? modal.user : null;
+  const photoPreview = localPhotoPreview || editingUser?.profilePhoto || null;
 
   const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: getUsers });
 
@@ -144,7 +149,6 @@ export default function UsersPage() {
     setForm(EMPTY_FORM);
     setShowPass(EMPTY_SHOW);
     setPhotoFile(null);
-    setPhotoPreview(null);
     setModal('create');
   };
 
@@ -159,14 +163,12 @@ export default function UsersPage() {
     });
     setShowPass(EMPTY_SHOW);
     setPhotoFile(null);
-    setPhotoPreview(user.profilePhoto || null);
     setModal({ user });
   };
 
   const closeModal = () => {
     setModal(null);
     setPhotoFile(null);
-    setPhotoPreview(null);
     setShowPass(EMPTY_SHOW);
   };
 
@@ -174,7 +176,6 @@ export default function UsersPage() {
     const file = e.target.files[0];
     if (!file) return;
     setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = (e) => {

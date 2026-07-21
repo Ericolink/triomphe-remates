@@ -36,6 +36,7 @@ import {
 import { getPropertyAnalytics } from '../../services/analyticsService';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import useFilePreviews from '../../hooks/useFilePreviews';
 import { safeBlobUrl } from '../../utils/sanitize';
 import { buildImageUrl } from '../../utils/images';
 import { STATUS_LABELS } from '../../utils/constants';
@@ -331,10 +332,7 @@ export default function PropertyFormPage() {
     setForm(serverForm);
   }
 
-  const previews = useMemo(
-    () => newFiles.map((file) => ({ file, url: URL.createObjectURL(file) })),
-    [newFiles]
-  );
+  const previews = useFilePreviews(newFiles);
 
   const saveMutation = useMutation({
     mutationFn: async (formData) => {
