@@ -2,6 +2,7 @@ const { Testimonial, Property } = require('../models/index');
 const { cloudinary } = require('../config/cloudinary');
 const { logAudit } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
+const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 
 const uploadToCloudinary = (buffer, folder) =>
   new Promise((resolve, reject) => {
@@ -158,7 +159,11 @@ const updateTestimonial = async (req, res) => {
 
     if (req.files?.beforeImage?.[0]) {
       if (testimonial.beforeImageFilename) {
-        await cloudinary.uploader.destroy(testimonial.beforeImageFilename).catch(console.error);
+        await destroyCloudinaryAsset(testimonial.beforeImageFilename, {
+          controller: 'testimonialController',
+          operation: 'updateTestimonial',
+          resourceId: testimonial.id,
+        });
       }
       const result = await uploadToCloudinary(
         req.files.beforeImage[0].buffer,
@@ -170,7 +175,11 @@ const updateTestimonial = async (req, res) => {
 
     if (req.files?.afterImage?.[0]) {
       if (testimonial.afterImageFilename) {
-        await cloudinary.uploader.destroy(testimonial.afterImageFilename).catch(console.error);
+        await destroyCloudinaryAsset(testimonial.afterImageFilename, {
+          controller: 'testimonialController',
+          operation: 'updateTestimonial',
+          resourceId: testimonial.id,
+        });
       }
       const result = await uploadToCloudinary(
         req.files.afterImage[0].buffer,
@@ -200,10 +209,18 @@ const deleteTestimonial = async (req, res) => {
     if (!testimonial) return res.status(404).json({ error: 'Testimonio no encontrado' });
 
     if (testimonial.beforeImageFilename) {
-      await cloudinary.uploader.destroy(testimonial.beforeImageFilename).catch(console.error);
+      await destroyCloudinaryAsset(testimonial.beforeImageFilename, {
+        controller: 'testimonialController',
+        operation: 'deleteTestimonial',
+        resourceId: testimonial.id,
+      });
     }
     if (testimonial.afterImageFilename) {
-      await cloudinary.uploader.destroy(testimonial.afterImageFilename).catch(console.error);
+      await destroyCloudinaryAsset(testimonial.afterImageFilename, {
+        controller: 'testimonialController',
+        operation: 'deleteTestimonial',
+        resourceId: testimonial.id,
+      });
     }
 
     await testimonial.destroy();

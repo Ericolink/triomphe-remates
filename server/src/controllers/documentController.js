@@ -2,6 +2,7 @@ const { cloudinary } = require('../config/cloudinary');
 const { PropertyDocument, Property } = require('../models');
 const { logAudit } = require('../utils/audit');
 const { isValidDocumentBuffer } = require('../utils/fileSignature');
+const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 
 const uploadToCloudinary = (buffer, name) =>
   new Promise((resolve, reject) => {
@@ -125,11 +126,16 @@ exports.deleteDocument = async (req, res) => {
     });
     if (!doc) return res.status(404).json({ error: 'Documento no encontrado' });
 
-    try {
-      await cloudinary.uploader.destroy(doc.filename, { resource_type: 'raw' });
-    } catch {
-      /* ignorado */
-    }
+    await destroyCloudinaryAsset(
+      doc.filename,
+      {
+        controller: 'documentController',
+        operation: 'deleteDocument',
+        resourceId: req.params.id,
+        documentId: doc.id,
+      },
+      { resource_type: 'raw' }
+    );
 
     await doc.destroy();
     logAudit(req, 'delete', 'property', req.params.id, `Documento eliminado: ${doc.name}`);

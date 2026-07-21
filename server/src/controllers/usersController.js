@@ -2,6 +2,7 @@ const { cloudinary } = require('../config/cloudinary');
 const { User } = require('../models/index');
 const { generateToken, hashPassword, comparePassword } = require('../utils/helpers');
 const { logAudit } = require('../utils/audit');
+const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 
 const safeUser = (user) => ({
   id: user.id,
@@ -133,11 +134,11 @@ const updateUser = async (req, res) => {
           .slice(-2)
           .join('/')
           .replace(/\.[^.]+$/, '');
-        try {
-          await cloudinary.uploader.destroy(filename);
-        } catch {
-          /* ignorado */
-        }
+        await destroyCloudinaryAsset(filename, {
+          controller: 'usersController',
+          operation: 'updateUser',
+          resourceId: user.id,
+        });
       }
 
       const result = await uploadToCloudinary(req.file.buffer);
@@ -240,11 +241,11 @@ const permanentDeleteUser = async (req, res) => {
         .slice(-2)
         .join('/')
         .replace(/\.[^.]+$/, '');
-      try {
-        await cloudinary.uploader.destroy(filename);
-      } catch {
-        /* ignorado */
-      }
+      await destroyCloudinaryAsset(filename, {
+        controller: 'usersController',
+        operation: 'permanentDeleteUser',
+        resourceId: user.id,
+      });
     }
 
     await user.destroy();

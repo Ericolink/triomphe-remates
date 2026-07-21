@@ -7,6 +7,7 @@ const { isValidImageBuffer } = require('../utils/fileSignature');
 const { paginate } = require('../utils/pagination');
 const { logAudit } = require('../utils/audit');
 const logger = require('../utils/logger');
+const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined ? null : val);
@@ -468,11 +469,12 @@ const deleteProperty = async (req, res) => {
     // Eliminar imágenes de Cloudinary
     for (const image of property.images) {
       if (image.filename) {
-        try {
-          await cloudinary.uploader.destroy(image.filename);
-        } catch {
-          /* ignorado */
-        }
+        await destroyCloudinaryAsset(image.filename, {
+          controller: 'propertyController',
+          operation: 'deleteProperty',
+          resourceId: property.id,
+          imageId: image.id,
+        });
       }
     }
 
@@ -557,11 +559,12 @@ const deleteImage = async (req, res) => {
 
     // Eliminar de Cloudinary si tiene public_id
     if (image.filename) {
-      try {
-        await cloudinary.uploader.destroy(image.filename);
-      } catch {
-        /* ignorado */
-      }
+      await destroyCloudinaryAsset(image.filename, {
+        controller: 'propertyController',
+        operation: 'deleteImage',
+        resourceId: req.params.id,
+        imageId: image.id,
+      });
     }
 
     await image.destroy();
