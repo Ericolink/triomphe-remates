@@ -1,0 +1,98 @@
+name: CodeQL — Análisis de seguridad
+
+# Se ejecuta solo en main y de forma programada (no en pull_request): este repo
+# es privado y no tiene GitHub Advanced Security habilitado, por lo que la subida
+# de resultados a la API de Code Scanning falla siempre (ver README de este workflow
+# más abajo / investigación en el issue #43). En vez de subir a Code Scanning,
+# el resultado se publica como job summary + artefacto SARIF descargable.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  analyze:
+    name: Analizar javascript-typescript
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v5
+
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Analizar (sin subir a Code Scanning)
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript
+          upload: never
+          upload-database: false
+          output: ../results
+
+      - name: Publicar resumen de hallazgos
+        if: always()
+        run: |
+          shopt -s nullglob
+          sarif_files=(../results/*.sarif)
+          if [ ${#sarif_files[@]} -eq 0 ]; then
+            echo "No se generó ningún archivo SARIF." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          total=0
+          {
+            echo "### Resultados de CodeQL"
+            echo ""
+            echo "| Regla | Severidad | Mensaje | Ubicación |"
+            echo "|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for f in "${sarif_files[@]}"; do
+            count=$(jq '[.runs[].results[]] | length' "$f")
+            total=$((total + count))
+            jq -r '
+              .runs[] as $run |
+              $run.results[] |
+              [
+                (.ruleId // "N/A"),
+                ((.level // "warning")),
+                (.message.text // "" | gsub("\n";" ")),
+                (.locations[0].physicalLocation.artifactLocation.uri // "N/A") + ":" +
+                  ((.locations[0].physicalLocation.region.startLine // 0) | tostring)
+              ] | "| " + join(" | ") + " |"
+            ' "$f" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Total de hallazgos: $total" >> "$GITHUB_STEP_SUMMARY"
+          echo "TOTAL_FINDINGS=$total" >> "$GITHUB_ENV"
+
+      - name: Subir SARIF como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-sarif
+          path: ../results/*.sarif
+          retention-days: 30
+
+      - name: Fallar si hay hallazgos
+        if: always()
+        run: |
+          if [ "${TOTAL_FINDINGS:-0}" -gt 0 ]; then
+            echo "CodeQL encontró ${TOTAL_FINDINGS} hallazgo(s) de seguridad. Revisa el job summary o el artefacto codeql-sarif."
+            exit 1
+          fi
