@@ -1,4 +1,5 @@
 const { Lead, Activity, User } = require('../models/index');
+const { logAudit } = require('../utils/audit');
 
 const VALID_ACTIVITY_TYPES = ['llamada', 'whatsapp', 'email', 'visita', 'nota'];
 
@@ -44,6 +45,8 @@ const createLeadActivity = async (req, res) => {
       userId: req.user?.id ?? null,
       occurredAt: occurredAt || new Date(),
     });
+
+    logAudit(req, 'update', 'lead', lead.id, { addedActivity: activity.id });
 
     return res.status(201).json({ data: activity });
   } catch (error) {

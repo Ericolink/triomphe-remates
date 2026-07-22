@@ -83,6 +83,7 @@ const createPosition = async (req, res) => {
       type: type || 'por_comision',
       isUrgent: isUrgent || false,
     });
+    logAudit(req, 'create', 'job', position.id, { title: position.title, city, type });
     return res.status(201).json({ message: 'Vacante creada exitosamente', data: position });
   } catch (error) {
     console.error('Error en createPosition:', error);
