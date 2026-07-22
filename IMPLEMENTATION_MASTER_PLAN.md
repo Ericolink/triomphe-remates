@@ -60,7 +60,7 @@ Antes de construir el backlog, cada hallazgo "abierto" de las auditorías previa
 | 8 | Contraste `text-gray-400` insuficiente en metadatos sobre fondo blanco | No verificado en este pase (no es grep-able de forma confiable); se mantiene como hallazgo heredado de confianza media | BAJO |
 | 9 | `analyticsController.getDashboard` con ~15 queries secuenciales sin `Promise.all` | No tocado por el remediation pass backend (que fue de seguridad/estabilidad, no performance) | BAJO-MEDIO |
 | 10 | `exportController.js` sigue siendo un archivo grande (720 líneas, antes 841) con 4 responsabilidades mezcladas | `wc -l` → 720; redujo tamaño al extraer labels pero no se dividió en módulos | BAJO (mantenibilidad) |
-| 11 | `sync({alter:false})` sin sistema de migraciones formal (Sequelize CLI/Umzug) | Sin cambios — sigue siendo el mecanismo de schema | MEDIO (largo plazo) |
+| 11 | `sync({alter:false})` sin sistema de migraciones formal (Sequelize CLI/Umzug) | **Resuelto 2026-07-22** — `runMigrations()` eliminado, `server/migrations/` es la única fuente de verdad, gate de arranque (`checkPendingMigrations`) agregado | — |
 | 12 | SSE con `EventEmitter` en memoria, no escala a multi-instancia | Sin cambios; aceptable mientras el server corra como un solo proceso (SmarterASP/IIS httpPlatformHandler) | INFO (documentar, no actuar) |
 
 ---
@@ -173,7 +173,7 @@ Convención: **Complejidad/Impacto** en escala 1-5. **ROI** = Impacto/Complejida
 | Contraste `text-gray-400` | Varias páginas | 1 | 2 | 2.0 | **P2 — quick win** | Ninguna | Muy bajo | 2h |
 | `Promise.all` en `analyticsController.getDashboard` | `analyticsController.js` | 2 | 2 | 1.0 | **P3** | Ninguna | Bajo | 3h |
 | Dividir `exportController.js` (720 líneas) | `exportController.js` → módulos data/excel/pdf/branding | 3 | 2 | 0.7 | **P3** | Ninguna | Bajo | 8h |
-| Migraciones formales (Sequelize CLI/Umzug) | `server.js`, nueva carpeta `migrations/` | 4 | 3 | 0.75 | **P3** | Ninguna | Medio (cambio de proceso de deploy) | 16h |
+| ~~Migraciones formales (Sequelize CLI/Umzug)~~ | `server.js`, `migrations/` | 4 | 3 | 0.75 | **Resuelto 2026-07-22** | Ninguna | — | — |
 
 ---
 
@@ -212,7 +212,7 @@ Convención: **Complejidad/Impacto** en escala 1-5. **ROI** = Impacto/Complejida
 - Badge: unificar `SOURCE_COLORS`
 - `WHATSAPP_NUMBER` única fuente, limpieza de `package.json`, `React.memo`
 - `Promise.all` en dashboard, división de `exportController.js`
-- Migraciones formales (Sequelize CLI/Umzug)
+- ~~Migraciones formales (Sequelize CLI/Umzug)~~ — resuelto 2026-07-22
 
 ---
 
@@ -284,7 +284,7 @@ Cada sprint solo incluye tareas que no rompen el resto del proyecto. Las depende
 - [P3] Blog — modelo + CRUD admin + páginas públicas (usa el Card primitive de Sprint 4); el ritmo de publicación de contenido continúa después del sprint, no es un entregable de una sola vez
 - [P3] Tours 3D Matterport — **requiere decisión de negocio sobre presupuesto antes de empezar** (no es solo trabajo de ingeniería)
 - [P3] `Promise.all` en `analyticsController.getDashboard`, división de `exportController.js`
-- [P3] Evaluar migración a Sequelize CLI/Umzug (decisión de proceso, no solo código)
+- ~~[P3] Evaluar migración a Sequelize CLI/Umzug~~ — resuelto 2026-07-22
 
 ---
 
@@ -317,3 +317,4 @@ Cada sprint solo incluye tareas que no rompen el resto del proyecto. Las depende
 | Fecha | Cambio | Commit |
 |---|---|---|
 | 2026-06-30 | Creación del documento — auditoría completa, cruce competitivo, re-verificación de hallazgos previos contra HEAD | — |
+| 2026-07-22 | Resuelto: migraciones formales (Sequelize CLI). `runMigrations()` ad-hoc eliminado de `server.js`; `server/migrations/` es la única fuente de verdad; gate de arranque `checkPendingMigrations` agregado — ver `AUDITORIA_SMARTERASP_DEPLOY.md` fila 13 y Bloque E0 | — |
