@@ -71,7 +71,7 @@ function AcquisitionProgress({ stage }) {
                 className={`w-full h-1.5 rounded-full ${i === 0 ? 'rounded-l-full' : ''} ${i === ACQUISITION_STAGES.length - 1 ? 'rounded-r-full' : ''} ${done ? (isComplete ? 'bg-green-500' : 'bg-yellow-500') : 'bg-gray-200 dark:bg-[#2e3650]'}`}
               />
               <span
-                className={`text-[10px] font-medium text-center leading-tight ${active ? (isComplete ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400') : done ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'}`}
+                className={`text-xs font-medium text-center leading-tight ${active ? (isComplete ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400') : done ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400'}`}
               >
                 {s.label}
               </span>

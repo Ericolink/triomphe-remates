@@ -49,7 +49,7 @@ function AppointmentRow({ appointment, showDate, onStatusChange, onReschedule })
     <div className="bg-gray-50 dark:bg-[#1a1f2e] rounded-xl p-3">
       <div className="flex items-start gap-2">
         {showDate && (
-          <span className="mt-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded text-[10px] font-mono whitespace-nowrap flex-shrink-0">
+          <span className="mt-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap flex-shrink-0">
             {new Date(appointment.scheduledAt).toLocaleDateString('es-MX', {
               day: '2-digit',
               month: 'short',

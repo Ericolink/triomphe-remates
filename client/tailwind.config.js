@@ -16,8 +16,8 @@ export default {
         },
       },
       fontSize: {
-        xs: ['0.8rem', { lineHeight: '1.25rem' }],
-        sm: ['0.925rem', { lineHeight: '1.5rem' }],
+        xs: ['0.875rem', { lineHeight: '1.3rem' }],
+        sm: ['0.95rem', { lineHeight: '1.5rem' }],
         base: ['1.05rem', { lineHeight: '1.6rem' }],
         lg: ['1.2rem', { lineHeight: '1.75rem' }],
         xl: ['1.35rem', { lineHeight: '1.85rem' }],

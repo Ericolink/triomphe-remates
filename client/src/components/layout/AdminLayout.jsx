@@ -84,7 +84,7 @@ function Sidebar({ user, onClose, onLogout }) {
         {groups.map((group, gi) => (
           <div key={gi}>
             {group.label && (
-              <p className="px-4 mb-1 text-[11px] font-semibold uppercase tracking-wider text-blue-300/70">
+              <p className="px-4 mb-1 text-xs font-semibold uppercase tracking-wider text-blue-300/70">
                 {group.label}
               </p>
             )}

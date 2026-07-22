@@ -22,6 +22,26 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
+// TODO: reemplazar los datos de Chihuahua con la información real de la oficina.
+const OFFICES = [
+  {
+    city: 'Ciudad Juárez',
+    cityLabel: 'Cd. Juárez, Chih.',
+    phone: '+52 (656) 579-2750',
+    email: 't.bienesraicesmx@gmail.com',
+    street: 'Av. Paseo Triunfo de la República 215-INT 24',
+    location: 'San Lorenzo, 32320 Juárez, Chih.',
+  },
+  {
+    city: 'Chihuahua',
+    cityLabel: 'Chihuahua, Chih.',
+    phone: 'Próximamente',
+    email: 'Próximamente',
+    street: 'Próximamente',
+    location: 'Chihuahua, Chih.',
+  },
+];
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const socialLinks = [
@@ -36,8 +56,8 @@ export default function Footer() {
 
   return (
     <footer className="bg-blue-900 text-white mt-20">
-      <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
-        <div className="md:col-span-1">
+      <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
           <img
             src="/logo.png"
             alt="Triomphe Bienes Raíces"
@@ -101,33 +121,41 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-        <div>
-          <h4 className="font-semibold text-yellow-400 mb-4">Contacto</h4>
-          <ul className="space-y-3 text-gray-300 text-sm">
-            <li className="flex items-center gap-2">
-              <Phone size={14} className="flex-shrink-0" />
-              <span>+52 (656) 579-2750</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <Mail size={14} className="flex-shrink-0" />
-              <a
-                href="mailto:t.bienesraicesmx@gmail.com"
-                className="hover:text-yellow-400 transition-colors"
-              >
-                t.bienesraicesmx@gmail.com
-              </a>
-            </li>
-            <li className="flex items-start gap-2">
-              <MapPin size={14} className="flex-shrink-0 mt-0.5" />
-              <span>Ciudad Juarez, Chihuahua, México</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <MapPin size={14} className="flex-shrink-0 mt-0.5" />
-              <span>
-                Av. Paseo Triunfo de la República 215-INT 24, San Lorenzo, 32320 Juárez, Chih.
-              </span>
-            </li>
-          </ul>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 pb-12 border-t border-blue-800 pt-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+          {OFFICES.map(({ city, cityLabel, phone, email, street, location }) => (
+            <div key={city}>
+              <h4 className="font-semibold text-yellow-400 mb-4">Contacto {city}</h4>
+              <ul className="space-y-3 text-gray-300 text-sm">
+                <li className="flex items-center gap-2">
+                  <Phone size={14} className="flex-shrink-0" />
+                  <span>{phone}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Mail size={14} className="flex-shrink-0" />
+                  {email.includes('@') ? (
+                    <a href={`mailto:${email}`} className="hover:text-yellow-400 transition-colors">
+                      {email}
+                    </a>
+                  ) : (
+                    <span>{email}</span>
+                  )}
+                </li>
+                <li className="flex items-start gap-2">
+                  <MapPin size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>{cityLabel}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <MapPin size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>
+                    {street}, {location}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          ))}
         </div>
       </div>
       <div className="border-t border-blue-800 py-4 px-4">
