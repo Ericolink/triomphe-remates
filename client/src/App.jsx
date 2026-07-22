@@ -9,6 +9,7 @@ const PropertiesPage = lazy(() => import('./pages/public/PropertiesPage'));
 const PropertyDetailPage = lazy(() => import('./pages/public/PropertyDetailPage'));
 const ContactPage = lazy(() => import('./pages/public/ContactPage'));
 const AboutPage = lazy(() => import('./pages/public/AboutPage'));
+const ProcessPage = lazy(() => import('./pages/public/ProcessPage'));
 const JobsPage = lazy(() => import('./pages/public/JobsPage'));
 const BuzonPage = lazy(() => import('./pages/public/BuzonPage'));
 const FavoritesPage = lazy(() => import('./pages/public/FavoritesPage'));
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="/propiedades/:slug" element={<PropertyDetailPage />} />
             <Route path="/contacto" element={<ContactPage />} />
             <Route path="/nosotros" element={<AboutPage />} />
+            <Route path="/proceso-adquisicion" element={<ProcessPage />} />
             <Route path="/trabaja-con-nosotros" element={<JobsPage />} />
             <Route path="/buzon" element={<BuzonPage />} />
             <Route path="/favoritos" element={<FavoritesPage />} />

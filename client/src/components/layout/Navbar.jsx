@@ -13,6 +13,7 @@ export default function Navbar() {
     { to: '/', label: 'Inicio' },
     { to: '/propiedades', label: 'Propiedades' },
     { to: '/nosotros', label: 'Sobre Nosotros' },
+    { to: '/proceso-adquisicion', label: 'Proceso de Adquisición' },
     { to: '/contacto', label: 'Contacto' },
     { to: '/trabaja-con-nosotros', label: 'Trabaja con nosotros' },
   ];
