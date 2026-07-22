@@ -26,6 +26,7 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import OverflowMenu from '../../components/ui/OverflowMenu';
 import AdminFormModal from '../../components/ui/AdminFormModal';
+import Pagination from '../../components/ui/Pagination';
 import useFilePreviews from '../../hooks/useFilePreviews';
 import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
@@ -87,11 +88,20 @@ export default function UsersPage() {
   const localPhotoPreview = useFilePreviews(photoFiles)[0]?.url;
   const editingUser = modal && modal !== 'create' ? modal.user : null;
   const photoPreview = localPhotoPreview || editingUser?.profilePhoto || null;
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: getUsers });
+  const { data, isLoading } = useQuery({
+    queryKey: ['users', page],
+    queryFn: () => getUsers({ page, limit: 20 }),
+  });
 
-  // El admin principal es el usuario con el ID más bajo
-  const masterAdminId = data?.data?.length ? Math.min(...data.data.map((u) => u.id)) : null;
+  // Consulta aparte (1 fila) para el admin principal: es el usuario más antiguo
+  // (id más bajo, createdAt ASC), pero puede no estar en la página que se ve ahora.
+  const { data: masterData } = useQuery({
+    queryKey: ['users', 'master'],
+    queryFn: () => getUsers({ page: 1, limit: 1 }),
+  });
+  const masterAdminId = masterData?.data?.[0]?.id ?? null;
 
   const createMutation = useMutation({
     mutationFn: createUser,
@@ -247,7 +257,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Usuarios</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            {data?.data?.length ?? 0} usuarios registrados
+            {data?.pagination?.total ?? 0} usuarios registrados
           </p>
         </div>
         <motion.button
@@ -390,6 +400,12 @@ export default function UsersPage() {
             </table>
           </div>
         )}
+        <Pagination
+          pagination={data?.pagination}
+          page={page}
+          onPageChange={setPage}
+          className="p-4 border-t border-gray-100 dark:border-[#2e3650]"
+        />
       </motion.div>
 
       <ConfirmDialog

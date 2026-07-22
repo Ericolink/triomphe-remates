@@ -5,6 +5,7 @@ const {
   sendJobApplicationConfirmation,
 } = require('../services/emailService');
 const { logAudit } = require('../utils/audit');
+const { paginate } = require('../utils/pagination');
 
 const VALID_APPLICATION_STATUS = ['nueva', 'en_revision', 'entrevista', 'aceptada', 'rechazada'];
 
@@ -37,7 +38,8 @@ const getPositions = async (req, res) => {
 // GET /api/jobs/admin — todas las vacantes para el admin
 const getAllPositions = async (req, res) => {
   try {
-    const positions = await JobPosition.findAll({
+    const { page, limit } = req.query;
+    const queryOptions = {
       include: [
         {
           model: JobApplication,
@@ -46,9 +48,19 @@ const getAllPositions = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
-    });
+      // JobPosition->applications es hasMany: sin distinct, el JOIN infla el COUNT
+      // de findAndCountAll (una vacante con 5 postulaciones contaría como 5).
+      distinct: true,
+    };
 
-    return res.json({ data: positions });
+    // page/limit opcionales: sin ellos, comportamiento sin cambios (lista completa).
+    if (page === undefined && limit === undefined) {
+      const positions = await JobPosition.findAll(queryOptions);
+      return res.json({ data: positions });
+    }
+
+    const result = await paginate(JobPosition, { page, limit, ...queryOptions });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getAllPositions:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
@@ -191,12 +203,12 @@ const applyToPosition = async (req, res) => {
 // GET /api/jobs/applications — admin
 const getApplications = async (req, res) => {
   try {
-    const { status, positionId } = req.query;
+    const { status, positionId, page, limit } = req.query;
     const where = {};
     if (status) where.status = status;
     if (positionId) where.jobPositionId = positionId;
 
-    const applications = await JobApplication.findAll({
+    const queryOptions = {
       where,
       include: [
         {
@@ -207,9 +219,16 @@ const getApplications = async (req, res) => {
         },
       ],
       order: [['createdAt', 'DESC']],
-    });
+    };
 
-    return res.json({ data: applications });
+    // page/limit opcionales: sin ellos, comportamiento sin cambios (lista completa).
+    if (page === undefined && limit === undefined) {
+      const applications = await JobApplication.findAll(queryOptions);
+      return res.json({ data: applications });
+    }
+
+    const result = await paginate(JobApplication, { page, limit, ...queryOptions });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getApplications:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

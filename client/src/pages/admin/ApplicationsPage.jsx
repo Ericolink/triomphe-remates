@@ -1,5 +1,5 @@
-import { useId, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useId, useMemo, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mail, Phone, MapPin, Briefcase, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -10,6 +10,8 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
 import { CITY_LABELS } from '../../utils/constants';
+
+const APPLICATIONS_PAGE_SIZE = 15;
 
 const statusVariant = {
   nueva: 'primary',
@@ -32,10 +34,18 @@ export default function ApplicationsPage() {
   const [confirm, setConfirm] = useState(null);
   const detailFormId = useId();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['applications', status],
-    queryFn: () => getApplications({ status }),
+    queryFn: ({ pageParam = 1 }) =>
+      getApplications({ status, page: pageParam, limit: APPLICATIONS_PAGE_SIZE }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
+    initialPageParam: 1,
   });
+  const applications = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const applicationsTotal = data?.pages?.[0]?.pagination?.total ?? 0;
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => updateApplication(id, data),
@@ -65,7 +75,7 @@ export default function ApplicationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Postulaciones</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            {data?.data?.length ?? 0} postulaciones
+            {applicationsTotal} postulaci{applicationsTotal === 1 ? 'ón' : 'ones'}
           </p>
         </div>
         <select
@@ -94,7 +104,7 @@ export default function ApplicationsPage() {
               className="space-y-3"
             >
               <AnimatePresence>
-                {data?.data?.map((app) => (
+                {applications.map((app) => (
                   <motion.div
                     key={app.id}
                     variants={fadeInUp}
@@ -139,9 +149,20 @@ export default function ApplicationsPage() {
               </AnimatePresence>
             </motion.div>
           )}
-          {!isLoading && data?.data?.length === 0 && (
+          {!isLoading && applications.length === 0 && (
             <div className="text-center py-16 text-gray-400 dark:text-gray-500">
               No hay postulaciones con este filtro
+            </div>
+          )}
+          {hasNextPage && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-4 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 transition-colors"
+              >
+                {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+              </button>
             </div>
           )}
         </div>

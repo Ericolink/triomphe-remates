@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { Feedback } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendFeedbackNotification } = require('../services/emailService');
@@ -50,11 +51,18 @@ const createFeedback = async (req, res) => {
 // GET /api/feedback
 const getFeedbacks = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, category } = req.query;
+    const { page = 1, limit = 20, status, category, search } = req.query;
     const where = {};
 
     if (status) where.status = status;
     if (category) where.category = category;
+    if (search) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { subject: { [Op.like]: `%${search}%` } },
+        { message: { [Op.like]: `%${search}%` } },
+      ];
+    }
 
     const result = await paginate(Feedback, { page, limit, where, order: [['createdAt', 'DESC']] });
 

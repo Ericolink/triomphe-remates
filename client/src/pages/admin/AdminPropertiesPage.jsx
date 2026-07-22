@@ -12,6 +12,7 @@ import {
 } from '../../services/propertyService';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import Pagination from '../../components/ui/Pagination';
 import api from '../../services/api';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatPrice, formatDate } from '../../utils/formatters';
@@ -417,25 +418,12 @@ export default function AdminPropertiesPage() {
             )}
           </div>
         )}
-        {data?.pagination?.totalPages > 1 && (
-          <div className="flex justify-center gap-2 p-4 border-t border-gray-100 dark:border-[#2e3650]">
-            {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((p) => (
-              <motion.button
-                key={p}
-                onClick={() => setPage(p)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                  page === p
-                    ? 'bg-blue-900 dark:bg-blue-700 text-white'
-                    : 'bg-gray-100 dark:bg-[#2e3650] text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {p}
-              </motion.button>
-            ))}
-          </div>
-        )}
+        <Pagination
+          pagination={data?.pagination}
+          page={page}
+          onPageChange={setPage}
+          className="p-4 border-t border-gray-100 dark:border-[#2e3650]"
+        />
       </motion.div>
       <ConfirmDialog
         open={!!confirm}

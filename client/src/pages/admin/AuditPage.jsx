@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { getAuditLogs } from '../../services/auditService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
+import Pagination from '../../components/ui/Pagination';
 import { fadeIn, fadeInUp, staggerContainer } from '../../utils/animations';
 import { formatDateTime } from '../../utils/formatters';
 
@@ -162,19 +163,7 @@ export default function AuditPage() {
         </div>
       )}
 
-      {data?.pagination?.totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-8">
-          {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${page === p ? 'bg-blue-900 text-white' : 'bg-gray-100 dark:bg-[#242938] text-gray-700 dark:text-gray-300 hover:bg-gray-200'}`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      )}
+      <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} className="mt-8" />
     </motion.div>
   );
 }

@@ -3,6 +3,7 @@ const { User } = require('../models/index');
 const { generateToken, hashPassword, comparePassword } = require('../utils/helpers');
 const { logAudit } = require('../utils/audit');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
+const { paginate } = require('../utils/pagination');
 
 const safeUser = (user) => ({
   id: user.id,
@@ -18,11 +19,22 @@ const safeUser = (user) => ({
 // GET /api/users
 const getUsers = async (req, res) => {
   try {
-    const users = await User.findAll({
+    const { page, limit } = req.query;
+    const queryOptions = {
       attributes: { exclude: ['password'] },
       order: [['createdAt', 'ASC']],
-    });
-    return res.json({ data: users });
+    };
+
+    // page/limit son opcionales: sin ellos se devuelve la lista completa, igual que
+    // antes — varios selectores de "responsable" (CreateLeadModal, CasosExitoSection,
+    // ProspectosSection) dependen de recibir todos los usuarios de una sola vez.
+    if (page === undefined && limit === undefined) {
+      const users = await User.findAll(queryOptions);
+      return res.json({ data: users });
+    }
+
+    const result = await paginate(User, { page, limit, ...queryOptions });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getUsers:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

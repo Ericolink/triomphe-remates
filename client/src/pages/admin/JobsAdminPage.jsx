@@ -13,6 +13,7 @@ import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import OverflowMenu from '../../components/ui/OverflowMenu';
 import AdminFormModal from '../../components/ui/AdminFormModal';
+import Pagination from '../../components/ui/Pagination';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import {
   CITY_LABELS,
@@ -211,10 +212,11 @@ export default function JobsAdminPage() {
   const queryClient = useQueryClient();
   const [modal, setModal] = useState(null); // null | 'create' | position
   const [confirm, setConfirm] = useState(null);
+  const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-jobs'],
-    queryFn: getAllPositions,
+    queryKey: ['admin-jobs', page],
+    queryFn: () => getAllPositions({ page, limit: 10 }),
   });
 
   const createMutation = useMutation({
@@ -259,7 +261,7 @@ export default function JobsAdminPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Vacantes</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            {data?.data?.length ?? 0} vacantes en total
+            {data?.pagination?.total ?? 0} vacantes en total
           </p>
         </div>
         <motion.button
@@ -354,6 +356,8 @@ export default function JobsAdminPage() {
           )}
         </motion.div>
       )}
+
+      <Pagination pagination={data?.pagination} page={page} onPageChange={setPage} className="mt-6" />
 
       <ConfirmDialog
         open={!!confirm}

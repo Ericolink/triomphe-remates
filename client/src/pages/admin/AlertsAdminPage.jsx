@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -11,15 +11,25 @@ import { fadeIn, fadeInUp, staggerContainer } from '../../utils/animations';
 import { formatPrice, formatDate } from '../../utils/formatters';
 import { CITY_LABELS, TYPE_LABELS_SHORT } from '../../utils/constants';
 
+const ALERTS_PAGE_SIZE = 24;
+
 export default function AlertsAdminPage() {
   const queryClient = useQueryClient();
   const [isActiveFilter, setIsActiveFilter] = useState('true');
   const [confirm, setConfirm] = useState(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['alerts', isActiveFilter],
-    queryFn: () => getAlerts({ isActive: isActiveFilter, limit: 50 }),
+    queryFn: ({ pageParam = 1 }) =>
+      getAlerts({ isActive: isActiveFilter, page: pageParam, limit: ALERTS_PAGE_SIZE }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
+    initialPageParam: 1,
   });
+  const alerts = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const alertsTotal = data?.pages?.[0]?.pagination?.total ?? 0;
 
   const deleteMutation = useMutation({
     mutationFn: deleteAlert,
@@ -41,9 +51,7 @@ export default function AlertsAdminPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
             Alertas de propiedades
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            {data?.pagination?.total ?? 0} suscriptores
-          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{alertsTotal} suscriptores</p>
         </div>
         <select
           value={isActiveFilter}
@@ -65,7 +73,7 @@ export default function AlertsAdminPage() {
           animate="visible"
           className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
         >
-          {data?.data?.map((alert) => (
+          {alerts.map((alert) => (
             <motion.div
               key={alert.id}
               variants={fadeInUp}
@@ -126,9 +134,20 @@ export default function AlertsAdminPage() {
           ))}
         </motion.div>
       )}
-      {!isLoading && data?.data?.length === 0 && (
+      {!isLoading && alerts.length === 0 && (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           No hay alertas con este filtro
+        </div>
+      )}
+      {hasNextPage && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="px-4 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 transition-colors"
+          >
+            {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+          </button>
         </div>
       )}
 

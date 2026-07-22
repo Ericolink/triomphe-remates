@@ -1,5 +1,5 @@
-import { useId, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useId, useMemo, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Trash2,
   MessageSquare,
@@ -23,6 +23,7 @@ import BatchActionBar from '../../components/ui/BatchActionBar';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
 import { downloadBlob } from '../../utils/download';
@@ -32,6 +33,8 @@ import {
   FEEDBACK_CATEGORY_GRADIENT,
   FEEDBACK_STATUS_LABELS,
 } from '../../utils/constants';
+
+const FEEDBACK_PAGE_SIZE = 20;
 
 const categoryIcon = {
   queja: <AlertCircle size={14} />,
@@ -48,15 +51,27 @@ export default function BuzonAdminPage() {
   const [confirm, setConfirm] = useState(null);
   const [checked, setChecked] = useState([]);
   const detailFormId = useId();
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['feedback', statusFilter, categoryFilter],
-    queryFn: () =>
+  // AUDIT: antes pedía getFeedbacks() con `limit: 50` fijo y filtraba la búsqueda en el
+  // cliente sobre esos 50 ya cargados — con más de 50 mensajes, buscar algo fuera de esa
+  // tanda simplemente no encontraba nada. Ahora pagina con useInfiniteQuery + "Cargar más"
+  // (mismo patrón que CasosExitoSection/AlertsAdminPage) y la búsqueda va al backend.
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['feedback', statusFilter, categoryFilter, debouncedSearch],
+    queryFn: ({ pageParam = 1 }) =>
       getFeedbacks({
         status: statusFilter || undefined,
         category: categoryFilter || undefined,
-        limit: 50,
+        search: debouncedSearch || undefined,
+        page: pageParam,
+        limit: FEEDBACK_PAGE_SIZE,
       }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
+    initialPageParam: 1,
   });
 
   const updateMutation = useMutation({
@@ -96,19 +111,12 @@ export default function BuzonAdminPage() {
     },
   });
 
-  const allItems = data?.data ?? [];
-  const items = search.trim()
-    ? allItems.filter((i) => {
-        const q = search.trim().toLowerCase();
-        return (
-          i.name?.toLowerCase().includes(q) ||
-          i.subject?.toLowerCase().includes(q) ||
-          i.message?.toLowerCase().includes(q)
-        );
-      })
-    : allItems;
-  const newCount = allItems.filter((i) => i.status === 'nuevo').length;
-  const archivedCount = allItems.filter((i) => i.status === 'archivado').length;
+  const items = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const total = data?.pages?.[0]?.pagination?.total ?? 0;
+  // Conteos sobre lo ya cargado (no sobre el total real) — igual que antes, solo que
+  // ahora "lo cargado" crece con "Cargar más" en vez de estar topado en 50 para siempre.
+  const newCount = items.filter((i) => i.status === 'nuevo').length;
+  const archivedCount = items.filter((i) => i.status === 'archivado').length;
 
   const toggleCheck = (e, id) => {
     e.stopPropagation();
@@ -163,7 +171,7 @@ export default function BuzonAdminPage() {
             </h1>
             <div className="flex items-center gap-2 mt-1.5">
               <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-[#1a1f2e] text-gray-600 dark:text-gray-300">
-                {allItems.length} total
+                {total} total
               </span>
               {newCount > 0 && (
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
@@ -359,6 +367,17 @@ export default function BuzonAdminPage() {
                 ? 'Ningún mensaje coincide con la búsqueda'
                 : 'No hay mensajes con este filtro'}
             </motion.div>
+          )}
+          {hasNextPage && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-4 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 transition-colors"
+              >
+                {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+              </button>
+            </div>
           )}
         </div>
 
