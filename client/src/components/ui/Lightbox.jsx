@@ -22,7 +22,12 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
 
   if (!isOpen) return null;
 
+  // El clic en el fondo es un atajo solo para mouse; el equivalente de teclado real es
+  // Escape, ya manejado globalmente por useModalA11y (activo mientras el diálogo esté
+  // abierto, sin depender de qué elemento tenga el foco). Convertir este contenedor en
+  // focalizable no aportaría nada y metería una parada vacía en el orden de Tab.
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <div
       ref={panelRef}
       role="dialog"
@@ -69,6 +74,10 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
         </>
       )}
 
+      {/* No tiene acción propia: el onClick solo evita que el clic en la imagen cierre el
+          diálogo (ver onClick del contenedor arriba). No hay nada que un usuario de
+          teclado deba "activar" aquí. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <img
         src={buildImageUrl(images[currentIndex].url, 1600)}
         alt={`Imagen ${currentIndex + 1}`}

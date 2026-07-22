@@ -154,7 +154,12 @@ export default function AdminLayout() {
           >
             <Sidebar user={user} onClose={() => setOpen(false)} onLogout={handleLogout} />
           </div>
-          <div className="flex-1 bg-black/50" onClick={() => setOpen(false)} />
+          <button
+            type="button"
+            aria-label="Cerrar menú"
+            className="flex-1 bg-black/50"
+            onClick={() => setOpen(false)}
+          />
         </div>
       )}
 

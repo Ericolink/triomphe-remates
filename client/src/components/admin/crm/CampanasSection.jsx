@@ -297,11 +297,24 @@ export default function CampanasSection() {
           animate="visible"
         >
           {campaigns.map((c) => (
+            // role="button" en vez de <button>: contiene sus propios botones (editar,
+            // menú de opciones) — un <button> no puede envolver otro <button>. El guard
+            // target===currentTarget evita que Enter/Espacio en esos controles internos
+            // dispare también la apertura del detalle (ver div de acciones más abajo).
             <motion.div
               key={c.id}
               variants={fadeInUp}
+              role="button"
+              tabIndex={0}
               className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] p-5 cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => setDetailId(c.id)}
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setDetailId(c.id);
+                }
+              }}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -317,6 +330,9 @@ export default function CampanasSection() {
                     {c.budget ? ` · ${formatPrice(c.budget)}` : ''}
                   </p>
                 </div>
+                {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions --
+                    Solo contiene el click para que no llegue a la tarjeta; no es un control en sí — sus hijos
+                    (botón editar, menú de opciones) ya son focalizables y accesibles por teclado por sí mismos. */}
                 <div
                   className="flex items-center gap-1 flex-shrink-0"
                   onClick={(e) => e.stopPropagation()}

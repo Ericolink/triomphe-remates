@@ -120,12 +120,25 @@ export function KanbanCard({
   onDragEnd,
   isDragging,
 }) {
+  // role="button" en vez de un <button> nativo: la tarjeta es `draggable` y contiene
+  // enlaces propios (llamar, WhatsApp) — un <button> no puede envolver <a>. El guard
+  // target===currentTarget evita que Enter/Espacio activado sobre esos enlaces internos
+  // (que ya son focalizables y bubblean su keydown) dispare también onSelect de la tarjeta.
   return (
     <div
+      role="button"
+      tabIndex={0}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={() => onSelect(lead)}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(lead);
+        }
+      }}
       className={`bg-white dark:bg-[#242938] rounded-xl p-3 shadow-sm border border-gray-100 dark:border-[#2e3650] cursor-pointer hover:shadow-md transition-shadow select-none ${draggable ? 'active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}
     >
       <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm line-clamp-2 break-words">

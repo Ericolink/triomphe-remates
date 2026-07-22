@@ -209,10 +209,22 @@ export default function PropertyDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2">
-          {/* Galería con lightbox */}
+          {/* Galería con lightbox — role="button" en vez de <button>: contiene sus propios
+              botones (anterior/siguiente). El guard target===currentTarget evita que
+              Enter/Espacio en esos botones internos también abra el lightbox. */}
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Ver imágenes en pantalla completa"
             className="relative bg-gray-100 dark:bg-[#242938] rounded-2xl overflow-hidden h-80 md:h-96 mb-3 cursor-zoom-in group"
             onClick={() => images.length > 0 && setLightboxOpen(true)}
+            onKeyDown={(e) => {
+              if (e.target !== e.currentTarget) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (images.length > 0) setLightboxOpen(true);
+              }
+            }}
           >
             {images.length > 0 ? (
               <>

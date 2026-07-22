@@ -21,13 +21,5 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
-    rules: {
-      // Baseline for gradual jsx-a11y adoption: these have pre-existing violations
-      // across many unrelated files. Kept as warnings (visible, non-blocking) until
-      // each is fixed; then promote back to 'error' so no regressions creep back in.
-      'jsx-a11y/click-events-have-key-events': 'warn',
-      'jsx-a11y/no-static-element-interactions': 'warn',
-      'jsx-a11y/no-noninteractive-element-interactions': 'warn',
-    },
   },
 ]);
