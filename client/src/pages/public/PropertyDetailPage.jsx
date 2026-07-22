@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -22,6 +22,7 @@ import {
   getProperties,
   getDocuments,
   getPriceHistory,
+  trackView,
 } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
@@ -96,6 +97,12 @@ export default function PropertyDetailPage() {
   const images = property?.images || [];
   const coverImage = images.find((i) => i.isCover) || images[0];
   const coverUrl = coverImage ? buildImageUrl(coverImage.url, 1200) : null;
+
+  // Única fuente de vistas reales: se dispara al cargar la ficha pública, nunca desde el
+  // panel admin (que usa getPropertyById, sin efectos secundarios). Ver propertyController.
+  useEffect(() => {
+    if (property?.id) trackView(property.id).catch(() => {});
+  }, [property?.id]);
 
   const { data: similarData } = useQuery({
     queryKey: ['similar', property?.city, property?.type],

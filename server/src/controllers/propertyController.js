@@ -193,7 +193,9 @@ const getPropertyStats = async (req, res) => {
   }
 };
 
-// GET /api/properties/:id
+// GET /api/properties/:id — usado únicamente por el panel admin (PropertyFormPage). No
+// registra vistas: el registro de vistas vive solo en trackView, disparado explícitamente
+// por la ficha pública. Ver POST /:id/view.
 const getPropertyById = async (req, res) => {
   try {
     const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
@@ -204,17 +206,6 @@ const getPropertyById = async (req, res) => {
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
-    // Registrar visita
-    await Analytics.create({
-      event: 'view',
-      propertyId: property.id,
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      referrer: req.headers['referer'] || null,
-    });
-
-    await property.increment('views');
-
     return res.json({ data: property });
   } catch (error) {
     console.error('Error en getPropertyById:', error);
@@ -222,7 +213,9 @@ const getPropertyById = async (req, res) => {
   }
 };
 
-// GET /api/properties/slug/:slug
+// GET /api/properties/slug/:slug — usado por la ficha pública. Tampoco registra vistas
+// (ver nota en getPropertyById); el cliente llama a POST /:id/view por separado una vez
+// que la propiedad carga.
 const getPropertyBySlug = async (req, res) => {
   try {
     const property = await Property.findOne({
@@ -232,16 +225,6 @@ const getPropertyBySlug = async (req, res) => {
     });
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
-
-    await Analytics.create({
-      event: 'view',
-      propertyId: property.id,
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      referrer: req.headers['referer'] || null,
-    });
-
-    await property.increment('views');
 
     return res.json({ data: property });
   } catch (error) {
@@ -725,6 +708,28 @@ const getPublicPriceHistory = async (req, res) => {
   }
 };
 
+// POST /api/properties/:id/view — registra una visita real a la ficha pública. Separado
+// del GET para que ese GET (y el de admin) queden libres de efectos secundarios: cacheables,
+// y sin riesgo de que abrir una propiedad para editarla infle el contador de vistas.
+const trackView = async (req, res) => {
+  try {
+    await Analytics.create({
+      event: 'view',
+      propertyId: req.params.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      referrer: req.headers['referer'] || null,
+    });
+
+    await Property.increment('views', { where: { id: req.params.id } });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error en trackView:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
 // POST /api/properties/:id/share — registra evento de compartir
 const trackShare = async (req, res) => {
   try {
@@ -757,6 +762,7 @@ module.exports = {
   promoteProperty,
   getStatusHistory,
   getPublicPriceHistory,
+  trackView,
   trackShare,
   getPropertyStats,
   getPropertiesSync,

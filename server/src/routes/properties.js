@@ -14,6 +14,7 @@ const {
   promoteProperty,
   getStatusHistory,
   getPublicPriceHistory,
+  trackView,
   trackShare,
   getPropertyStats,
   getPropertiesSync,
@@ -58,6 +59,7 @@ router.get(
   getStatusHistory
 );
 router.get('/:id/price-history', apiLimiter, getPublicPriceHistory);
+router.post('/:id/view', apiLimiter, trackView);
 router.post('/:id/share', apiLimiter, trackShare);
 router.post(
   '/:id/images',
