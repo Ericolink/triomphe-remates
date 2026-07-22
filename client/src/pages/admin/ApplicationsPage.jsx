@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mail, Phone, MapPin, Briefcase, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,6 +30,7 @@ export default function ApplicationsPage() {
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const detailFormId = useId();
 
   const { data, isLoading } = useQuery({
     queryKey: ['applications', status],
@@ -216,10 +217,14 @@ export default function ApplicationsPage() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    <label
+                      htmlFor={`${detailFormId}-status`}
+                      className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                    >
                       Estatus
                     </label>
                     <select
+                      id={`${detailFormId}-status`}
                       value={selected.status}
                       onChange={(e) => {
                         updateMutation.mutate({
@@ -238,10 +243,14 @@ export default function ApplicationsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    <label
+                      htmlFor={`${detailFormId}-notes`}
+                      className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                    >
                       Notas
                     </label>
                     <textarea
+                      id={`${detailFormId}-notes`}
                       defaultValue={selected.notes || ''}
                       onBlur={(e) =>
                         updateMutation.mutate({ id: selected.id, data: { notes: e.target.value } })

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useId, useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -310,6 +310,7 @@ export default function PropertyFormPage() {
   const [form, setForm] = useState(emptyForm);
   const [formLoaded, setFormLoaded] = useState(false);
   const [fieldErrors, setFieldErrors] = useState([]);
+  const codeFieldId = useId();
 
   if (serverForm && !formLoaded) {
     setFormLoaded(true);
@@ -612,10 +613,14 @@ export default function PropertyFormPage() {
 
               {sectionKey === 'basicos' && (
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <label
+                    htmlFor={codeFieldId}
+                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                  >
                     Código de propiedad (opcional)
                   </label>
                   <input
+                    id={codeFieldId}
                     type="text"
                     value={form.code}
                     disabled={form.noCode}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import { MessageSquare, Send, CheckCircle } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
@@ -36,6 +36,7 @@ const INITIAL_FORM = { category: 'comentario', name: '', email: '', subject: '',
 export default function BuzonPage() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [sent, setSent] = useState(false);
+  const formId = useId();
 
   const mutation = useMutation({
     mutationFn: createFeedback,
@@ -152,10 +153,14 @@ export default function BuzonPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-name`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Nombre *
               </label>
               <input
+                id={`${formId}-name`}
                 name="name"
                 value={form.name}
                 onChange={handleChange}
@@ -165,10 +170,14 @@ export default function BuzonPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-email`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Email *
               </label>
               <input
+                id={`${formId}-email`}
                 name="email"
                 type="email"
                 value={form.email}
@@ -181,10 +190,14 @@ export default function BuzonPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            <label
+              htmlFor={`${formId}-subject`}
+              className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
               Asunto *
             </label>
             <input
+              id={`${formId}-subject`}
               name="subject"
               value={form.subject}
               onChange={handleChange}
@@ -195,10 +208,14 @@ export default function BuzonPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            <label
+              htmlFor={`${formId}-message`}
+              className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
               Mensaje *
             </label>
             <textarea
+              id={`${formId}-message`}
               name="message"
               value={form.message}
               onChange={handleChange}

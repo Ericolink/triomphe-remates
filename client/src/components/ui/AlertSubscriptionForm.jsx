@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Bell, CheckCircle } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -18,6 +18,7 @@ const INIT = { name: '', email: '', phone: '', city: '', type: '', maxPrice: '' 
 export default function AlertSubscriptionForm() {
   const [form, setForm] = useState(INIT);
   const [sent, setSent] = useState(false);
+  const formId = useId();
 
   const mutation = useMutation({
     mutationFn: subscribe,
@@ -62,10 +63,14 @@ export default function AlertSubscriptionForm() {
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-name`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Nombre *
           </label>
           <input
+            id={`${formId}-name`}
             name="name"
             value={form.name}
             onChange={handleChange}
@@ -75,10 +80,14 @@ export default function AlertSubscriptionForm() {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-email`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Email *
           </label>
           <input
+            id={`${formId}-email`}
             name="email"
             type="email"
             value={form.email}
@@ -90,10 +99,14 @@ export default function AlertSubscriptionForm() {
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+        <label
+          htmlFor={`${formId}-phone`}
+          className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+        >
           Teléfono / WhatsApp (opcional)
         </label>
         <input
+          id={`${formId}-phone`}
           name="phone"
           type="tel"
           value={form.phone}
@@ -107,10 +120,19 @@ export default function AlertSubscriptionForm() {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-city`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Ciudad
           </label>
-          <select name="city" value={form.city} onChange={handleChange} className={inputCls}>
+          <select
+            id={`${formId}-city`}
+            name="city"
+            value={form.city}
+            onChange={handleChange}
+            className={inputCls}
+          >
             {CITIES.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.label}
@@ -119,10 +141,19 @@ export default function AlertSubscriptionForm() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-type`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Tipo
           </label>
-          <select name="type" value={form.type} onChange={handleChange} className={inputCls}>
+          <select
+            id={`${formId}-type`}
+            name="type"
+            value={form.type}
+            onChange={handleChange}
+            className={inputCls}
+          >
             {TYPES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
@@ -132,10 +163,14 @@ export default function AlertSubscriptionForm() {
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+        <label
+          htmlFor={`${formId}-maxPrice`}
+          className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+        >
           Precio máximo (opcional)
         </label>
         <input
+          id={`${formId}-maxPrice`}
           name="maxPrice"
           value={
             form.maxPrice

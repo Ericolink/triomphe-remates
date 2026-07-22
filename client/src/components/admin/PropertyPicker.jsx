@@ -17,6 +17,7 @@ const defaultInputClass =
 // (propertyController.getProperties), así que cualquier propiedad existente es
 // alcanzable escribiendo su título — nunca queda "oculta".
 export default function PropertyPicker({
+  id,
   value,
   onChange,
   excludeIds = [],
@@ -64,6 +65,7 @@ export default function PropertyPicker({
       <div className={className}>
         <Search size={14} className="text-gray-400 flex-shrink-0" />
         <input
+          id={id}
           type="text"
           value={open ? query : displayLabel}
           onChange={(e) => {

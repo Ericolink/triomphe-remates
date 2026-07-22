@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useId, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SlidersHorizontal, X, Bell, ChevronDown, Loader2 } from 'lucide-react';
@@ -38,6 +38,7 @@ export default function PropertiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [showAlertForm, setShowAlertForm] = useState(false);
+  const filtersFormId = useId();
   const [localFilters, setLocalFilters] = useState({
     city: '',
     type: '',
@@ -240,10 +241,14 @@ export default function PropertiesPage() {
                 </div>
               ))}
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${filtersFormId}-maxPrice`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Precio máx.
                 </label>
                 <input
+                  id={`${filtersFormId}-maxPrice`}
                   type="text"
                   placeholder="Ej: 1,000,000"
                   value={filters.maxPrice ? Number(filters.maxPrice).toLocaleString('es-MX') : ''}
@@ -281,10 +286,14 @@ export default function PropertiesPage() {
                 </div>
               ))}
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${filtersFormId}-minTerrainM2`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Terreno m² mín.
                 </label>
                 <input
+                  id={`${filtersFormId}-minTerrainM2`}
                   type="number"
                   placeholder="Ej: 80"
                   min="0"
@@ -294,10 +303,14 @@ export default function PropertiesPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${filtersFormId}-maxTerrainM2`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Terreno m² máx.
                 </label>
                 <input
+                  id={`${filtersFormId}-maxTerrainM2`}
                   type="number"
                   placeholder="Ej: 300"
                   min="0"
@@ -307,10 +320,14 @@ export default function PropertiesPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${filtersFormId}-minConstructionM2`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Construcción m² mín.
                 </label>
                 <input
+                  id={`${filtersFormId}-minConstructionM2`}
                   type="number"
                   placeholder="Ej: 80"
                   min="0"
@@ -320,10 +337,14 @@ export default function PropertiesPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${filtersFormId}-maxConstructionM2`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Construcción m² máx.
                 </label>
                 <input
+                  id={`${filtersFormId}-maxConstructionM2`}
                   type="number"
                   placeholder="Ej: 300"
                   min="0"

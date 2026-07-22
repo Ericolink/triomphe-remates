@@ -10,6 +10,11 @@
     "preview": "vite preview",
     "test": "vitest run"
   },
+  "overrides": {
+    "eslint-plugin-jsx-a11y": {
+      "eslint": "$eslint"
+    }
+  },
   "dependencies": {
     "@tanstack/react-query": "^5.100.10",
     "@tanstack/react-virtual": "^3.14.6",
@@ -31,6 +36,7 @@
     "autoprefixer": "^10.5.0",
     "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",

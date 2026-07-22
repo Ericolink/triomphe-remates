@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useId, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -95,6 +95,7 @@ function LeadDetailPanel({
   onAttemptStageChange,
 }) {
   const queryClient = useQueryClient();
+  const formId = useId();
   const [noteText, setNoteText] = useState('');
   const [activityType, setActivityType] = useState('llamada');
   const [activityContent, setActivityContent] = useState('');
@@ -437,8 +438,11 @@ function LeadDetailPanel({
             <ArrowRightLeft size={13} /> Seguimiento
           </p>
           <div>
-            <label className={fieldLabelClass}>Etapa</label>
+            <label htmlFor={`${formId}-stage`} className={fieldLabelClass}>
+              Etapa
+            </label>
             <button
+              id={`${formId}-stage`}
               onClick={() => onAttemptStageChange(lead)}
               className="w-full flex items-center justify-between px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
             >
@@ -447,8 +451,11 @@ function LeadDetailPanel({
             </button>
           </div>
           <div>
-            <label className={fieldLabelClass}>Responsable</label>
+            <label htmlFor={`${formId}-assignedToUserId`} className={fieldLabelClass}>
+              Responsable
+            </label>
             <select
+              id={`${formId}-assignedToUserId`}
               value={lead.assignedToUserId || ''}
               onChange={(e) =>
                 updateMutation.mutate({
@@ -477,8 +484,11 @@ function LeadDetailPanel({
             <Wallet size={13} /> Datos comerciales
           </p>
           <div>
-            <label className={fieldLabelClass}>Fuente</label>
+            <label htmlFor={`${formId}-source`} className={fieldLabelClass}>
+              Fuente
+            </label>
             <select
+              id={`${formId}-source`}
               value={selected.source || 'directo'}
               onChange={(e) => {
                 updateMutation.mutate({ id: selected.id, data: { source: e.target.value } });
@@ -493,9 +503,12 @@ function LeadDetailPanel({
             </select>
           </div>
           <div>
-            <label className={fieldLabelClass}>Fecha de primer contacto</label>
+            <label htmlFor={`${formId}-firstContactDate`} className={fieldLabelClass}>
+              Fecha de primer contacto
+            </label>
             <div className="flex gap-2">
               <input
+                id={`${formId}-firstContactDate`}
                 type="date"
                 max={todayISODate()}
                 value={firstContactInput}
@@ -520,8 +533,11 @@ function LeadDetailPanel({
             </div>
           </div>
           <div>
-            <label className={fieldLabelClass}>Forma de pago</label>
+            <label htmlFor={`${formId}-paymentMethod`} className={fieldLabelClass}>
+              Forma de pago
+            </label>
             <select
+              id={`${formId}-paymentMethod`}
               value={lead.paymentMethod || ''}
               onChange={(e) =>
                 updateMutation.mutate({
@@ -541,7 +557,10 @@ function LeadDetailPanel({
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
+              <label
+                htmlFor={`${formId}-budgetAmount`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400"
+              >
                 Monto disponible
               </label>
               <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
@@ -565,6 +584,7 @@ function LeadDetailPanel({
             </div>
             <div className="flex gap-2">
               <input
+                id={`${formId}-budgetAmount`}
                 type="number"
                 min="0"
                 step="1000"

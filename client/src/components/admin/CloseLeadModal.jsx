@@ -24,6 +24,7 @@ export default function CloseLeadModal({
   const [closeReason, setCloseReason] = useState('');
   const [closeReasonDetail, setCloseReasonDetail] = useState('');
   const titleId = useId();
+  const formId = useId();
 
   const reset = () => {
     setPropertyId('');
@@ -111,7 +112,10 @@ export default function CloseLeadModal({
             {isWon ? (
               <div className="space-y-3 mb-5">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <label
+                    htmlFor={`${formId}-propertyId`}
+                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                  >
                     Propiedad
                   </label>
                   {propertyOptions.length === 0 ? (
@@ -121,6 +125,7 @@ export default function CloseLeadModal({
                     </p>
                   ) : (
                     <select
+                      id={`${formId}-propertyId`}
                       value={propertyId}
                       onChange={handlePropertyChange}
                       className={inputClass}
@@ -135,10 +140,14 @@ export default function CloseLeadModal({
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <label
+                    htmlFor={`${formId}-amount`}
+                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                  >
                     Monto (MXN)
                   </label>
                   <input
+                    id={`${formId}-amount`}
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
@@ -162,10 +171,14 @@ export default function CloseLeadModal({
             ) : (
               <div className="space-y-3 mb-5">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <label
+                    htmlFor={`${formId}-closeReason`}
+                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                  >
                     Motivo
                   </label>
                   <select
+                    id={`${formId}-closeReason`}
                     value={closeReason}
                     onChange={(e) => setCloseReason(e.target.value)}
                     className={inputClass}
@@ -180,10 +193,14 @@ export default function CloseLeadModal({
                 </div>
                 {closeReason === 'otro' && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    <label
+                      htmlFor={`${formId}-closeReasonDetail`}
+                      className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                    >
                       Detalle
                     </label>
                     <textarea
+                      id={`${formId}-closeReasonDetail`}
                       value={closeReasonDetail}
                       onChange={(e) => setCloseReasonDetail(e.target.value)}
                       rows={2}

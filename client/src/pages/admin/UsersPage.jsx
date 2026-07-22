@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useId, useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -81,6 +81,7 @@ export default function UsersPage() {
   const [showPass, setShowPass] = useState(EMPTY_SHOW);
   const [photoFile, setPhotoFile] = useState(null);
   const fileInputRef = useRef(null);
+  const formId = useId();
 
   const photoFiles = useMemo(() => (photoFile ? [photoFile] : []), [photoFile]);
   const localPhotoPreview = useFilePreviews(photoFiles)[0]?.url;
@@ -446,10 +447,14 @@ export default function UsersPage() {
             )}
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-name`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Nombre
               </label>
               <input
+                id={`${formId}-name`}
                 type="text"
                 required
                 value={form.name}
@@ -459,10 +464,14 @@ export default function UsersPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-email`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Email
               </label>
               <input
+                id={`${formId}-email`}
                 type="email"
                 required
                 value={form.email}
@@ -472,10 +481,14 @@ export default function UsersPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-role`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Rol
               </label>
               <select
+                id={`${formId}-role`}
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
@@ -487,10 +500,14 @@ export default function UsersPage() {
 
             {!isEditing ? (
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${formId}-password`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Contraseña
                 </label>
                 <PasswordInput
+                  id={`${formId}-password`}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   placeholder="Mínimo 8 caracteres"
@@ -508,10 +525,14 @@ export default function UsersPage() {
                 <div className="mt-3 space-y-3">
                   {modal.user.id === currentUser?.id && (
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      <label
+                        htmlFor={`${formId}-currentPassword`}
+                        className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                      >
                         Contraseña actual
                       </label>
                       <PasswordInput
+                        id={`${formId}-currentPassword`}
                         value={form.currentPassword}
                         onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
                         showPass={showPass.currentPassword}
@@ -520,10 +541,14 @@ export default function UsersPage() {
                     </div>
                   )}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    <label
+                      htmlFor={`${formId}-newPassword`}
+                      className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                    >
                       Nueva contraseña
                     </label>
                     <PasswordInput
+                      id={`${formId}-newPassword`}
                       value={form.newPassword}
                       onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
                       placeholder="Mínimo 8 caracteres"

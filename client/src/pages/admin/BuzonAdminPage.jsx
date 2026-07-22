@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Trash2,
@@ -47,6 +47,7 @@ export default function BuzonAdminPage() {
   const [selected, setSelected] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [checked, setChecked] = useState([]);
+  const detailFormId = useId();
 
   const { data, isLoading } = useQuery({
     queryKey: ['feedback', statusFilter, categoryFilter],
@@ -426,10 +427,14 @@ export default function BuzonAdminPage() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    <label
+                      htmlFor={`${detailFormId}-status`}
+                      className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                    >
                       Estatus
                     </label>
                     <select
+                      id={`${detailFormId}-status`}
                       value={selected.status}
                       onChange={(e) => {
                         const newStatus = e.target.value;
@@ -446,10 +451,14 @@ export default function BuzonAdminPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    <label
+                      htmlFor={`${detailFormId}-notes`}
+                      className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                    >
                       Notas internas
                     </label>
                     <textarea
+                      id={`${detailFormId}-notes`}
                       defaultValue={selected.notes || ''}
                       onBlur={(e) =>
                         updateMutation.mutate({ id: selected.id, data: { notes: e.target.value } })

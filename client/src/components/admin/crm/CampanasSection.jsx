@@ -29,6 +29,7 @@ const CAMPAIGNS_PAGE_SIZE = 20;
 
 function CampaignForm({ initial, onSave, onCancel, isPending }) {
   const [form, setForm] = useState(initial || emptyForm);
+  const formId = useId();
   const inputClass =
     'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
@@ -36,10 +37,14 @@ function CampaignForm({ initial, onSave, onCancel, isPending }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-name`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Nombre de la campaña *
           </label>
           <input
+            id={`${formId}-name`}
             type="text"
             value={form.name}
             placeholder="Ej: Remate Polanco Julio"
@@ -48,10 +53,14 @@ function CampaignForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-platform`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Plataforma
           </label>
           <select
+            id={`${formId}-platform`}
             value={form.platform}
             onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
             className={inputClass}
@@ -64,10 +73,14 @@ function CampaignForm({ initial, onSave, onCancel, isPending }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-budget`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Presupuesto (opcional)
           </label>
           <input
+            id={`${formId}-budget`}
             type="number"
             value={form.budget}
             placeholder="50000"
@@ -76,10 +89,14 @@ function CampaignForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-startDate`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Fecha de inicio *
           </label>
           <input
+            id={`${formId}-startDate`}
             type="date"
             value={form.startDate?.slice(0, 10) || ''}
             onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
@@ -87,10 +104,14 @@ function CampaignForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-endDate`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Fecha de fin (opcional)
           </label>
           <input
+            id={`${formId}-endDate`}
             type="date"
             value={form.endDate?.slice(0, 10) || ''}
             onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}

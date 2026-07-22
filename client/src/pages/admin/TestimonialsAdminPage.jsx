@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -37,6 +37,7 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
   const [form, setForm] = useState(
     initial ? { ...emptyForm, ...initial, beforeImage: null, afterImage: null } : emptyForm
   );
+  const formId = useId();
 
   const inputClass =
     'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
@@ -45,10 +46,14 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-clientName`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Nombre del cliente *
           </label>
           <input
+            id={`${formId}-clientName`}
             type="text"
             value={form.clientName}
             onChange={(e) => setForm((f) => ({ ...f, clientName: e.target.value }))}
@@ -56,10 +61,14 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-clientRole`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Rol (opcional, ej: Inversionista)
           </label>
           <input
+            id={`${formId}-clientRole`}
             type="text"
             value={form.clientRole}
             onChange={(e) => setForm((f) => ({ ...f, clientRole: e.target.value }))}
@@ -67,10 +76,14 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-clientCity`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Ciudad (opcional)
           </label>
           <select
+            id={`${formId}-clientCity`}
             value={form.clientCity}
             onChange={(e) => setForm((f) => ({ ...f, clientCity: e.target.value }))}
             className={inputClass}
@@ -85,10 +98,14 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-rating`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Calificación
           </label>
           <select
+            id={`${formId}-rating`}
             value={form.rating}
             onChange={(e) => setForm((f) => ({ ...f, rating: parseInt(e.target.value, 10) }))}
             className={inputClass}
@@ -101,10 +118,14 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-status`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Estatus
           </label>
           <select
+            id={`${formId}-status`}
             value={form.status}
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
             className={inputClass}
@@ -119,10 +140,14 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+        <label
+          htmlFor={`${formId}-testimonialText`}
+          className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+        >
           Testimonio *
         </label>
         <textarea
+          id={`${formId}-testimonialText`}
           value={form.testimonialText}
           rows={4}
           onChange={(e) => setForm((f) => ({ ...f, testimonialText: e.target.value }))}
@@ -132,10 +157,14 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-beforeImage`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Foto antes (opcional)
           </label>
           <input
+            id={`${formId}-beforeImage`}
             type="file"
             accept="image/*"
             onChange={(e) => setForm((f) => ({ ...f, beforeImage: e.target.files[0] }))}
@@ -143,10 +172,14 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-afterImage`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Foto después (opcional)
           </label>
           <input
+            id={`${formId}-afterImage`}
             type="file"
             accept="image/*"
             onChange={(e) => setForm((f) => ({ ...f, afterImage: e.target.files[0] }))}

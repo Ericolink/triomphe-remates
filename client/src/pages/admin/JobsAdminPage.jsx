@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Users, Briefcase, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -38,6 +38,7 @@ const emptyForm = {
 
 function PositionForm({ initial, onSave, onCancel, isPending }) {
   const [form, setForm] = useState(initial || emptyForm);
+  const formId = useId();
 
   const inputClass =
     'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
@@ -47,10 +48,14 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-title`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Título del puesto *
           </label>
           <input
+            id={`${formId}-title`}
             type="text"
             value={form.title}
             placeholder="Ej: Asesor de Ventas Inmobiliarias"
@@ -59,10 +64,14 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-city`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Ciudad
           </label>
           <select
+            id={`${formId}-city`}
             value={form.city}
             onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
             className={inputClass}
@@ -75,10 +84,14 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-type`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Tipo
           </label>
           <select
+            id={`${formId}-type`}
             value={form.type}
             onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
             className={inputClass}
@@ -91,10 +104,14 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-status`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Estatus
           </label>
           <select
+            id={`${formId}-status`}
             value={form.status}
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
             className={inputClass}
@@ -119,10 +136,14 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
           </label>
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-description`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Descripción *
           </label>
           <textarea
+            id={`${formId}-description`}
             value={form.description}
             rows={3}
             placeholder="Descripción del puesto..."
@@ -131,10 +152,14 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-requirements`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Requisitos *
           </label>
           <textarea
+            id={`${formId}-requirements`}
             value={form.requirements}
             rows={3}
             placeholder="Lista los requisitos..."
@@ -143,10 +168,14 @@ function PositionForm({ initial, onSave, onCancel, isPending }) {
           />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor={`${formId}-benefits`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Beneficios (opcional)
           </label>
           <textarea
+            id={`${formId}-benefits`}
             value={form.benefits}
             rows={2}
             placeholder="Lista los beneficios..."

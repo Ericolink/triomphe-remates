@@ -43,6 +43,7 @@ const emptyForm = {
 function ApplicationForm({ positionId, positionTitle, onClose }) {
   const [form, setForm] = useState(emptyForm);
   const titleId = useId();
+  const formId = useId();
   const panelRef = useModalA11y(true, onClose);
 
   const { mutate, isPending } = useMutation({
@@ -97,10 +98,14 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-name`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Nombre completo *
               </label>
               <input
+                id={`${formId}-name`}
                 type="text"
                 placeholder="Tu nombre"
                 value={form.name}
@@ -109,10 +114,14 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-email`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Email *
               </label>
               <input
+                id={`${formId}-email`}
                 type="email"
                 placeholder="tu@email.com"
                 value={form.email}
@@ -121,10 +130,14 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-phone`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Teléfono *
               </label>
               <input
+                id={`${formId}-phone`}
                 type="text"
                 placeholder="614 000 0000"
                 value={form.phone}
@@ -133,10 +146,14 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-city`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Ciudad *
               </label>
               <select
+                id={`${formId}-city`}
                 value={form.city}
                 onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
                 className={inputClass}
@@ -148,10 +165,14 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              <label
+                htmlFor={`${formId}-experience`}
+                className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+              >
                 Experiencia en ventas *
               </label>
               <select
+                id={`${formId}-experience`}
                 value={form.experience}
                 onChange={(e) => setForm((f) => ({ ...f, experience: e.target.value }))}
                 className={inputClass}
@@ -176,10 +197,14 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            <label
+              htmlFor={`${formId}-motivation`}
+              className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+            >
               ¿Por qué quieres unirte a Triomphe?
             </label>
             <textarea
+              id={`${formId}-motivation`}
               placeholder="Cuéntanos tu motivación..."
               value={form.motivation}
               onChange={(e) => setForm((f) => ({ ...f, motivation: e.target.value }))}

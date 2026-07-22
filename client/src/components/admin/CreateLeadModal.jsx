@@ -32,6 +32,7 @@ const emptyForm = {
 export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) {
   const [form, setForm] = useState(emptyForm);
   const titleId = useId();
+  const formId = useId();
 
   const { data: campaignsData } = useQuery({
     queryKey: ['campaigns-for-picker'],
@@ -122,24 +123,31 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
 
             <div className="space-y-3 mb-5">
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${formId}-name`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Nombre (opcional)
                 </label>
                 <input
+                  id={`${formId}-name`}
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="Nombre del prospecto"
                   className={inputClass}
-                  autoFocus
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <label
+                    htmlFor={`${formId}-phone`}
+                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                  >
                     Teléfono
                   </label>
                   <input
+                    id={`${formId}-phone`}
                     type="text"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
@@ -148,10 +156,14 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <label
+                    htmlFor={`${formId}-source`}
+                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                  >
                     Origen
                   </label>
                   <select
+                    id={`${formId}-source`}
                     value={form.source}
                     onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
                     className={inputClass}
@@ -165,10 +177,14 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${formId}-firstContactDate`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Fecha de primer contacto (opcional)
                 </label>
                 <input
+                  id={`${formId}-firstContactDate`}
                   type="date"
                   max={todayISODate()}
                   value={form.firstContactDate}
@@ -177,10 +193,14 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${formId}-paymentMethod`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Forma de pago (opcional)
                 </label>
                 <select
+                  id={`${formId}-paymentMethod`}
                   value={form.paymentMethod}
                   onChange={(e) => setForm((f) => ({ ...f, paymentMethod: e.target.value }))}
                   className={inputClass}
@@ -198,7 +218,10 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
               {form.paymentMethod && (
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <label
+                      htmlFor={`${formId}-budgetAmount`}
+                      className="block text-xs font-medium text-gray-500 dark:text-gray-400"
+                    >
                       Monto disponible
                     </label>
                     <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
@@ -218,6 +241,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                     </label>
                   </div>
                   <input
+                    id={`${formId}-budgetAmount`}
                     type="number"
                     min="0"
                     step="1000"
@@ -234,10 +258,14 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
               )}
               {campaigns.length > 0 && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  <label
+                    htmlFor={`${formId}-campaignId`}
+                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                  >
                     Campaña (opcional)
                   </label>
                   <select
+                    id={`${formId}-campaignId`}
                     value={form.campaignId}
                     onChange={(e) => setForm((f) => ({ ...f, campaignId: e.target.value }))}
                     className={inputClass}
@@ -252,19 +280,27 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 </div>
               )}
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${formId}-propertyId`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Propiedad de interés (opcional)
                 </label>
                 <PropertyPicker
+                  id={`${formId}-propertyId`}
                   value={form.propertyId}
                   onChange={(propertyId) => setForm((f) => ({ ...f, propertyId }))}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                <label
+                  htmlFor={`${formId}-assignedToUserId`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
                   Responsable (opcional)
                 </label>
                 <select
+                  id={`${formId}-assignedToUserId`}
                   value={form.assignedToUserId}
                   onChange={(e) => setForm((f) => ({ ...f, assignedToUserId: e.target.value }))}
                   className={inputClass}

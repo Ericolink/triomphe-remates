@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [welcome, setWelcome] = useState(null); // nombre del usuario
+  const formId = useId();
 
   const { mutate, isPending } = useMutation({
     mutationFn: ({ email, password }) => login(email, password),
@@ -51,10 +52,14 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor={`${formId}-email`}
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Email
               </label>
               <input
+                id={`${formId}-email`}
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -64,11 +69,15 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label
+                htmlFor={`${formId}-password`}
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
                 Contraseña
               </label>
               <div className="relative">
                 <input
+                  id={`${formId}-password`}
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
