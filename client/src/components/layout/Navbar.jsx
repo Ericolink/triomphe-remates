@@ -25,20 +25,30 @@ export default function Navbar() {
       transition={{ duration: 0.4, ease: 'easeOut' }}
       className="bg-blue-900 text-white sticky top-0 z-50 shadow-lg"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-3">
+      <div className="max-w-[1920px] mx-auto px-6 sm:px-8 lg:px-12 xl:px-16">
+        {/* grid en vez de flex+justify-between: así el menú queda centrado en el
+            espacio disponible entre logo y acciones sin importar que ambos extremos
+            tengan anchos distintos (justify-between solo reparte el hueco sobrante,
+            no centra el contenido intermedio de verdad). */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 h-20 dk:h-28">
+          <Link to="/" className="flex items-center gap-3 shrink-0">
             <motion.img
               src="/logo.png"
               alt="Triomphe Bienes Raíces"
-              className="h-10 w-auto brightness-0 invert"
+              className="h-14 dk:h-20 w-auto brightness-0 invert"
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
             />
           </Link>
 
-          {/* Desktop */}
-          <div className="hidden lg:flex items-center gap-6 xl:gap-8">
+          {/* Desktop — columna central, se centra dentro del espacio libre entre
+              logo y acciones. minmax(0,1fr) arriba + min-w-0 aquí evitan que el
+              ancho mínimo de los links (whitespace-nowrap) fuerce el desborde del
+              grid o aplaste la columna del logo — gotcha clásico de CSS Grid.
+              "dk" (1800px, ver tailwind.config.js) en vez de "lg": con el font-size
+              global del sitio, 6 links sin salto de línea no caben cómodos antes de
+              eso — por debajo se usa el menú hamburguesa. */}
+          <div className="hidden dk:flex items-center justify-center gap-10 dk:gap-12 min-w-0">
             {links.map(({ to, label }, i) => (
               <motion.div
                 key={to}
@@ -50,7 +60,7 @@ export default function Navbar() {
                   to={to}
                   end={to === '/'}
                   className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-yellow-400 ${isActive ? 'text-yellow-400' : 'text-gray-200'}`
+                    `text-sm font-medium whitespace-nowrap transition-colors hover:text-yellow-400 ${isActive ? 'text-yellow-400' : 'text-gray-200'}`
                   }
                 >
                   {label}
@@ -59,68 +69,72 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div className="hidden lg:flex items-center gap-2">
-            <ThemeToggle />
-            <Link
-              to="/favoritos"
-              title="Mis favoritos"
-              className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-blue-800 transition-colors"
-            >
-              <Heart size={18} className="text-gray-200" />
-              {count > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                  {count > 9 ? '9+' : count}
-                </span>
-              )}
-            </Link>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
-            >
+          {/* col-start-3 explícito: si el menú central no se renderiza (mobile,
+              hidden), evita que este bloque caiga en la columna 1fr del centro */}
+          <div className="col-start-3 flex items-center gap-2">
+            <div className="hidden dk:flex items-center gap-2">
+              <ThemeToggle />
               <Link
-                to="/admin/login"
-                className="text-sm font-medium bg-yellow-400 text-blue-900 px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors"
+                to="/favoritos"
+                title="Mis favoritos"
+                className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-blue-800 transition-colors"
               >
-                Acceso Admin
-              </Link>
-            </motion.div>
-          </div>
-
-          <div className="flex items-center gap-2 lg:hidden">
-            <ThemeToggle />
-            <button
-              className="p-2"
-              onClick={() => setOpen(!open)}
-              aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
-              aria-expanded={open}
-            >
-              <AnimatePresence mode="wait">
-                {open ? (
-                  <motion.div
-                    key="close"
-                    initial={{ rotate: -90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: 90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <X size={24} />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="menu"
-                    initial={{ rotate: 90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: -90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Menu size={24} />
-                  </motion.div>
+                <Heart size={18} className="text-gray-200" />
+                {count > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    {count > 9 ? '9+' : count}
+                  </span>
                 )}
-              </AnimatePresence>
-            </button>
+              </Link>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <Link
+                  to="/admin/login"
+                  className="text-sm font-medium bg-yellow-400 text-blue-900 px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors whitespace-nowrap"
+                >
+                  Acceso Admin
+                </Link>
+              </motion.div>
+            </div>
+
+            <div className="flex items-center gap-2 dk:hidden">
+              <ThemeToggle />
+              <button
+                className="p-2"
+                onClick={() => setOpen(!open)}
+                aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+                aria-expanded={open}
+              >
+                <AnimatePresence mode="wait">
+                  {open ? (
+                    <motion.div
+                      key="close"
+                      initial={{ rotate: -90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: 90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <X size={24} />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="menu"
+                      initial={{ rotate: 90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: -90, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Menu size={24} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -133,7 +147,7 @@ export default function Navbar() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="lg:hidden bg-blue-800 overflow-hidden"
+            className="dk:hidden bg-blue-800 overflow-hidden"
           >
             <div className="px-4 pb-4 flex flex-col gap-3">
               {links.map(({ to, label }, i) => (

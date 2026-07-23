@@ -31,6 +31,13 @@ export default {
         4.5: '1.125rem',
         5.5: '1.375rem',
       },
+      screens: {
+        // El Navbar necesita bastante más ancho que el "lg" estándar (1024px) para
+        // mostrar el menú de 6 links totalmente distribuido sin salto de línea ni
+        // desborde — con el font-size global del sitio (18px) no cabe cómodamente
+        // hasta ~1700px. Por debajo de "dk" se usa el menú hamburguesa. Ver Navbar.jsx.
+        dk: '1800px',
+      },
     },
   },
   plugins: [],
