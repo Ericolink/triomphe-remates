@@ -147,7 +147,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
               <div className="space-y-3">
                 {d?.topProperties?.map((p, i) => (
                   <div key={p.id} className="flex items-center gap-3">
-                    <span className="w-6 h-6 bg-gray-100 dark:bg-[#2e3650] rounded-full flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">
+                    <span className="w-7 h-7 shrink-0 bg-gray-100 dark:bg-[#2e3650] rounded-full flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400">
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">

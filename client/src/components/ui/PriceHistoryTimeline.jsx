@@ -56,7 +56,7 @@ export default function PriceHistoryTimeline({ history }) {
         const { icon, text } = describeEntry(entry);
         return (
           <div key={entry.id} className="flex items-start gap-3">
-            <div className="mt-0.5 flex-shrink-0">{icon}</div>
+            <div className="mt-1 flex-shrink-0">{icon}</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm text-gray-700 dark:text-gray-300">{text}</p>
               <p className="text-xs text-gray-400 mt-0.5">{formatDate(entry.createdAt)}</p>

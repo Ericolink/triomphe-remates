@@ -243,7 +243,7 @@ export default function CalendarioSection() {
                   onClick={() => day && setSelected(isSel ? null : day)}
                   disabled={!day}
                   className={`
-                    relative min-h-[52px] rounded-xl p-1 text-xs transition-colors text-left
+                    relative min-h-[60px] rounded-xl p-1 text-xs transition-colors text-left
                     ${!day ? '' : 'hover:bg-gray-50 dark:hover:bg-[#2e3650] cursor-pointer'}
                     ${isToday ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' : ''}
                     ${isSel ? 'bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500' : ''}
@@ -257,13 +257,13 @@ export default function CalendarioSection() {
                           {dayAppointments.slice(0, 3).map((a) => (
                             <span
                               key={a.id}
-                              className="block w-full truncate text-[10px] bg-blue-600 text-white px-1 py-0.5 rounded"
+                              className="block w-full truncate text-[12px] bg-blue-600 text-white px-1 py-0.5 rounded"
                             >
                               {a.lead?.name?.split(' ')[0]}
                             </span>
                           ))}
                           {dayAppointments.length > 3 && (
-                            <span className="text-[10px] text-gray-400">
+                            <span className="text-[12px] text-gray-400">
                               +{dayAppointments.length - 3}
                             </span>
                           )}

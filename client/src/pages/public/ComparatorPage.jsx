@@ -108,7 +108,7 @@ export default function ComparatorPage() {
         <table className="w-full min-w-[480px]">
           <thead>
             <tr>
-              <th className="w-24 sm:w-32 md:w-40" />
+              <th className="w-28 sm:w-36 md:w-44" />
               {items.map((p) => (
                 <th key={p.id} className="px-2 sm:px-3 pb-4 align-top">
                   <div

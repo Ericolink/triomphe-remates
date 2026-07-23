@@ -38,7 +38,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-6 xl:gap-8">
             {links.map(({ to, label }, i) => (
               <motion.div
                 key={to}
@@ -59,7 +59,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2">
             <ThemeToggle />
             <Link
               to="/favoritos"
@@ -68,7 +68,7 @@ export default function Navbar() {
             >
               <Heart size={18} className="text-gray-200" />
               {count > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                   {count > 9 ? '9+' : count}
                 </span>
               )}
@@ -89,7 +89,7 @@ export default function Navbar() {
             </motion.div>
           </div>
 
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
             <ThemeToggle />
             <button
               className="p-2"
@@ -133,7 +133,7 @@ export default function Navbar() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="md:hidden bg-blue-800 overflow-hidden"
+            className="lg:hidden bg-blue-800 overflow-hidden"
           >
             <div className="px-4 pb-4 flex flex-col gap-3">
               {links.map(({ to, label }, i) => (

@@ -31,14 +31,14 @@ function Tooltip({ x, y, label, value, color }) {
         stroke="#e5e7eb"
         strokeWidth={1}
       />
-      <text x={tx + bw / 2} y={ty + 15} textAnchor="middle" fontSize={11} fill="#6b7280">
+      <text x={tx + bw / 2} y={ty + 15} textAnchor="middle" fontSize={13} fill="#6b7280">
         {label}
       </text>
       <text
         x={tx + bw / 2}
         y={ty + 31}
         textAnchor="middle"
-        fontSize={14}
+        fontSize={16}
         fontWeight="700"
         fill={color}
       >
@@ -64,7 +64,7 @@ export function BarChart({ data = [], color = '#1a3a5c' }) {
         return (
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y} y2={y} stroke="#f3f4f6" strokeWidth={1} />
-            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={10} fill="#9ca3af">
+            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={12} fill="#9ca3af">
               {t}
             </text>
           </g>
@@ -97,7 +97,7 @@ export function BarChart({ data = [], color = '#1a3a5c' }) {
               x={x + barW / 2}
               y={H - PAD.bottom + 11}
               textAnchor="middle"
-              fontSize={10}
+              fontSize={12}
               fill="#9ca3af"
             >
               {d.label}
@@ -151,7 +151,7 @@ export function AreaChart({ data = [], color = '#7c3aed' }) {
         return (
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y} y2={y} stroke="#f3f4f6" strokeWidth={1} />
-            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={10} fill="#9ca3af">
+            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={12} fill="#9ca3af">
               {t}
             </text>
           </g>
@@ -204,7 +204,7 @@ export function AreaChart({ data = [], color = '#7c3aed' }) {
               x={labelX}
               y={H - PAD.bottom + 11}
               textAnchor={anchor}
-              fontSize={10}
+              fontSize={12}
               fill="#9ca3af"
             >
               {d.label}
