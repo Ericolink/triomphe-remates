@@ -34,8 +34,19 @@ const Lead = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    // 'informacion' ("Información del remate") ya no es un motivo seleccionable en
+    // formularios nuevos (ver ContactForm.jsx / VALID_LEAD_TYPE en leadController) — se
+    // conserva en el ENUM únicamente para no romper leads históricos que ya lo tenían.
     type: {
-      type: DataTypes.ENUM('contacto', 'cita', 'informacion'),
+      type: DataTypes.ENUM(
+        'contacto',
+        'cita',
+        'informacion',
+        'asesoria_financiera',
+        'propiedades_similares',
+        'vender_propiedad',
+        'otro'
+      ),
       defaultValue: 'contacto',
     },
     // CRM Comercial: deprecado a favor de pipelineStage (embudo de 8 etapas). Se conserva

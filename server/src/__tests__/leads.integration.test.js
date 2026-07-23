@@ -5,11 +5,16 @@ jest.mock('../services/emailService', () => ({
 
 const request = require('supertest');
 const app = require('../../app');
-const { sequelize, Lead } = require('../models/index');
+const { sequelize, Lead, User } = require('../models/index');
+const { createUser, authToken } = require('./helpers/factories');
 
 describe('POST /api/leads', () => {
+  let admin, token;
+
   beforeAll(async () => {
     await sequelize.sync({ alter: false });
+    admin = await createUser({ role: 'admin' });
+    token = authToken(admin);
   });
 
   afterEach(async () => {
@@ -17,6 +22,7 @@ describe('POST /api/leads', () => {
   });
 
   afterAll(async () => {
+    await User.destroy({ where: { id: admin.id }, force: true });
     await sequelize.close();
   });
 
@@ -55,11 +61,30 @@ describe('POST /api/leads', () => {
     expect(stored).not.toBeNull();
   });
 
-  test('crea el lead sin teléfono (campo opcional)', async () => {
+  test('rechaza el lead sin teléfono cuando no hay usuario autenticado (formulario público)', async () => {
     const res = await request(app)
       .post('/api/leads')
       .send({ name: 'Sin Teléfono', email: 'sintelefono@test.com' });
 
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/teléfono/i);
+  });
+
+  test('permite el lead sin teléfono cuando lo crea un usuario autenticado (CRM, campo opcional)', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Sin Teléfono CRM' });
+
     expect(res.status).toBe(201);
+  });
+
+  test('rechaza un motivo de contacto fuera de la lista permitida', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .send({ phone: '6561234567', type: 'informacion' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/motivo/i);
   });
 });

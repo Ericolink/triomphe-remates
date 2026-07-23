@@ -106,7 +106,15 @@ const getDashboard = async (req, res) => {
       total: parseInt(leadsByStatusRaw.find((r) => r.status === status)?.total || 0),
     }));
 
-    const leadsByType = ['contacto', 'cita', 'informacion'].map((type) => ({
+    const leadsByType = [
+      'contacto',
+      'cita',
+      'informacion',
+      'asesoria_financiera',
+      'propiedades_similares',
+      'vender_propiedad',
+      'otro',
+    ].map((type) => ({
       type,
       total: parseInt(leadsByTypeRaw.find((r) => r.type === type)?.total || 0),
     }));

@@ -3,16 +3,16 @@ import { Bell, X, User, Building2, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useNotifications from '../../hooks/useNotifications';
 import usePopoverA11y from '../../hooks/usePopoverA11y';
+import { LEAD_TYPE_LABELS } from '../../utils/constants';
 
-const typeLabel = {
-  contacto: 'Solicitud de info',
-  cita: 'Agendar visita',
-  informacion: 'Información',
-};
 const typeColor = {
   contacto: 'bg-blue-100 text-blue-700',
   cita: 'bg-yellow-100 text-yellow-700',
   informacion: 'bg-purple-100 text-purple-700',
+  asesoria_financiera: 'bg-green-100 text-green-700',
+  propiedades_similares: 'bg-indigo-100 text-indigo-700',
+  vender_propiedad: 'bg-pink-100 text-pink-700',
+  otro: 'bg-gray-100 text-gray-700',
 };
 
 export default function NotificationBell() {
@@ -110,7 +110,7 @@ export default function NotificationBell() {
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2 ${typeColor[lead.type]}`}
                         >
-                          {typeLabel[lead.type]}
+                          {LEAD_TYPE_LABELS[lead.type] || lead.type}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 truncate">{lead.email}</p>

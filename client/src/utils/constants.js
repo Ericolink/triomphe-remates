@@ -81,10 +81,18 @@ export const ACQUISITION_STAGE_LABELS = {
 };
 
 // AUDIT-012: estaba duplicado idénticamente en LeadsPage.jsx y CalendarPage.jsx
+// 'informacion' ("Información del remate") ya no es un motivo seleccionable en
+// formularios nuevos — se conserva aquí solo para mostrar correctamente el motivo de
+// leads históricos que ya lo tenían guardado (ver labelsToOptions(..., ['informacion'])
+// en ContactForm.jsx).
 export const LEAD_TYPE_LABELS = {
-  contacto: 'Contacto',
-  cita: 'Cita',
-  informacion: 'Información',
+  contacto: 'Solicitar información',
+  cita: 'Agendar cita',
+  asesoria_financiera: 'Solicitar asesoría financiera',
+  propiedades_similares: 'Conocer propiedades similares',
+  vender_propiedad: 'Quiero vender mi propiedad',
+  otro: 'Otro',
+  informacion: 'Información del remate',
 };
 
 export const SOURCE_LABELS = {

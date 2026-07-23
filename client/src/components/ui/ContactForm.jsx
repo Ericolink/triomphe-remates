@@ -3,6 +3,12 @@ import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { createLead } from '../../services/leadService';
+import { LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
+
+const LEAD_TYPE_OPTIONS = labelsToOptions(LEAD_TYPE_LABELS, [
+  'informacion',
+  'propiedades_similares',
+]);
 
 export default function ContactForm({ propertyId, propertyTitle, defaultSource }) {
   const [searchParams] = useSearchParams();
@@ -10,8 +16,8 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
     defaultSource || searchParams.get('source') || searchParams.get('utm_source') || 'directo';
   const [form, setForm] = useState({
     name: '',
-    email: '',
     phone: '',
+    email: '',
     message: '',
     type: 'contacto',
   });
@@ -27,7 +33,7 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.name || !form.email) return toast.error('Nombre y email son requeridos');
+    if (!form.name || !form.phone) return toast.error('Nombre y teléfono son requeridos');
     mutate({ ...form, propertyId, source });
   };
 
@@ -49,20 +55,21 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
         className={inputClass}
       />
       <input
-        type="email"
-        placeholder="Tu email *"
-        value={form.email}
-        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-        className={inputClass}
-      />
-      <input
         type="tel"
-        placeholder="Tu teléfono"
+        placeholder="Tu teléfono *"
         value={form.phone}
         maxLength={20}
+        required
         onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
         pattern="^(\+?52)?\d{10}$"
         title="10 dígitos, con o sin +52"
+        className={inputClass}
+      />
+      <input
+        type="email"
+        placeholder="Tu email"
+        value={form.email}
+        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
         className={inputClass}
       />
       <select
@@ -70,9 +77,11 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
         onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
         className={inputClass}
       >
-        <option value="contacto">Solicitar información</option>
-        <option value="cita">Agendar visita</option>
-        <option value="informacion">Información del remate</option>
+        {LEAD_TYPE_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </select>
       <textarea
         placeholder="Tu mensaje..."

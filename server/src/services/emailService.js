@@ -82,7 +82,11 @@ const buildEmail = ({ title, subtitle, badge = '', body, cta = '', footerNote = 
 
 const typeLabel = {
   contacto: 'Solicitud de información',
-  cita: 'Agendar visita',
+  cita: 'Agendar cita',
+  asesoria_financiera: 'Solicitud de asesoría financiera',
+  propiedades_similares: 'Propiedades similares',
+  vender_propiedad: 'Quiere vender su propiedad',
+  otro: 'Otro',
   informacion: 'Información del remate',
 };
 const expLabel = {

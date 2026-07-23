@@ -20,7 +20,11 @@ const { addLeadProperty, removeLeadProperty } = require('../controllers/leadProp
 const { getLeadActivities, createLeadActivity } = require('../controllers/activityController');
 const { getLeadAppointments } = require('../controllers/appointmentController');
 const { getLeadTasks } = require('../controllers/taskController');
-const { authenticate, authenticateSSE } = require('../middleware/authMiddleware');
+const {
+  authenticate,
+  authenticateSSE,
+  attachUserIfPresent,
+} = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddleware');
 
@@ -31,7 +35,12 @@ const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddle
  *   description: Gestión de contactos y citas (CRM Comercial — "Prospectos" en la UI)
  */
 
-router.post('/', publicFormLimiter, createLead);
+// attachUserIfPresent: esta ruta no requiere auth (también la usa el formulario público
+// "Contactar asesor"), pero el CRM reusa el mismo endpoint para "Nuevo prospecto"
+// (CreateLeadModal), donde el teléfono es intencionalmente opcional. Adjuntar req.user
+// cuando hay un token válido es lo que le permite a createLead distinguir un envío del
+// sitio público (teléfono obligatorio) de una captura manual del equipo comercial.
+router.post('/', publicFormLimiter, attachUserIfPresent, createLead);
 router.get('/stream', apiLimiter, authenticateSSE, authorize('admin', 'editor'), streamLeads);
 router.get('/', apiLimiter, authenticate, authorize('admin', 'editor'), getLeads);
 router.patch('/batch', apiLimiter, authenticate, authorize('admin', 'editor'), batchUpdateLeads);

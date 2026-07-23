@@ -35,6 +35,18 @@ const VALID_CLOSE_REASONS = [
   'otro',
 ];
 const VALID_PAYMENT_METHODS = ['credito_hipotecario', 'contado'];
+// Motivos de contacto seleccionables para leads nuevos. 'informacion' sigue existiendo
+// en el ENUM de la base (leads históricos ya la tienen guardada) pero se excluye aquí a
+// propósito para que ya no pueda asignarse a leads nuevos — ver LEAD_TYPE_LABELS en
+// client/src/utils/constants.js.
+const VALID_LEAD_TYPE = [
+  'contacto',
+  'cita',
+  'asesoria_financiera',
+  'propiedades_similares',
+  'vender_propiedad',
+  'otro',
+];
 
 // Normaliza forma de pago / monto disponible / fecha de primer contacto — usado tanto
 // por createLead como updateLead para no duplicar las reglas de validación.
@@ -136,8 +148,22 @@ const createLead = async (req, res) => {
       return res.status(400).json({ error: 'Email inválido' });
     }
 
+    // El teléfono es obligatorio para el formulario público "Contactar asesor" (mejora la
+    // calidad de los prospectos captados) pero se mantiene opcional para la captura manual
+    // del CRM (CreateLeadModal / "Nuevo prospecto"), donde req.user viene presente porque
+    // el equipo comercial ya está autenticado — ver attachUserIfPresent en routes/leads.js.
+    if (!req.user && (!phone || !phone.trim())) {
+      return res.status(400).json({ error: 'Teléfono es requerido' });
+    }
+
     if (!validatePhone(phone)) {
       return res.status(400).json({ error: 'Teléfono inválido — usa 10 dígitos, con o sin +52' });
+    }
+
+    if (type && !VALID_LEAD_TYPE.includes(type)) {
+      return res.status(400).json({
+        error: `Motivo de contacto inválido. Valores permitidos: ${VALID_LEAD_TYPE.join(', ')}`,
+      });
     }
 
     const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);

@@ -472,7 +472,17 @@ const exportFeedbackExcel = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCEL — Leads
 // ─────────────────────────────────────────────────────────────────────────────
-const leadTypeLabel = { contacto: 'Contacto', cita: 'Cita', informacion: 'Información' };
+// 'informacion' se conserva solo para leads históricos — ya no es un motivo seleccionable
+// (ver LEAD_TYPE_LABELS en client/src/utils/constants.js).
+const leadTypeLabel = {
+  contacto: 'Solicitar información',
+  cita: 'Agendar cita',
+  asesoria_financiera: 'Solicitar asesoría financiera',
+  propiedades_similares: 'Conocer propiedades similares',
+  vender_propiedad: 'Quiero vender mi propiedad',
+  otro: 'Otro',
+  informacion: 'Información del remate',
+};
 const leadStatusLabel = {
   nuevo: 'Nuevo',
   contactado: 'Contactado',
