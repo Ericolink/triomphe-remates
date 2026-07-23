@@ -242,6 +242,7 @@ const createProperty = async (req, res) => {
       price,
       city,
       type,
+      category,
       status,
       squareMeters,
       terrainMeters,
@@ -249,6 +250,7 @@ const createProperty = async (req, res) => {
       bedrooms,
       bathrooms,
       address,
+      colonia,
       auctionDate,
       acquisitionStage,
       isFeatured,
@@ -277,6 +279,7 @@ const createProperty = async (req, res) => {
           price: nullIfEmpty(price),
           city,
           type,
+          category: category || 'remate',
           status: status || 'disponible',
           squareMeters: nullIfEmpty(squareMeters),
           terrainMeters: nullIfEmpty(terrainMeters),
@@ -284,6 +287,7 @@ const createProperty = async (req, res) => {
           bedrooms: nullIfEmpty(bedrooms),
           bathrooms: nullIfEmpty(bathrooms),
           address,
+          colonia,
           auctionDate: auctionDate || null,
           acquisitionStage: acquisitionStage || 'sin_proceso',
           isFeatured: isFeatured || false,
@@ -344,6 +348,7 @@ const updateProperty = async (req, res) => {
       price,
       city,
       type,
+      category,
       status,
       squareMeters,
       terrainMeters,
@@ -351,6 +356,7 @@ const updateProperty = async (req, res) => {
       bedrooms,
       bathrooms,
       address,
+      colonia,
       auctionDate,
       acquisitionStage,
       isFeatured,
@@ -379,6 +385,7 @@ const updateProperty = async (req, res) => {
     if (price !== undefined) updates.price = nullIfEmpty(price);
     if (city !== undefined) updates.city = city;
     if (type !== undefined) updates.type = type;
+    if (category !== undefined) updates.category = category;
     if (status !== undefined) updates.status = status;
     if (squareMeters !== undefined) updates.squareMeters = nullIfEmpty(squareMeters);
     if (terrainMeters !== undefined) updates.terrainMeters = nullIfEmpty(terrainMeters);
@@ -387,6 +394,7 @@ const updateProperty = async (req, res) => {
     if (bedrooms !== undefined) updates.bedrooms = nullIfEmpty(bedrooms);
     if (bathrooms !== undefined) updates.bathrooms = nullIfEmpty(bathrooms);
     if (address !== undefined) updates.address = address;
+    if (colonia !== undefined) updates.colonia = colonia;
     if (auctionDate !== undefined) updates.auctionDate = auctionDate || null;
     if (acquisitionStage !== undefined)
       updates.acquisitionStage = acquisitionStage || 'sin_proceso';

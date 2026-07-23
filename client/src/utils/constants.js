@@ -43,6 +43,22 @@ export const STATUS_VARIANTS = {
   vendido: 'danger',
 };
 
+// Categoría comercial de la propiedad — distinta del `status` (disponible/apartado/vendido)
+export const CATEGORY_LABELS = {
+  remate: 'Remate',
+  renta: 'Renta',
+  compra_venta_credito: 'Compra venta (Crédito)',
+  compra_venta_contado: 'Compra venta (Contado)',
+};
+
+// Mapeadas a las 5 variantes que soporta Badge, mismo criterio que STATUS_VARIANTS
+export const CATEGORY_VARIANTS = {
+  remate: 'primary',
+  renta: 'warning',
+  compra_venta_credito: 'success',
+  compra_venta_contado: 'success',
+};
+
 // Fondo del <select> de estatus en la tabla admin (AdminPropertiesPage) — no puede ser un
 // <Badge> porque es el control de formulario mismo, pero usa la misma familia -300 en dark
 // que Badge para que se vea como el mismo estado en todas partes.

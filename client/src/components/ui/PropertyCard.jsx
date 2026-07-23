@@ -11,6 +11,8 @@ import {
   CITY_LABELS,
   STATUS_LABELS,
   STATUS_VARIANTS,
+  CATEGORY_LABELS,
+  CATEGORY_VARIANTS,
   WHATSAPP_NUMBER,
 } from '../../utils/constants';
 
@@ -66,7 +68,10 @@ export default function PropertyCard({ property }) {
               <Building size={48} />
             </div>
           )}
-          <div className="absolute top-3 left-3 flex flex-col gap-1">
+          <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
+            <Badge variant={CATEGORY_VARIANTS[property.category]}>
+              {CATEGORY_LABELS[property.category] || property.category}
+            </Badge>
             <Badge variant={STATUS_VARIANTS[property.status]}>
               {STATUS_LABELS[property.status]}
             </Badge>
@@ -108,13 +113,13 @@ export default function PropertyCard({ property }) {
               {property.constructionMeters && (
                 <span className="flex items-center gap-1" title="Metros de construcción">
                   <Maximize2 size={14} />
-                  {property.constructionMeters} m²
+                  {property.constructionMeters} m²c
                 </span>
               )}
               {property.terrainMeters && (
                 <span className="flex items-center gap-1" title="Metros de terreno">
                   <LandPlot size={14} />
-                  {property.terrainMeters} m²
+                  {property.terrainMeters} m²t
                 </span>
               )}
               {!property.constructionMeters && !property.terrainMeters && property.squareMeters && (

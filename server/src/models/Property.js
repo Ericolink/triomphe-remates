@@ -29,6 +29,12 @@ const Property = sequelize.define(
       type: DataTypes.ENUM('casa', 'departamento', 'terreno', 'local', 'bodega'),
       allowNull: false,
     },
+    category: {
+      type: DataTypes.ENUM('remate', 'renta', 'compra_venta_credito', 'compra_venta_contado'),
+      allowNull: false,
+      defaultValue: 'remate',
+      comment: 'Categoría comercial de la propiedad',
+    },
     status: {
       type: DataTypes.ENUM('disponible', 'apartado', 'vendido'),
       defaultValue: 'disponible',
@@ -55,6 +61,10 @@ const Property = sequelize.define(
     },
     address: {
       type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    colonia: {
+      type: DataTypes.STRING(150),
       allowNull: true,
     },
     auctionDate: {

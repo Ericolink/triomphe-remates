@@ -1,10 +1,31 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Maximize2, Bed, Bath, Star, ArrowRight, Building } from 'lucide-react';
+import { MapPin, Maximize2, LandPlot, Bed, Bath, Star, ArrowRight, Building } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Badge from './Badge';
 import { buildImageUrl } from '../../utils/images';
 import { formatPrice } from '../../utils/formatters';
-import { CITY_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
+import {
+  CITY_LABELS,
+  STATUS_LABELS,
+  STATUS_VARIANTS,
+  CATEGORY_LABELS,
+  CATEGORY_VARIANTS,
+  TYPE_LABELS,
+} from '../../utils/constants';
+
+// Etiqueta pequeña en mayúsculas + valor destacado debajo — mismo patrón repetido
+// para Categoría, Tipo de inmueble, Estado, Ciudad y Colonia (ver punto 6/7 del
+// ticket "Propiedad Estrella": los títulos deben pesar menos que los valores).
+function InfoField({ label, children }) {
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
 
 export default function PromotedPropertyBanner({ property }) {
   const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
@@ -61,30 +82,71 @@ export default function PromotedPropertyBanner({ property }) {
           </div>
 
           {/* Detalles */}
-          <div className="flex flex-col justify-between p-8 flex-1">
+          <div className="flex flex-col justify-between p-6 sm:p-8 flex-1">
             <div>
-              <p className="text-3xl md:text-4xl font-bold text-blue-900 dark:text-yellow-400 mb-3">
-                {formatPrice(property.price)}
-              </p>
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 leading-snug">
+              <InfoField label="Precio">
+                <p className="text-3xl md:text-4xl font-bold text-blue-900 dark:text-yellow-400">
+                  {formatPrice(property.price)}
+                </p>
+              </InfoField>
+
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mt-3 mb-4 leading-snug">
                 {property.title}
               </h3>
+
               {property.description && (
                 <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6 line-clamp-3">
                   {property.description}
                 </p>
               )}
+
+              {/* Datos comerciales — grupo bien definido, mismo tratamiento visual que la
+                  caja de metros/recámaras en PropertyDetailPage para mantener consistencia. */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 bg-gray-50 dark:bg-[#1a1f2e] rounded-xl p-4 mb-6">
+                <InfoField label="Categoría">
+                  <Badge variant={CATEGORY_VARIANTS[property.category]}>
+                    {CATEGORY_LABELS[property.category] || property.category}
+                  </Badge>
+                </InfoField>
+                <InfoField label="Tipo de inmueble">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    {TYPE_LABELS[property.type] || property.type}
+                  </p>
+                </InfoField>
+                <InfoField label="Estado">
+                  <Badge variant={STATUS_VARIANTS[property.status]}>
+                    {STATUS_LABELS[property.status]}
+                  </Badge>
+                </InfoField>
+                <InfoField label="Ciudad">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    {CITY_LABELS[property.city]}
+                  </p>
+                </InfoField>
+                <InfoField label="Colonia">
+                  <p
+                    className={
+                      property.colonia
+                        ? 'text-sm font-semibold text-gray-800 dark:text-gray-100'
+                        : 'text-sm italic text-gray-400 dark:text-gray-500'
+                    }
+                  >
+                    {property.colonia || 'No especificada'}
+                  </p>
+                </InfoField>
+              </div>
+
               <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
                 {property.constructionMeters && (
                   <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
                     <Maximize2 size={15} className="text-blue-600 dark:text-blue-400" />
-                    {property.constructionMeters} m² const.
+                    {property.constructionMeters} m²c
                   </span>
                 )}
                 {property.terrainMeters && (
                   <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <Maximize2 size={15} className="text-blue-600 dark:text-blue-400" />
-                    {property.terrainMeters} m² ter.
+                    <LandPlot size={15} className="text-blue-600 dark:text-blue-400" />
+                    {property.terrainMeters} m²t
                   </span>
                 )}
                 {!property.constructionMeters &&

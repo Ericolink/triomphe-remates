@@ -43,6 +43,8 @@ import {
   TYPE_LABELS,
   STATUS_LABELS,
   STATUS_VARIANTS,
+  CATEGORY_LABELS,
+  CATEGORY_VARIANTS,
   ACQUISITION_STAGE_LABELS,
   labelsToOptions,
 } from '../../utils/constants';
@@ -303,6 +305,9 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Badge variant={CATEGORY_VARIANTS[property.category]}>
+              {CATEGORY_LABELS[property.category] || property.category}
+            </Badge>
             <Badge variant={STATUS_VARIANTS[property.status]}>
               {STATUS_LABELS[property.status]}
             </Badge>
@@ -319,9 +324,12 @@ export default function PropertyDetailPage() {
             {property.title}
           </h1>
 
-          {property.address && (
+          {(property.address || property.colonia) && (
             <p className="flex items-center gap-1 text-gray-500 mb-4">
-              <MapPin size={16} /> {property.address}, {CITY_LABELS[property.city]}
+              <MapPin size={16} />
+              {[property.address, property.colonia, CITY_LABELS[property.city]]
+                .filter(Boolean)
+                .join(', ')}
             </p>
           )}
 
