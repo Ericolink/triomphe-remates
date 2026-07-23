@@ -39,11 +39,11 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *   description: Gestión de propiedades
  */
 
-router.get('/', apiLimiter, getProperties);
+router.get('/', apiLimiter, attachUserIfPresent, getProperties);
 router.get('/stats', apiLimiter, getPropertyStats);
 router.get('/promoted', apiLimiter, getPromotedProperty);
 router.get('/sync', apiLimiter, getPropertiesSync);
-router.get('/slug/:slug', apiLimiter, getPropertyBySlug);
+router.get('/slug/:slug', apiLimiter, attachUserIfPresent, getPropertyBySlug);
 router.get('/:id', apiLimiter, attachUserIfPresent, getPropertyById);
 
 router.post('/', apiLimiter, authenticate, authorize('admin', 'editor'), createProperty);

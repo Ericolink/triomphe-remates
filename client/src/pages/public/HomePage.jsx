@@ -180,7 +180,7 @@ export default function HomePage() {
             whileHover={{ x: 4 }}
             transition={{ duration: 0.2 }}
           >
-            Ver todas <ChevronRight size={18} />
+            Ver todas las propiedades <ChevronRight size={18} />
           </motion.button>
         </AnimatedSection>
 
@@ -355,7 +355,7 @@ export default function HomePage() {
             >
               <MapPin size={40} className="text-yellow-400 mx-auto mb-4" />
             </motion.div>
-            <h2 className="text-3xl font-bold mb-4">¿Te interesa alguna propiedad?</h2>
+            <h2 className="text-3xl font-bold mb-4">¿Te interesa alguna propiedad o inversión?</h2>
             <p className="text-blue-200 dark:text-gray-400 mb-8">
               Agenda una cita con nuestros asesores y te ayudamos en todo el proceso.
             </p>

@@ -51,10 +51,18 @@ const getProperties = async (req, res) => {
 
     const where = {};
 
+    // El inventario público solo muestra "disponible": apartado/vendido salen de circulación
+    // y de ahí en adelante solo son visibles desde el panel admin (getPropertyById/By Slug ya
+    // aplican la misma regla). El staff autenticado sí puede filtrar por cualquier status.
+    const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
+
     if (city) where.city = city;
     if (type) where.type = type;
-    if (status) where.status = status;
-    else where.status = { [Op.ne]: 'vendido' };
+    if (isStaff) {
+      if (status) where.status = status;
+    } else {
+      where.status = 'disponible';
+    }
     if (featured) where.isFeatured = featured === 'true';
 
     if (minPrice || maxPrice) {
@@ -168,10 +176,11 @@ const getPropertiesSync = async (req, res) => {
   }
 };
 
-// GET /api/properties/stats
+// GET /api/properties/stats — usado solo por páginas públicas (HomePage, AboutPage); cuenta
+// únicamente inventario disponible, igual que getProperties para clientes no-staff.
 const getPropertyStats = async (req, res) => {
   try {
-    const where = { status: { [Op.ne]: 'vendido' } };
+    const where = { status: 'disponible' };
 
     const total = await Property.count({ where });
     const byCityRaw = await Property.findAll({
@@ -205,6 +214,9 @@ const getPropertyById = async (req, res) => {
     });
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+    if (!isStaff && property.status !== 'disponible') {
+      return res.status(404).json({ error: 'Propiedad no encontrada' });
+    }
 
     return res.json({ data: property });
   } catch (error) {
@@ -218,6 +230,7 @@ const getPropertyById = async (req, res) => {
 // que la propiedad carga.
 const getPropertyBySlug = async (req, res) => {
   try {
+    const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
     const property = await Property.findOne({
       where: { slug: req.params.slug },
       attributes: { exclude: ['internalNotes'] },
@@ -225,6 +238,9 @@ const getPropertyBySlug = async (req, res) => {
     });
 
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+    if (!isStaff && property.status !== 'disponible') {
+      return res.status(404).json({ error: 'Propiedad no encontrada' });
+    }
 
     return res.json({ data: property });
   } catch (error) {
@@ -635,7 +651,7 @@ const reorderImages = async (req, res) => {
 const getPromotedProperty = async (req, res) => {
   try {
     const property = await Property.findOne({
-      where: { isPromoted: true },
+      where: { isPromoted: true, status: 'disponible' },
       include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
     });
     return res.json({ data: property || null });

@@ -9,17 +9,13 @@ import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkelet
 import SEO from '../../components/ui/SEO';
 import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
-import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, labelsToOptions } from '../../utils/constants';
+import { CITY_LABELS, TYPE_LABELS, labelsToOptions } from '../../utils/constants';
 
 const CITIES = [
   { value: '', label: 'Todas las ciudades' },
   ...labelsToOptions(CITY_LABELS, ['otra']),
 ];
 const TYPES = [{ value: '', label: 'Todos los tipos' }, ...labelsToOptions(TYPE_LABELS)];
-const STATUS = [
-  { value: '', label: 'Todos los estatus' },
-  ...labelsToOptions(STATUS_LABELS, ['vendido']),
-];
 const BEDROOMS = [
   { value: '', label: 'Cualquier cantidad' },
   { value: '1', label: '1+ recámara' },
@@ -42,7 +38,6 @@ export default function PropertiesPage() {
   const [localFilters, setLocalFilters] = useState({
     city: '',
     type: '',
-    status: '',
     maxPrice: '',
     search: '',
     minBedrooms: '',
@@ -57,7 +52,6 @@ export default function PropertiesPage() {
   const filters = {
     city: searchParams.get('city') || localFilters.city,
     type: searchParams.get('type') || localFilters.type,
-    status: localFilters.status,
     maxPrice: localFilters.maxPrice,
     search: searchParams.get('search') || localFilters.search,
     minBedrooms: localFilters.minBedrooms,
@@ -107,7 +101,6 @@ export default function PropertiesPage() {
     setLocalFilters({
       city: '',
       type: '',
-      status: '',
       maxPrice: '',
       search: '',
       minBedrooms: '',
@@ -123,7 +116,6 @@ export default function PropertiesPage() {
   const hasFilters =
     filters.city ||
     filters.type ||
-    filters.status ||
     filters.maxPrice ||
     filters.search ||
     filters.minBedrooms ||
@@ -221,7 +213,6 @@ export default function PropertiesPage() {
               {[
                 { key: 'city', options: CITIES, label: 'Ciudad' },
                 { key: 'type', options: TYPES, label: 'Tipo' },
-                { key: 'status', options: STATUS, label: 'Estatus' },
               ].map(({ key, options, label }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
