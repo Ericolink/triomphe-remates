@@ -306,7 +306,9 @@ export default function PropertyDetailPage() {
 
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <Badge variant={CATEGORY_VARIANTS[property.category]}>
-              {CATEGORY_LABELS[property.category] || property.category}
+              {property.category === 'remate'
+                ? 'Remate bancario (Cesión de Derechos)'
+                : CATEGORY_LABELS[property.category] || property.category}
             </Badge>
             <Badge variant={STATUS_VARIANTS[property.status]}>
               {STATUS_LABELS[property.status]}

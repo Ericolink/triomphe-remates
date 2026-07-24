@@ -9,13 +9,22 @@ import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkelet
 import SEO from '../../components/ui/SEO';
 import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
-import { CITY_LABELS, TYPE_LABELS, labelsToOptions } from '../../utils/constants';
+import {
+  CITY_LABELS,
+  TYPE_LABELS,
+  CATEGORY_LABELS,
+  labelsToOptions,
+} from '../../utils/constants';
 
 const CITIES = [
   { value: '', label: 'Todas las ciudades' },
   ...labelsToOptions(CITY_LABELS, ['otra']),
 ];
 const TYPES = [{ value: '', label: 'Todos los tipos' }, ...labelsToOptions(TYPE_LABELS)];
+const CATEGORIES = [
+  { value: '', label: 'Todas las categorías' },
+  ...labelsToOptions(CATEGORY_LABELS),
+];
 const BEDROOMS = [
   { value: '', label: 'Cualquier cantidad' },
   { value: '1', label: '1+ recámara' },
@@ -38,6 +47,7 @@ export default function PropertiesPage() {
   const [localFilters, setLocalFilters] = useState({
     city: '',
     type: '',
+    category: '',
     maxPrice: '',
     search: '',
     minBedrooms: '',
@@ -52,6 +62,7 @@ export default function PropertiesPage() {
   const filters = {
     city: searchParams.get('city') || localFilters.city,
     type: searchParams.get('type') || localFilters.type,
+    category: searchParams.get('category') || localFilters.category,
     maxPrice: localFilters.maxPrice,
     search: searchParams.get('search') || localFilters.search,
     minBedrooms: localFilters.minBedrooms,
@@ -101,6 +112,7 @@ export default function PropertiesPage() {
     setLocalFilters({
       city: '',
       type: '',
+      category: '',
       maxPrice: '',
       search: '',
       minBedrooms: '',
@@ -116,6 +128,7 @@ export default function PropertiesPage() {
   const hasFilters =
     filters.city ||
     filters.type ||
+    filters.category ||
     filters.maxPrice ||
     filters.search ||
     filters.minBedrooms ||
@@ -213,6 +226,7 @@ export default function PropertiesPage() {
               {[
                 { key: 'city', options: CITIES, label: 'Ciudad' },
                 { key: 'type', options: TYPES, label: 'Tipo' },
+                { key: 'category', options: CATEGORIES, label: 'Categoría de propiedad' },
               ].map(({ key, options, label }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -276,91 +290,75 @@ export default function PropertiesPage() {
                   </select>
                 </div>
               ))}
-              <div>
-                <label
-                  htmlFor={`${filtersFormId}-minTerrainM2`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
-                  Terreno m² mín.
-                </label>
-                <input
-                  id={`${filtersFormId}-minTerrainM2`}
-                  type="number"
-                  placeholder="Ej: 80"
-                  min="0"
-                  value={filters.minTerrainM2}
-                  onChange={(e) => setFilter('minTerrainM2', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor={`${filtersFormId}-maxTerrainM2`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
-                  Terreno m² máx.
-                </label>
-                <input
-                  id={`${filtersFormId}-maxTerrainM2`}
-                  type="number"
-                  placeholder="Ej: 300"
-                  min="0"
-                  value={filters.maxTerrainM2}
-                  onChange={(e) => setFilter('maxTerrainM2', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor={`${filtersFormId}-minConstructionM2`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
-                  Construcción m² mín.
-                </label>
-                <input
-                  id={`${filtersFormId}-minConstructionM2`}
-                  type="number"
-                  placeholder="Ej: 80"
-                  min="0"
-                  value={filters.minConstructionM2}
-                  onChange={(e) => setFilter('minConstructionM2', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor={`${filtersFormId}-maxConstructionM2`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
-                  Construcción m² máx.
-                </label>
-                <input
-                  id={`${filtersFormId}-maxConstructionM2`}
-                  type="number"
-                  placeholder="Ej: 300"
-                  min="0"
-                  value={filters.maxConstructionM2}
-                  onChange={(e) => setFilter('maxConstructionM2', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                />
-              </div>
+              {[
+                {
+                  groupLabel: 'Terreno m²',
+                  minKey: 'minTerrainM2',
+                  maxKey: 'maxTerrainM2',
+                },
+                {
+                  groupLabel: 'Construcción m²',
+                  minKey: 'minConstructionM2',
+                  maxKey: 'maxConstructionM2',
+                },
+              ].map(({ groupLabel, minKey, maxKey }) => (
+                <div key={minKey} className="col-span-2 md:col-span-1">
+                  <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    {groupLabel}
+                  </span>
+                  <div className="flex gap-2">
+                    <div className="w-1/2">
+                      <label htmlFor={`${filtersFormId}-${minKey}`} className="sr-only">
+                        {groupLabel} mínimo
+                      </label>
+                      <input
+                        id={`${filtersFormId}-${minKey}`}
+                        type="number"
+                        placeholder="Mín."
+                        min="0"
+                        value={filters[minKey]}
+                        onChange={(e) => setFilter(minKey, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
+                      />
+                    </div>
+                    <div className="w-1/2">
+                      <label htmlFor={`${filtersFormId}-${maxKey}`} className="sr-only">
+                        {groupLabel} máximo
+                      </label>
+                      <input
+                        id={`${filtersFormId}-${maxKey}`}
+                        type="number"
+                        placeholder="Máx."
+                        min="0"
+                        value={filters[maxKey]}
+                        onChange={(e) => setFilter(maxKey, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Alertas por email */}
-      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-6">
-        <button
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
+        <motion.button
+          whileHover={buttonHover}
+          whileTap={buttonTap}
           onClick={() => setShowAlertForm((v) => !v)}
-          className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400 font-medium hover:underline"
+          aria-expanded={showAlertForm}
+          className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 sm:px-8 py-4 bg-blue-900 dark:bg-blue-700 text-white rounded-2xl text-base sm:text-lg font-bold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 active:bg-blue-800 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-900"
         >
-          <Bell size={15} /> Recibir alerta cuando llegue una propiedad
+          <Bell size={22} className="flex-shrink-0" />
+          <span>Recibir alerta cuando llegue una propiedad</span>
           <ChevronDown
-            size={14}
-            className={`transition-transform ${showAlertForm ? 'rotate-180' : ''}`}
+            size={20}
+            className={`flex-shrink-0 transition-transform ${showAlertForm ? 'rotate-180' : ''}`}
           />
-        </button>
+        </motion.button>
         <AnimatePresence>
           {showAlertForm && (
             <motion.div

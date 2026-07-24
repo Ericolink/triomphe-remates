@@ -36,7 +36,7 @@ export default function OverviewSection({
       value: propiedadesDisponibles ?? 0,
       icon: <Home size={22} />,
       color: 'bg-blue-600',
-      onClick: () => navigate('/admin/propiedades', { state: { status: 'disponible' } }),
+      onClick: () => navigate('/admin/propiedades'),
     },
     {
       label: 'Vistas del sitio (30 días)',

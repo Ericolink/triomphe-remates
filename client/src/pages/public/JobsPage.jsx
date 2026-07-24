@@ -24,6 +24,13 @@ import useModalA11y from '../../hooks/useModalA11y';
 
 // 'todas' es propio del dominio de vacantes (no existe en CITY_LABELS, que es para propiedades)
 const cityLabel = { ...CITY_LABELS, todas: 'Todas las ciudades' };
+
+// Vacantes principales que se muestran públicamente; cualquier otra vacante activa en la BD se oculta.
+const FEATURED_POSITION_TITLES = new Set([
+  'coordinador de ventas',
+  'socio comercial',
+  'asesor de ventas',
+]);
 const typeColor = {
   tiempo_completo: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   medio_tiempo: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
@@ -201,11 +208,11 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
               htmlFor={`${formId}-motivation`}
               className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
             >
-              ¿Por qué quieres unirte a Triomphe?
+              Cuéntanos de ti
             </label>
             <textarea
               id={`${formId}-motivation`}
-              placeholder="Cuéntanos tu motivación..."
+              placeholder="Comparte tu experiencia, intereses o lo que quieras que sepamos de ti..."
               value={form.motivation}
               onChange={(e) => setForm((f) => ({ ...f, motivation: e.target.value }))}
               rows={3}
@@ -369,7 +376,9 @@ export default function JobsPage() {
     queryFn: () => getPositions({ status: 'activa' }),
   });
 
-  const positions = data?.data || [];
+  const positions = (data?.data || []).filter((position) =>
+    FEATURED_POSITION_TITLES.has(position.title?.trim().toLowerCase())
+  );
 
   const benefits = [
     {
@@ -385,7 +394,7 @@ export default function JobsPage() {
     {
       icon: <Users size={32} className="text-yellow-500" />,
       title: 'Excelente ambiente',
-      desc: 'Equipo colaborativo con más de 27 años de experiencia. Aprende de los mejores en el sector.',
+      desc: 'Equipo colaborativo con más de 28 años de experiencia. Aprende de los mejores en el sector.',
     },
   ];
 
@@ -522,25 +531,37 @@ export default function JobsPage() {
         )}
       </section>
 
-      {/* CTA */}
-      <AnimatedSection>
-        <section className="bg-blue-900 dark:bg-[#0f1621] text-white py-16 text-center">
-          <div className="max-w-2xl mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-4">¿No encuentras tu vacante ideal?</h2>
-            <p className="text-blue-200 dark:text-gray-400 mb-8">
-              Envíanos tu postulación general y te consideraremos para futuras oportunidades.
-            </p>
-            <motion.button
-              onClick={() => setGeneralApplying(true)}
-              whileHover={buttonHover}
-              whileTap={buttonTap}
-              className="bg-yellow-400 text-blue-900 px-10 py-4 rounded-xl font-bold text-lg hover:bg-yellow-300 transition-colors"
-            >
-              Enviar postulación general
-            </motion.button>
-          </div>
-        </section>
-      </AnimatedSection>
+      {/* Postulación general */}
+      <section className="bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#1a1f2e] text-white py-24 md:py-32 text-center">
+        <motion.div
+          className="max-w-3xl mx-auto px-4"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div
+            variants={fadeInUp}
+            className="inline-flex items-center gap-2 bg-yellow-400 text-blue-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
+          >
+            <Send size={16} /> Postulación general
+          </motion.div>
+          <motion.h2
+            variants={fadeInUp}
+            className="text-3xl md:text-5xl font-extrabold mb-8 leading-tight max-w-2xl mx-auto"
+          >
+            Envíanos tu postulación general y te consideraremos para futuras oportunidades.
+          </motion.h2>
+          <motion.button
+            variants={fadeInUp}
+            onClick={() => setGeneralApplying(true)}
+            whileHover={buttonHover}
+            whileTap={buttonTap}
+            className="bg-yellow-400 text-blue-900 px-12 py-5 rounded-xl font-bold text-xl hover:bg-yellow-300 transition-colors inline-flex items-center gap-3"
+          >
+            <Send size={22} /> Enviar postulación
+          </motion.button>
+        </motion.div>
+      </section>
 
       <AnimatePresence>
         {generalApplying && (

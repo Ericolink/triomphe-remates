@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Eye, Search, FileSpreadsheet, FileText, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,6 +18,7 @@ import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../.
 import { formatPrice, formatDate } from '../../utils/formatters';
 import {
   CITY_LABELS,
+  CATEGORY_LABELS,
   STATUS_LABELS,
   STATUS_SELECT_COLORS,
   labelsToOptions,
@@ -26,19 +27,17 @@ import { downloadBlob } from '../../utils/download';
 
 export default function AdminPropertiesPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
-  // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Disponibles").
-  const [status, setStatus] = useState(location.state?.status || '');
+  const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-properties', search, city, status, page],
-    queryFn: () => getProperties({ search, city, status, page, limit: 15 }),
+    queryKey: ['admin-properties', search, city, category, page],
+    queryFn: () => getProperties({ search, city, category, page, limit: 15 }),
   });
 
   const deleteMutation = useMutation({
@@ -104,7 +103,7 @@ export default function AdminPropertiesPage() {
       setExporting(format);
       const params = new URLSearchParams();
       if (city) params.set('city', city);
-      if (status) params.set('status', status);
+      if (category) params.set('category', category);
       const response = await api.get(`/export/${format}?${params.toString()}`, {
         responseType: 'blob',
       });
@@ -206,9 +205,12 @@ export default function AdminPropertiesPage() {
             ],
           },
           {
-            value: status,
-            onChange: setStatus,
-            options: [{ value: '', label: 'Todos' }, ...labelsToOptions(STATUS_LABELS)],
+            value: category,
+            onChange: setCategory,
+            options: [
+              { value: '', label: 'Todas las categorías' },
+              ...labelsToOptions(CATEGORY_LABELS),
+            ],
           },
         ].map((sel, i) => (
           <select
@@ -386,7 +388,7 @@ export default function AdminPropertiesPage() {
                 animate="visible"
                 className="text-center py-16 text-gray-400 dark:text-gray-500"
               >
-                {search || city || status ? (
+                {search || city || category ? (
                   <>
                     <p>Ningún resultado coincide con los filtros actuales.</p>
                     <button
@@ -394,7 +396,7 @@ export default function AdminPropertiesPage() {
                       onClick={() => {
                         setSearch('');
                         setCity('');
-                        setStatus('');
+                        setCategory('');
                         setPage(1);
                       }}
                       className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline"

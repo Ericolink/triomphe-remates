@@ -36,6 +36,7 @@ const getProperties = async (req, res) => {
       limit = 12,
       city,
       type,
+      category,
       status,
       minPrice,
       maxPrice,
@@ -58,6 +59,7 @@ const getProperties = async (req, res) => {
 
     if (city) where.city = city;
     if (type) where.type = type;
+    if (category) where.category = category;
     if (isStaff) {
       if (status) where.status = status;
     } else {
@@ -267,6 +269,7 @@ const createProperty = async (req, res) => {
       bathrooms,
       address,
       colonia,
+      fraccionamiento,
       auctionDate,
       acquisitionStage,
       isFeatured,
@@ -304,6 +307,7 @@ const createProperty = async (req, res) => {
           bathrooms: nullIfEmpty(bathrooms),
           address,
           colonia,
+          fraccionamiento,
           auctionDate: auctionDate || null,
           acquisitionStage: acquisitionStage || 'sin_proceso',
           isFeatured: isFeatured || false,
@@ -373,6 +377,7 @@ const updateProperty = async (req, res) => {
       bathrooms,
       address,
       colonia,
+      fraccionamiento,
       auctionDate,
       acquisitionStage,
       isFeatured,
@@ -411,6 +416,7 @@ const updateProperty = async (req, res) => {
     if (bathrooms !== undefined) updates.bathrooms = nullIfEmpty(bathrooms);
     if (address !== undefined) updates.address = address;
     if (colonia !== undefined) updates.colonia = colonia;
+    if (fraccionamiento !== undefined) updates.fraccionamiento = fraccionamiento;
     if (auctionDate !== undefined) updates.auctionDate = auctionDate || null;
     if (acquisitionStage !== undefined)
       updates.acquisitionStage = acquisitionStage || 'sin_proceso';

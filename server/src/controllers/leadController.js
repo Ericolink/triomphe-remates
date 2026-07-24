@@ -8,6 +8,7 @@ const {
   Campaign,
   User,
   Deal,
+  Appointment,
 } = require('../models/index');
 
 // AUDIT-024: valores permitidos explícitos en vez de confiar solo en el ENUM de MySQL —
@@ -35,18 +36,62 @@ const VALID_CLOSE_REASONS = [
   'otro',
 ];
 const VALID_PAYMENT_METHODS = ['credito_hipotecario', 'contado'];
-// Motivos de contacto seleccionables para leads nuevos. 'informacion' sigue existiendo
-// en el ENUM de la base (leads históricos ya la tienen guardada) pero se excluye aquí a
-// propósito para que ya no pueda asignarse a leads nuevos — ver LEAD_TYPE_LABELS en
-// client/src/utils/constants.js.
+// Motivos de contacto seleccionables para leads nuevos. 'informacion' y
+// 'propiedades_similares' siguen existiendo en el ENUM de la base (leads históricos ya
+// los tienen guardados) pero se excluyen aquí a propósito para que ya no puedan asignarse
+// a leads nuevos — ver LEAD_TYPE_LABELS en client/src/utils/constants.js.
 const VALID_LEAD_TYPE = [
+  'comprar_propiedad',
+  'rentar_propiedad',
+  'vender_propiedad',
+  'invertir_remates',
   'contacto',
   'cita',
   'asesoria_financiera',
-  'propiedades_similares',
-  'vender_propiedad',
   'otro',
 ];
+
+// Horario comercial anunciado en ContactPage.jsx ("Lun - Vie: 9:00 AM - 6:00 PM") —
+// mismo rango que valida el formulario público "Contactar asesor" al elegir "Agendar cita".
+const APPOINTMENT_MIN_HOUR = 9;
+const APPOINTMENT_MAX_HOUR = 18;
+const APPOINTMENT_MIN_LEAD_MS = 24 * 60 * 60 * 1000;
+
+// No existe todavía un sistema de disponibilidad (el Appointment/Calendario es admin-only,
+// sin endpoint público de horarios ocupados) — esto valida solo las reglas de negocio
+// (24h de anticipación, horario/día hábil), no choques de horario entre citas. La hora se
+// lee directamente del string en vez de con Date#getHours() para no depender de la
+// zona horaria del proceso del servidor (que puede no coincidir con la de México).
+function validateAppointmentDate(appointmentDate) {
+  if (!appointmentDate) return { error: 'Fecha y hora de la cita son requeridas' };
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(appointmentDate);
+  if (!match) return { error: 'Fecha y hora de la cita inválidas' };
+
+  const [, year, month, day, hourStr] = match;
+  const hour = Number(hourStr);
+  const date = new Date(appointmentDate);
+  if (Number.isNaN(date.getTime())) return { error: 'Fecha y hora de la cita inválidas' };
+
+  if (hour < APPOINTMENT_MIN_HOUR || hour >= APPOINTMENT_MAX_HOUR) {
+    return {
+      error: `El horario debe estar entre las ${APPOINTMENT_MIN_HOUR}:00 AM y las ${APPOINTMENT_MAX_HOUR - 12}:00 PM`,
+    };
+  }
+
+  // Día de la semana calculado a partir de year/month/day como fecha local "naive"
+  // (mismo criterio que la hora, sin pasar por el huso horario del proceso).
+  const weekday = new Date(Number(year), Number(month) - 1, Number(day)).getDay();
+  if (weekday === 0 || weekday === 6) {
+    return { error: 'No se pueden agendar citas en fin de semana' };
+  }
+
+  if (date.getTime() - Date.now() < APPOINTMENT_MIN_LEAD_MS) {
+    return { error: 'La cita debe programarse con al menos 24 horas de anticipación' };
+  }
+
+  return { date };
+}
 
 // Normaliza forma de pago / monto disponible / fecha de primer contacto — usado tanto
 // por createLead como updateLead para no duplicar las reglas de validación.
@@ -166,6 +211,12 @@ const createLead = async (req, res) => {
       });
     }
 
+    const resolvedType = type || 'contacto';
+    if (resolvedType === 'cita') {
+      const { error: appointmentError } = validateAppointmentDate(appointmentDate);
+      if (appointmentError) return res.status(400).json({ error: appointmentError });
+    }
+
     const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);
     if (commercialError) return res.status(400).json({ error: commercialError });
 
@@ -192,7 +243,7 @@ const createLead = async (req, res) => {
           email: email || null,
           phone,
           message,
-          type: type || 'contacto',
+          type: resolvedType,
           source: source || 'directo',
           propertyId: propertyId || null,
           appointmentDate: appointmentDate || null,
@@ -209,6 +260,27 @@ const createLead = async (req, res) => {
         content: 'Prospecto creado',
         transaction,
       });
+
+      // "Agendar cita" crea también la Appointment que alimenta el Calendario admin —
+      // mismo patrón que appointmentController.createAppointment — para que la solicitud
+      // del formulario público quede visible ahí de inmediato, sin depender del
+      // Lead.appointmentDate deprecado (que solo se conserva para el email de confirmación).
+      if (resolvedType === 'cita') {
+        await Appointment.create(
+          {
+            leadId: created.id,
+            propertyId: propertyId || null,
+            scheduledAt: appointmentDate,
+          },
+          { transaction }
+        );
+        await logActivity({
+          leadId: created.id,
+          type: 'sistema',
+          content: `Cita agendada para ${new Date(appointmentDate).toLocaleString('es-MX')}`,
+          transaction,
+        });
+      }
 
       // Diferido hasta asignar: un prospecto público sin responsable no tiene "próxima
       // acción" todavía (ver CRM_UX_DESIGN.md / plan de Fase 1).

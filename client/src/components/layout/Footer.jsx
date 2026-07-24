@@ -1,6 +1,6 @@
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { WHATSAPP_NUMBER } from '../../utils/constants';
+import { WHATSAPP_NUMBER, OFFICES } from '../../utils/constants';
 import { toWhatsAppLink } from '../../utils/formatters';
 
 const FacebookIcon = () => (
@@ -22,26 +22,6 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
-// TODO: reemplazar los datos de Chihuahua con la información real de la oficina.
-const OFFICES = [
-  {
-    city: 'Ciudad Juárez',
-    cityLabel: 'Cd. Juárez, Chih.',
-    phone: '+52 (656) 579-2750',
-    email: 't.bienesraicesmx@gmail.com',
-    street: 'Av. Paseo Triunfo de la República 215-INT 24',
-    location: 'San Lorenzo, 32320 Juárez, Chih.',
-  },
-  {
-    city: 'Chihuahua',
-    cityLabel: 'Chihuahua, Chih.',
-    phone: 'Próximamente',
-    email: 'Próximamente',
-    street: 'Próximamente',
-    location: 'Chihuahua, Chih.',
-  },
-];
-
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const socialLinks = [
@@ -56,7 +36,7 @@ export default function Footer() {
 
   return (
     <footer className="bg-blue-900 text-white mt-20">
-      <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         <div>
           <img
             src="/logo.png"
@@ -102,61 +82,40 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-        <div>
-          <h4 className="font-semibold text-yellow-400 mb-4">Ciudades</h4>
-          <ul className="space-y-2 text-gray-300 text-sm">
-            {[
-              { label: 'Cd. Juárez, Chih.', city: 'juarez' },
-              { label: 'Chihuahua, Chih.', city: 'chihuahua' },
-              { label: 'Querétaro, Qro.', city: 'queretaro' },
-            ].map(({ label, city }) => (
-              <li key={city}>
-                <Link
-                  to={`/propiedades?city=${city}`}
-                  className="flex items-center gap-1.5 hover:text-yellow-400 transition-colors"
-                >
-                  <MapPin size={13} /> {label}
-                </Link>
+        {OFFICES.map(({ city, cityLabel, phone, email, street, location }) => (
+          <div key={city}>
+            <h4 className="font-semibold text-yellow-400 mb-4">Contacto {city}</h4>
+            <ul className="space-y-3 text-gray-300 text-sm">
+              <li className="flex items-center gap-2">
+                <Phone size={14} className="flex-shrink-0" />
+                <span>{phone}</span>
               </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 pb-12 border-t border-blue-800 pt-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-          {OFFICES.map(({ city, cityLabel, phone, email, street, location }) => (
-            <div key={city}>
-              <h4 className="font-semibold text-yellow-400 mb-4">Contacto {city}</h4>
-              <ul className="space-y-3 text-gray-300 text-sm">
-                <li className="flex items-center gap-2">
-                  <Phone size={14} className="flex-shrink-0" />
-                  <span>{phone}</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Mail size={14} className="flex-shrink-0" />
-                  {email.includes('@') ? (
-                    <a href={`mailto:${email}`} className="hover:text-yellow-400 transition-colors">
-                      {email}
-                    </a>
-                  ) : (
-                    <span>{email}</span>
-                  )}
-                </li>
-                <li className="flex items-start gap-2">
-                  <MapPin size={14} className="flex-shrink-0 mt-0.5" />
-                  <span>{cityLabel}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <MapPin size={14} className="flex-shrink-0 mt-0.5" />
-                  <span>
-                    {street}, {location}
-                  </span>
-                </li>
-              </ul>
-            </div>
-          ))}
-        </div>
+              <li className="flex items-center gap-2 min-w-0">
+                <Mail size={14} className="flex-shrink-0" />
+                {email.includes('@') ? (
+                  <a
+                    href={`mailto:${email}`}
+                    className="hover:text-yellow-400 transition-colors break-words"
+                  >
+                    {email}
+                  </a>
+                ) : (
+                  <span>{email}</span>
+                )}
+              </li>
+              <li className="flex items-start gap-2">
+                <MapPin size={14} className="flex-shrink-0 mt-0.5" />
+                <span>{cityLabel}</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <MapPin size={14} className="flex-shrink-0 mt-0.5" />
+                <span>
+                  {street}, {location}
+                </span>
+              </li>
+            </ul>
+          </div>
+        ))}
       </div>
       <div className="border-t border-blue-800 py-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">

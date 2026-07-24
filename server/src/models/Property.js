@@ -67,6 +67,10 @@ const Property = sequelize.define(
       type: DataTypes.STRING(150),
       allowNull: true,
     },
+    fraccionamiento: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+    },
     auctionDate: {
       type: DataTypes.DATE,
       allowNull: true,

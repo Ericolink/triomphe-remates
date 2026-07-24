@@ -34,9 +34,9 @@ const Lead = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    // 'informacion' ("Información del remate") ya no es un motivo seleccionable en
+    // 'informacion' y 'propiedades_similares' ya no son motivos seleccionables en
     // formularios nuevos (ver ContactForm.jsx / VALID_LEAD_TYPE en leadController) — se
-    // conserva en el ENUM únicamente para no romper leads históricos que ya lo tenían.
+    // conservan en el ENUM únicamente para no romper leads históricos que ya los tenían.
     type: {
       type: DataTypes.ENUM(
         'contacto',
@@ -45,7 +45,10 @@ const Lead = sequelize.define(
         'asesoria_financiera',
         'propiedades_similares',
         'vender_propiedad',
-        'otro'
+        'otro',
+        'comprar_propiedad',
+        'rentar_propiedad',
+        'invertir_remates'
       ),
       defaultValue: 'contacto',
     },

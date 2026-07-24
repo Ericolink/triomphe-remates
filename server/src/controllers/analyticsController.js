@@ -107,13 +107,16 @@ const getDashboard = async (req, res) => {
     }));
 
     const leadsByType = [
+      'comprar_propiedad',
+      'rentar_propiedad',
+      'vender_propiedad',
+      'invertir_remates',
       'contacto',
       'cita',
-      'informacion',
       'asesoria_financiera',
-      'propiedades_similares',
-      'vender_propiedad',
       'otro',
+      'informacion',
+      'propiedades_similares',
     ].map((type) => ({
       type,
       total: parseInt(leadsByTypeRaw.find((r) => r.type === type)?.total || 0),

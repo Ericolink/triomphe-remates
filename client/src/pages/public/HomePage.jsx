@@ -56,7 +56,7 @@ export default function HomePage() {
     <div>
       <SEO
         title="Remates Bancarios en México"
-        description="Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos hasta 40% por debajo del valor comercial."
+        description="Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos del 30% al 70% por debajo del valor comercial."
         url="/"
       />
 
@@ -76,7 +76,7 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 bg-yellow-400 text-blue-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
             >
               <TrendingDown size={16} />
-              Precios hasta 40% por debajo del mercado
+              Precios del 30% al 70% por debajo del mercado.
             </motion.div>
 
             <motion.h1
@@ -88,8 +88,17 @@ export default function HomePage() {
               <span className="text-yellow-400">en México</span>
             </motion.h1>
 
-            <motion.p variants={fadeInUp} className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
-              Encuentra propiedades a precios de remate en Chihuahua, Ciudad Juárez y Querétaro.
+            <motion.p variants={fadeInUp} className="text-xl text-blue-100 mb-3 max-w-2xl mx-auto">
+              Encuentra propiedades a precios de remate en Chihuahua, Ciudad Juárez y Querétaro. Has
+              llegado al lugar correcto para hacer crecer tus inversiones, con más de 28 años de
+              experiencia a nivel nacional.
+            </motion.p>
+
+            <motion.p
+              variants={fadeInUp}
+              className="text-lg font-semibold text-yellow-300 mb-10 max-w-2xl mx-auto"
+            >
+              Contamos con inventario a nivel nacional.
             </motion.p>
 
             <motion.form
@@ -145,7 +154,7 @@ export default function HomePage() {
           {[
             { label: 'Propiedades activas', value: stats?.total ? `${stats.total}+` : '...' },
             { label: 'Ciudades', value: '3' },
-            { label: 'Años de experiencia', value: '27+' },
+            { label: 'Inventario disponible en todo México.', value: 'Nacional' },
             { label: 'Clientes satisfechos', value: '500+' },
           ].map(({ label, value }) => (
             <motion.div key={label} variants={fadeInUp} className="text-blue-900">
@@ -236,7 +245,7 @@ export default function HomePage() {
               {
                 icon: <TrendingDown size={32} className="text-yellow-500" />,
                 title: 'Precios de Remate',
-                desc: 'Propiedades hasta un 40% más baratas que el valor comercial. La mejor inversión del mercado.',
+                desc: 'Propiedades del 30% al 70% más baratas que el valor comercial. La mejor inversión del mercado.',
               },
               {
                 icon: <Shield size={32} className="text-yellow-500" />,

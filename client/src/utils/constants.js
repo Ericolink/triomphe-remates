@@ -1,5 +1,27 @@
 export const WHATSAPP_NUMBER = '526565792750';
 
+// Oficinas físicas de Triomphe — fuente única de verdad para Footer.jsx y ContactPage.jsx
+// (antes vivía solo en Footer.jsx). TODO: reemplazar los datos de Chihuahua con la
+// información real de la oficina.
+export const OFFICES = [
+  {
+    city: 'Ciudad Juárez',
+    cityLabel: 'Cd. Juárez, Chih.',
+    phone: '+52 (656) 579-2750',
+    email: 't.bienesraicesmx@gmail.com',
+    street: 'Av. Paseo Triunfo de la República 215-INT 24',
+    location: 'San Lorenzo, 32320 Juárez, Chih.',
+  },
+  {
+    city: 'Chihuahua',
+    cityLabel: 'Chihuahua, Chih.',
+    phone: 'Próximamente',
+    email: 'Próximamente',
+    street: 'Próximamente',
+    location: 'Chihuahua, Chih.',
+  },
+];
+
 // Convierte un mapa de labels (CITY_LABELS, TYPE_LABELS, etc.) en opciones para <select>,
 // preservando el orden de inserción y excluyendo claves que no aplican como filtro.
 export const labelsToOptions = (labels, exclude = []) =>
@@ -43,12 +65,16 @@ export const STATUS_VARIANTS = {
   vendido: 'danger',
 };
 
-// Categoría comercial de la propiedad — distinta del `status` (disponible/apartado/vendido)
+// Categoría comercial de la propiedad — distinta del `status` (disponible/apartado/vendido).
+// Las claves internas (compra_venta_credito/compra_venta_contado) se conservan tal cual desde
+// la migración 20260723000001; solo el texto visible se actualizó a la nomenclatura de negocio
+// "Compra venta remates" / "Compra venta Infonavit" (ver filtro de categoría en PropertiesPage
+// y AdminPropertiesPage).
 export const CATEGORY_LABELS = {
-  remate: 'Remate',
+  remate: 'Remates',
   renta: 'Renta',
-  compra_venta_credito: 'Compra venta (Crédito)',
-  compra_venta_contado: 'Compra venta (Contado)',
+  compra_venta_credito: 'Compra venta remates',
+  compra_venta_contado: 'Compra venta Infonavit',
 };
 
 // Mapeadas a las 5 variantes que soporta Badge, mismo criterio que STATUS_VARIANTS
@@ -96,19 +122,25 @@ export const ACQUISITION_STAGE_LABELS = {
   entrega: 'Entrega',
 };
 
-// AUDIT-012: estaba duplicado idénticamente en LeadsPage.jsx y CalendarPage.jsx
-// 'informacion' ("Información del remate") ya no es un motivo seleccionable en
-// formularios nuevos — se conserva aquí solo para mostrar correctamente el motivo de
-// leads históricos que ya lo tenían guardado (ver labelsToOptions(..., ['informacion'])
+// AUDIT-012: estaba duplicado idénticamente en LeadsPage.jsx y CalendarPage.jsx.
+// Motivos de contacto del formulario público "Contactar asesor" — 'contacto' y 'cita'
+// conservan sus claves porque siguen disparando lógica (defaultValue del modelo Lead y
+// la UI/flujo de agendar cita respectivamente, ver ContactForm.jsx y leadController.js).
+// 'informacion' y 'propiedades_similares' ya no son motivos seleccionables en formularios
+// nuevos — se conservan aquí solo para mostrar correctamente el motivo de leads históricos
+// que ya los tenían guardados (ver labelsToOptions(..., ['informacion', 'propiedades_similares'])
 // en ContactForm.jsx).
 export const LEAD_TYPE_LABELS = {
-  contacto: 'Solicitar información',
-  cita: 'Agendar cita',
-  asesoria_financiera: 'Solicitar asesoría financiera',
-  propiedades_similares: 'Conocer propiedades similares',
-  vender_propiedad: 'Quiero vender mi propiedad',
+  comprar_propiedad: 'Quiero comprar una propiedad',
+  rentar_propiedad: 'Quiero rentar una propiedad',
+  vender_propiedad: 'Quiero vender una propiedad',
+  invertir_remates: 'Quiero invertir en remates bancarios',
+  contacto: 'Solicitar información de una propiedad',
+  cita: 'Agendar una cita con un asesor',
+  asesoria_financiera: 'Solicitar asesoría inmobiliaria',
   otro: 'Otro',
   informacion: 'Información del remate',
+  propiedades_similares: 'Conocer propiedades similares',
 };
 
 export const SOURCE_LABELS = {

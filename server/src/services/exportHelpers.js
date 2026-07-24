@@ -108,10 +108,11 @@ const buildExcelHeader = async ({ workbook, sheet, headers, title, subtitle }) =
 };
 
 const getFilteredProperties = async (query) => {
-  const { city, type, status } = query;
+  const { city, type, category, status } = query;
   const where = {};
   if (city) where.city = city;
   if (type) where.type = type;
+  if (category) where.category = category;
   if (status) where.status = status;
 
   return Property.findAll({

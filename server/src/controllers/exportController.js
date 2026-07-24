@@ -5,6 +5,8 @@ const {
   CITY_LABEL: cityLabel,
   PROPERTY_TYPE_LABEL: typeLabel,
   STATUS_LABEL: statusLabel,
+  CITY_STATE_LABEL: stateLabel,
+  LEAD_TYPE_LABEL: leadTypeLabel,
 } = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
 
@@ -27,6 +29,7 @@ const {
   COMPANY_PHONE,
   COMPANY_WHATSAPP,
   COMPANY_EMAIL,
+  COMPANY_ADDRESS,
 } = require('../services/exportBranding');
 const {
   formatPrice,
@@ -472,17 +475,6 @@ const exportFeedbackExcel = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCEL — Leads
 // ─────────────────────────────────────────────────────────────────────────────
-// 'informacion' se conserva solo para leads históricos — ya no es un motivo seleccionable
-// (ver LEAD_TYPE_LABELS en client/src/utils/constants.js).
-const leadTypeLabel = {
-  contacto: 'Solicitar información',
-  cita: 'Agendar cita',
-  asesoria_financiera: 'Solicitar asesoría financiera',
-  propiedades_similares: 'Conocer propiedades similares',
-  vender_propiedad: 'Quiero vender mi propiedad',
-  otro: 'Otro',
-  informacion: 'Información del remate',
-};
 const leadStatusLabel = {
   nuevo: 'Nuevo',
   contactado: 'Contactado',
@@ -622,6 +614,97 @@ const exportLeadsExcel = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // PDF — Cotización / ficha de propiedad
 // ─────────────────────────────────────────────────────────────────────────────
+// Bloque de fondo BG_ALT con filas label:value en cuadrícula — comparten el mismo
+// lenguaje visual "Ubicación"/"Características" en vez de las pastillas de ancho
+// variable de antes (se envolvían de forma impredecible y desperdiciaban ancho).
+// `rows` ya debe venir filtrado (sin entradas vacías) — el orden se preserva tal cual
+// al recorrer la cuadrícula fila por fila, columna por columna.
+const drawInfoBox = (doc, { x, y, width, title, rows, columns }) => {
+  if (!rows.length) return y;
+
+  const PAD = 10;
+  const ROW_H = 28;
+  const TITLE_H = 18;
+  const gridRows = Math.ceil(rows.length / columns);
+  const colWidth = (width - PAD * 2) / columns;
+  const boxH = PAD * 2 + TITLE_H + gridRows * ROW_H;
+
+  doc.roundedRect(x, y, width, boxH, 8).fill(BG_ALT);
+  doc
+    .fillColor(ACCENT)
+    .fontSize(11)
+    .font('Helvetica-Bold')
+    .text(title.toUpperCase(), x + PAD, y + PAD - 2, { characterSpacing: 0.4 });
+
+  rows.forEach((row, i) => {
+    const col = i % columns;
+    const gridRow = Math.floor(i / columns);
+    const cx = x + PAD + col * colWidth;
+    const cy = y + PAD + TITLE_H + gridRow * ROW_H;
+    doc
+      .fillColor('#6b7280')
+      .fontSize(8)
+      .font('Helvetica-Bold')
+      .text(row.label.toUpperCase(), cx, cy, {
+        width: colWidth - 10,
+        characterSpacing: 0.3,
+        lineBreak: false,
+      });
+    doc
+      .fillColor(TEXT)
+      .fontSize(11)
+      .font('Helvetica')
+      .text(row.value, cx, cy + 12, { width: colWidth - 10, ellipsis: true, lineBreak: false });
+  });
+
+  return y + boxH + 10;
+};
+
+// Pie institucional — se dibuja en CADA página (antes solo aparecía en la última, si la
+// descripción larga de una propiedad forzaba un salto de página, la primera se quedaba
+// sin datos de contacto). Dos columnas para aprovechar el ancho completo del pie.
+const drawQuoteFooter = (doc, PW, MX, FOOTER_H) => {
+  const top = doc.page.height - FOOTER_H;
+  const colW = (PW - MX * 2) / 2;
+
+  doc.rect(0, top, PW, FOOTER_H).fill(PRIMARY);
+
+  doc
+    .fillColor(ACCENT)
+    .fontSize(11)
+    .font('Helvetica-Bold')
+    .text('¿Te interesa esta propiedad? Contáctanos:', MX, top + 14, { width: colW });
+  doc
+    .fillColor('white')
+    .fontSize(9.5)
+    .font('Helvetica')
+    .text(`Tel / WhatsApp: ${COMPANY_PHONE}`, MX, top + 34, { width: colW })
+    .text(`Email: ${COMPANY_EMAIL}`, MX, top + 50, { width: colW });
+
+  doc
+    .fillColor(ACCENT)
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .text('Oficinas', MX + colW, top + 14, { width: colW });
+  doc
+    .fillColor('white')
+    .fontSize(9)
+    .font('Helvetica')
+    .text(COMPANY_ADDRESS, MX + colW, top + 30, { width: colW, lineGap: 1 })
+    .text(`https://wa.me/${COMPANY_WHATSAPP}`, MX + colW, top + 58, { width: colW });
+
+  doc
+    .fillColor(ACCENT)
+    .fontSize(7)
+    .font('Helvetica')
+    .text(
+      '© Triomphe Bienes Raíces — Documento informativo. Precio e información sujetos a cambios sin previo aviso.',
+      MX,
+      doc.page.height - 14,
+      { width: PW - MX * 2, align: 'center' }
+    );
+};
+
 const exportPropertyQuotePDF = async (req, res) => {
   try {
     const property = await Property.findByPk(req.params.id, {
@@ -646,6 +729,7 @@ const exportPropertyQuotePDF = async (req, res) => {
 
     const PW = doc.page.width;
     const MX = 40;
+    const FOOTER_H = 100;
 
     // Encabezado
     doc.rect(0, 0, PW, 88).fill(PRIMARY);
@@ -674,7 +758,7 @@ const exportPropertyQuotePDF = async (req, res) => {
     const coverImage = property.images?.find((i) => i.isCover) || property.images?.[0];
     const coverUrl = coverImage?.url;
     const imgBuf = await getImageBuffer(coverUrl);
-    const IMG_H = 240;
+    const IMG_H = 210;
     if (imgBuf) {
       try {
         // doc.image con `cover` solo calcula el escalado, no recorta — hay que
@@ -700,7 +784,7 @@ const exportPropertyQuotePDF = async (req, res) => {
         .font('Helvetica')
         .text('Sin imagen disponible', 0, y + IMG_H / 2 - 6, { width: PW, align: 'center' });
     }
-    y += IMG_H + 24;
+    y += IMG_H + 20;
 
     // Estatus + título + precio
     doc.roundedRect(MX, y, 90, 22, 11).fill(statusHex[property.status] || PRIMARY);
@@ -727,88 +811,76 @@ const exportPropertyQuotePDF = async (req, res) => {
     const cleanTitle = stripUnsupported(property.title);
     doc
       .fillColor(PRIMARY)
-      .fontSize(20)
+      .fontSize(22)
       .font('Helvetica-Bold')
       .text(cleanTitle, MX, y + 34, { width: PW - MX * 2 });
 
-    const titleHeight = doc.heightOfString(cleanTitle, { width: PW - MX * 2, fontSize: 20 });
-    y += 34 + titleHeight + 10;
-
-    doc
-      .fillColor('#6b7280')
-      .fontSize(10)
-      .font('Helvetica')
-      .text(
-        `${cityLabel[property.city] || property.city}  ·  ${typeLabel[property.type] || property.type}${property.address ? `  ·  ${stripUnsupported(property.address)}` : ''}`,
-        MX,
-        y,
-        { width: PW - MX * 2 }
-      );
-    y += 22;
+    const titleHeight = doc.heightOfString(cleanTitle, { width: PW - MX * 2, fontSize: 22 });
+    y += 34 + titleHeight + 8;
 
     doc
       .fillColor(ACCENT)
-      .fontSize(26)
+      .fontSize(28)
       .font('Helvetica-Bold')
       .text(formatPrice(property.price), MX, y);
-    y += 44;
+    y += 34;
+
+    // Ubicación — orden fijo Estado → Ciudad → Fraccionamiento → Colonia → Calle; se
+    // omiten las filas sin dato (ej. propiedades antiguas sin fraccionamiento capturado).
+    const locationRows = [
+      { label: 'Estado', value: stateLabel[property.city] },
+      { label: 'Ciudad', value: cityLabel[property.city] || property.city },
+      { label: 'Fraccionamiento', value: stripUnsupported(property.fraccionamiento) },
+      { label: 'Colonia', value: stripUnsupported(property.colonia) },
+      { label: 'Calle', value: stripUnsupported(property.address) },
+    ].filter((row) => row.value);
+
+    y = drawInfoBox(doc, {
+      x: MX,
+      y,
+      width: PW - MX * 2,
+      title: 'Ubicación',
+      rows: locationRows,
+      columns: 2,
+    });
 
     // Características
-    const features = [
-      property.terrainMeters ? `${property.terrainMeters} m² de terreno` : null,
-      property.constructionMeters ? `${property.constructionMeters} m² de construcción` : null,
-      !property.terrainMeters && !property.constructionMeters && property.squareMeters
-        ? `${property.squareMeters} m²`
+    const featureRows = [
+      { label: 'Tipo', value: typeLabel[property.type] || property.type },
+      property.terrainMeters
+        ? { label: 'M² terreno', value: `${property.terrainMeters} m²` }
         : null,
-      property.bedrooms ? `${property.bedrooms} recámaras` : null,
-      property.bathrooms ? `${property.bathrooms} baños` : null,
+      property.constructionMeters
+        ? { label: 'M² construcción', value: `${property.constructionMeters} m²` }
+        : null,
+      !property.terrainMeters && !property.constructionMeters && property.squareMeters
+        ? { label: 'M²', value: `${property.squareMeters} m²` }
+        : null,
+      property.bedrooms ? { label: 'Recámaras', value: String(property.bedrooms) } : null,
+      property.bathrooms ? { label: 'Baños', value: String(property.bathrooms) } : null,
     ].filter(Boolean);
 
-    if (features.length) {
-      doc
-        .moveTo(MX, y)
-        .lineTo(PW - MX, y)
-        .strokeColor('#e5e7eb')
-        .lineWidth(1)
-        .stroke();
-      y += 16;
-      let fx = MX;
-      features.forEach((f) => {
-        const w = doc.widthOfString(f, { fontSize: 10 }) + 28;
-        doc.roundedRect(fx, y, w, 24, 12).fill(BG_ALT);
-        doc
-          .fillColor(TEXT)
-          .fontSize(10)
-          .font('Helvetica')
-          .text(f, fx + 14, y + 7);
-        fx += w + 10;
-        if (fx > PW - MX - 100) {
-          fx = MX;
-          y += 32;
-        }
-      });
-      y += 40;
-    }
+    y = drawInfoBox(doc, {
+      x: MX,
+      y,
+      width: PW - MX * 2,
+      title: 'Características',
+      rows: featureRows,
+      columns: 3,
+    });
 
     // Descripción
-    const FOOTER_H = 86;
     if (property.description) {
       const cleanDesc = stripUnsupported(property.description);
       const descW = PW - MX * 2;
-      doc
-        .moveTo(MX, y)
-        .lineTo(PW - MX, y)
-        .strokeColor('#e5e7eb')
-        .lineWidth(1)
-        .stroke();
-      y += 16;
       doc.fillColor(PRIMARY).fontSize(12).font('Helvetica-Bold').text('Descripción', MX, y);
       y += 18;
 
       // Set the body font before measuring — heightOfString uses the current doc font
-      doc.font('Helvetica').fontSize(10);
-      const descH = doc.heightOfString(cleanDesc, { width: descW, lineGap: 2 });
+      doc.font('Helvetica').fontSize(10.5);
+      const descH = doc.heightOfString(cleanDesc, { width: descW, lineGap: 2.2 });
       if (y + descH + FOOTER_H + 12 > doc.page.height) {
+        drawQuoteFooter(doc, PW, MX, FOOTER_H);
         doc.addPage({ size: 'A4', margin: 0 });
         doc.rect(0, 0, PW, 32).fill(PRIMARY);
         doc
@@ -821,35 +893,12 @@ const exportPropertyQuotePDF = async (req, res) => {
 
       doc
         .fillColor(TEXT)
-        .fontSize(10)
+        .fontSize(10.5)
         .font('Helvetica')
-        .text(cleanDesc, MX, y, { width: descW, align: 'justify', lineGap: 2 });
+        .text(cleanDesc, MX, y, { width: descW, align: 'justify', lineGap: 2.2 });
     }
 
-    // Pie de página — contacto
-    doc.rect(0, doc.page.height - FOOTER_H, PW, FOOTER_H).fill(PRIMARY);
-    doc
-      .fillColor(ACCENT)
-      .fontSize(11)
-      .font('Helvetica-Bold')
-      .text('¿Te interesa esta propiedad? Contáctanos:', MX, doc.page.height - FOOTER_H + 16);
-    doc
-      .fillColor('white')
-      .fontSize(9.5)
-      .font('Helvetica')
-      .text(`Tel / WhatsApp: ${COMPANY_PHONE}`, MX, doc.page.height - FOOTER_H + 38)
-      .text(`Email: ${COMPANY_EMAIL}`, MX, doc.page.height - FOOTER_H + 54)
-      .text(`https://wa.me/${COMPANY_WHATSAPP}`, MX, doc.page.height - FOOTER_H + 70);
-    doc
-      .fillColor(ACCENT)
-      .fontSize(7)
-      .font('Helvetica')
-      .text(
-        '© Triomphe Bienes Raíces — Documento informativo. Precio e información sujetos a cambios sin previo aviso.',
-        MX,
-        doc.page.height - 16,
-        { width: PW - MX * 2, align: 'right' }
-      );
+    drawQuoteFooter(doc, PW, MX, FOOTER_H);
 
     doc.end();
   } catch (error) {

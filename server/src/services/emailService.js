@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
-const { CITY_LABEL, PROPERTY_TYPE_LABEL } = require('../utils/labels');
+const { CITY_LABEL, PROPERTY_TYPE_LABEL, LEAD_TYPE_LABEL: typeLabel } = require('../utils/labels');
 
 const getLogoAttachment = async () => {
   const candidates = [
@@ -80,15 +80,6 @@ const buildEmail = ({ title, subtitle, badge = '', body, cta = '', footerNote = 
   </html>
 `;
 
-const typeLabel = {
-  contacto: 'Solicitud de información',
-  cita: 'Agendar cita',
-  asesoria_financiera: 'Solicitud de asesoría financiera',
-  propiedades_similares: 'Propiedades similares',
-  vender_propiedad: 'Quiere vender su propiedad',
-  otro: 'Otro',
-  informacion: 'Información del remate',
-};
 const expLabel = {
   sin_experiencia: 'Sin experiencia',
   menos_1_año: 'Menos de 1 año',
