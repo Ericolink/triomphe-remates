@@ -101,9 +101,7 @@ function useColumnLeads(stageKey, filters) {
         assignedToUserId: filters.assignedToUserId || undefined,
       }),
     getNextPageParam: (lastPage) =>
-      lastPage.pagination.page < lastPage.pagination.totalPages
-        ? lastPage.pagination.page + 1
-        : undefined,
+      lastPage.pagination.hasNext ? lastPage.pagination.page + 1 : undefined,
     initialPageParam: 1,
   });
 }

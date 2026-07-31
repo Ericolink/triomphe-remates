@@ -3,35 +3,24 @@ const { sequelize, Lead, Task, User } = require('../models/index');
 const { TERMINAL_STAGES, logActivity, ensureOpenTask } = require('../utils/pipelineHelpers');
 const { logAudit } = require('../utils/audit');
 const { MAX_BATCH_IDS } = require('../utils/batchValidation');
+const { paginate } = require('../utils/pagination');
 
 // GET /api/tasks — filtros para el panel "seguimientos vencidos" y para pintar la
 // "próxima acción" en cada tarjeta del Kanban (leadIds CSV + done=false)
-// AUDIT: llamado sin `leadIds` (widget "Seguimientos vencidos" del Dashboard) el
-// `findAll` no tenía tope — crece indefinidamente con la vida del negocio. `limit` es
-// opcional y aditivo: si no se manda, el comportamiento es idéntico al de siempre (no
-// rompe a Kanban/detalle de lead, que dependen de recibir *todas* las tareas de su lote
-// acotado de `leadIds`, ya limitado por MAX_BATCH_IDS).
+// AUDIT: sin `leadIds` (widget "Seguimientos vencidos" del Dashboard, o cualquier otro
+// caller futuro) siempre pagina — el tope ya no depende de que el caller recuerde pasar
+// `limit`. La rama `leadIds` sigue sin paginar a propósito: Kanban/detalle de lead
+// necesitan *todas* las tareas de su lote acotado de leadIds (ya limitado por
+// MAX_BATCH_IDS), no una página de ellas.
 const getTasks = async (req, res) => {
   try {
-    const { assignedToUserId, done, overdue, leadIds, limit } = req.query;
+    const { assignedToUserId, done, overdue, leadIds, page, limit } = req.query;
     const where = {};
     if (assignedToUserId) where.assignedToUserId = assignedToUserId;
     if (done !== undefined) where.done = done === 'true';
     if (overdue === 'true') {
       where.done = false;
       where.dueDate = { [Op.lt]: new Date() };
-    }
-    if (leadIds) {
-      const parsedLeadIds = leadIds
-        .split(',')
-        .map((id) => parseInt(id, 10))
-        .filter(Boolean);
-      if (parsedLeadIds.length > MAX_BATCH_IDS) {
-        return res
-          .status(400)
-          .json({ error: `No se pueden consultar más de ${MAX_BATCH_IDS} leadIds por solicitud` });
-      }
-      where.leadId = { [Op.in]: parsedLeadIds };
     }
 
     const queryOptions = {
@@ -42,15 +31,24 @@ const getTasks = async (req, res) => {
       ],
       order: [['dueDate', 'ASC']],
     };
-    const limitNum = limit ? parseInt(limit, 10) : undefined;
-    if (limitNum) queryOptions.limit = limitNum;
 
-    const [tasks, total] = await Promise.all([
-      Task.findAll(queryOptions),
-      limitNum ? Task.count({ where }) : null,
-    ]);
+    if (leadIds) {
+      const parsedLeadIds = leadIds
+        .split(',')
+        .map((id) => parseInt(id, 10))
+        .filter(Boolean);
+      if (parsedLeadIds.length > MAX_BATCH_IDS) {
+        return res
+          .status(400)
+          .json({ error: `No se pueden consultar más de ${MAX_BATCH_IDS} leadIds por solicitud` });
+      }
+      queryOptions.where = { ...where, leadId: { [Op.in]: parsedLeadIds } };
+      const tasks = await Task.findAll(queryOptions);
+      return res.json({ data: tasks });
+    }
 
-    return res.json({ data: tasks, total: total ?? tasks.length });
+    const result = await paginate(Task, { page, limit, ...queryOptions });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getTasks:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

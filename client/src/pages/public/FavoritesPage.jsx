@@ -8,6 +8,7 @@ import UnavailablePropertyCard from '../../components/ui/UnavailablePropertyCard
 import SyncStatusBar from '../../components/ui/SyncStatusBar';
 import SEO from '../../components/ui/SEO';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import WhatsAppButton from '../../components/ui/WhatsAppButton';
 import { useState } from 'react';
 import { fadeInUp, staggerContainer } from '../../utils/animations';
 
@@ -94,6 +95,30 @@ export default function FavoritesPage() {
               )}
             </motion.div>
           ))}
+        </motion.div>
+      )}
+
+      {count > 0 && (
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="mt-12 rounded-2xl bg-primary-900 dark:bg-primary-950 px-6 py-10 sm:px-12 text-center"
+        >
+          <h2 className="text-2xl font-bold text-white mb-3">
+            ¿Encontraste una propiedad que te interesa?
+          </h2>
+          <p className="text-primary-100 dark:text-gray-300 max-w-xl mx-auto mb-6">
+            Nuestro equipo puede ayudarte a resolver tus dudas, brindarte más información y
+            acompañarte durante todo el proceso de compra. Contáctanos y recibe atención
+            personalizada.
+          </p>
+          <WhatsAppButton
+            message="Hola, encontré algunas propiedades en mis favoritos y me gustaría recibir más información."
+            label="Hablar por WhatsApp"
+            className="inline-flex w-auto mx-auto px-8 py-4 text-base"
+          />
         </motion.div>
       )}
 

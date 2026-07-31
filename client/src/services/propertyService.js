@@ -98,13 +98,13 @@ export const trackShare = async (id) => {
 
 export const getDocuments = async (id) => {
   const { data } = await api.get(`/properties/${id}/documents`);
-  return data;
+  return data.data;
 };
 
 // AUDIT-007: panel admin necesita ver también los documentos privados
 export const getAllDocuments = async (id) => {
   const { data } = await api.get(`/properties/${id}/documents/all`);
-  return data;
+  return data.data;
 };
 
 export const uploadDocument = async (id, file, name, isPublic = true) => {

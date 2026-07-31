@@ -23,7 +23,7 @@ export default function AlertsAdminPage() {
     queryFn: ({ pageParam = 1 }) =>
       getAlerts({ isActive: isActiveFilter, page: pageParam, limit: ALERTS_PAGE_SIZE }),
     getNextPageParam: (lastPage) =>
-      lastPage.pagination.page < lastPage.pagination.totalPages
+      lastPage.pagination.hasNext
         ? lastPage.pagination.page + 1
         : undefined,
     initialPageParam: 1,

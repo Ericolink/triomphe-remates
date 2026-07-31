@@ -2,14 +2,18 @@ const { Op } = require('sequelize');
 const { sequelize, Lead, Property, Appointment } = require('../models/index');
 const { logActivity, ensureOpenTask } = require('../utils/pipelineHelpers');
 const { logAudit } = require('../utils/audit');
+const { paginate } = require('../utils/pagination');
 
 const VALID_APPOINTMENT_STATUS = ['programada', 'confirmada', 'completada', 'no_show', 'cancelada'];
 
 // GET /api/appointments — alimenta el Calendario (reemplaza el filtro sobre
-// Lead.appointmentDate que usaba CalendarPage.jsx)
+// Lead.appointmentDate que usaba CalendarPage.jsx). AUDIT: antes tenía un `limit=500`
+// fijo sin devolver total/hasNext — un mes con más de 500 citas se truncaba en
+// silencio. `maxLimit: 500` conserva el mismo techo práctico pero ahora es honesto sobre
+// si se truncó (pagination.hasNext), en vez de simplemente no decir nada.
 const getAppointments = async (req, res) => {
   try {
-    const { from, to, status, leadId, limit = 500 } = req.query;
+    const { from, to, status, leadId, page, limit = 500 } = req.query;
     const where = {};
     if (status) where.status = status;
     if (leadId) where.leadId = leadId;
@@ -19,17 +23,19 @@ const getAppointments = async (req, res) => {
       if (to) where.scheduledAt[Op.lte] = new Date(to);
     }
 
-    const appointments = await Appointment.findAll({
+    const result = await paginate(Appointment, {
+      page,
+      limit,
+      maxLimit: 500,
       where,
       include: [
         { model: Lead, as: 'lead', attributes: ['id', 'name', 'phone', 'email'] },
         { model: Property, as: 'property', attributes: ['id', 'title'], required: false },
       ],
       order: [['scheduledAt', 'ASC']],
-      limit: parseInt(limit, 10) || 500,
     });
 
-    return res.json({ data: appointments });
+    return res.json(result);
   } catch (error) {
     console.error('Error en getAppointments:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });

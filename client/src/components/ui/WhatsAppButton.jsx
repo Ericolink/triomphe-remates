@@ -10,10 +10,21 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
-export default function WhatsAppButton({ title, priceLabel, url, className = '' }) {
-  const fullUrl = `${import.meta.env.VITE_SITE_URL || window.location.origin}${url}`;
-  const message = `Hola, me interesa esta propiedad: ${title}${priceLabel ? ` (${priceLabel})` : ''}\n${fullUrl}`;
-  const href = toWhatsAppLink(WHATSAPP_NUMBER, message);
+export default function WhatsAppButton({
+  title,
+  priceLabel,
+  url,
+  message,
+  label = 'Consultar por WhatsApp',
+  className = '',
+}) {
+  const resolvedMessage =
+    message ??
+    (() => {
+      const fullUrl = `${import.meta.env.VITE_SITE_URL || window.location.origin}${url}`;
+      return `Hola, me interesa esta propiedad: ${title}${priceLabel ? ` (${priceLabel})` : ''}\n${fullUrl}`;
+    })();
+  const href = toWhatsAppLink(WHATSAPP_NUMBER, resolvedMessage);
 
   return (
     <motion.a
@@ -24,7 +35,7 @@ export default function WhatsAppButton({ title, priceLabel, url, className = '' 
       whileTap={buttonTap}
       className={`flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-colors ${className}`}
     >
-      <WhatsAppIcon /> Consultar por WhatsApp
+      <WhatsAppIcon /> {label}
     </motion.a>
   );
 }

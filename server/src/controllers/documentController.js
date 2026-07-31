@@ -32,7 +32,7 @@ exports.getDocuments = async (req, res) => {
       where: { propertyId: req.params.id, isPublic: true },
       order: [['createdAt', 'ASC']],
     });
-    res.json(docs);
+    res.json({ data: docs });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener documentos' });
@@ -49,7 +49,7 @@ exports.getAllDocuments = async (req, res) => {
       where: { propertyId: req.params.id },
       order: [['createdAt', 'ASC']],
     });
-    res.json(docs);
+    res.json({ data: docs });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener documentos' });

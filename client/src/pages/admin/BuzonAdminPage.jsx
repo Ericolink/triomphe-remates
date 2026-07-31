@@ -68,9 +68,7 @@ export default function BuzonAdminPage() {
         limit: FEEDBACK_PAGE_SIZE,
       }),
     getNextPageParam: (lastPage) =>
-      lastPage.pagination.page < lastPage.pagination.totalPages
-        ? lastPage.pagination.page + 1
-        : undefined,
+      lastPage.pagination.hasNext ? lastPage.pagination.page + 1 : undefined,
     initialPageParam: 1,
   });
 

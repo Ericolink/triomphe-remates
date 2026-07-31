@@ -134,6 +134,10 @@ export default function CalendarioSection() {
       getAppointments({ from: monthStart.toISOString(), to: monthEnd.toISOString(), limit: 500 }),
   });
   const appointments = data?.data ?? [];
+  const appointmentsTotal = data?.pagination?.total ?? appointments.length;
+  // AUDIT: getAppointments ahora pagina (maxLimit: 500) en vez de truncar en silencio —
+  // si un mes tiene más citas de las que trae esta página, avisamos en vez de ocultarlo.
+  const appointmentsTruncated = Boolean(data?.pagination?.hasNext);
 
   const { data: upcomingData } = useQuery({
     queryKey: ['appointments-upcoming'],
@@ -193,7 +197,8 @@ export default function CalendarioSection() {
     <motion.div variants={fadeIn} initial="hidden" animate="visible" className="max-w-5xl mx-auto">
       <div className="mb-6">
         <p className="text-gray-500 dark:text-gray-400 text-sm">
-          {appointments.length} cita{appointments.length !== 1 ? 's' : ''} este mes
+          {appointmentsTotal} cita{appointmentsTotal !== 1 ? 's' : ''} este mes
+          {appointmentsTruncated && ' · no se muestran todas las citas de este rango'}
         </p>
       </div>
 

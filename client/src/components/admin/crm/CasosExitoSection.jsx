@@ -323,9 +323,7 @@ export default function CasosExitoSection() {
     queryFn: ({ pageParam = 1 }) =>
       getDeals({ page: pageParam, limit: DEALS_PAGE_SIZE, search: search || undefined }),
     getNextPageParam: (lastPage) =>
-      lastPage.pagination.page < lastPage.pagination.totalPages
-        ? lastPage.pagination.page + 1
-        : undefined,
+      lastPage.pagination.hasNext ? lastPage.pagination.page + 1 : undefined,
     initialPageParam: 1,
   });
   const deals = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);

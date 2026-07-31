@@ -1,5 +1,5 @@
-import { useId, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useId, useMemo, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -224,16 +224,28 @@ function buildFormData(form) {
   return formData;
 }
 
+const TESTIMONIALS_PAGE_SIZE = 20;
+
 export default function TestimonialsAdminPage() {
   const queryClient = useQueryClient();
   const [modal, setModal] = useState(null); // null | 'create' | testimonial
   const [statusFilter, setStatusFilter] = useState('');
   const [confirm, setConfirm] = useState(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['admin-testimonials', statusFilter],
-    queryFn: () => getAllTestimonials({ status: statusFilter || undefined, limit: 100 }),
+    queryFn: ({ pageParam = 1 }) =>
+      getAllTestimonials({
+        page: pageParam,
+        limit: TESTIMONIALS_PAGE_SIZE,
+        status: statusFilter || undefined,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasNext ? lastPage.pagination.page + 1 : undefined,
+    initialPageParam: 1,
   });
+  const testimonials = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+  const testimonialsTotal = data?.pages?.[0]?.pagination?.total ?? 0;
 
   const createMutation = useMutation({
     mutationFn: createTestimonial,
@@ -277,7 +289,7 @@ export default function TestimonialsAdminPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Testimonios</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            {data?.pagination?.total ?? 0} testimonios en total
+            {testimonialsTotal} testimonios en total
           </p>
         </div>
         <motion.button
@@ -315,7 +327,7 @@ export default function TestimonialsAdminPage() {
           initial="hidden"
           animate="visible"
         >
-          {data?.data?.map((testimonial) => (
+          {testimonials.map((testimonial) => (
             <motion.div
               key={testimonial.id}
               variants={fadeInUp}
@@ -372,9 +384,20 @@ export default function TestimonialsAdminPage() {
               </div>
             </motion.div>
           ))}
-          {data?.data?.length === 0 && (
+          {testimonials.length === 0 && (
             <div className="text-center py-16 text-gray-400 dark:text-gray-500">
               No hay testimonios. Crea el primero.
+            </div>
+          )}
+          {hasNextPage && (
+            <div className="flex justify-center mt-2">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-4 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 transition-colors"
+              >
+                {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+              </button>
             </div>
           )}
         </motion.div>

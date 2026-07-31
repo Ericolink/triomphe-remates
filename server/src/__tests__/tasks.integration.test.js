@@ -3,7 +3,7 @@ const app = require('../../app');
 const { sequelize, Task, Lead, User } = require('../models/index');
 const { createUser, authToken, createLead } = require('./helpers/factories');
 
-describe('GET /api/tasks — limit opcional (AUDIT: sin leadIds, findAll no tenía tope)', () => {
+describe('GET /api/tasks — pagina por contrato cuando no hay leadIds (AUDIT: antes findAll no tenía tope)', () => {
   let admin, token;
 
   beforeAll(async () => {
@@ -38,21 +38,39 @@ describe('GET /api/tasks — limit opcional (AUDIT: sin leadIds, findAll no ten�
     }
   };
 
-  test('sin `limit`, devuelve todas las tareas — comportamiento sin cambios para Kanban/detalle', async () => {
+  test('sin `limit`, pagina con el default (10) — 5 tareas caben todas en una página', async () => {
     await seedOverdueTasks(5);
 
     const res = await authed(request(app).get('/api/tasks?overdue=true'));
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(5);
-    expect(res.body.total).toBe(5);
+    expect(res.body.pagination.total).toBe(5);
+    expect(res.body.pagination.hasNext).toBe(false);
   });
 
-  test('con `limit`, trunca la respuesta pero `total` refleja el conteo real', async () => {
+  test('con `limit`, trunca la respuesta pero `pagination.total` refleja el conteo real', async () => {
     await seedOverdueTasks(8);
 
     const res = await authed(request(app).get('/api/tasks?overdue=true&limit=3'));
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(3);
-    expect(res.body.total).toBe(8);
+    expect(res.body.pagination.total).toBe(8);
+    expect(res.body.pagination.hasNext).toBe(true);
+  });
+
+  test('con `leadIds`, sigue sin paginar — Kanban/detalle necesitan todas las tareas del lote', async () => {
+    const lead = await createLead();
+    await Task.create({
+      leadId: lead.id,
+      type: 'dar_seguimiento',
+      dueDate: new Date(),
+      assignedToUserId: admin.id,
+      done: false,
+    });
+
+    const res = await authed(request(app).get(`/api/tasks?leadIds=${lead.id}`));
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.pagination).toBeUndefined();
   });
 });

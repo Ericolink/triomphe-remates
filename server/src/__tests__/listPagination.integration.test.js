@@ -1,7 +1,7 @@
 const request = require('supertest');
 const app = require('../../app');
-const { sequelize, User, JobPosition, JobApplication, Feedback } = require('../models/index');
-const { createUser, authToken } = require('./helpers/factories');
+const { sequelize, User, JobPosition, JobApplication, Feedback, Appointment } = require('../models/index');
+const { createUser, authToken, createLead } = require('./helpers/factories');
 
 // AUDIT: usersController.getUsers, jobController.getAllPositions/getApplications y
 // feedbackController.getFeedbacks no tenían límite (o, en feedback, no tenían `search`).
@@ -46,11 +46,19 @@ describe('Paginación opcional en listados admin', () => {
       expect(res.body.data.length).toBeGreaterThanOrEqual(4);
     });
 
-    test('con page/limit, pagina y expone el total real', async () => {
+    test('con page/limit, pagina y expone el total real, hasNext/hasPrevious', async () => {
       const res = await authed(request(app).get('/api/users?page=1&limit=2'));
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(2);
       expect(res.body.pagination.total).toBeGreaterThanOrEqual(4);
+      expect(res.body.pagination.hasNext).toBe(true);
+      expect(res.body.pagination.hasPrevious).toBe(false);
+    });
+
+    test('limit por encima de MAX_LIMIT (100) se recorta, no descarga todo en una página', async () => {
+      const res = await authed(request(app).get('/api/users?page=1&limit=999999'));
+      expect(res.status).toBe(200);
+      expect(res.body.pagination.limit).toBe(100);
     });
   });
 
@@ -151,6 +159,38 @@ describe('Paginación opcional en listados admin', () => {
       expect(res.status).toBe(200);
       expect(res.body.data.some((f) => f.subject === 'Pregunta sobre remate')).toBe(true);
       expect(res.body.data.some((f) => f.subject === 'Queja de servicio')).toBe(false);
+    });
+  });
+
+  describe('GET /api/appointments — antes limit=500 fijo sin pagination info', () => {
+    let lead, appointments;
+
+    beforeAll(async () => {
+      lead = await createLead();
+      appointments = await Appointment.bulkCreate(
+        Array.from({ length: 3 }, (_, i) => ({
+          leadId: lead.id,
+          scheduledAt: new Date(Date.now() + i * 60 * 60 * 1000),
+        }))
+      );
+    });
+
+    afterAll(async () => {
+      await Appointment.destroy({ where: { id: appointments.map((a) => a.id) }, force: true });
+    });
+
+    test('devuelve {data, pagination} con el total real en vez de una lista pelada', async () => {
+      const res = await authed(request(app).get(`/api/appointments?leadId=${lead.id}&page=1&limit=2`));
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(2);
+      expect(res.body.pagination.total).toBe(3);
+      expect(res.body.pagination.hasNext).toBe(true);
+    });
+
+    test('limit por encima de 500 (maxLimit) se recorta', async () => {
+      const res = await authed(request(app).get(`/api/appointments?leadId=${lead.id}&limit=999999`));
+      expect(res.status).toBe(200);
+      expect(res.body.pagination.limit).toBe(500);
     });
   });
 });

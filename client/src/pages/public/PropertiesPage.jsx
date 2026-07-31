@@ -78,8 +78,8 @@ export default function PropertiesPage() {
     queryFn: ({ pageParam }) => getProperties({ ...filters, page: pageParam, limit: 12 }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
-      const { page, totalPages } = lastPage.pagination;
-      return page < totalPages ? page + 1 : undefined;
+      const { page, hasNext } = lastPage.pagination;
+      return hasNext ? page + 1 : undefined;
     },
   });
 
