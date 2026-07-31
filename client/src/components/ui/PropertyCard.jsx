@@ -83,13 +83,13 @@ export default function PropertyCard({ property }) {
           )}
           <FavoriteButton
             property={property}
-            size={15}
-            className="absolute bottom-3 right-3 w-8 h-8"
+            size={17}
+            className="absolute bottom-3 right-3 w-9 h-9"
           />
           <ComparatorButton
             property={property}
-            size={14}
-            className="absolute bottom-3 left-3 w-8 h-8"
+            size={16}
+            className="absolute bottom-3 left-3 w-9 h-9"
           />
         </div>
         <div className="p-5">

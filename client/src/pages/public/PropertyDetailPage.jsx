@@ -184,7 +184,7 @@ export default function PropertyDetailPage() {
           <ChevronLeft size={18} /> Regresar
         </button>
         <div className="flex items-center gap-2">
-          <ComparatorButton property={property} size={18} className="w-10 h-10" />
+          <ComparatorButton property={property} size={18} showLabel className="h-10" />
           <FavoriteButton property={property} size={18} className="w-10 h-10" />
           <ShareButton
             title={property.title}
