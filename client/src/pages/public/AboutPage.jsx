@@ -63,17 +63,17 @@ const services = [
 
 const advantages = [
   {
-    icon: <TrendingDown size={32} className="text-yellow-500" />,
+    icon: <TrendingDown size={32} className="text-accent-500" />,
     title: 'Precios de Remate',
     desc: 'Propiedades con precios por debajo del valor comercial, ofreciendo oportunidades de inversión respaldadas por garantías hipotecarias.',
   },
   {
-    icon: <Shield size={32} className="text-yellow-500" />,
+    icon: <Shield size={32} className="text-accent-500" />,
     title: 'Proceso Seguro',
     desc: 'Cesiones de derechos inscritas en el Registro Público de la Propiedad, respaldadas por instituciones financieras y acompañadas durante todo el proceso legal y notarial.',
   },
   {
-    icon: <Users size={32} className="text-yellow-500" />,
+    icon: <Users size={32} className="text-accent-500" />,
     title: 'Asesoría Personalizada',
     desc: 'Nuestros coordinadores y asesores acompañan al cliente en cada etapa, desde el primer contacto hasta la entrega de su propiedad.',
   },
@@ -94,7 +94,7 @@ export default function AboutPage() {
       />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#1a1f2e] text-white py-20">
+      <section className="bg-gradient-to-br from-primary-900 to-primary-700 dark:from-primary-950 dark:to-[#1a1f2e] text-white py-20">
         <motion.div
           className="max-w-7xl mx-auto px-4 text-center"
           variants={staggerContainer}
@@ -112,7 +112,7 @@ export default function AboutPage() {
           </motion.h1>
           <motion.p
             variants={fadeInUp}
-            className="text-blue-200 dark:text-gray-400 text-lg max-w-2xl mx-auto"
+            className="text-primary-200 dark:text-gray-400 text-lg max-w-2xl mx-auto"
           >
             Más de 28 años conectando inversionistas con las mejores oportunidades de remates
             bancarios en México.
@@ -123,7 +123,7 @@ export default function AboutPage() {
       {/* Conócenos */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <AnimatedSection variant={fadeInLeft} className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-blue-900 dark:text-white mb-6">Conócenos</h2>
+          <h2 className="text-3xl font-bold text-primary-900 dark:text-white mb-6">Conócenos</h2>
           <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
             Somos un despacho administrador líder en el ramo inmobiliario y financiero, dedicado a
             la venta de cesiones de derechos litigiosos, adjudicatarios o de escritura.
@@ -134,7 +134,7 @@ export default function AboutPage() {
           </p>
           <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
             Contamos con más de{' '}
-            <strong className="text-blue-900 dark:text-white">28 años de experiencia</strong> en
+            <strong className="text-primary-900 dark:text-white">28 años de experiencia</strong> en
             el ramo inmobiliario y somos expertos en remates bancarios. Tenemos presencia física
             en los estados de Chihuahua y Querétaro, con oficinas ubicadas en Ciudad Juárez,
             Chihuahua Capital y el municipio de Querétaro.
@@ -150,7 +150,7 @@ export default function AboutPage() {
       <section className="bg-gray-50 dark:bg-[#242938] py-16">
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection>
-            <h2 className="text-3xl font-bold text-blue-900 dark:text-white text-center mb-12">
+            <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
               Servicios
             </h2>
           </AnimatedSection>
@@ -174,9 +174,9 @@ export default function AboutPage() {
                   whileHover={{ scale: 1.15, rotate: 5 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Icon size={32} className="text-yellow-500" />
+                  <Icon size={32} className="text-accent-500" />
                 </motion.div>
-                <h3 className="text-xl font-bold text-blue-900 dark:text-white mb-3 text-center">
+                <h3 className="text-xl font-bold text-primary-900 dark:text-white mb-3 text-center">
                   {title}
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-center">
@@ -185,15 +185,15 @@ export default function AboutPage() {
 
                 {advisories && (
                   <div className="mt-6 pt-6 border-t border-gray-100 dark:border-[#2e3650]">
-                    <p className="text-sm font-bold text-blue-900 dark:text-white mb-3">
+                    <p className="text-sm font-bold text-primary-900 dark:text-white mb-3">
                       Asesorías disponibles:
                     </p>
                     <ul className="space-y-3">
                       {advisories.map(({ title: advTitle, detail }) => (
                         <li key={advTitle} className="flex gap-2 text-sm">
-                          <CheckCircle size={16} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+                          <CheckCircle size={16} className="text-accent-500 flex-shrink-0 mt-0.5" />
                           <span className="text-gray-500 dark:text-gray-400">
-                            <strong className="text-blue-900 dark:text-white font-semibold">
+                            <strong className="text-primary-900 dark:text-white font-semibold">
                               {advTitle}:
                             </strong>{' '}
                             {detail}
@@ -212,7 +212,7 @@ export default function AboutPage() {
       {/* Remates Bancarios */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <AnimatedSection className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-blue-900 dark:text-white mb-6">
+          <h2 className="text-3xl font-bold text-primary-900 dark:text-white mb-6">
             Remates Bancarios
           </h2>
           <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
@@ -232,12 +232,12 @@ export default function AboutPage() {
       <section className="bg-gray-50 dark:bg-[#242938] py-16">
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-blue-900 dark:text-white mb-4">
+            <h2 className="text-3xl font-bold text-primary-900 dark:text-white mb-4">
               ¿Qué adquiere el cliente?
             </h2>
             <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
               El cliente adquiere{' '}
-              <strong className="text-blue-900 dark:text-white">cesiones de derechos</strong>:
+              <strong className="text-primary-900 dark:text-white">cesiones de derechos</strong>:
               documentos notariales inscritos en el Registro Público de la Propiedad (RPP), que
               otorgan derechos crediticios litigiosos y/o adjudicatarios sobre un inmueble,
               respaldados por gravámenes a favor de bancos o instituciones financieras.
@@ -249,7 +249,7 @@ export default function AboutPage() {
       {/* Por qué elegirnos */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <AnimatedSection>
-          <h2 className="text-3xl font-bold text-blue-900 dark:text-white text-center mb-12">
+          <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
             ¿Por qué elegirnos?
           </h2>
         </AnimatedSection>
@@ -275,7 +275,7 @@ export default function AboutPage() {
               >
                 {icon}
               </motion.div>
-              <h3 className="text-xl font-bold text-blue-900 dark:text-white mb-3">{title}</h3>
+              <h3 className="text-xl font-bold text-primary-900 dark:text-white mb-3">{title}</h3>
               <p className="text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
             </motion.div>
           ))}
@@ -286,7 +286,7 @@ export default function AboutPage() {
       <section className="bg-gray-50 dark:bg-[#242938] py-16">
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection>
-            <h2 className="text-3xl font-bold text-blue-900 dark:text-white text-center mb-12">
+            <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
               Misión y Visión
             </h2>
           </AnimatedSection>
@@ -298,16 +298,16 @@ export default function AboutPage() {
             viewport={{ once: true }}
           >
             <motion.div variants={fadeInLeft} whileHover={{ y: -4, transition: { duration: 0.2 } }}>
-              <div className="bg-blue-900 dark:bg-[#0f1621] text-white rounded-2xl p-8 h-full">
+              <div className="bg-primary-900 dark:bg-primary-950 text-white rounded-2xl p-8 h-full">
                 <motion.div
-                  className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center mb-4"
+                  className="w-12 h-12 bg-accent-400 rounded-xl flex items-center justify-center mb-4"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Shield size={24} className="text-blue-900" />
+                  <Shield size={24} className="text-primary-900" />
                 </motion.div>
                 <h3 className="text-2xl font-bold mb-4">Misión</h3>
-                <p className="text-blue-100 leading-relaxed">
+                <p className="text-primary-100 leading-relaxed">
                   Proporcionar una asesoría inmobiliaria con ética, honestidad y discreción,
                   siempre orientados al servicio en todas las etapas de nuestra intervención en la
                   venta, compra o alquiler, basados en nuestra experiencia y capacitación en el
@@ -317,16 +317,16 @@ export default function AboutPage() {
             </motion.div>
 
             <motion.div variants={fadeInRight} whileHover={{ y: -4, transition: { duration: 0.2 } }}>
-              <div className="bg-yellow-400 dark:bg-yellow-500 rounded-2xl p-8 h-full">
+              <div className="bg-accent-400 dark:bg-accent-500 rounded-2xl p-8 h-full">
                 <motion.div
-                  className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center mb-4"
+                  className="w-12 h-12 bg-primary-900 rounded-xl flex items-center justify-center mb-4"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Award size={24} className="text-yellow-400" />
+                  <Award size={24} className="text-accent-400" />
                 </motion.div>
-                <h3 className="text-2xl font-bold text-blue-900 mb-4">Visión</h3>
-                <p className="text-blue-900 leading-relaxed">
+                <h3 className="text-2xl font-bold text-primary-900 mb-4">Visión</h3>
+                <p className="text-primary-900 leading-relaxed">
                   Ser la mejor alternativa para quienes busquen la ayuda de un profesional
                   inmobiliario, ofreciendo las propuestas más innovadoras. Que nuestros clientes se
                   sientan plenamente acompañados y asesorados durante todo el proceso de compra,
@@ -341,7 +341,7 @@ export default function AboutPage() {
       {/* Valores */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <AnimatedSection>
-          <h2 className="text-3xl font-bold text-blue-900 dark:text-white text-center mb-12">
+          <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
             Nuestros Valores
           </h2>
         </AnimatedSection>
@@ -359,8 +359,8 @@ export default function AboutPage() {
               whileHover={{ y: -4, scale: 1.03, transition: { duration: 0.2 } }}
               className="bg-gray-50 dark:bg-[#1a1f2e] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 flex items-center gap-3 cursor-default"
             >
-              <CheckCircle size={20} className="text-yellow-500 flex-shrink-0" />
-              <span className="font-medium text-blue-900 dark:text-white text-sm">{value}</span>
+              <CheckCircle size={20} className="text-accent-500 flex-shrink-0" />
+              <span className="font-medium text-primary-900 dark:text-white text-sm">{value}</span>
             </motion.div>
           ))}
         </motion.div>
@@ -370,7 +370,7 @@ export default function AboutPage() {
       <section className="bg-gray-50 dark:bg-[#242938] py-16">
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection>
-            <h2 className="text-3xl font-bold text-blue-900 dark:text-white text-center mb-12">
+            <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
               Dónde operamos
             </h2>
           </AnimatedSection>
@@ -409,13 +409,13 @@ export default function AboutPage() {
               >
                 <div className="flex items-center gap-3 mb-3">
                   <motion.div whileHover={{ scale: 1.2 }} transition={{ duration: 0.2 }}>
-                    <MapPin size={20} className="text-yellow-500 flex-shrink-0" />
+                    <MapPin size={20} className="text-accent-500 flex-shrink-0" />
                   </motion.div>
                   <div>
-                    <p className="font-bold text-blue-900 dark:text-white">{city}</p>
+                    <p className="font-bold text-primary-900 dark:text-white">{city}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">{state}</p>
                   </div>
-                  <span className="ml-auto bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-300 text-xs font-bold px-2.5 py-1 rounded-full">
+                  <span className="ml-auto bg-primary-50 dark:bg-primary-900/30 text-primary-900 dark:text-primary-300 text-xs font-bold px-2.5 py-1 rounded-full">
                     {properties}
                   </span>
                 </div>

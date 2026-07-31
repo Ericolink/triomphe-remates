@@ -1,16 +1,16 @@
 // AUDIT-017: paleta de marca extraída de exportController.js — antes vivía mezclada con
 // queries, helpers de imagen y la lógica de generación de Excel/PDF en un solo archivo
 // de 838 líneas.
-const PRIMARY = '#1a3a5c';
-const ACCENT = '#c8a96e';
+const PRIMARY = '#22273A';
+const ACCENT = '#D2A057';
 const BG_ALT = '#f0f4f8';
 const TEXT = '#374151';
 const ST_GREEN = '#10b981';
 const ST_YELLOW = '#f59e0b';
 const ST_RED = '#ef4444';
 
-const PRIMARY_ARGB = 'FF1a3a5c';
-const ACCENT_ARGB = 'FFc8a96e';
+const PRIMARY_ARGB = 'FF22273A';
+const ACCENT_ARGB = 'FFD2A057';
 const BG_ALT_ARGB = 'FFf0f4f8';
 const WHITE_ARGB = 'FFFFFFFF';
 const TEXT_ARGB = 'FF374151';

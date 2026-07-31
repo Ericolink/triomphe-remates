@@ -17,7 +17,7 @@ export default function Pagination({ pagination, page, onPageChange, className =
           whileTap={{ scale: 0.95 }}
           className={`min-w-9 h-9 px-1 rounded-lg text-sm font-medium transition-colors ${
             page === p
-              ? 'bg-blue-900 dark:bg-blue-700 text-white'
+              ? 'bg-primary-900 dark:bg-primary-700 text-white'
               : 'bg-gray-100 dark:bg-[#2e3650] text-gray-700 dark:text-gray-300 hover:bg-gray-200'
           }`}
         >

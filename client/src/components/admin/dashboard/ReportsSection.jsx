@@ -36,7 +36,7 @@ export default function ReportsSection() {
   return (
     <CollapsibleSection
       title="Reportes comerciales"
-      icon={<PieChart size={16} className="text-blue-700 dark:text-blue-400" />}
+      icon={<PieChart size={16} className="text-primary-700 dark:text-primary-400" />}
       subtitle="embudo, motivos de cierre, desempeño por asesor"
       onOpen={() => setEverOpened(true)}
     >
@@ -55,7 +55,7 @@ export default function ReportsSection() {
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <Target size={16} className="text-blue-700 dark:text-blue-400" /> Embudo comercial
+                <Target size={16} className="text-primary-700 dark:text-primary-400" /> Embudo comercial
               </h3>
               <div className="space-y-3">
                 {(d?.funnel ?? []).map(({ stage, total }, i) => (
@@ -112,7 +112,7 @@ export default function ReportsSection() {
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <Users size={16} className="text-yellow-500" /> Desempeño por asesor
+                <Users size={16} className="text-accent-500" /> Desempeño por asesor
               </h3>
               {(d?.porAsesor ?? []).length === 0 ? (
                 <p className="text-sm text-gray-400 dark:text-gray-500 italic">

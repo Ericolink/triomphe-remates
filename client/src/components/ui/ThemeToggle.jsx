@@ -13,7 +13,7 @@ export default function ThemeToggle({ className = '' }) {
       aria-label="Cambiar tema"
     >
       {isDark ? (
-        <Sun size={18} className="text-yellow-400" />
+        <Sun size={18} className="text-accent-400" />
       ) : (
         <Moon size={18} className="text-gray-800" />
       )}

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 
-const DEFAULT_BAR_COLOR = 'bg-blue-900 dark:bg-blue-500';
+const DEFAULT_BAR_COLOR = 'bg-primary-900 dark:bg-primary-500';
 
 // Fila de barra de progreso reutilizada en los desgloses "categóricos" del Dashboard
 // (embudo comercial, motivos de cierre, citas por estado, etc). El color depende de la

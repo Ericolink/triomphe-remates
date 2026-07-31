@@ -26,7 +26,7 @@ export default function ComparatorBar() {
             transition={{ type: 'spring', stiffness: 280, damping: 26 }}
             className="pointer-events-auto max-w-full bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-2xl shadow-2xl px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3 overflow-x-auto"
           >
-            <GitCompare size={18} className="text-blue-700 dark:text-blue-400 flex-shrink-0" />
+            <GitCompare size={18} className="text-primary-700 dark:text-primary-400 flex-shrink-0" />
             <div className="flex items-center gap-2">
               {items.map((p) => {
                 const img = p.images?.[0];
@@ -43,7 +43,7 @@ export default function ComparatorBar() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30" />
+                        <div className="w-full h-full bg-primary-100 dark:bg-primary-900/30" />
                       )}
                     </div>
                     <button
@@ -62,7 +62,7 @@ export default function ComparatorBar() {
             {count >= 2 ? (
               <Link
                 to="/comparar"
-                className="px-4 py-1.5 bg-blue-900 text-white text-sm font-medium rounded-xl hover:bg-blue-800 transition-colors whitespace-nowrap flex-shrink-0"
+                className="px-4 py-1.5 bg-accent-400 text-primary-900 text-sm font-medium rounded-xl hover:bg-accent-300 transition-colors whitespace-nowrap flex-shrink-0"
               >
                 Comparar →
               </Link>

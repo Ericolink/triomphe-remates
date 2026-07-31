@@ -28,21 +28,21 @@ export default function OverviewSection({
       label: 'Tasa de cierre',
       value: `${tasaCierre ?? 0}%`,
       icon: <Target size={22} />,
-      color: 'bg-blue-900',
+      color: 'bg-primary-900',
       onClick: () => navigate('/admin/crm?tab=prospectos'),
     },
     {
       label: 'Propiedades disponibles',
       value: propiedadesDisponibles ?? 0,
       icon: <Home size={22} />,
-      color: 'bg-blue-600',
+      color: 'bg-accent-500',
       onClick: () => navigate('/admin/propiedades'),
     },
     {
       label: 'Vistas del sitio (30 días)',
       value: vistas30Dias ?? 0,
       icon: <Eye size={22} />,
-      color: 'bg-purple-600',
+      color: 'bg-brand-red-600',
     },
   ];
 
@@ -71,7 +71,7 @@ export default function OverviewSection({
               : {})}
             className={`bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-[#2e3650] transition-shadow ${
               onClick
-                ? 'cursor-pointer hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800'
+                ? 'cursor-pointer hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800'
                 : ''
             }`}
           >
@@ -83,7 +83,7 @@ export default function OverviewSection({
             <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
             <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
               {label}
-              {onClick && <span className="text-blue-500 dark:text-blue-400"> · ver detalle</span>}
+              {onClick && <span className="text-primary-500 dark:text-primary-400"> · ver detalle</span>}
             </p>
           </motion.div>
         ))}
@@ -98,11 +98,11 @@ export default function OverviewSection({
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-              <Megaphone size={16} className="text-yellow-500" /> Mejor campaña
+              <Megaphone size={16} className="text-accent-500" /> Mejor campaña
             </h2>
             <button
               onClick={() => navigate('/admin/crm?tab=campanas')}
-              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
             >
               Ver campañas
             </button>

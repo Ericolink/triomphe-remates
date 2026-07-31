@@ -113,7 +113,7 @@ export default function ApplicationsPage() {
                     whileHover={{ x: 4, transition: { duration: 0.15 } }}
                     className={`bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border cursor-pointer transition-all ${
                       selected?.id === app.id
-                        ? 'border-blue-500 dark:border-blue-400 ring-1 ring-blue-500'
+                        ? 'border-accent-500 dark:border-accent-400 ring-1 ring-accent-500'
                         : 'border-gray-100 dark:border-[#2e3650]'
                     }`}
                   >
@@ -278,7 +278,7 @@ export default function ApplicationsPage() {
                       }
                       rows={3}
                       placeholder="Notas internas..."
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
                     />
                   </div>
                 </div>

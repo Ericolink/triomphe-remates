@@ -66,7 +66,7 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <Bell size={16} className="text-blue-900" aria-hidden="true" />
+              <Bell size={16} className="text-primary-900" aria-hidden="true" />
               <span id={titleId} className="font-semibold text-gray-800 text-sm">
                 Leads nuevos
               </span>
@@ -104,8 +104,8 @@ export default function NotificationBell() {
                   }}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User size={14} className="text-blue-700" aria-hidden="true" />
+                    <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User size={14} className="text-primary-700" aria-hidden="true" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
@@ -139,7 +139,7 @@ export default function NotificationBell() {
                 navigate('/admin/crm?tab=prospectos');
                 setOpen(false);
               }}
-              className="w-full text-center text-sm text-blue-700 font-medium hover:text-blue-900 transition-colors"
+              className="w-full text-center text-sm text-primary-700 font-medium hover:text-primary-900 transition-colors"
             >
               Ver todos los leads →
             </button>

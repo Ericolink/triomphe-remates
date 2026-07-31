@@ -87,7 +87,7 @@ function FAQItem({ q, a, isOpen, onToggle }) {
         onClick={onToggle}
         className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
       >
-        <span className="font-medium text-blue-900 dark:text-gray-100">{q}</span>
+        <span className="font-medium text-primary-900 dark:text-gray-100">{q}</span>
         <motion.span
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -126,7 +126,7 @@ export default function FAQPage() {
         url="/preguntas-frecuentes"
       />
 
-      <section className="bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#1a1f2e] text-white py-20">
+      <section className="bg-gradient-to-br from-primary-900 to-primary-700 dark:from-primary-950 dark:to-[#1a1f2e] text-white py-20">
         <motion.div
           className="max-w-4xl mx-auto px-4 text-center"
           variants={staggerContainer}
@@ -134,14 +134,14 @@ export default function FAQPage() {
           animate="visible"
         >
           <motion.div variants={fadeInUp} className="flex justify-center mb-4">
-            <HelpCircle size={48} className="text-yellow-400" />
+            <HelpCircle size={48} className="text-accent-400" />
           </motion.div>
           <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-bold mb-4">
             Preguntas Frecuentes
           </motion.h1>
           <motion.p
             variants={fadeInUp}
-            className="text-blue-200 dark:text-gray-400 text-lg max-w-2xl mx-auto"
+            className="text-primary-200 dark:text-gray-400 text-lg max-w-2xl mx-auto"
           >
             Todo lo que necesitas saber sobre remates bancarios, cesión de derechos y el proceso de
             compra.
@@ -152,7 +152,7 @@ export default function FAQPage() {
       <section className="max-w-4xl mx-auto px-4 py-16 space-y-12">
         {faqGroups.map((group) => (
           <AnimatedSection key={group.category}>
-            <h2 className="text-2xl font-bold text-blue-900 dark:text-white mb-6">
+            <h2 className="text-2xl font-bold text-primary-900 dark:text-white mb-6">
               {group.category}
             </h2>
             <div className="space-y-3">

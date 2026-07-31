@@ -89,7 +89,7 @@ export default function UrgentSection({
                     <a
                       href={`tel:${task.lead.phone}`}
                       title="Llamar"
-                      className="p-1.5 text-gray-400 hover:text-blue-500"
+                      className="p-1.5 text-gray-400 hover:text-primary-500"
                     >
                       <PhoneCall size={15} />
                     </a>
@@ -107,7 +107,7 @@ export default function UrgentSection({
                   )}
                   <button
                     onClick={() => onCompleteTask(task.id)}
-                    className="text-xs font-medium px-2.5 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="text-xs font-medium px-2.5 py-1.5 bg-accent-400 text-primary-900 rounded-lg hover:bg-accent-300 transition-colors"
                   >
                     Completar
                   </button>
@@ -143,11 +143,11 @@ export default function UrgentSection({
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            <CalendarClock size={16} className="text-blue-700 dark:text-blue-400" /> Citas de hoy
+            <CalendarClock size={16} className="text-primary-700 dark:text-primary-400" /> Citas de hoy
           </h2>
           <button
             onClick={() => navigate('/admin/crm?tab=calendario')}
-            className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
           >
             Ver calendario
           </button>
@@ -163,7 +163,7 @@ export default function UrgentSection({
                 key={a.id}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 dark:bg-[#1a1f2e]"
               >
-                <span className="text-xs font-mono text-blue-600 dark:text-blue-400 flex-shrink-0">
+                <span className="text-xs font-mono text-primary-600 dark:text-primary-400 flex-shrink-0">
                   {new Date(a.scheduledAt).toLocaleTimeString('es-MX', {
                     hour: '2-digit',
                     minute: '2-digit',

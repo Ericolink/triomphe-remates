@@ -49,7 +49,7 @@ function AppointmentRow({ appointment, showDate, onStatusChange, onReschedule })
     <div className="bg-gray-50 dark:bg-[#1a1f2e] rounded-xl p-3">
       <div className="flex items-start gap-2">
         {showDate && (
-          <span className="mt-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap flex-shrink-0">
+          <span className="mt-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap flex-shrink-0">
             {new Date(appointment.scheduledAt).toLocaleDateString('es-MX', {
               day: '2-digit',
               month: 'short',
@@ -109,7 +109,7 @@ function AppointmentRow({ appointment, showDate, onStatusChange, onReschedule })
               }
             }}
             disabled={!newDate}
-            className="px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0"
+            className="px-2.5 py-1.5 bg-accent-400 text-primary-900 rounded-lg text-xs font-medium hover:bg-accent-300 disabled:opacity-40 transition-colors flex-shrink-0"
           >
             Confirmar
           </button>
@@ -245,8 +245,8 @@ export default function CalendarioSection() {
                   className={`
                     relative min-h-[60px] rounded-xl p-1 text-xs transition-colors text-left
                     ${!day ? '' : 'hover:bg-gray-50 dark:hover:bg-[#2e3650] cursor-pointer'}
-                    ${isToday ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' : ''}
-                    ${isSel ? 'bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500' : ''}
+                    ${isToday ? 'ring-2 ring-accent-400 bg-accent-50 dark:bg-accent-900/20' : ''}
+                    ${isSel ? 'bg-accent-50 dark:bg-accent-900/30 ring-2 ring-accent-500' : ''}
                   `}
                 >
                   {day && (
@@ -257,7 +257,7 @@ export default function CalendarioSection() {
                           {dayAppointments.slice(0, 3).map((a) => (
                             <span
                               key={a.id}
-                              className="block w-full truncate text-[12px] bg-blue-600 text-white px-1 py-0.5 rounded"
+                              className="block w-full truncate text-[12px] bg-primary-600 text-white px-1 py-0.5 rounded"
                             >
                               {a.lead?.name?.split(' ')[0]}
                             </span>
@@ -291,7 +291,7 @@ export default function CalendarioSection() {
                 className="bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-[#2e3650]"
               >
                 <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-                  <Calendar size={15} className="text-blue-600" />
+                  <Calendar size={15} className="text-primary-600" />
                   {selected} de {MONTH_NAMES[current.month]}
                 </h3>
                 {selectedAppointments.length === 0 ? (

@@ -69,8 +69,8 @@ const adminOnlyGroup = {
 function Sidebar({ user, onClose, onLogout }) {
   const groups = [...navGroups, ...(user?.role === 'admin' ? [adminOnlyGroup] : [])];
   return (
-    <div className="flex flex-col h-full bg-blue-900 text-white w-64">
-      <div className="p-6 border-b border-blue-800">
+    <div className="flex flex-col h-full bg-primary-900 text-white w-64">
+      <div className="p-6 border-b border-primary-800">
         <a href="/" target="_blank" rel="noopener noreferrer" title="Ver sitio público">
           <img
             src="/logo.png"
@@ -84,7 +84,7 @@ function Sidebar({ user, onClose, onLogout }) {
         {groups.map((group, gi) => (
           <div key={gi}>
             {group.label && (
-              <p className="px-4 mb-1 text-xs font-semibold uppercase tracking-wider text-blue-300/70">
+              <p className="px-4 mb-1 text-xs font-semibold uppercase tracking-wider text-primary-300/70">
                 {group.label}
               </p>
             )}
@@ -97,8 +97,8 @@ function Sidebar({ user, onClose, onLogout }) {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-yellow-400 text-blue-900'
-                        : 'text-blue-200 hover:bg-blue-800 hover:text-white'
+                        ? 'bg-accent-400 text-primary-900'
+                        : 'text-primary-200 hover:bg-primary-800 hover:text-white'
                     }`
                   }
                 >
@@ -110,10 +110,10 @@ function Sidebar({ user, onClose, onLogout }) {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-blue-800">
+      <div className="p-4 border-t border-primary-800">
         <button
           onClick={onLogout}
-          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-sm font-medium text-blue-200 hover:bg-blue-800 hover:text-white transition-colors"
+          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-sm font-medium text-primary-200 hover:bg-primary-800 hover:text-white transition-colors"
         >
           <LogOut size={18} /> Cerrar sesión
         </button>
@@ -174,7 +174,7 @@ export default function AdminLayout() {
             >
               <Menu size={22} aria-hidden="true" />
             </button>
-            <span className="hidden md:inline-block text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold capitalize">
+            <span className="hidden md:inline-block text-xs bg-accent-400 text-primary-900 px-2 py-0.5 rounded-full font-semibold capitalize">
               {user?.role}
             </span>
           </div>
@@ -187,10 +187,10 @@ export default function AdminLayout() {
                 <img
                   src={buildImageUrl(user.profilePhoto, 80)}
                   alt={user.name}
-                  className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900/40"
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-primary-100 dark:ring-primary-900/40"
                 />
               ) : (
-                <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-8 h-8 bg-primary-900 rounded-full flex items-center justify-center text-white text-xs font-bold">
                   {user?.name?.[0]?.toUpperCase()}
                 </div>
               )}

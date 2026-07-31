@@ -38,10 +38,10 @@ export default function PromotedPropertyBanner({ property }) {
           animate={{ rotate: [0, 15, -15, 0] }}
           transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
         >
-          <Star size={22} className="text-yellow-400 fill-yellow-400" />
+          <Star size={22} className="text-accent-400 fill-accent-400" />
         </motion.div>
-        <h2 className="text-2xl font-bold text-blue-900 dark:text-white">Propiedad Estrella</h2>
-        <span className="bg-yellow-400 text-blue-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+        <h2 className="text-2xl font-bold text-primary-900 dark:text-white">Propiedad Estrella</h2>
+        <span className="bg-accent-400 text-primary-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
           Oferta especial
         </span>
       </div>
@@ -50,7 +50,7 @@ export default function PromotedPropertyBanner({ property }) {
         <motion.div
           whileHover={{ y: -4, boxShadow: '0 24px 48px -8px rgba(0,0,0,0.2)' }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="relative bg-white dark:bg-[#242938] rounded-3xl overflow-hidden shadow-xl border-2 border-yellow-400 dark:border-yellow-500 flex flex-col md:flex-row"
+          className="relative bg-white dark:bg-[#242938] rounded-3xl overflow-hidden shadow-xl border-2 border-accent-400 dark:border-accent-500 flex flex-col md:flex-row"
         >
           {/* Imagen */}
           <div className="relative w-full md:w-1/2 h-64 md:h-auto min-h-[280px] bg-gray-100 dark:bg-[#2e3650] overflow-hidden flex-shrink-0">
@@ -85,7 +85,7 @@ export default function PromotedPropertyBanner({ property }) {
           <div className="flex flex-col justify-between p-6 sm:p-8 flex-1">
             <div>
               <InfoField label="Precio">
-                <p className="text-3xl md:text-4xl font-bold text-blue-900 dark:text-yellow-400">
+                <p className="text-3xl md:text-4xl font-bold text-primary-900 dark:text-accent-400">
                   {formatPrice(property.price)}
                 </p>
               </InfoField>
@@ -139,13 +139,13 @@ export default function PromotedPropertyBanner({ property }) {
               <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
                 {property.constructionMeters && (
                   <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <Maximize2 size={15} className="text-blue-600 dark:text-blue-400" />
+                    <Maximize2 size={15} className="text-primary-600 dark:text-primary-400" />
                     {property.constructionMeters} m²c
                   </span>
                 )}
                 {property.terrainMeters && (
                   <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <LandPlot size={15} className="text-blue-600 dark:text-blue-400" />
+                    <LandPlot size={15} className="text-primary-600 dark:text-primary-400" />
                     {property.terrainMeters} m²t
                   </span>
                 )}
@@ -153,19 +153,19 @@ export default function PromotedPropertyBanner({ property }) {
                   !property.terrainMeters &&
                   property.squareMeters && (
                     <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                      <Maximize2 size={15} className="text-blue-600 dark:text-blue-400" />
+                      <Maximize2 size={15} className="text-primary-600 dark:text-primary-400" />
                       {property.squareMeters} m²
                     </span>
                   )}
                 {property.bedrooms && (
                   <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <Bed size={15} className="text-blue-600 dark:text-blue-400" />
+                    <Bed size={15} className="text-primary-600 dark:text-primary-400" />
                     {property.bedrooms} rec.
                   </span>
                 )}
                 {property.bathrooms && (
                   <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <Bath size={15} className="text-blue-600 dark:text-blue-400" />
+                    <Bath size={15} className="text-primary-600 dark:text-primary-400" />
                     {property.bathrooms} baños
                   </span>
                 )}
@@ -173,7 +173,7 @@ export default function PromotedPropertyBanner({ property }) {
             </div>
 
             <motion.div
-              className="flex items-center gap-2 text-blue-700 dark:text-yellow-400 font-semibold"
+              className="flex items-center gap-2 text-primary-700 dark:text-accent-400 font-semibold"
               whileHover={{ x: 6 }}
               transition={{ duration: 0.2 }}
             >

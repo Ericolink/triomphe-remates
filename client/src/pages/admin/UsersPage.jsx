@@ -57,7 +57,7 @@ function PasswordInput({ value, onChange, placeholder, required, showPass, onTog
         onChange={onChange}
         placeholder={placeholder}
         required={required}
-        className="w-full px-3 py-2 pr-10 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
+        className="w-full px-3 py-2 pr-10 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
         {...props}
       />
       <button
@@ -264,7 +264,7 @@ export default function UsersPage() {
           whileHover={buttonHover}
           whileTap={buttonTap}
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-blue-900 dark:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-1.5 bg-accent-400 dark:bg-accent-500 text-primary-900 px-4 py-2 rounded-xl text-sm font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
         >
           <Plus size={16} /> Nuevo usuario
         </motion.button>
@@ -314,7 +314,7 @@ export default function UsersPage() {
                             className="w-9 h-9 rounded-full object-cover ring-2 ring-gray-100 dark:ring-[#2e3650]"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-blue-900 flex items-center justify-center text-white text-sm font-bold">
+                          <div className="w-9 h-9 rounded-full bg-primary-900 flex items-center justify-center text-white text-sm font-bold">
                             {u.name?.[0]?.toUpperCase()}
                           </div>
                         )}
@@ -355,7 +355,7 @@ export default function UsersPage() {
                           onClick={() => openEdit(u)}
                           whileHover={{ scale: 1.15 }}
                           whileTap={{ scale: 0.9 }}
-                          className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-lg transition-colors"
                           title="Editar"
                         >
                           <Pencil size={16} />
@@ -435,10 +435,10 @@ export default function UsersPage() {
                     <img
                       src={photoPreview}
                       alt="preview"
-                      className="w-20 h-20 rounded-full object-cover ring-4 ring-blue-100 dark:ring-blue-900/40"
+                      className="w-20 h-20 rounded-full object-cover ring-4 ring-primary-100 dark:ring-primary-900/40"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-blue-900 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-blue-100 dark:ring-blue-900/40">
+                    <div className="w-20 h-20 rounded-full bg-primary-900 flex items-center justify-center text-white text-2xl font-bold ring-4 ring-primary-100 dark:ring-primary-900/40">
                       {form.name?.[0]?.toUpperCase() || <User size={28} />}
                     </div>
                   )}
@@ -446,7 +446,7 @@ export default function UsersPage() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     aria-label="Cambiar foto"
-                    className="absolute -bottom-1 -right-1 bg-yellow-400 text-blue-900 p-1.5 rounded-full hover:bg-yellow-300 transition-colors shadow-md"
+                    className="absolute -bottom-1 -right-1 bg-accent-400 text-primary-900 p-1.5 rounded-full hover:bg-accent-300 transition-colors shadow-md"
                   >
                     <Camera size={14} />
                   </button>
@@ -475,7 +475,7 @@ export default function UsersPage() {
                 required
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
               />
             </div>
 
@@ -492,7 +492,7 @@ export default function UsersPage() {
                 required
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
               />
             </div>
 
@@ -507,7 +507,7 @@ export default function UsersPage() {
                 id={`${formId}-role`}
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
               >
                 <option value="editor">Editor</option>
                 <option value="admin">Admin</option>
@@ -535,7 +535,7 @@ export default function UsersPage() {
               </div>
             ) : (
               <details className="group">
-                <summary className="text-xs font-medium text-blue-600 dark:text-blue-400 cursor-pointer select-none">
+                <summary className="text-xs font-medium text-primary-600 dark:text-primary-400 cursor-pointer select-none">
                   Cambiar contraseña (opcional)
                 </summary>
                 <div className="mt-3 space-y-3">
@@ -590,7 +590,7 @@ export default function UsersPage() {
                 disabled={isBusy}
                 whileHover={buttonHover}
                 whileTap={buttonTap}
-                className="flex-1 py-2.5 bg-blue-900 dark:bg-blue-700 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 bg-accent-400 dark:bg-accent-500 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors disabled:opacity-50"
               >
                 {isBusy ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear usuario'}
               </motion.button>

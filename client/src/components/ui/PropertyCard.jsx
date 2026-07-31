@@ -76,7 +76,7 @@ export default function PropertyCard({ property }) {
               {STATUS_LABELS[property.status]}
             </Badge>
             {showCountdown && (
-              <span className="flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+              <span className="flex items-center gap-1 bg-brand-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
                 <Clock size={10} /> {countdownLabel}
               </span>
             )}
@@ -98,7 +98,7 @@ export default function PropertyCard({ property }) {
           />
         </div>
         <div className="p-5">
-          <p className="text-2xl font-bold text-blue-900 dark:text-yellow-400 mb-1">
+          <p className="text-2xl font-bold text-primary-900 dark:text-accent-400 mb-1">
             {formatPrice(property.price)}
           </p>
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2 line-clamp-2">

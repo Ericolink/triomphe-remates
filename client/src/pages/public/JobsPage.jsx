@@ -71,7 +71,7 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
   };
 
   const inputClass =
-    'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500';
+    'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500';
 
   return (
     <motion.div
@@ -94,7 +94,7 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
         className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-100 dark:border-[#2e3650]"
       >
         <div className="p-6 border-b border-gray-100 dark:border-[#2e3650]">
-          <h2 id={titleId} className="text-xl font-bold text-blue-900 dark:text-white">
+          <h2 id={titleId} className="text-xl font-bold text-primary-900 dark:text-white">
             Postularme
           </h2>
           {positionTitle && (
@@ -196,7 +196,7 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
                 id="hasVehicle"
                 checked={form.hasVehicle}
                 onChange={(e) => setForm((f) => ({ ...f, hasVehicle: e.target.checked }))}
-                className="w-4 h-4 accent-blue-900"
+                className="w-4 h-4 accent-accent-400"
               />
               <label htmlFor="hasVehicle" className="text-sm text-gray-700 dark:text-gray-300">
                 Cuento con vehículo propio
@@ -232,7 +232,7 @@ function ApplicationForm({ positionId, positionTitle, onClose }) {
               disabled={isPending}
               whileHover={buttonHover}
               whileTap={buttonTap}
-              className="flex-1 bg-blue-900 dark:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 bg-accent-400 dark:bg-accent-500 text-primary-900 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Send size={16} />
               {isPending ? 'Enviando...' : 'Enviar postulación'}
@@ -259,7 +259,7 @@ function PositionCard({ position }) {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 {position.isUrgent && (
-                  <span className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
+                  <span className="inline-flex items-center gap-1 bg-brand-red-50 dark:bg-red-900/30 text-brand-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
                     <Star size={10} /> Urgente
                   </span>
                 )}
@@ -269,13 +269,13 @@ function PositionCard({ position }) {
                   {JOB_TYPE_LABELS[position.type]}
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-blue-900 dark:text-white">{position.title}</h3>
+              <h3 className="text-lg font-bold text-primary-900 dark:text-white">{position.title}</h3>
             </div>
             <motion.button
               onClick={() => setApplying(true)}
               whileHover={buttonHover}
               whileTap={buttonTap}
-              className="flex-shrink-0 bg-yellow-400 text-blue-900 px-4 py-2 rounded-xl text-sm font-bold hover:bg-yellow-300 transition-colors"
+              className="flex-shrink-0 bg-accent-400 text-primary-900 px-4 py-2 rounded-xl text-sm font-bold hover:bg-accent-300 transition-colors"
             >
               Postularme
             </motion.button>
@@ -299,7 +299,7 @@ function PositionCard({ position }) {
 
           <button
             onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-sm font-medium mt-3 hover:underline"
+            className="flex items-center gap-1 text-primary-600 dark:text-primary-400 text-sm font-medium mt-3 hover:underline"
           >
             {expanded ? (
               <>
@@ -324,7 +324,7 @@ function PositionCard({ position }) {
             >
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold text-blue-900 dark:text-white text-sm mb-2">
+                  <h4 className="font-semibold text-primary-900 dark:text-white text-sm mb-2">
                     Descripción completa
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
@@ -332,7 +332,7 @@ function PositionCard({ position }) {
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-blue-900 dark:text-white text-sm mb-2">
+                  <h4 className="font-semibold text-primary-900 dark:text-white text-sm mb-2">
                     Requisitos
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
@@ -341,7 +341,7 @@ function PositionCard({ position }) {
                 </div>
                 {position.benefits && (
                   <div className="md:col-span-2">
-                    <h4 className="font-semibold text-blue-900 dark:text-white text-sm mb-2">
+                    <h4 className="font-semibold text-primary-900 dark:text-white text-sm mb-2">
                       Beneficios
                     </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
@@ -382,17 +382,17 @@ export default function JobsPage() {
 
   const benefits = [
     {
-      icon: <DollarSign size={32} className="text-yellow-500" />,
+      icon: <DollarSign size={32} className="text-accent-500" />,
       title: 'Comisiones atractivas',
       desc: 'Esquema de comisiones competitivo. Tus ingresos dependen de tu esfuerzo y dedicación.',
     },
     {
-      icon: <TrendingUp size={32} className="text-yellow-500" />,
+      icon: <TrendingUp size={32} className="text-accent-500" />,
       title: 'Crecimiento profesional',
       desc: 'Capacitación constante en el sector inmobiliario y oportunidades de desarrollo dentro de la empresa.',
     },
     {
-      icon: <Users size={32} className="text-yellow-500" />,
+      icon: <Users size={32} className="text-accent-500" />,
       title: 'Excelente ambiente',
       desc: 'Equipo colaborativo con más de 28 años de experiencia. Aprende de los mejores en el sector.',
     },
@@ -407,7 +407,7 @@ export default function JobsPage() {
       />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#1a1f2e] text-white py-20">
+      <section className="bg-gradient-to-br from-primary-900 to-primary-700 dark:from-primary-950 dark:to-[#1a1f2e] text-white py-20">
         <motion.div
           className="max-w-7xl mx-auto px-4 text-center"
           variants={staggerContainer}
@@ -416,7 +416,7 @@ export default function JobsPage() {
         >
           <motion.div
             variants={fadeInUp}
-            className="inline-flex items-center gap-2 bg-yellow-400 text-blue-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
+            className="inline-flex items-center gap-2 bg-accent-400 text-primary-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
           >
             <Users size={16} /> Únete a nuestro equipo
           </motion.div>
@@ -425,7 +425,7 @@ export default function JobsPage() {
           </motion.h1>
           <motion.p
             variants={fadeInUp}
-            className="text-blue-200 dark:text-gray-400 text-lg max-w-2xl mx-auto mb-8"
+            className="text-primary-200 dark:text-gray-400 text-lg max-w-2xl mx-auto mb-8"
           >
             Sé parte de Triomphe Bienes Raíces y construye una carrera exitosa en el sector
             inmobiliario. Comisiones atractivas y crecimiento profesional.
@@ -435,7 +435,7 @@ export default function JobsPage() {
             onClick={() => setGeneralApplying(true)}
             whileHover={buttonHover}
             whileTap={buttonTap}
-            className="bg-yellow-400 text-blue-900 px-8 py-3.5 rounded-xl font-bold text-lg hover:bg-yellow-300 transition-colors"
+            className="bg-accent-400 text-primary-900 px-8 py-3.5 rounded-xl font-bold text-lg hover:bg-accent-300 transition-colors"
           >
             Postulación general
           </motion.button>
@@ -446,7 +446,7 @@ export default function JobsPage() {
       <section className="bg-gray-50 dark:bg-[#242938] py-16">
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection>
-            <h2 className="text-3xl font-bold text-blue-900 dark:text-white text-center mb-12">
+            <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
               ¿Por qué unirte a Triomphe?
             </h2>
           </AnimatedSection>
@@ -471,7 +471,7 @@ export default function JobsPage() {
                 >
                   {icon}
                 </motion.div>
-                <h3 className="text-xl font-bold text-blue-900 dark:text-white mb-3">{title}</h3>
+                <h3 className="text-xl font-bold text-primary-900 dark:text-white mb-3">{title}</h3>
                 <p className="text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
               </motion.div>
             ))}
@@ -482,7 +482,7 @@ export default function JobsPage() {
       {/* Vacantes */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <AnimatedSection className="mb-8">
-          <h2 className="text-3xl font-bold text-blue-900 dark:text-white mb-2">
+          <h2 className="text-3xl font-bold text-primary-900 dark:text-white mb-2">
             Vacantes disponibles
           </h2>
           <p className="text-gray-500 dark:text-gray-400">
@@ -512,7 +512,7 @@ export default function JobsPage() {
               onClick={() => setGeneralApplying(true)}
               whileHover={buttonHover}
               whileTap={buttonTap}
-              className="bg-blue-900 dark:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              className="bg-accent-400 dark:bg-accent-500 text-primary-900 px-6 py-2.5 rounded-xl font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
             >
               Postulación general
             </motion.button>
@@ -532,7 +532,7 @@ export default function JobsPage() {
       </section>
 
       {/* Postulación general */}
-      <section className="bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#1a1f2e] text-white py-24 md:py-32 text-center">
+      <section className="bg-gradient-to-br from-primary-900 to-primary-700 dark:from-primary-950 dark:to-[#1a1f2e] text-white py-24 md:py-32 text-center">
         <motion.div
           className="max-w-3xl mx-auto px-4"
           variants={staggerContainer}
@@ -541,7 +541,7 @@ export default function JobsPage() {
         >
           <motion.div
             variants={fadeInUp}
-            className="inline-flex items-center gap-2 bg-yellow-400 text-blue-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
+            className="inline-flex items-center gap-2 bg-accent-400 text-primary-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
           >
             <Send size={16} /> Postulación general
           </motion.div>
@@ -556,7 +556,7 @@ export default function JobsPage() {
             onClick={() => setGeneralApplying(true)}
             whileHover={buttonHover}
             whileTap={buttonTap}
-            className="bg-yellow-400 text-blue-900 px-12 py-5 rounded-xl font-bold text-xl hover:bg-yellow-300 transition-colors inline-flex items-center gap-3"
+            className="bg-accent-400 text-primary-900 px-12 py-5 rounded-xl font-bold text-xl hover:bg-accent-300 transition-colors inline-flex items-center gap-3"
           >
             <Send size={22} /> Enviar postulación
           </motion.button>

@@ -81,8 +81,8 @@ export default function AlertsAdminPage() {
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                    <Bell size={16} className="text-blue-700 dark:text-blue-400" />
+                  <div className="w-9 h-9 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
+                    <Bell size={16} className="text-primary-700 dark:text-primary-400" />
                   </div>
                   <div>
                     <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">

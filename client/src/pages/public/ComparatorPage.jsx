@@ -25,7 +25,7 @@ const ROWS = [
   {
     label: 'Precio',
     render: (p) => (
-      <span className="font-bold text-blue-900 dark:text-yellow-400">{formatPrice(p.price)}</span>
+      <span className="font-bold text-primary-900 dark:text-accent-400">{formatPrice(p.price)}</span>
     ),
   },
   { label: 'Ciudad', render: (p) => val(CITY_LABELS[p.city] || p.city) },
@@ -69,7 +69,7 @@ export default function ComparatorPage() {
           </p>
           <Link
             to="/propiedades"
-            className="px-6 py-3 bg-blue-900 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors"
+            className="px-6 py-3 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors"
           >
             Ver propiedades
           </Link>
@@ -88,7 +88,7 @@ export default function ComparatorPage() {
         className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
       >
         <motion.div variants={fadeInUp}>
-          <h1 className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-primary-900 dark:text-white flex items-center gap-2">
             <GitCompare size={22} className="flex-shrink-0" />
             <span>Comparando {items.length} propiedades</span>
           </h1>
@@ -147,7 +147,7 @@ export default function ComparatorPage() {
                       ) : (
                         <Link
                           to={`/propiedades/${p.slug}`}
-                          className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-gray-100 hover:text-blue-600 line-clamp-2 block"
+                          className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-gray-100 hover:text-primary-600 line-clamp-2 block"
                         >
                           {p.title}
                         </Link>
@@ -195,7 +195,7 @@ export default function ComparatorPage() {
             <Link
               key={p.id}
               to={`/propiedades/${p.slug}`}
-              className="px-5 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors"
+              className="px-5 py-2.5 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors"
             >
               Ver {p.title.slice(0, 20)}…
             </Link>

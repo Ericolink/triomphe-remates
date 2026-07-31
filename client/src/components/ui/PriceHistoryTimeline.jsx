@@ -25,7 +25,7 @@ function describeEntry(entry) {
 
   if (!entry.fromStatus) {
     return {
-      icon: <History size={16} className="text-blue-600" />,
+      icon: <History size={16} className="text-primary-600" />,
       text: (
         <>
           Primer ingreso al catálogo como{' '}
@@ -36,7 +36,7 @@ function describeEntry(entry) {
   }
 
   return {
-    icon: <History size={16} className="text-blue-600" />,
+    icon: <History size={16} className="text-primary-600" />,
     text: (
       <>
         Estatus cambió de{' '}

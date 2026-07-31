@@ -92,7 +92,7 @@ export default function ProcessPage() {
       />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-900 to-blue-700 dark:from-[#0f1621] dark:to-[#1a1f2e] text-white py-20">
+      <section className="bg-gradient-to-br from-primary-900 to-primary-700 dark:from-primary-950 dark:to-[#1a1f2e] text-white py-20">
         <motion.div
           className="max-w-7xl mx-auto px-4 text-center"
           variants={staggerContainer}
@@ -104,7 +104,7 @@ export default function ProcessPage() {
           </motion.h1>
           <motion.p
             variants={fadeInUp}
-            className="text-blue-200 dark:text-gray-400 text-lg max-w-2xl mx-auto"
+            className="text-primary-200 dark:text-gray-400 text-lg max-w-2xl mx-auto"
           >
             Desde el primer contacto hasta la entrega de tu propiedad, te acompañamos en cada
             etapa.
@@ -132,22 +132,22 @@ export default function ProcessPage() {
                 <motion.div
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   transition={{ duration: 0.2 }}
-                  className="flex-shrink-0 w-16 h-16 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center"
+                  className="flex-shrink-0 w-16 h-16 bg-primary-50 dark:bg-primary-900/30 rounded-2xl flex items-center justify-center"
                 >
-                  <Icon size={32} className="text-blue-900 dark:text-yellow-400" />
+                  <Icon size={32} className="text-primary-900 dark:text-accent-400" />
                 </motion.div>
                 <div>
-                  <span className="text-xs font-bold text-yellow-500 uppercase tracking-wide">
+                  <span className="text-xs font-bold text-accent-500 uppercase tracking-wide">
                     Paso {step}
                   </span>
-                  <h3 className="font-bold text-lg text-blue-900 dark:text-white">{title}</h3>
+                  <h3 className="font-bold text-lg text-primary-900 dark:text-white">{title}</h3>
                 </div>
               </div>
               <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">{desc}</p>
               {link && (
                 <Link
                   to={link}
-                  className="inline-flex items-center gap-1.5 mt-4 text-sm font-bold text-blue-900 dark:text-yellow-400 hover:gap-2.5 transition-all"
+                  className="inline-flex items-center gap-1.5 mt-4 text-sm font-bold text-primary-900 dark:text-accent-400 hover:gap-2.5 transition-all"
                 >
                   Ir a Contáctanos
                   <ArrowRight size={16} />
@@ -160,10 +160,10 @@ export default function ProcessPage() {
         {/* Fin del proceso */}
         <AnimatedSection>
           <div className="flex flex-col items-center gap-3 mt-12 text-center">
-            <div className="w-16 h-16 bg-blue-900 dark:bg-blue-700 rounded-full flex items-center justify-center">
-              <Flag size={28} className="text-yellow-400" />
+            <div className="w-16 h-16 bg-primary-900 dark:bg-primary-700 rounded-full flex items-center justify-center">
+              <Flag size={28} className="text-accent-400" />
             </div>
-            <p className="text-xl font-bold text-blue-900 dark:text-white">Fin del proceso</p>
+            <p className="text-xl font-bold text-primary-900 dark:text-white">Fin del proceso</p>
           </div>
         </AnimatedSection>
       </section>

@@ -67,7 +67,7 @@ export default function AuditPage() {
       >
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            <ShieldCheck size={22} className="text-blue-700 dark:text-blue-400" /> Audit Log
+            <ShieldCheck size={22} className="text-primary-700 dark:text-primary-400" /> Audit Log
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
             {data?.pagination?.total ?? 0} eventos registrados

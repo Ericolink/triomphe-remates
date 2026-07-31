@@ -40,7 +40,7 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
   const formId = useId();
 
   const inputClass =
-    'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
+    'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
   return (
     <div className="space-y-4">
@@ -202,7 +202,7 @@ function TestimonialForm({ initial, onSave, onCancel, isPending }) {
           disabled={isPending}
           whileHover={buttonHover}
           whileTap={buttonTap}
-          className="px-6 py-2.5 bg-blue-900 dark:bg-blue-700 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+          className="px-6 py-2.5 bg-accent-400 dark:bg-accent-500 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors disabled:opacity-50"
         >
           {isPending ? 'Guardando...' : 'Guardar testimonio'}
         </motion.button>
@@ -284,7 +284,7 @@ export default function TestimonialsAdminPage() {
           whileHover={buttonHover}
           whileTap={buttonTap}
           onClick={() => setModal('create')}
-          className="flex items-center gap-2 bg-blue-900 dark:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 bg-accent-400 dark:bg-accent-500 text-primary-900 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
         >
           <Plus size={16} /> Nuevo testimonio
         </motion.button>
@@ -347,7 +347,7 @@ export default function TestimonialsAdminPage() {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setModal(testimonial)}
-                    className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
+                    className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-lg transition-colors"
                   >
                     <Pencil size={20} />
                   </motion.button>

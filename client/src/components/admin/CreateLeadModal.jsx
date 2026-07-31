@@ -49,7 +49,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
   const users = (usersData?.data ?? []).filter((u) => u.isActive);
 
   const inputClass =
-    'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
+    'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
   const handleClose = () => {
     setForm(emptyForm);
@@ -235,7 +235,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                             budgetAmount: e.target.checked ? '' : f.budgetAmount,
                           }))
                         }
-                        className="w-3.5 h-3.5 rounded accent-blue-600"
+                        className="w-3.5 h-3.5 rounded accent-accent-400"
                       />
                       No especificó el monto
                     </label>
@@ -331,7 +331,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 disabled={budgetInvalid || isPending}
                 whileHover={buttonHover}
                 whileTap={buttonTap}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium text-primary-900 bg-accent-400 hover:bg-accent-300 disabled:opacity-40 transition-colors"
               >
                 {isPending ? 'Guardando...' : 'Crear prospecto'}
               </motion.button>

@@ -196,7 +196,7 @@ const propertyToForm = (p) => ({
 });
 
 const inputClass =
-  'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
+  'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
 
 function ImageThumb({
   img,
@@ -229,7 +229,7 @@ function ImageThumb({
         loading="lazy"
         decoding="async"
         draggable={false}
-        className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none select-none ${img.isCover ? 'border-yellow-400' : 'border-transparent'}`}
+        className={`w-full aspect-square object-cover rounded-xl border-2 transition-colors pointer-events-none select-none ${img.isCover ? 'border-accent-400' : 'border-transparent'}`}
       />
       {/* Visibles siempre en touch/tablet (sin hover); en desktop solo aparecen al pasar el mouse */}
       <div className="absolute inset-0 bg-black/40 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-1">
@@ -238,10 +238,10 @@ function ImageThumb({
           draggable
           onDragStart={(e) => e.preventDefault()}
           onClick={onSetCover}
-          className="p-1 bg-yellow-400 rounded-lg"
+          className="p-1 bg-accent-400 rounded-lg"
           title="Hacer portada"
         >
-          <Star size={16} className="text-blue-900" />
+          <Star size={16} className="text-primary-900" />
         </button>
         <button
           type="button"
@@ -281,7 +281,7 @@ function ImageThumb({
         </button>
       </div>
       {img.isCover && (
-        <span className="absolute top-1 left-1 bg-yellow-400 text-blue-900 text-xs px-1.5 py-0.5 rounded-md font-medium">
+        <span className="absolute top-1 left-1 bg-accent-400 text-primary-900 text-xs px-1.5 py-0.5 rounded-md font-medium">
           Portada
         </span>
       )}
@@ -572,7 +572,7 @@ export default function PropertyFormPage() {
                                   price: e.target.checked ? '' : f.price,
                                 }))
                               }
-                              className="w-4 h-4 rounded accent-blue-900"
+                              className="w-4 h-4 rounded accent-accent-400"
                             />
                             <span className="text-xs text-gray-500 dark:text-gray-400">
                               Precio pendiente — se mostrará como{' '}
@@ -662,7 +662,7 @@ export default function PropertyFormPage() {
                           code: e.target.checked ? '' : f.code || CITY_CODE_PREFIX[f.city] || '',
                         }))
                       }
-                      className="w-4 h-4 rounded accent-blue-900"
+                      className="w-4 h-4 rounded accent-accent-400"
                     />
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       Sin código asignado
@@ -678,7 +678,7 @@ export default function PropertyFormPage() {
                     id="featured"
                     checked={form.isFeatured}
                     onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))}
-                    className="w-4 h-4 rounded accent-blue-900"
+                    className="w-4 h-4 rounded accent-accent-400"
                   />
                   <label htmlFor="featured" className="text-sm text-gray-700 dark:text-gray-300">
                     Destacar en el sitio público
@@ -839,7 +839,7 @@ export default function PropertyFormPage() {
           <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">
             {isEdit ? 'Agregar más imágenes' : 'Imágenes'}
           </h2>
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-[#2e3650] rounded-xl p-8 cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+          <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-[#2e3650] rounded-xl p-8 cursor-pointer hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-colors">
             <Upload size={32} className="text-gray-300 mb-2" />
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Haz clic o arrastra imágenes aquí
@@ -891,7 +891,7 @@ export default function PropertyFormPage() {
                     key={doc.id}
                     className="flex items-center gap-3 bg-gray-50 dark:bg-[#1a1f2e] rounded-xl px-4 py-2.5"
                   >
-                    <FileText size={16} className="text-blue-600 flex-shrink-0" />
+                    <FileText size={16} className="text-primary-600 flex-shrink-0" />
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
                       {doc.name}
                     </span>
@@ -945,7 +945,7 @@ export default function PropertyFormPage() {
               />
               Visible públicamente en la ficha de la propiedad
             </label>
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-[#2e3650] rounded-xl p-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-[#2e3650] rounded-xl p-6 cursor-pointer hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-colors">
               <Upload size={28} className="text-gray-300 mb-2" />
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {uploadDocMutation.isPending ? 'Subiendo...' : 'Haz clic para subir un documento'}
@@ -975,7 +975,7 @@ export default function PropertyFormPage() {
           <button
             type="submit"
             disabled={saveMutation.isPending}
-            className="px-8 py-2.5 bg-blue-900 dark:bg-blue-700 text-white rounded-xl text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
+            className="px-8 py-2.5 bg-accent-400 dark:bg-accent-500 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors disabled:opacity-50"
           >
             {saveMutation.isPending
               ? 'Guardando...'

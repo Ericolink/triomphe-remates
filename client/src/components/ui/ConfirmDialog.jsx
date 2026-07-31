@@ -42,10 +42,10 @@ export default function ConfirmDialog({
             {/* Ícono */}
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                danger ? 'bg-red-100 dark:bg-red-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30'
+                danger ? 'bg-red-100 dark:bg-red-900/30' : 'bg-primary-100 dark:bg-primary-900/30'
               }`}
             >
-              <AlertTriangle size={24} className={danger ? 'text-red-500' : 'text-yellow-500'} />
+              <AlertTriangle size={24} className={danger ? 'text-red-500' : 'text-primary-600 dark:text-primary-400'} />
             </div>
 
             {/* Texto */}
@@ -78,7 +78,7 @@ export default function ConfirmDialog({
                 whileHover={buttonHover}
                 whileTap={buttonTap}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-colors ${
-                  danger ? 'bg-red-500 hover:bg-red-600' : 'bg-yellow-500 hover:bg-yellow-600'
+                  danger ? 'bg-red-500 hover:bg-red-600' : 'bg-primary-600 hover:bg-primary-700'
                 }`}
               >
                 {confirmLabel}

@@ -85,7 +85,7 @@ export default function BuzonPage() {
               setSent(false);
               setForm(INITIAL_FORM);
             }}
-            className="px-6 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors"
+            className="px-6 py-2.5 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors"
           >
             Enviar otro mensaje
           </button>
@@ -110,13 +110,13 @@ export default function BuzonPage() {
       >
         <motion.div
           variants={fadeInUp}
-          className="w-14 h-14 bg-blue-900 rounded-2xl flex items-center justify-center mx-auto mb-4"
+          className="w-14 h-14 bg-primary-900 rounded-2xl flex items-center justify-center mx-auto mb-4"
         >
-          <MessageSquare size={28} className="text-yellow-400" />
+          <MessageSquare size={28} className="text-accent-400" />
         </motion.div>
         <motion.h1
           variants={fadeInUp}
-          className="text-3xl font-bold text-blue-900 dark:text-white mb-2"
+          className="text-3xl font-bold text-primary-900 dark:text-white mb-2"
         >
           Buzón de opiniones
         </motion.h1>
@@ -166,7 +166,7 @@ export default function BuzonPage() {
                 onChange={handleChange}
                 placeholder="Tu nombre"
                 maxLength={100}
-                className="w-full px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:placeholder-gray-500"
               />
             </div>
             <div>
@@ -184,7 +184,7 @@ export default function BuzonPage() {
                 onChange={handleChange}
                 placeholder="tu@email.com"
                 maxLength={150}
-                className="w-full px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:placeholder-gray-500"
               />
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function BuzonPage() {
               onChange={handleChange}
               placeholder="Describe brevemente el tema"
               maxLength={200}
-              className="w-full px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:placeholder-gray-500"
             />
           </div>
 
@@ -222,7 +222,7 @@ export default function BuzonPage() {
               placeholder="Escribe tu mensaje aquí..."
               rows={5}
               maxLength={2000}
-              className="w-full px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm resize-none bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:placeholder-gray-500"
+              className="w-full px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm resize-none bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:placeholder-gray-500"
             />
             <p className="text-xs text-gray-400 dark:text-gray-500 text-right mt-1">
               {form.message.length}/2000
@@ -232,7 +232,7 @@ export default function BuzonPage() {
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-blue-900 text-white rounded-xl font-medium text-sm hover:bg-blue-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-accent-400 text-primary-900 rounded-xl font-medium text-sm hover:bg-accent-300 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {mutation.isPending ? (
               <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

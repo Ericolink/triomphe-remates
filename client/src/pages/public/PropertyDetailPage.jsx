@@ -59,7 +59,7 @@ function AcquisitionProgress({ stage }) {
   const isComplete = stage === 'entrega';
   return (
     <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
-      <h3 className="font-bold text-blue-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+      <h3 className="font-bold text-primary-900 dark:text-gray-100 mb-4 flex items-center gap-2">
         <CheckCircle2 size={18} className={isComplete ? 'text-green-500' : 'text-yellow-500'} />{' '}
         Proceso de adquisición
       </h3>
@@ -150,7 +150,7 @@ export default function PropertyDetailPage() {
         <p className="text-xl text-gray-500">Propiedad no encontrada</p>
         <button
           onClick={() => navigate('/propiedades')}
-          className="mt-4 text-blue-600 hover:underline"
+          className="mt-4 text-primary-600 hover:underline"
         >
           Ver todas las propiedades
         </button>
@@ -181,7 +181,7 @@ export default function PropertyDetailPage() {
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-500 hover:text-blue-900 dark:hover:text-blue-300 transition-colors"
+          className="flex items-center gap-2 text-gray-500 hover:text-primary-900 dark:hover:text-primary-300 transition-colors"
         >
           <ChevronLeft size={18} /> Regresar
         </button>
@@ -199,7 +199,7 @@ export default function PropertyDetailPage() {
 
       {showCountdown && (
         <div
-          className={`mb-6 rounded-xl px-5 py-3 flex items-center gap-3 ${daysLeft <= 7 ? 'bg-red-600 text-white' : daysLeft <= 14 ? 'bg-orange-500 text-white' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'}`}
+          className={`mb-6 rounded-xl px-5 py-3 flex items-center gap-3 ${daysLeft <= 7 ? 'bg-brand-red-600 text-white' : daysLeft <= 14 ? 'bg-orange-500 text-white' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'}`}
         >
           <Clock size={18} className="flex-shrink-0" />
           <span className="font-semibold text-sm">
@@ -290,7 +290,7 @@ export default function PropertyDetailPage() {
                 <button
                   key={img.id}
                   onClick={() => setImgIndex(i)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${i === imgIndex ? 'border-blue-600' : 'border-transparent hover:border-gray-300'}`}
+                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${i === imgIndex ? 'border-accent-500' : 'border-transparent hover:border-gray-300'}`}
                 >
                   <img
                     src={buildImageUrl(img.url, 120)}
@@ -322,7 +322,7 @@ export default function PropertyDetailPage() {
             )}
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-bold text-blue-900 dark:text-white mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-primary-900 dark:text-white mb-2">
             {property.title}
           </h1>
 
@@ -338,7 +338,7 @@ export default function PropertyDetailPage() {
           <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-4 bg-gray-50 dark:bg-[#242938] rounded-xl">
             {property.constructionMeters && (
               <span className="flex items-center gap-2">
-                <Maximize2 size={18} className="text-blue-700 dark:text-blue-400" />
+                <Maximize2 size={18} className="text-primary-700 dark:text-primary-400" />
                 <span>
                   <span className="font-medium">{property.constructionMeters}</span> m² construcción
                 </span>
@@ -346,7 +346,7 @@ export default function PropertyDetailPage() {
             )}
             {property.terrainMeters && (
               <span className="flex items-center gap-2">
-                <LandPlot size={18} className="text-blue-700 dark:text-blue-400" />
+                <LandPlot size={18} className="text-primary-700 dark:text-primary-400" />
                 <span>
                   <span className="font-medium">{property.terrainMeters}</span> m² terreno
                 </span>
@@ -354,19 +354,19 @@ export default function PropertyDetailPage() {
             )}
             {!property.constructionMeters && !property.terrainMeters && property.squareMeters && (
               <span className="flex items-center gap-2">
-                <Maximize2 size={18} className="text-blue-700 dark:text-blue-400" />{' '}
+                <Maximize2 size={18} className="text-primary-700 dark:text-primary-400" />{' '}
                 {property.squareMeters} m²
               </span>
             )}
             {property.bedrooms && (
               <span className="flex items-center gap-2">
-                <Bed size={18} className="text-blue-700 dark:text-blue-400" /> {property.bedrooms}{' '}
+                <Bed size={18} className="text-primary-700 dark:text-primary-400" /> {property.bedrooms}{' '}
                 recámaras
               </span>
             )}
             {property.bathrooms && (
               <span className="flex items-center gap-2">
-                <Bath size={18} className="text-blue-700 dark:text-blue-400" /> {property.bathrooms}{' '}
+                <Bath size={18} className="text-primary-700 dark:text-primary-400" /> {property.bathrooms}{' '}
                 baños
               </span>
             )}
@@ -374,7 +374,7 @@ export default function PropertyDetailPage() {
 
           {property.description && (
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-2">
+              <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-2">
                 Descripción
               </h2>
               <p className="text-gray-600 leading-relaxed">{property.description}</p>
@@ -383,7 +383,7 @@ export default function PropertyDetailPage() {
 
           {documents?.length > 0 && (
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-2">
+              <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-2">
                 Documentos
               </h2>
               <div className="space-y-2">
@@ -395,7 +395,7 @@ export default function PropertyDetailPage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-3 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-100 dark:border-[#2e3650] rounded-xl px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#2e3650] transition-colors"
                   >
-                    <FileText size={18} className="text-blue-700 flex-shrink-0" />
+                    <FileText size={18} className="text-primary-700 flex-shrink-0" />
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
                       {doc.name}
                     </span>
@@ -408,7 +408,7 @@ export default function PropertyDetailPage() {
 
           {priceHistory.length > 1 && (
             <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md mb-6">
-              <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-4">
+              <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-4">
                 Historial de precio
               </h2>
               <PriceHistoryTimeline history={priceHistory} />
@@ -417,14 +417,14 @@ export default function PropertyDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-blue-900 text-white rounded-2xl p-6">
-            <p className="text-sm text-blue-200 mb-1">Precio de remate</p>
+          <div className="bg-primary-900 text-white rounded-2xl p-6">
+            <p className="text-sm text-primary-200 mb-1">Precio de remate</p>
             <p
-              className={`text-3xl font-bold ${property.price ? 'text-yellow-400' : 'text-yellow-300'}`}
+              className={`text-3xl font-bold ${property.price ? 'text-accent-400' : 'text-accent-300'}`}
             >
               {formatPrice(property.price)}
             </p>
-            <p className="text-xs text-blue-300 mt-1">{CITY_LABELS[property.city]}</p>
+            <p className="text-xs text-primary-300 mt-1">{CITY_LABELS[property.city]}</p>
           </div>
 
           <WhatsAppButton
@@ -440,7 +440,7 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
-            <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
+            <h3 className="font-bold text-primary-900 dark:text-primary-300 mb-4 flex items-center gap-2">
               <Phone size={18} /> Contactar asesor
             </h3>
             <ContactForm propertyId={property.id} propertyTitle={property.title} />
@@ -450,7 +450,7 @@ export default function PropertyDetailPage() {
 
       {similar.length > 0 && (
         <div className="mt-14">
-          <h2 className="text-xl font-bold text-blue-900 dark:text-white mb-6">
+          <h2 className="text-xl font-bold text-primary-900 dark:text-white mb-6">
             Propiedades similares
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

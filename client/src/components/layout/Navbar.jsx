@@ -23,7 +23,7 @@ export default function Navbar() {
       initial={{ y: -64, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="bg-blue-900 text-white sticky top-0 z-50 shadow-lg"
+      className="bg-primary-900 text-white sticky top-0 z-50 shadow-lg"
     >
       <div className="max-w-[1920px] mx-auto px-6 sm:px-8 lg:px-12 xl:px-16">
         {/* grid en vez de flex+justify-between: así el menú queda centrado en el
@@ -60,7 +60,7 @@ export default function Navbar() {
                   to={to}
                   end={to === '/'}
                   className={({ isActive }) =>
-                    `text-sm font-medium whitespace-nowrap transition-colors hover:text-yellow-400 ${isActive ? 'text-yellow-400' : 'text-gray-200'}`
+                    `text-sm font-medium whitespace-nowrap transition-colors hover:text-accent-400 ${isActive ? 'text-accent-400' : 'text-gray-200'}`
                   }
                 >
                   {label}
@@ -77,7 +77,7 @@ export default function Navbar() {
               <Link
                 to="/favoritos"
                 title="Mis favoritos"
-                className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-blue-800 transition-colors"
+                className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-primary-800 transition-colors"
               >
                 <Heart size={18} className="text-gray-200" />
                 {count > 0 && (
@@ -95,7 +95,7 @@ export default function Navbar() {
               >
                 <Link
                   to="/admin/login"
-                  className="text-sm font-medium bg-yellow-400 text-blue-900 px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors whitespace-nowrap"
+                  className="text-sm font-medium bg-accent-400 text-primary-900 px-4 py-1.5 rounded-lg hover:bg-accent-300 transition-colors whitespace-nowrap"
                 >
                   Acceso Admin
                 </Link>
@@ -147,7 +147,7 @@ export default function Navbar() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="dk:hidden bg-blue-800 overflow-hidden"
+            className="dk:hidden bg-primary-800 overflow-hidden"
           >
             <div className="px-4 pb-4 flex flex-col gap-3">
               {links.map(({ to, label }, i) => (
@@ -162,7 +162,7 @@ export default function Navbar() {
                     end={to === '/'}
                     onClick={() => setOpen(false)}
                     className={({ isActive }) =>
-                      `block py-2 text-sm font-medium border-b border-blue-700 ${isActive ? 'text-yellow-400' : 'text-gray-200'}`
+                      `block py-2 text-sm font-medium border-b border-primary-700 ${isActive ? 'text-accent-400' : 'text-gray-200'}`
                     }
                   >
                     {label}
@@ -177,7 +177,7 @@ export default function Navbar() {
                 <Link
                   to="/admin/login"
                   onClick={() => setOpen(false)}
-                  className="block py-2 text-sm font-medium text-yellow-400 border-b border-blue-700"
+                  className="block py-2 text-sm font-medium text-accent-400 border-b border-primary-700"
                 >
                   Acceso Admin
                 </Link>

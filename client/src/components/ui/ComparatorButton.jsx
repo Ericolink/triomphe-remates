@@ -32,8 +32,8 @@ export default function ComparatorButton({ property, size = 16, className = '' }
       }
       className={`flex items-center justify-center rounded-full transition-colors ${
         active
-          ? 'bg-blue-600 text-white shadow-md'
-          : 'bg-white/85 text-gray-400 hover:text-blue-600 shadow'
+          ? 'bg-primary-600 text-white shadow-md'
+          : 'bg-white/85 text-gray-400 hover:text-primary-600 shadow'
       } ${className}`}
     >
       <GitCompare size={size} strokeWidth={2} />

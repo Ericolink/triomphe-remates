@@ -50,7 +50,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
   return (
     <CollapsibleSection
       title="Analítica"
-      icon={<BarChart3 size={16} className="text-blue-700 dark:text-blue-400" />}
+      icon={<BarChart3 size={16} className="text-primary-700 dark:text-primary-400" />}
       subtitle="gráficas y desgloses a detalle"
     >
       <TabBar tabs={TABS} active={tab} onChange={setTab} />
@@ -66,18 +66,18 @@ export default function AnalyticsSection({ d, recentProperties }) {
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <Users size={16} className="text-yellow-500" /> Leads por semana
+                <Users size={16} className="text-accent-500" /> Leads por semana
               </h3>
-              <BarChart data={d?.leadsOverTime ?? []} color="#f59e0b" />
+              <BarChart data={d?.leadsOverTime ?? []} color="#C08D3E" />
             </motion.div>
             <motion.div
               variants={fadeInUp}
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <Eye size={16} className="text-purple-500" /> Vistas por semana
+                <Eye size={16} className="text-primary-600 dark:text-primary-400" /> Vistas por semana
               </h3>
-              <AreaChart data={d?.viewsOverTime ?? []} color="#7c3aed" />
+              <AreaChart data={d?.viewsOverTime ?? []} color="#343C56" />
             </motion.div>
           </motion.div>
 
@@ -90,7 +90,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <MapPin size={16} className="text-blue-700 dark:text-blue-400" /> Por ciudad
+                <MapPin size={16} className="text-primary-700 dark:text-primary-400" /> Por ciudad
               </h3>
               <div className="space-y-3">
                 {d?.byCity?.map(({ city, total }) => (
@@ -105,7 +105,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
                     </div>
                     <div className="h-2 bg-gray-100 dark:bg-[#2e3650] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-blue-900 dark:bg-blue-500 rounded-full"
+                        className="h-full bg-primary-900 dark:bg-primary-500 rounded-full"
                         style={{
                           width: `${d.properties.total > 0 ? (total / d.properties.total) * 100 : 0}%`,
                         }}
@@ -121,7 +121,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <Home size={16} className="text-blue-700 dark:text-blue-400" /> Por tipo
+                <Home size={16} className="text-primary-700 dark:text-primary-400" /> Por tipo
               </h3>
               <div className="space-y-3">
                 {d?.byType?.map(({ type, total }) => (
@@ -129,7 +129,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       {TYPE_LABELS_SHORT[type] || type}
                     </span>
-                    <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full">
+                    <span className="bg-primary-50 dark:bg-primary-900/30 text-primary-900 dark:text-primary-300 text-xs font-semibold px-2.5 py-1 rounded-full">
                       {total}
                     </span>
                   </div>
@@ -142,7 +142,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <TrendingUp size={16} className="text-blue-700 dark:text-blue-400" /> Más visitadas
+                <TrendingUp size={16} className="text-primary-700 dark:text-primary-400" /> Más visitadas
               </h3>
               <div className="space-y-3">
                 {d?.topProperties?.map((p, i) => (
@@ -173,12 +173,12 @@ export default function AnalyticsSection({ d, recentProperties }) {
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                <Building2 size={16} className="text-blue-700 dark:text-blue-400" /> Propiedades
+                <Building2 size={16} className="text-primary-700 dark:text-primary-400" /> Propiedades
                 recientes
               </h3>
               <button
                 onClick={() => navigate('/admin/propiedades')}
-                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
               >
                 Ver todas
               </button>
@@ -274,7 +274,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
                   >
                     Tasa de vista → lead
                   </span>
-                  <span className="font-semibold text-blue-700 dark:text-blue-400">
+                  <span className="font-semibold text-primary-700 dark:text-primary-400">
                     {d?.conversion?.viewToLeadRate ?? 0}%
                   </span>
                 </div>
@@ -297,7 +297,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <Users size={16} className="text-yellow-500" /> Leads por estatus
+                <Users size={16} className="text-accent-500" /> Leads por estatus
               </h3>
               <div className="space-y-3">
                 {d?.leadsByStatus?.map(({ status, total }) => (
@@ -312,7 +312,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
                     </div>
                     <div className="h-2 bg-gray-100 dark:bg-[#2e3650] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-blue-900 dark:bg-blue-500 rounded-full"
+                        className="h-full bg-primary-900 dark:bg-primary-500 rounded-full"
                         style={{
                           width: `${d.leads.total > 0 ? (total / d.leads.total) * 100 : 0}%`,
                         }}
@@ -328,7 +328,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
               className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5"
             >
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                <Users size={16} className="text-blue-700 dark:text-blue-400" /> Leads por tipo
+                <Users size={16} className="text-primary-700 dark:text-primary-400" /> Leads por tipo
               </h3>
               <div className="space-y-3">
                 {d?.leadsByType?.map(({ type, total }) => (
@@ -336,7 +336,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
                     <span className="text-sm text-gray-600 dark:text-gray-300">
                       {LEAD_TYPE_LABELS[type] || type}
                     </span>
-                    <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full">
+                    <span className="bg-primary-50 dark:bg-primary-900/30 text-primary-900 dark:text-primary-300 text-xs font-semibold px-2.5 py-1 rounded-full">
                       {total}
                     </span>
                   </div>
@@ -347,7 +347,7 @@ export default function AnalyticsSection({ d, recentProperties }) {
 
           <motion.div variants={fadeInUp} className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5">
             <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-              <TrendingUp size={16} className="text-yellow-500" /> Leads por fuente
+              <TrendingUp size={16} className="text-accent-500" /> Leads por fuente
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {d?.leadsBySource

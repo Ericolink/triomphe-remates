@@ -48,7 +48,7 @@ function Tooltip({ x, y, label, value, color }) {
   );
 }
 
-export function BarChart({ data = [], color = '#1a3a5c' }) {
+export function BarChart({ data = [], color = '#22273A' }) {
   const [hover, setHover] = useState(null);
   if (!data.length) return <EmptyChart />;
 

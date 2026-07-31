@@ -68,7 +68,7 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
   };
 
   const inputClass =
-    'w-full px-3 py-3 border border-gray-200 dark:border-[#2e3650] rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500';
+    'w-full px-3 py-3 border border-gray-200 dark:border-[#2e3650] rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -168,7 +168,7 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
       <button
         type="submit"
         disabled={isPending}
-        className="w-full bg-yellow-400 text-blue-900 py-3 rounded-xl font-bold text-lg hover:bg-yellow-300 transition-colors disabled:opacity-50"
+        className="w-full bg-accent-400 text-primary-900 py-3 rounded-xl font-bold text-lg hover:bg-accent-300 transition-colors disabled:opacity-50"
       >
         {isPending ? 'Enviando...' : 'Enviar mensaje'}
       </button>

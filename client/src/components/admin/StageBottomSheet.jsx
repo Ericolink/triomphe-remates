@@ -47,7 +47,7 @@ export default function StageBottomSheet({ open, lead, onClose, onSelectStage })
                   onClick={() => onSelectStage(stage)}
                   className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm text-left transition-colors ${
                     lead.pipelineStage === stage
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium'
+                      ? 'bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-300 font-medium'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
                   }`}
                 >

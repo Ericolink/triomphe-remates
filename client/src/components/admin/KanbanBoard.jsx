@@ -25,17 +25,17 @@ const KANBAN_COLUMNS = Object.entries(PIPELINE_STAGE_LABELS).map(([key, label]) 
     ? key === 'venta_realizada'
       ? 'border-green-400'
       : 'border-gray-300 dark:border-gray-600'
-    : 'border-blue-400',
+    : 'border-primary-400',
   headerBg: TERMINAL_STAGES.includes(key)
     ? key === 'venta_realizada'
       ? 'bg-green-50 dark:bg-green-900/20'
       : 'bg-gray-50 dark:bg-[#2e3650]'
-    : 'bg-blue-50 dark:bg-blue-900/20',
+    : 'bg-primary-50 dark:bg-primary-900/20',
   dot: TERMINAL_STAGES.includes(key)
     ? key === 'venta_realizada'
       ? 'bg-green-500'
       : 'bg-gray-400'
-    : 'bg-blue-500',
+    : 'bg-primary-500',
 }));
 
 export function NextActionLine({ task }) {
@@ -150,7 +150,7 @@ export function KanbanCard({
         </p>
       )}
       {lead.property && (
-        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1 truncate">
+        <p className="text-xs text-primary-600 dark:text-primary-400 mt-1 flex items-center gap-1 truncate">
           <Building2 size={10} /> {lead.property.title}
         </p>
       )}
@@ -162,7 +162,7 @@ export function KanbanCard({
               href={`tel:${lead.phone}`}
               onClick={(e) => e.stopPropagation()}
               title="Llamar"
-              className="p-2 -m-1 text-gray-400 hover:text-blue-500"
+              className="p-2 -m-1 text-gray-400 hover:text-primary-500"
             >
               <PhoneCall size={12} />
             </a>
@@ -249,7 +249,7 @@ function KanbanColumn({
       onDragOver={(e) => onDragOver(e, col.key)}
       onDrop={(e) => onDrop(e, col.key)}
       onDragLeave={onDragLeave}
-      className={`flex flex-col rounded-2xl border-2 transition-colors ${fullWidth ? 'w-full flex-shrink-0' : 'flex-1 min-w-0'} ${col.color} ${isDragOver ? 'bg-blue-50 dark:bg-blue-900/10' : 'bg-gray-50/60 dark:bg-[#1a1f2e]/60'}`}
+      className={`flex flex-col rounded-2xl border-2 transition-colors ${fullWidth ? 'w-full flex-shrink-0' : 'flex-1 min-w-0'} ${col.color} ${isDragOver ? 'bg-primary-50 dark:bg-primary-900/10' : 'bg-gray-50/60 dark:bg-[#1a1f2e]/60'}`}
     >
       {/* Encabezado a una sola línea siempre: con 8 columnas simultáneas en pc, algunas
           etiquetas ("Cita agendada", "Venta realizada") no caben enteras junto al contador.

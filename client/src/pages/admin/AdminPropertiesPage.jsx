@@ -168,7 +168,7 @@ export default function AdminPropertiesPage() {
             whileHover={buttonHover}
             whileTap={buttonTap}
             onClick={() => navigate('/admin/propiedades/nueva')}
-            className="flex items-center gap-1.5 bg-blue-900 dark:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-1.5 bg-accent-400 dark:bg-accent-500 text-primary-900 px-4 py-2 rounded-xl text-xs font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
           >
             <Plus size={16} /> Nueva propiedad
           </motion.button>
@@ -294,7 +294,7 @@ export default function AdminPropertiesPage() {
                         style={{ color: property.price ? undefined : '#f59e0b' }}
                         className={
                           property.price
-                            ? 'text-blue-900 dark:text-yellow-400'
+                            ? 'text-primary-900 dark:text-accent-400'
                             : 'text-yellow-500 dark:text-yellow-400'
                         }
                       >
@@ -304,7 +304,7 @@ export default function AdminPropertiesPage() {
                         <select
                           value={property.status}
                           onChange={(e) => handleStatusChange(property, e.target.value)}
-                          className={`text-xs border-0 rounded-lg px-2 py-1 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 ${STATUS_SELECT_COLORS[property.status]}`}
+                          className={`text-xs border-0 rounded-lg px-2 py-1 font-medium focus:outline-none focus:ring-2 focus:ring-accent-400 ${STATUS_SELECT_COLORS[property.status]}`}
                         >
                           {labelsToOptions(STATUS_LABELS).map((o) => (
                             <option key={o.value} value={o.value}>
@@ -331,13 +331,13 @@ export default function AdminPropertiesPage() {
                           title={
                             property.isPromoted ? 'Quitar promoción' : 'Promover como estrella'
                           }
-                          className="p-1.5 rounded-lg transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/20 disabled:opacity-50"
+                          className="p-1.5 rounded-lg transition-colors hover:bg-accent-50 dark:hover:bg-accent-900/20 disabled:opacity-50"
                         >
                           <Star
                             size={18}
                             className={
                               property.isPromoted
-                                ? 'text-yellow-400 fill-yellow-400'
+                                ? 'text-accent-400 fill-accent-400'
                                 : 'text-gray-300 dark:text-gray-600'
                             }
                           />
@@ -349,13 +349,13 @@ export default function AdminPropertiesPage() {
                             {
                               icon: <Eye size={20} />,
                               color:
-                                'hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20',
+                                'hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20',
                               action: () => window.open(`/propiedades/${property.slug}`, '_blank'),
                             },
                             {
                               icon: <Pencil size={20} />,
                               color:
-                                'hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
+                                'hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2e3650]',
                               action: () => navigate(`/admin/propiedades/${property.id}/editar`),
                             },
                             {
@@ -399,7 +399,7 @@ export default function AdminPropertiesPage() {
                         setCategory('');
                         setPage(1);
                       }}
-                      className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline"
+                      className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
                     >
                       Quitar filtros
                     </button>
@@ -410,7 +410,7 @@ export default function AdminPropertiesPage() {
                     <button
                       type="button"
                       onClick={() => navigate('/admin/propiedades/nueva')}
-                      className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline"
+                      className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
                     >
                       Crear la primera propiedad
                     </button>

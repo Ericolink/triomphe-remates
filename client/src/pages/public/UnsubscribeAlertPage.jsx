@@ -45,7 +45,7 @@ export default function UnsubscribeAlertPage() {
             <div className="w-14 h-14 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <XCircle className="text-red-500" size={28} />
             </div>
-            <h1 className="text-xl font-bold text-blue-900 dark:text-white mb-2">
+            <h1 className="text-xl font-bold text-primary-900 dark:text-white mb-2">
               Enlace inválido
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -58,7 +58,7 @@ export default function UnsubscribeAlertPage() {
             <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <Loader2 className="text-blue-700 dark:text-blue-400 animate-spin" size={28} />
             </div>
-            <h1 className="text-xl font-bold text-blue-900 dark:text-white mb-2">
+            <h1 className="text-xl font-bold text-primary-900 dark:text-white mb-2">
               Cancelando tu alerta…
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -70,7 +70,7 @@ export default function UnsubscribeAlertPage() {
             <div className="w-14 h-14 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <XCircle className="text-red-500" size={28} />
             </div>
-            <h1 className="text-xl font-bold text-blue-900 dark:text-white mb-2">
+            <h1 className="text-xl font-bold text-primary-900 dark:text-white mb-2">
               No se pudo cancelar la alerta
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">{errorMessage}</p>
@@ -80,7 +80,7 @@ export default function UnsubscribeAlertPage() {
             <div className="w-14 h-14 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="text-green-600" size={28} />
             </div>
-            <h1 className="text-xl font-bold text-blue-900 dark:text-white mb-2">
+            <h1 className="text-xl font-bold text-primary-900 dark:text-white mb-2">
               Alerta cancelada
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -92,7 +92,7 @@ export default function UnsubscribeAlertPage() {
         <div className="mt-8 pt-6 border-t border-gray-100 dark:border-[#2e3650] flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             to="/propiedades"
-            className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors inline-flex items-center justify-center gap-2"
+            className="px-5 py-2.5 bg-accent-400 hover:bg-accent-300 text-primary-900 text-sm font-medium rounded-xl transition-colors inline-flex items-center justify-center gap-2"
           >
             <BellOff size={16} /> Ver propiedades disponibles
           </Link>

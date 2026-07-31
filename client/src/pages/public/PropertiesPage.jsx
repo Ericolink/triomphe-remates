@@ -152,11 +152,11 @@ export default function PropertiesPage() {
       />
 
       <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
-        <h1 className="text-3xl font-bold text-blue-900 dark:text-white">Propiedades en Remate</h1>
+        <h1 className="text-3xl font-bold text-primary-900 dark:text-white">Propiedades en Remate</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           {total || '...'} propiedades disponibles
           {filters.search && (
-            <span className="ml-2 text-blue-600 font-medium">
+            <span className="ml-2 text-primary-600 font-medium">
               · Buscando: &quot;{filters.search}&quot;
             </span>
           )}
@@ -175,7 +175,7 @@ export default function PropertiesPage() {
           placeholder="Buscar por título, dirección..."
           value={filters.search}
           onChange={(e) => setFilter('search', e.target.value)}
-          className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#242938] dark:text-white dark:placeholder-gray-500"
+          className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#242938] dark:text-white dark:placeholder-gray-500"
         />
         <motion.button
           whileHover={buttonHover}
@@ -189,7 +189,7 @@ export default function PropertiesPage() {
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+              className="bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
             >
               !
             </motion.span>
@@ -235,7 +235,7 @@ export default function PropertiesPage() {
                   <select
                     value={filters[key]}
                     onChange={(e) => setFilter(key, e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
                   >
                     {options.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -261,10 +261,10 @@ export default function PropertiesPage() {
                     const raw = e.target.value.replace(/[^0-9]/g, '');
                     setFilter('maxPrice', raw);
                   }}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
                 />
                 {filters.maxPrice && (
-                  <p className="text-xs text-blue-600 mt-1">
+                  <p className="text-xs text-primary-600 mt-1">
                     $ {Number(filters.maxPrice).toLocaleString('es-MX')} MXN
                   </p>
                 )}
@@ -280,7 +280,7 @@ export default function PropertiesPage() {
                   <select
                     value={filters[key]}
                     onChange={(e) => setFilter(key, e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
                   >
                     {options.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -318,7 +318,7 @@ export default function PropertiesPage() {
                         min="0"
                         value={filters[minKey]}
                         onChange={(e) => setFilter(minKey, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
                       />
                     </div>
                     <div className="w-1/2">
@@ -332,7 +332,7 @@ export default function PropertiesPage() {
                         min="0"
                         value={filters[maxKey]}
                         onChange={(e) => setFilter(maxKey, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
                       />
                     </div>
                   </div>
@@ -350,7 +350,7 @@ export default function PropertiesPage() {
           whileTap={buttonTap}
           onClick={() => setShowAlertForm((v) => !v)}
           aria-expanded={showAlertForm}
-          className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 sm:px-8 py-4 bg-blue-900 dark:bg-blue-700 text-white rounded-2xl text-base sm:text-lg font-bold shadow-md hover:bg-blue-700 dark:hover:bg-blue-600 active:bg-blue-800 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-900"
+          className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 sm:px-8 py-4 bg-accent-400 dark:bg-accent-500 text-primary-900 rounded-2xl text-base sm:text-lg font-bold shadow-md hover:bg-accent-300 dark:hover:bg-accent-400 active:bg-accent-500 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-300 dark:focus-visible:ring-accent-900"
         >
           <Bell size={22} className="flex-shrink-0" />
           <span>Recibir alerta cuando llegue una propiedad</span>
@@ -399,7 +399,7 @@ export default function PropertiesPage() {
             onClick={clearFilters}
             whileHover={buttonHover}
             whileTap={buttonTap}
-            className="mt-4 text-blue-600 hover:underline text-sm"
+            className="mt-4 text-primary-600 hover:underline text-sm"
           >
             Limpiar filtros
           </motion.button>

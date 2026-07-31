@@ -4,10 +4,38 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#1a3a5c',
-        'primary-light': '#2d5986',
-        accent: '#c8a96e',
-        'accent-light': '#e8c98e',
+        // Paleta corporativa Triomphe — navy institucional, base = #22273A
+        primary: {
+          50: '#EEF0F4',
+          100: '#D7DAE4',
+          200: '#B4BBCC',
+          300: '#8890AC',
+          400: '#5C6690',
+          500: '#454F68',
+          600: '#343C56',
+          700: '#2B3145',
+          800: '#262B3F',
+          900: '#22273A',
+          950: '#14161F',
+        },
+        // Dorado corporativo — base = #D2A057, en el escalón 400 (reemplaza yellow-400 como CTA)
+        accent: {
+          50: '#FBF3E7',
+          100: '#F5E4C9',
+          300: '#E4C48D',
+          400: '#D2A057',
+          500: '#C08D3E',
+          600: '#A5762E',
+          900: '#4A3419',
+        },
+        // Rojo institucional — uso puntual (no reemplaza el rojo funcional de error/destructivo)
+        'brand-red': {
+          50: '#F8E8E7',
+          100: '#F0D1CF',
+          400: '#C05650',
+          600: '#A22C27',
+          700: '#872420',
+        },
         dark: {
           bg: '#1a1f2e',
           surface: '#242938',

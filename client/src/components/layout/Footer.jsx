@@ -35,7 +35,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-blue-900 text-white mt-20">
+    <footer className="bg-primary-900 text-white mt-20">
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         <div>
           <img
@@ -55,7 +55,7 @@ export default function Footer() {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 bg-blue-800 hover:bg-yellow-400 hover:text-blue-900 rounded-lg flex items-center justify-center transition-colors"
+                className="w-9 h-9 bg-primary-800 hover:bg-accent-400 hover:text-primary-900 rounded-lg flex items-center justify-center transition-colors"
                 aria-label={label}
               >
                 {icon}
@@ -64,7 +64,7 @@ export default function Footer() {
           </div>
         </div>
         <div>
-          <h4 className="font-semibold text-yellow-400 mb-4">Navegación</h4>
+          <h4 className="font-semibold text-accent-400 mb-4">Navegación</h4>
           <ul className="space-y-2 text-gray-300 text-sm">
             {[
               { to: '/', label: 'Inicio' },
@@ -75,7 +75,7 @@ export default function Footer() {
               { to: '/buzon', label: 'Buzón de opiniones' },
             ].map(({ to, label }) => (
               <li key={to}>
-                <Link to={to} className="hover:text-yellow-400 transition-colors">
+                <Link to={to} className="hover:text-accent-400 transition-colors">
                   {label}
                 </Link>
               </li>
@@ -84,7 +84,7 @@ export default function Footer() {
         </div>
         {OFFICES.map(({ city, cityLabel, phone, email, street, location }) => (
           <div key={city}>
-            <h4 className="font-semibold text-yellow-400 mb-4">Contacto {city}</h4>
+            <h4 className="font-semibold text-accent-400 mb-4">Contacto {city}</h4>
             <ul className="space-y-3 text-gray-300 text-sm">
               <li className="flex items-center gap-2">
                 <Phone size={14} className="flex-shrink-0" />
@@ -95,7 +95,7 @@ export default function Footer() {
                 {email.includes('@') ? (
                   <a
                     href={`mailto:${email}`}
-                    className="hover:text-yellow-400 transition-colors break-words"
+                    className="hover:text-accent-400 transition-colors break-words"
                   >
                     {email}
                   </a>
@@ -117,7 +117,7 @@ export default function Footer() {
           </div>
         ))}
       </div>
-      <div className="border-t border-blue-800 py-4 px-4">
+      <div className="border-t border-primary-800 py-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
           <p>© {currentYear} Triomphe Bienes Raíces. Todos los derechos reservados.</p>
           <p>
@@ -126,7 +126,7 @@ export default function Footer() {
               href="https://github.com/ericolink"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-yellow-400 hover:text-yellow-300 transition-colors font-medium"
+              className="text-accent-400 hover:text-accent-300 transition-colors font-medium"
             >
               Ericolink
             </a>

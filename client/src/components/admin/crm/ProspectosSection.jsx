@@ -227,15 +227,15 @@ function LeadDetailPanel({
   // "Forma de pago") para que compartan tamaño de fuente, radio y foco.
   const fieldLabelClass = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
   const fieldControlClass =
-    'w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500';
+    'w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500';
   // Compone una fila de "input + botón": min-w-0 + flex-1 hace que el control ceda ante
   // el botón en vez de imponer su propio 100% de ancho (bug original: `w-full` dentro de
   // un `flex` fuerza al hijo a pedir el ancho completo del contenedor y empuja al botón
   // fuera de vista → scroll horizontal para llegar a escribir).
   const rowControlClass =
-    'min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500';
+    'min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500';
   const rowButtonClass =
-    'flex-shrink-0 px-2.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors';
+    'flex-shrink-0 px-2.5 py-2 bg-accent-400 text-primary-900 rounded-xl text-xs font-medium hover:bg-accent-300 disabled:opacity-40 transition-colors';
   const sectionLabelClass =
     'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5';
   const cardClass = 'rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3';
@@ -281,7 +281,7 @@ function LeadDetailPanel({
               <a
                 href={`tel:${selected.phone}`}
                 title="Llamar"
-                className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
               >
                 <PhoneCall size={18} />
               </a>
@@ -340,7 +340,7 @@ function LeadDetailPanel({
               <button
                 onClick={() => completeTaskMutation.mutate(openTask.id)}
                 disabled={completeTaskMutation.isPending}
-                className="text-xs font-medium px-2.5 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0"
+                className="text-xs font-medium px-2.5 py-1 bg-accent-400 text-primary-900 rounded-lg hover:bg-accent-300 disabled:opacity-40 transition-colors flex-shrink-0"
               >
                 Completar
               </button>
@@ -391,7 +391,7 @@ function LeadDetailPanel({
             <select
               value={activityType}
               onChange={(e) => setActivityType(e.target.value)}
-              className="w-40 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-40 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500"
             >
               {['llamada', 'whatsapp', 'email', 'visita', 'nota'].map((t) => (
                 <option key={t} value={t}>
@@ -577,7 +577,7 @@ function LeadDetailPanel({
                       },
                     });
                   }}
-                  className="w-3.5 h-3.5 rounded accent-blue-600"
+                  className="w-3.5 h-3.5 rounded accent-accent-400"
                 />
                 No especificó
               </label>
@@ -661,7 +661,7 @@ function LeadDetailPanel({
                 onChange={setAddPropertyId}
                 excludeIds={excludePropertyIds}
                 placeholder="Agregar propiedad..."
-                className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-blue-500 bg-white dark:bg-[#1a1f2e]"
+                className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#1a1f2e]"
               />
             </div>
             <button
@@ -750,7 +750,7 @@ function LeadDetailPanel({
                 onChange={(e) => setWhatsappMessage(e.target.value)}
                 rows={2}
                 placeholder="Mensaje de seguimiento..."
-                className="min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
+                className="min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
               />
               <button
                 onClick={() =>
@@ -1148,7 +1148,7 @@ export default function ProspectosSection() {
               onClick={() => setOnlyMine((v) => !v)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
                 onlyMine
-                  ? 'bg-blue-600 border-blue-600 text-white'
+                  ? 'bg-primary-600 border-primary-600 text-white'
                   : 'bg-white dark:bg-[#242938] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
               }`}
             >
@@ -1157,7 +1157,7 @@ export default function ProspectosSection() {
           )}
           <button
             onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors"
           >
             <Plus size={16} /> Nuevo prospecto
           </button>
@@ -1170,13 +1170,13 @@ export default function ProspectosSection() {
           <div className="flex border border-gray-200 dark:border-[#2e3650] rounded-xl overflow-hidden">
             <button
               onClick={() => setView('list')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${view === 'list' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#242938] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2e3650]'}`}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${view === 'list' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-[#242938] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2e3650]'}`}
             >
               <LayoutList size={15} /> Lista
             </button>
             <button
               onClick={() => setView('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${view === 'kanban' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#242938] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2e3650]'}`}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${view === 'kanban' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-[#242938] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2e3650]'}`}
             >
               <Columns size={15} /> Kanban
             </button>
@@ -1248,7 +1248,7 @@ export default function ProspectosSection() {
                   type="checkbox"
                   checked={allChecked}
                   onChange={toggleAll}
-                  className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                  className="w-4 h-4 rounded accent-accent-400 cursor-pointer"
                 />
                 <span className="text-xs text-gray-400 dark:text-gray-500">
                   {allChecked ? 'Deseleccionar todos' : 'Seleccionar todos'}
@@ -1275,7 +1275,7 @@ export default function ProspectosSection() {
                       whileHover={{ x: 4, transition: { duration: 0.15 } }}
                       className={`bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border cursor-pointer transition-all ${
                         selected?.id === lead.id
-                          ? 'border-blue-500 dark:border-blue-400 ring-1 ring-blue-500'
+                          ? 'border-accent-500 dark:border-accent-400 ring-1 ring-accent-500'
                           : 'border-gray-100 dark:border-[#2e3650]'
                       }`}
                     >
@@ -1285,7 +1285,7 @@ export default function ProspectosSection() {
                           checked={checked.includes(lead.id)}
                           onChange={(e) => toggleCheck(e, lead.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className="mt-1 w-4 h-4 rounded accent-blue-600 flex-shrink-0 cursor-pointer"
+                          className="mt-1 w-4 h-4 rounded accent-accent-400 flex-shrink-0 cursor-pointer"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-2">
@@ -1364,7 +1364,7 @@ export default function ProspectosSection() {
                     <button
                       type="button"
                       onClick={() => setStage('')}
-                      className="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline"
+                      className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
                     >
                       Ver todos los prospectos
                     </button>

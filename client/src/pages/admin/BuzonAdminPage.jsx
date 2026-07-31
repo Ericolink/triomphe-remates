@@ -174,7 +174,7 @@ export default function BuzonAdminPage() {
                 {total} total
               </span>
               {newCount > 0 && (
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
                   {newCount} nuevo{newCount !== 1 ? 's' : ''}
                 </span>
               )}
@@ -235,7 +235,7 @@ export default function BuzonAdminPage() {
                 type="checkbox"
                 checked={checked.length === items.length}
                 onChange={toggleAll}
-                className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                className="w-4 h-4 rounded accent-accent-400 cursor-pointer"
               />
               <span className="text-xs text-gray-400 dark:text-gray-500">
                 {checked.length === items.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
@@ -271,15 +271,15 @@ export default function BuzonAdminPage() {
                       role="button"
                       tabIndex={0}
                       whileHover={{ x: 4, transition: { duration: 0.15 } }}
-                      className={`group relative overflow-hidden rounded-2xl p-5 shadow-sm border cursor-pointer transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      className={`group relative overflow-hidden rounded-2xl p-5 shadow-sm border cursor-pointer transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 ${
                         isArchived ? 'opacity-60' : ''
                       } ${
                         isUnread
-                          ? 'bg-blue-50/50 dark:bg-blue-900/10'
+                          ? 'bg-primary-50/50 dark:bg-primary-900/10'
                           : 'bg-white dark:bg-[#242938]'
                       } ${
                         selected?.id === item.id
-                          ? 'border-blue-500 dark:border-blue-400 ring-1 ring-blue-500'
+                          ? 'border-accent-500 dark:border-accent-400 ring-1 ring-accent-500'
                           : 'border-gray-100 dark:border-[#2e3650]'
                       }`}
                     >
@@ -294,14 +294,14 @@ export default function BuzonAdminPage() {
                           onChange={(e) => toggleCheck(e, item.id)}
                           onClick={(e) => e.stopPropagation()}
                           aria-label={`Seleccionar mensaje de ${item.name}`}
-                          className="mt-1 w-4 h-4 rounded accent-blue-600 flex-shrink-0 cursor-pointer"
+                          className="mt-1 w-4 h-4 rounded accent-accent-400 flex-shrink-0 cursor-pointer"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1 min-w-0 mr-3">
                               <p className="flex items-center gap-2 truncate">
                                 {isUnread && (
-                                  <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                                  <span className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" />
                                 )}
                                 <span
                                   className={`truncate ${isUnread ? 'font-bold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}
@@ -336,7 +336,7 @@ export default function BuzonAdminPage() {
                             onClick={(e) => handleArchive(e, item)}
                             title="Archivar"
                             aria-label={`Archivar mensaje de ${item.name}`}
-                            className="p-1.5 bg-white/90 dark:bg-[#1a1f2e]/90 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors shadow-sm"
+                            className="p-1.5 bg-white/90 dark:bg-[#1a1f2e]/90 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors shadow-sm"
                           >
                             <Archive size={15} />
                           </button>
@@ -484,7 +484,7 @@ export default function BuzonAdminPage() {
                       }
                       rows={3}
                       placeholder="Agrega notas sobre este mensaje..."
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
                     />
                   </div>
                 </div>

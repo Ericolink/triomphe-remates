@@ -28,7 +28,7 @@ export default function FavoritesPage() {
       <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="mb-10">
         <motion.div variants={fadeInUp} className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-blue-900 dark:text-white flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-primary-900 dark:text-white flex items-center gap-3">
               <Heart size={28} className="text-red-500" fill="currentColor" />
               Mis favoritos
             </h1>
@@ -70,7 +70,7 @@ export default function FavoritesPage() {
           </p>
           <Link
             to="/propiedades"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-xl text-sm font-medium hover:bg-blue-800 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors"
           >
             Ver propiedades
           </Link>

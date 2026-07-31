@@ -35,7 +35,7 @@ function DealCard({ deal, isSelected, onSelect }) {
       whileHover={{ y: -3, transition: { duration: 0.15 } }}
       className={`bg-white dark:bg-[#242938] rounded-2xl overflow-hidden shadow-sm border cursor-pointer transition-all ${
         isSelected
-          ? 'border-blue-500 dark:border-blue-400 ring-1 ring-blue-500'
+          ? 'border-accent-500 dark:border-accent-400 ring-1 ring-accent-500'
           : 'border-gray-100 dark:border-[#2e3650]'
       }`}
     >

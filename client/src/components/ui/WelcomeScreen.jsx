@@ -13,7 +13,7 @@ export default function WelcomeScreen({ name, onDone }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
       transition={{ duration: 0.4 }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700"
     >
       {/* Fondo con patrón sutil */}
       <div
@@ -42,7 +42,7 @@ export default function WelcomeScreen({ name, onDone }) {
           transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
           className="space-y-2"
         >
-          <p className="text-blue-200 text-lg tracking-widest uppercase font-light">
+          <p className="text-primary-200 text-lg tracking-widest uppercase font-light">
             Bienvenido de vuelta
           </p>
           <h1 className="text-4xl md:text-5xl font-bold text-white">{name}</h1>
@@ -51,7 +51,7 @@ export default function WelcomeScreen({ name, onDone }) {
         {/* Barra de progreso */}
         <motion.div className="absolute bottom-[-120px] w-48 h-1 bg-white/20 rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-yellow-400 rounded-full"
+            className="h-full bg-accent-400 rounded-full"
             initial={{ width: '0%' }}
             animate={{ width: '100%' }}
             transition={{ duration: 2.4, delay: 0.4, ease: 'linear' }}

@@ -7,7 +7,7 @@ import useDebouncedValue from '../../hooks/useDebouncedValue';
 import usePopoverA11y from '../../hooks/usePopoverA11y';
 
 const defaultInputClass =
-  'flex items-center gap-2 w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] focus-within:ring-2 focus-within:ring-blue-500';
+  'flex items-center gap-2 w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] focus-within:ring-2 focus-within:ring-accent-500';
 
 // Combobox de búsqueda remota para elegir UNA propiedad dentro de un formulario del CRM
 // (propiedad de interés de un prospecto). Reemplaza el <select> que solo traía las
