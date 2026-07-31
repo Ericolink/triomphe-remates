@@ -8,11 +8,7 @@ import {
   ArrowLeft,
   Lock,
   History,
-  FileText,
-  Trash2,
-  Download,
   Eye,
-  EyeOff,
   MessageCircle,
   Share2,
   ChevronLeft,
@@ -28,10 +24,6 @@ import {
   setCoverImage,
   reorderImages,
   getStatusHistory,
-  getAllDocuments,
-  uploadDocument,
-  deleteDocument,
-  setDocumentVisibility,
 } from '../../services/propertyService';
 import { getPropertyAnalytics } from '../../services/analyticsService';
 import Spinner from '../../components/ui/Spinner';
@@ -44,16 +36,22 @@ import {
   CITY_LABELS,
   TYPE_LABELS,
   CATEGORY_LABELS,
-  BUSINESS_LINE_LABELS,
-  ACQUISITION_STAGE_LABELS,
   STATUS_DOT_COLORS,
   labelsToOptions,
 } from '../../utils/constants';
+import TabBar from '../../components/ui/TabBar';
 
-// `category` (remate/renta/compra-venta) y `auctionDate` son conceptos propios de la línea
-// de remates — no aplican a Infonavit y se ocultan del formulario cuando se elige esa línea
-// (quedan con su valor por defecto internamente, ver emptyForm/propertyToForm).
-const HIDDEN_FOR_INFONAVIT = ['category', 'auctionDate'];
+// `category` (remate/renta/compra-venta) es un concepto propio de la línea de remates — no
+// aplica a Infonavit y se oculta del formulario cuando se elige esa línea (queda con su valor
+// por defecto internamente, ver emptyForm/propertyToForm).
+const HIDDEN_FOR_INFONAVIT = ['category'];
+
+// Mismas claves/labels que PROPERTY_LINE_TABS en pages/public/PropertiesPage.jsx — el
+// selector de línea de negocio del panel admin debe leerse igual que el tab público.
+const BUSINESS_LINE_TABS = [
+  { key: 'remate', label: 'Remates Bancarios' },
+  { key: 'infonavit', label: 'Casas Infonavit' },
+];
 
 // Cada campo se agrupa por sección para que el formulario se lea como bloques
 // con propósito claro (Datos básicos, Ubicación, Detalles, Remate) en vez de una
@@ -67,14 +65,6 @@ const SECTIONS = [
 
 const FIELDS = [
   { key: 'title', label: 'Título *', type: 'text', col: 2, section: 'basicos' },
-  {
-    key: 'businessLine',
-    label: 'Línea de negocio *',
-    type: 'select',
-    col: 2,
-    section: 'basicos',
-    options: labelsToOptions(BUSINESS_LINE_LABELS),
-  },
   {
     key: 'description',
     label: 'Descripción (opcional)',
@@ -138,21 +128,6 @@ const FIELDS = [
     col: 1,
     section: 'remate',
     options: labelsToOptions(STATUS_LABELS),
-  },
-  {
-    key: 'auctionDate',
-    label: 'Fecha del remate (opcional)',
-    type: 'date',
-    col: 1,
-    section: 'remate',
-  },
-  {
-    key: 'acquisitionStage',
-    label: 'Etapa de adquisición',
-    type: 'select',
-    col: 1,
-    section: 'remate',
-    options: labelsToOptions(ACQUISITION_STAGE_LABELS),
   },
   { key: 'price', label: 'Precio (opcional)', type: 'price', col: 1, section: 'remate' },
 ];
@@ -337,13 +312,6 @@ export default function PropertyFormPage() {
   });
   const analyticsTotals = analyticsData?.data?.totals;
 
-  const { data: documentsData } = useQuery({
-    queryKey: ['property-documents-all', id],
-    queryFn: () => getAllDocuments(id),
-    enabled: isEdit,
-  });
-  const documents = documentsData ?? [];
-
   const serverForm = useMemo(() => (data?.data ? propertyToForm(data.data) : null), [data]);
 
   const [form, setForm] = useState(emptyForm);
@@ -405,44 +373,6 @@ export default function PropertyFormPage() {
     },
     onError: () => toast.error('Error al actualizar el orden'),
   });
-
-  const [docIsPublic, setDocIsPublic] = useState(true);
-
-  const uploadDocMutation = useMutation({
-    mutationFn: (file) => uploadDocument(id, file, file.name, docIsPublic),
-    onSuccess: () => {
-      toast.success('Documento subido');
-      queryClient.invalidateQueries(['property-documents-all', id]);
-    },
-    onError: (err) => toast.error(err?.response?.data?.error || 'Error al subir documento'),
-  });
-
-  const deleteDocMutation = useMutation({
-    mutationFn: (docId) => deleteDocument(id, docId),
-    onSuccess: () => {
-      toast.success('Documento eliminado');
-      queryClient.invalidateQueries(['property-documents-all', id]);
-    },
-    onError: (err) => toast.error(err?.response?.data?.error || 'Error al eliminar el documento'),
-  });
-
-  const visibilityMutation = useMutation({
-    mutationFn: ({ docId, isPublic }) => setDocumentVisibility(id, docId, isPublic),
-    onSuccess: () => queryClient.invalidateQueries(['property-documents-all', id]),
-    onError: () => toast.error('Error al cambiar la visibilidad'),
-  });
-
-  const handleDocFile = (e) => {
-    const file = e.target.files[0];
-    if (file) uploadDocMutation.mutate(file);
-    e.target.value = '';
-  };
-
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '';
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
 
   const handleFiles = (e) => {
     const files = Array.from(e.target.files);
@@ -511,7 +441,6 @@ export default function PropertyFormPage() {
   };
 
   const [confirmDeleteImg, setConfirmDeleteImg] = useState(null);
-  const [confirmDeleteDoc, setConfirmDeleteDoc] = useState(null);
 
   if (isEdit && isLoading) return <Spinner size="lg" className="py-20" />;
 
@@ -543,6 +472,18 @@ export default function PropertyFormPage() {
             className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]"
           >
             <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">{title}</h2>
+            {sectionKey === 'basicos' && (
+              <div className="mb-4" role="group" aria-label="Línea de negocio">
+                <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Línea de negocio *
+                </span>
+                <TabBar
+                  tabs={BUSINESS_LINE_TABS}
+                  active={form.businessLine}
+                  onChange={(key) => setForm((f) => ({ ...f, businessLine: key }))}
+                />
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {FIELDS.filter(
                 (f) =>
@@ -559,12 +500,6 @@ export default function PropertyFormPage() {
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                         {label}
                       </label>
-                      {key === 'acquisitionStage' && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">
-                          En qué punto va el trámite legal para tomar posesión del inmueble (no
-                          afecta lo que ve el público).
-                        </p>
-                      )}
                       {type === 'price' ? (
                         <div className="space-y-2">
                           <input
@@ -898,92 +833,6 @@ export default function PropertyFormPage() {
           )}
         </div>
 
-        {isEdit && (
-          <div className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]">
-            <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-              <FileText size={15} className="text-gray-400" /> Documentos
-            </h2>
-
-            {documents.length > 0 && (
-              <div className="space-y-2 mb-4">
-                {documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center gap-3 bg-gray-50 dark:bg-[#1a1f2e] rounded-xl px-4 py-2.5"
-                  >
-                    <FileText size={16} className="text-primary-600 flex-shrink-0" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
-                      {doc.name}
-                    </span>
-                    {doc.size && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
-                        {formatFileSize(doc.size)}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        visibilityMutation.mutate({ docId: doc.id, isPublic: !doc.isPublic })
-                      }
-                      className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${doc.isPublic ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20' : 'text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2e3650]'}`}
-                      title={
-                        doc.isPublic
-                          ? 'Público — visible en la ficha de la propiedad'
-                          : 'Privado — solo visible en el panel admin'
-                      }
-                    >
-                      {doc.isPublic ? <Eye size={15} /> : <EyeOff size={15} />}
-                    </button>
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-[#2e3650] transition-colors text-gray-500 dark:text-gray-400"
-                      title="Descargar"
-                    >
-                      <Download size={15} />
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDeleteDoc(doc.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-500"
-                      title="Eliminar"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <label className="flex items-center gap-2 mb-3 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={docIsPublic}
-                onChange={(e) => setDocIsPublic(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              Visible públicamente en la ficha de la propiedad
-            </label>
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-[#2e3650] rounded-xl p-6 cursor-pointer hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-colors">
-              <Upload size={28} className="text-gray-300 mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {uploadDocMutation.isPending ? 'Subiendo...' : 'Haz clic para subir un documento'}
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                PDF, DOC, DOCX, XLS o XLSX · Máx. 20MB
-              </p>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx,.xls,.xlsx"
-                onChange={handleDocFile}
-                disabled={uploadDocMutation.isPending}
-                className="hidden"
-              />
-            </label>
-          </div>
-        )}
-
         <div className="flex gap-3 justify-end pb-6">
           <button
             type="button"
@@ -1016,17 +865,6 @@ export default function PropertyFormPage() {
           setConfirmDeleteImg(null);
         }}
         onCancel={() => setConfirmDeleteImg(null)}
-      />
-      <ConfirmDialog
-        open={!!confirmDeleteDoc}
-        title="¿Eliminar este documento?"
-        message="Se borrará permanentemente y ya no estará disponible, ni siquiera si era público."
-        confirmLabel="Eliminar"
-        onConfirm={() => {
-          deleteDocMutation.mutate(confirmDeleteDoc);
-          setConfirmDeleteDoc(null);
-        }}
-        onCancel={() => setConfirmDeleteDoc(null)}
       />
     </div>
   );

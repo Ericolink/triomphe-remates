@@ -14,13 +14,10 @@ import {
   ZoomIn,
   Clock,
   CheckCircle2,
-  FileText,
-  Download,
 } from 'lucide-react';
 import {
   getPropertyBySlug,
   getProperties,
-  getDocuments,
   getPriceHistory,
   trackView,
 } from '../../services/propertyService';
@@ -119,12 +116,6 @@ export default function PropertyDetailPage() {
     enabled: !!property,
   });
   const similar = similarData?.data?.filter((p) => p.id !== property?.id).slice(0, 3) ?? [];
-
-  const { data: documents } = useQuery({
-    queryKey: ['property-documents', property?.id],
-    queryFn: () => getDocuments(property.id),
-    enabled: !!property,
-  });
 
   const { data: priceHistoryData } = useQuery({
     queryKey: ['property-price-history', property?.id],
@@ -378,31 +369,6 @@ export default function PropertyDetailPage() {
                 Descripción
               </h2>
               <p className="text-gray-600 leading-relaxed">{property.description}</p>
-            </div>
-          )}
-
-          {documents?.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-2">
-                Documentos
-              </h2>
-              <div className="space-y-2">
-                {documents.map((doc) => (
-                  <a
-                    key={doc.id}
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-100 dark:border-[#2e3650] rounded-xl px-4 py-3 hover:bg-gray-100 dark:hover:bg-[#2e3650] transition-colors"
-                  >
-                    <FileText size={18} className="text-primary-700 flex-shrink-0" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
-                      {doc.name}
-                    </span>
-                    <Download size={16} className="text-gray-400 flex-shrink-0" />
-                  </a>
-                ))}
-              </div>
             </div>
           )}
 

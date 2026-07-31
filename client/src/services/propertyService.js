@@ -96,40 +96,6 @@ export const trackShare = async (id) => {
   await api.post(`/properties/${id}/share`);
 };
 
-export const getDocuments = async (id) => {
-  const { data } = await api.get(`/properties/${id}/documents`);
-  return data.data;
-};
-
-// AUDIT-007: panel admin necesita ver también los documentos privados
-export const getAllDocuments = async (id) => {
-  const { data } = await api.get(`/properties/${id}/documents/all`);
-  return data.data;
-};
-
-export const uploadDocument = async (id, file, name, isPublic = true) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  if (name) formData.append('name', name);
-  formData.append('isPublic', isPublic);
-  const { data } = await api.post(`/properties/${id}/documents`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
-};
-
-export const setDocumentVisibility = async (propertyId, docId, isPublic) => {
-  const { data } = await api.patch(`/properties/${propertyId}/documents/${docId}/visibility`, {
-    isPublic,
-  });
-  return data;
-};
-
-export const deleteDocument = async (propertyId, docId) => {
-  const { data } = await api.delete(`/properties/${propertyId}/documents/${docId}`);
-  return data;
-};
-
 export const downloadPropertyQuotePDF = async (id, filename) => {
   const response = await api.get(`/export/property/${id}/pdf`, { responseType: 'blob' });
   downloadBlob(response.data, filename);

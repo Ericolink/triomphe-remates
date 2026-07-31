@@ -4,6 +4,7 @@ export default function TabBar({ tabs, active, onChange }) {
       {tabs.map((t) => (
         <button
           key={t.key}
+          type="button"
           onClick={() => onChange(t.key)}
           className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl transition-colors ${
             active === t.key
