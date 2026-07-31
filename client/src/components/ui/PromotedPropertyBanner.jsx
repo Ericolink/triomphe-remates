@@ -3,7 +3,7 @@ import { MapPin, Maximize2, LandPlot, Bed, Bath, Star, ArrowRight, Building } fr
 import { motion } from 'framer-motion';
 import Badge from './Badge';
 import { buildImageUrl } from '../../utils/images';
-import { formatPrice } from '../../utils/formatters';
+import { formatPrice, formatMetric } from '../../utils/formatters';
 import {
   CITY_LABELS,
   CATEGORY_LABELS,
@@ -125,38 +125,22 @@ export default function PromotedPropertyBanner({ property }) {
               </div>
 
               <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
-                {property.constructionMeters && (
-                  <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <Maximize2 size={15} className="text-primary-600 dark:text-primary-400" />
-                    {property.constructionMeters} m²c
-                  </span>
-                )}
-                {property.terrainMeters && (
-                  <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <LandPlot size={15} className="text-primary-600 dark:text-primary-400" />
-                    {property.terrainMeters} m²t
-                  </span>
-                )}
-                {!property.constructionMeters &&
-                  !property.terrainMeters &&
-                  property.squareMeters && (
-                    <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                      <Maximize2 size={15} className="text-primary-600 dark:text-primary-400" />
-                      {property.squareMeters} m²
-                    </span>
-                  )}
-                {property.bedrooms && (
-                  <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <Bed size={15} className="text-primary-600 dark:text-primary-400" />
-                    {property.bedrooms} rec.
-                  </span>
-                )}
-                {property.bathrooms && (
-                  <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
-                    <Bath size={15} className="text-primary-600 dark:text-primary-400" />
-                    {property.bathrooms} baños
-                  </span>
-                )}
+                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
+                  <Maximize2 size={15} className="text-primary-600 dark:text-primary-400" />
+                  {formatMetric(property.constructionMeters ?? property.squareMeters, ' m²c')}
+                </span>
+                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
+                  <LandPlot size={15} className="text-primary-600 dark:text-primary-400" />
+                  {formatMetric(property.terrainMeters, ' m²t')}
+                </span>
+                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
+                  <Bed size={15} className="text-primary-600 dark:text-primary-400" />
+                  {formatMetric(property.bedrooms, ' rec.')}
+                </span>
+                <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
+                  <Bath size={15} className="text-primary-600 dark:text-primary-400" />
+                  {formatMetric(property.bathrooms, ' baños')}
+                </span>
               </div>
             </div>
 

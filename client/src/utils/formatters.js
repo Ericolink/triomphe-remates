@@ -53,3 +53,8 @@ export const formatBudget = (amount, notSpecified) => {
 // Fecha de hoy en formato YYYY-MM-DD, para el atributo `max` de inputs date que no deben
 // aceptar fechas futuras (ej. fecha de primer contacto).
 export const todayISODate = () => new Date().toISOString().split('T')[0];
+
+// Icono de tarjeta/detalle con dato no capturado: mostrar "--" en vez de ocultar el icono,
+// para que la estructura visual de habitaciones/baños/m² sea siempre consistente.
+export const formatMetric = (value, suffix = '') =>
+  value === null || value === undefined || value === '' ? '--' : `${value}${suffix}`;

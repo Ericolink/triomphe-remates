@@ -37,7 +37,7 @@ import PropertyCard from '../../components/ui/PropertyCard';
 import Lightbox from '../../components/ui/Lightbox';
 import PriceHistoryTimeline from '../../components/ui/PriceHistoryTimeline';
 import { buildImageUrl } from '../../utils/images';
-import { formatPrice } from '../../utils/formatters';
+import { formatPrice, formatMetric } from '../../utils/formatters';
 import {
   CITY_LABELS,
   TYPE_LABELS,
@@ -331,40 +331,29 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-4 bg-gray-50 dark:bg-[#242938] rounded-xl">
-            {property.constructionMeters && (
-              <span className="flex items-center gap-2">
-                <Maximize2 size={18} className="text-primary-700 dark:text-primary-400" />
-                <span>
-                  <span className="font-medium">{property.constructionMeters}</span> m² construcción
-                </span>
+            <span className="flex items-center gap-2">
+              <Maximize2 size={18} className="text-primary-700 dark:text-primary-400" />
+              <span>
+                <span className="font-medium">
+                  {formatMetric(property.constructionMeters ?? property.squareMeters)}
+                </span>{' '}
+                m² construcción
               </span>
-            )}
-            {property.terrainMeters && (
-              <span className="flex items-center gap-2">
-                <LandPlot size={18} className="text-primary-700 dark:text-primary-400" />
-                <span>
-                  <span className="font-medium">{property.terrainMeters}</span> m² terreno
-                </span>
+            </span>
+            <span className="flex items-center gap-2">
+              <LandPlot size={18} className="text-primary-700 dark:text-primary-400" />
+              <span>
+                <span className="font-medium">{formatMetric(property.terrainMeters)}</span> m² terreno
               </span>
-            )}
-            {!property.constructionMeters && !property.terrainMeters && property.squareMeters && (
-              <span className="flex items-center gap-2">
-                <Maximize2 size={18} className="text-primary-700 dark:text-primary-400" />{' '}
-                {property.squareMeters} m²
-              </span>
-            )}
-            {property.bedrooms && (
-              <span className="flex items-center gap-2">
-                <Bed size={18} className="text-primary-700 dark:text-primary-400" /> {property.bedrooms}{' '}
-                recámaras
-              </span>
-            )}
-            {property.bathrooms && (
-              <span className="flex items-center gap-2">
-                <Bath size={18} className="text-primary-700 dark:text-primary-400" /> {property.bathrooms}{' '}
-                baños
-              </span>
-            )}
+            </span>
+            <span className="flex items-center gap-2">
+              <Bed size={18} className="text-primary-700 dark:text-primary-400" />{' '}
+              {formatMetric(property.bedrooms)} recámaras
+            </span>
+            <span className="flex items-center gap-2">
+              <Bath size={18} className="text-primary-700 dark:text-primary-400" />{' '}
+              {formatMetric(property.bathrooms)} baños
+            </span>
           </div>
 
           {property.description && (

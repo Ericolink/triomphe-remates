@@ -6,7 +6,7 @@ import Badge from './Badge';
 import FavoriteButton from './FavoriteButton';
 import ComparatorButton from './ComparatorButton';
 import { buildImageUrl } from '../../utils/images';
-import { formatPrice, toWhatsAppLink } from '../../utils/formatters';
+import { formatPrice, formatMetric, toWhatsAppLink } from '../../utils/formatters';
 import {
   CITY_LABELS,
   CATEGORY_LABELS,
@@ -105,36 +105,22 @@ export default function PropertyCard({ property }) {
           </div>
           <div className="flex items-center justify-between border-t border-gray-100 dark:border-[#2e3650] pt-3">
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-              {property.constructionMeters && (
-                <span className="flex items-center gap-1" title="Metros de construcción">
-                  <Maximize2 size={14} />
-                  {property.constructionMeters} m²c
-                </span>
-              )}
-              {property.terrainMeters && (
-                <span className="flex items-center gap-1" title="Metros de terreno">
-                  <LandPlot size={14} />
-                  {property.terrainMeters} m²t
-                </span>
-              )}
-              {!property.constructionMeters && !property.terrainMeters && property.squareMeters && (
-                <span className="flex items-center gap-1">
-                  <Maximize2 size={14} />
-                  {property.squareMeters} m²
-                </span>
-              )}
-              {property.bedrooms && (
-                <span className="flex items-center gap-1">
-                  <Bed size={14} />
-                  {property.bedrooms}
-                </span>
-              )}
-              {property.bathrooms && (
-                <span className="flex items-center gap-1">
-                  <Bath size={14} />
-                  {property.bathrooms}
-                </span>
-              )}
+              <span className="flex items-center gap-1" title="Metros de construcción">
+                <Maximize2 size={14} />
+                {formatMetric(property.constructionMeters ?? property.squareMeters, ' m²c')}
+              </span>
+              <span className="flex items-center gap-1" title="Metros de terreno">
+                <LandPlot size={14} />
+                {formatMetric(property.terrainMeters, ' m²t')}
+              </span>
+              <span className="flex items-center gap-1" title="Recámaras">
+                <Bed size={14} />
+                {formatMetric(property.bedrooms)}
+              </span>
+              <span className="flex items-center gap-1" title="Baños">
+                <Bath size={14} />
+                {formatMetric(property.bathrooms)}
+              </span>
             </div>
             <button
               type="button"
