@@ -65,16 +65,18 @@ export const STATUS_VARIANTS = {
   vendido: 'danger',
 };
 
-// Categoría comercial de la propiedad — distinta del `status` (disponible/apartado/vendido).
-// Las claves internas (compra_venta_credito/compra_venta_contado) se conservan tal cual desde
-// la migración 20260723000001; solo el texto visible se actualizó a la nomenclatura de negocio
-// "Compra venta remates" / "Compra venta Infonavit" (ver filtro de categoría en PropertiesPage
-// y AdminPropertiesPage).
+// Categoría comercial de la propiedad — distinta del `status` (disponible/apartado/vendido) y
+// de `businessLine` (ver más abajo). Las claves internas (compra_venta_credito/
+// compra_venta_contado) se conservan tal cual desde la migración 20260723000001; solo el texto
+// visible se actualiza acá. `compra_venta_contado` ya NO se llama "Infonavit" — esa semántica
+// vive ahora en el campo `businessLine` (migración 20260731000000), que separa por completo la
+// sección pública de remates de la de Infonavit; tener las dos palabras "Infonavit" con
+// significados distintos en la misma UI sería confuso.
 export const CATEGORY_LABELS = {
   remate: 'Remates',
   renta: 'Renta',
   compra_venta_credito: 'Compra venta remates',
-  compra_venta_contado: 'Compra venta Infonavit',
+  compra_venta_contado: 'Compra venta de contado',
 };
 
 // Mapeadas a las 5 variantes que soporta Badge, mismo criterio que STATUS_VARIANTS
@@ -83,6 +85,56 @@ export const CATEGORY_VARIANTS = {
   renta: 'warning',
   compra_venta_credito: 'success',
   compra_venta_contado: 'success',
+};
+
+// Línea de negocio de la propiedad — el eje que separa por completo las dos secciones
+// públicas del sitio (remates bancarios para inversionistas vs. Infonavit para compradores
+// de vivienda). Independiente de `category` (que es una subclasificación dentro de la línea
+// de remates). Ver migración 20260731000000-add-businessline-to-properties.
+export const BUSINESS_LINE_LABELS = {
+  remate: 'Remate Bancario',
+  infonavit: 'Infonavit',
+};
+
+export const BUSINESS_LINE_VARIANTS = {
+  remate: 'primary',
+  infonavit: 'success',
+};
+
+// Fuente única de copy por línea de negocio. Ambas conviven en el mismo módulo
+// /propiedades (selector de tabs, ver TabBar en PropertiesPage) — no hay landing ni ruta
+// separada por línea, así que solo `remate` usa los campos de hero/CTA/SEO (el home sigue
+// enfocado exclusivamente en remates). El resto de los campos (listingTitle/listingDescription/
+// priceLabel/keywordsPrefix/descriptionSuffix) los leen ambas líneas: PropertiesPage para el
+// H1/SEO que cambia al alternar de tab, y PropertyDetailPage/SEO/PropertyCard para mostrar la
+// propiedad correctamente sin importar desde qué tab se llegó. Agregar una tercera línea en el
+// futuro (renta, preventa...) es sumar una entrada acá + el valor al ENUM `businessLine`.
+export const BUSINESS_LINE_CONTENT = {
+  remate: {
+    heroBadge: 'Precios del 30% al 70% por debajo del mercado.',
+    heroTitle: 'Remates Bancarios',
+    heroTitleAccent: 'en México',
+    heroSubtitle:
+      'Encuentra propiedades a precios de remate en Chihuahua, Ciudad Juárez y Querétaro. Has llegado al lugar correcto para hacer crecer tus inversiones, con más de 28 años de experiencia a nivel nacional.',
+    ctaText: '¿Te interesa alguna propiedad o inversión?',
+    listingPath: '/propiedades',
+    listingTitle: 'Propiedades en Remate',
+    listingDescription: 'Explora nuestro inventario de remates bancarios.',
+    seoTitle: 'Remates Bancarios en México',
+    seoDescription:
+      'Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos del 30% al 70% por debajo del valor comercial.',
+    priceLabel: 'Precio de remate',
+    keywordsPrefix: 'remate bancario',
+    descriptionSuffix: 'en remate bancario',
+  },
+  infonavit: {
+    listingPath: '/propiedades',
+    listingTitle: 'Casas Infonavit',
+    listingDescription: 'Encuentra tu próxima vivienda con crédito Infonavit o hipotecario.',
+    priceLabel: 'Precio',
+    keywordsPrefix: 'infonavit, crédito hipotecario',
+    descriptionSuffix: 'con crédito Infonavit',
+  },
 };
 
 // Fondo del <select> de estatus en la tabla admin (AdminPropertiesPage) — no puede ser un

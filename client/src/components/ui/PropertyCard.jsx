@@ -11,6 +11,8 @@ import {
   CITY_LABELS,
   CATEGORY_LABELS,
   CATEGORY_VARIANTS,
+  BUSINESS_LINE_LABELS,
+  BUSINESS_LINE_VARIANTS,
   WHATSAPP_NUMBER,
 } from '../../utils/constants';
 
@@ -67,9 +69,15 @@ export default function PropertyCard({ property }) {
             </div>
           )}
           <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
-            <Badge variant={CATEGORY_VARIANTS[property.category]}>
-              {CATEGORY_LABELS[property.category] || property.category}
-            </Badge>
+            {property.businessLine === 'infonavit' ? (
+              <Badge variant={BUSINESS_LINE_VARIANTS.infonavit}>
+                {BUSINESS_LINE_LABELS.infonavit}
+              </Badge>
+            ) : (
+              <Badge variant={CATEGORY_VARIANTS[property.category]}>
+                {CATEGORY_LABELS[property.category] || property.category}
+              </Badge>
+            )}
             {showCountdown && (
               <span className="flex items-center gap-1 bg-brand-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
                 <Clock size={10} /> {countdownLabel}

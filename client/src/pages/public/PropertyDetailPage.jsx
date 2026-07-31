@@ -43,6 +43,9 @@ import {
   TYPE_LABELS,
   CATEGORY_LABELS,
   CATEGORY_VARIANTS,
+  BUSINESS_LINE_LABELS,
+  BUSINESS_LINE_VARIANTS,
+  BUSINESS_LINE_CONTENT,
   ACQUISITION_STAGE_LABELS,
   labelsToOptions,
 } from '../../utils/constants';
@@ -105,8 +108,14 @@ export default function PropertyDetailPage() {
   }, [property?.id]);
 
   const { data: similarData } = useQuery({
-    queryKey: ['similar', property?.city, property?.type],
-    queryFn: () => getProperties({ city: property.city, type: property.type, limit: 6 }),
+    queryKey: ['similar', property?.city, property?.type, property?.businessLine],
+    queryFn: () =>
+      getProperties({
+        city: property.city,
+        type: property.type,
+        businessLine: property.businessLine,
+        limit: 6,
+      }),
     enabled: !!property,
   });
   const similar = similarData?.data?.filter((p) => p.id !== property?.id).slice(0, 3) ?? [];
@@ -130,8 +139,9 @@ export default function PropertyDetailPage() {
   const showCountdown = daysLeft !== null && daysLeft > 0;
 
   const buildDescription = (p) => {
+    const content = BUSINESS_LINE_CONTENT[p.businessLine] || BUSINESS_LINE_CONTENT.remate;
     const parts = [
-      `${TYPE_LABELS[p.type] || p.type} en remate bancario`,
+      `${TYPE_LABELS[p.type] || p.type} ${content.descriptionSuffix}`,
       p.price ? `a ${formatPrice(p.price)}` : '',
       p.city ? `en ${CITY_LABELS[p.city]}` : '',
       p.squareMeters ? `· ${p.squareMeters} m²` : '',
@@ -303,11 +313,17 @@ export default function PropertyDetailPage() {
           )}
 
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <Badge variant={CATEGORY_VARIANTS[property.category]}>
-              {property.category === 'remate'
-                ? 'Remate bancario (Cesión de Derechos)'
-                : CATEGORY_LABELS[property.category] || property.category}
-            </Badge>
+            {property.businessLine === 'infonavit' ? (
+              <Badge variant={BUSINESS_LINE_VARIANTS.infonavit}>
+                {BUSINESS_LINE_LABELS.infonavit}
+              </Badge>
+            ) : (
+              <Badge variant={CATEGORY_VARIANTS[property.category]}>
+                {property.category === 'remate'
+                  ? 'Remate bancario (Cesión de Derechos)'
+                  : CATEGORY_LABELS[property.category] || property.category}
+              </Badge>
+            )}
             {property.isFeatured && <Badge variant="primary">Destacado</Badge>}
             <span className="text-gray-400 text-sm capitalize">
               {TYPE_LABELS[property.type] || property.type}
@@ -402,7 +418,10 @@ export default function PropertyDetailPage() {
 
         <div className="space-y-6">
           <div className="bg-primary-900 text-white rounded-2xl p-6">
-            <p className="text-sm text-primary-200 mb-1">Precio de remate</p>
+            <p className="text-sm text-primary-200 mb-1">
+              {(BUSINESS_LINE_CONTENT[property.businessLine] || BUSINESS_LINE_CONTENT.remate)
+                .priceLabel}
+            </p>
             <p
               className={`text-3xl font-bold ${property.price ? 'text-accent-400' : 'text-accent-300'}`}
             >

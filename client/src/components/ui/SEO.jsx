@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { BUSINESS_LINE_CONTENT } from '../../utils/constants';
 
 const SITE_NAME = 'Triomphe Remates Bancarios';
 const SITE_URL = import.meta.env.VITE_SITE_URL || window.location.origin;
@@ -128,7 +129,7 @@ export default function SEO({
         name="keywords"
         content={
           property
-            ? `remate bancario, ${property.type}, ${cityName[property.city] || property.city}, ${property.title}, bienes raices chihuahua`
+            ? `${(BUSINESS_LINE_CONTENT[property.businessLine] || BUSINESS_LINE_CONTENT.remate).keywordsPrefix}, ${property.type}, ${cityName[property.city] || property.city}, ${property.title}, bienes raices chihuahua`
             : 'remates bancarios, propiedades remate, casas baratas chihuahua, juarez, queretaro, bienes raices'
         }
       />

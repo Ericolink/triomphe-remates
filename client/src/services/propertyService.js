@@ -63,13 +63,13 @@ export const syncProperties = async (ids) => {
   return data.data;
 };
 
-export const getPropertyStats = async () => {
-  const { data } = await api.get('/properties/stats');
+export const getPropertyStats = async (params = {}) => {
+  const { data } = await api.get('/properties/stats', { params });
   return data;
 };
 
-export const getPromotedProperty = async () => {
-  const { data } = await api.get('/properties/promoted');
+export const getPromotedProperty = async (params = {}) => {
+  const { data } = await api.get('/properties/promoted', { params });
   return data;
 };
 

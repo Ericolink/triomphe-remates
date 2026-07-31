@@ -16,26 +16,33 @@ import SEO from '../../components/ui/SEO';
 import AnimatedSection from '../../components/ui/AnimatedSection';
 import { fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { buildImageUrl } from '../../utils/images';
-import { CITY_LABELS } from '../../utils/constants';
+import { CITY_LABELS, BUSINESS_LINE_CONTENT } from '../../utils/constants';
+
+// La página principal se mantiene enfocada en remates bancarios (la propuesta de valor
+// principal del negocio) — Infonavit se navega desde /propiedades, ver TabBar ahí. `content`
+// sigue leyendo de BUSINESS_LINE_CONTENT (no hardcodeado inline) para no duplicar copy si en
+// el futuro el home necesita variar por algún otro criterio.
+const businessLine = 'remate';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const content = BUSINESS_LINE_CONTENT[businessLine];
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['properties', 'featured'],
-    queryFn: () => getProperties({ featured: true, limit: 6 }),
+    queryKey: ['properties', 'featured', businessLine],
+    queryFn: () => getProperties({ featured: true, limit: 6, businessLine }),
   });
 
   const { data: promotedData } = useQuery({
-    queryKey: ['property', 'promoted'],
-    queryFn: getPromotedProperty,
+    queryKey: ['property', 'promoted', businessLine],
+    queryFn: () => getPromotedProperty({ businessLine }),
   });
 
   const { data: stats } = useQuery({
-    queryKey: ['property-stats'],
-    queryFn: getPropertyStats,
+    queryKey: ['property-stats', businessLine],
+    queryFn: () => getPropertyStats({ businessLine }),
   });
 
   const { data: testimonialsData } = useQuery({
@@ -49,16 +56,12 @@ export default function HomePage() {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
     if (city) params.set('city', city);
-    navigate(`/propiedades?${params.toString()}`);
+    navigate(`${content.listingPath}?${params.toString()}`);
   };
 
   return (
     <div>
-      <SEO
-        title="Remates Bancarios en México"
-        description="Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos del 30% al 70% por debajo del valor comercial."
-        url="/"
-      />
+      <SEO title={content.seoTitle} description={content.seoDescription} url="/" />
 
       {/* Hero */}
       <section className="relative bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 dark:from-primary-950 dark:via-primary-900 dark:to-[#1a1f2e] text-white overflow-hidden">
@@ -76,22 +79,20 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 bg-accent-400 text-primary-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
             >
               <TrendingDown size={16} />
-              Precios del 30% al 70% por debajo del mercado.
+              {content.heroBadge}
             </motion.div>
 
             <motion.h1
               variants={fadeInUp}
               className="text-4xl md:text-6xl font-bold mb-6 leading-tight"
             >
-              Remates Bancarios
+              {content.heroTitle}
               <br />
-              <span className="text-accent-400">en México</span>
+              <span className="text-accent-400">{content.heroTitleAccent}</span>
             </motion.h1>
 
             <motion.p variants={fadeInUp} className="text-xl text-primary-100 mb-3 max-w-2xl mx-auto">
-              Encuentra propiedades a precios de remate en Chihuahua, Ciudad Juárez y Querétaro. Has
-              llegado al lugar correcto para hacer crecer tus inversiones, con más de 28 años de
-              experiencia a nivel nacional.
+              {content.heroSubtitle}
             </motion.p>
 
             <motion.p
@@ -184,7 +185,7 @@ export default function HomePage() {
             </p>
           </div>
           <motion.button
-            onClick={() => navigate('/propiedades')}
+            onClick={() => navigate(content.listingPath)}
             className="hidden md:flex items-center gap-2 text-primary-700 dark:text-primary-400 font-medium"
             whileHover={{ x: 4 }}
             transition={{ duration: 0.2 }}
@@ -216,7 +217,7 @@ export default function HomePage() {
 
         <AnimatedSection className="text-center mt-10 md:hidden">
           <motion.button
-            onClick={() => navigate('/propiedades')}
+            onClick={() => navigate(content.listingPath)}
             className="bg-accent-400 dark:bg-accent-500 text-primary-900 px-8 py-3 rounded-xl font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
             whileHover={buttonHover}
             whileTap={buttonTap}
@@ -364,7 +365,7 @@ export default function HomePage() {
             >
               <MapPin size={40} className="text-accent-400 mx-auto mb-4" />
             </motion.div>
-            <h2 className="text-3xl font-bold mb-4">¿Te interesa alguna propiedad o inversión?</h2>
+            <h2 className="text-3xl font-bold mb-4">{content.ctaText}</h2>
             <p className="text-primary-200 dark:text-gray-400 mb-8">
               Agenda una cita con nuestros asesores y te ayudamos en todo el proceso.
             </p>

@@ -44,10 +44,16 @@ import {
   CITY_LABELS,
   TYPE_LABELS,
   CATEGORY_LABELS,
+  BUSINESS_LINE_LABELS,
   ACQUISITION_STAGE_LABELS,
   STATUS_DOT_COLORS,
   labelsToOptions,
 } from '../../utils/constants';
+
+// `category` (remate/renta/compra-venta) y `auctionDate` son conceptos propios de la línea
+// de remates — no aplican a Infonavit y se ocultan del formulario cuando se elige esa línea
+// (quedan con su valor por defecto internamente, ver emptyForm/propertyToForm).
+const HIDDEN_FOR_INFONAVIT = ['category', 'auctionDate'];
 
 // Cada campo se agrupa por sección para que el formulario se lea como bloques
 // con propósito claro (Datos básicos, Ubicación, Detalles, Remate) en vez de una
@@ -61,6 +67,14 @@ const SECTIONS = [
 
 const FIELDS = [
   { key: 'title', label: 'Título *', type: 'text', col: 2, section: 'basicos' },
+  {
+    key: 'businessLine',
+    label: 'Línea de negocio *',
+    type: 'select',
+    col: 2,
+    section: 'basicos',
+    options: labelsToOptions(BUSINESS_LINE_LABELS),
+  },
   {
     key: 'description',
     label: 'Descripción (opcional)',
@@ -152,6 +166,7 @@ const emptyForm = {
   city: 'juarez',
   type: 'casa',
   category: 'remate',
+  businessLine: 'remate',
   status: 'disponible',
   squareMeters: '',
   terrainMeters: '',
@@ -177,6 +192,7 @@ const propertyToForm = (p) => ({
   city: p.city || 'juarez',
   type: p.type || 'casa',
   category: p.category || 'remate',
+  businessLine: p.businessLine || 'remate',
   status: p.status || 'disponible',
   squareMeters: p.squareMeters || '',
   terrainMeters: p.terrainMeters || '',
@@ -528,7 +544,11 @@ export default function PropertyFormPage() {
           >
             <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">{title}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {FIELDS.filter((f) => f.section === sectionKey).map(
+              {FIELDS.filter(
+                (f) =>
+                  f.section === sectionKey &&
+                  !(form.businessLine === 'infonavit' && HIDDEN_FOR_INFONAVIT.includes(f.key))
+              ).map(
                 ({ key, label, type, col, options }) => {
                   const hasError = fieldErrors.includes(key);
                   const fieldClass = hasError

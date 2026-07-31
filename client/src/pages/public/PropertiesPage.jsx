@@ -7,14 +7,24 @@ import { getProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
 import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkeleton';
 import SEO from '../../components/ui/SEO';
+import TabBar from '../../components/ui/TabBar';
 import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import {
   CITY_LABELS,
   TYPE_LABELS,
   CATEGORY_LABELS,
+  BUSINESS_LINE_CONTENT,
   labelsToOptions,
 } from '../../utils/constants';
+
+// Selector de inventario dentro del mismo módulo de propiedades — Remates Bancarios (línea
+// principal del negocio) y Casas Infonavit conviven en /propiedades sin landing separada; el
+// cambio de tab solo actualiza qué `businessLine` se consulta, no navega a otra ruta.
+const PROPERTY_LINE_TABS = [
+  { key: 'remate', label: 'Remates Bancarios' },
+  { key: 'infonavit', label: 'Casas Infonavit' },
+];
 
 const CITIES = [
   { value: '', label: 'Todas las ciudades' },
@@ -40,6 +50,8 @@ const BATHROOMS = [
 ];
 
 export default function PropertiesPage() {
+  const [businessLine, setBusinessLine] = useState('remate');
+  const content = BUSINESS_LINE_CONTENT[businessLine];
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [showAlertForm, setShowAlertForm] = useState(false);
@@ -74,8 +86,9 @@ export default function PropertiesPage() {
   };
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ['properties', filters],
-    queryFn: ({ pageParam }) => getProperties({ ...filters, page: pageParam, limit: 12 }),
+    queryKey: ['properties', businessLine, filters],
+    queryFn: ({ pageParam }) =>
+      getProperties({ ...filters, businessLine, page: pageParam, limit: 12 }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const { page, hasNext } = lastPage.pagination;
@@ -98,6 +111,14 @@ export default function PropertiesPage() {
     observer.observe(node);
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Al cambiar de inventario se conservan el resto de filtros (ciudad, tipo, precio...) —
+  // solo se limpia `category`, que es una subclasificación exclusiva de la línea de remates
+  // y no tiene sentido (ni opción visible) dentro de Casas Infonavit.
+  const handleBusinessLineChange = (nextLine) => {
+    setBusinessLine(nextLine);
+    if (nextLine !== 'remate') setFilter('category', '');
+  };
 
   const setFilter = (key, value) => {
     setLocalFilters((f) => ({ ...f, [key]: value }));
@@ -145,14 +166,14 @@ export default function PropertiesPage() {
       animate="visible"
       className="max-w-7xl mx-auto px-4 py-10"
     >
-      <SEO
-        title="Propiedades en Remate"
-        description="Explora nuestro inventario de remates bancarios."
-        url="/propiedades"
-      />
+      <SEO title={content.listingTitle} description={content.listingDescription} url="/propiedades" />
+
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-4">
+        <TabBar tabs={PROPERTY_LINE_TABS} active={businessLine} onChange={handleBusinessLineChange} />
+      </motion.div>
 
       <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
-        <h1 className="text-3xl font-bold text-primary-900 dark:text-white">Propiedades en Remate</h1>
+        <h1 className="text-3xl font-bold text-primary-900 dark:text-white">{content.listingTitle}</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           {total || '...'} propiedades disponibles
           {filters.search && (
@@ -226,7 +247,9 @@ export default function PropertiesPage() {
               {[
                 { key: 'city', options: CITIES, label: 'Ciudad' },
                 { key: 'type', options: TYPES, label: 'Tipo' },
-                { key: 'category', options: CATEGORIES, label: 'Categoría de propiedad' },
+                ...(businessLine === 'remate'
+                  ? [{ key: 'category', options: CATEGORIES, label: 'Categoría de propiedad' }]
+                  : []),
               ].map(({ key, options, label }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">

@@ -16,11 +16,14 @@ import Pagination from '../../components/ui/Pagination';
 import api from '../../services/api';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatPrice, formatDate } from '../../utils/formatters';
+import Badge from '../../components/ui/Badge';
 import {
   CITY_LABELS,
   CATEGORY_LABELS,
   STATUS_LABELS,
   STATUS_SELECT_COLORS,
+  BUSINESS_LINE_LABELS,
+  BUSINESS_LINE_VARIANTS,
   labelsToOptions,
 } from '../../utils/constants';
 import { downloadBlob } from '../../utils/download';
@@ -31,13 +34,14 @@ export default function AdminPropertiesPage() {
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
   const [category, setCategory] = useState('');
+  const [businessLine, setBusinessLine] = useState('');
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-properties', search, city, category, page],
-    queryFn: () => getProperties({ search, city, category, page, limit: 15 }),
+    queryKey: ['admin-properties', search, city, category, businessLine, page],
+    queryFn: () => getProperties({ search, city, category, businessLine, page, limit: 15 }),
   });
 
   const deleteMutation = useMutation({
@@ -104,6 +108,7 @@ export default function AdminPropertiesPage() {
       const params = new URLSearchParams();
       if (city) params.set('city', city);
       if (category) params.set('category', category);
+      if (businessLine) params.set('businessLine', businessLine);
       const response = await api.get(`/export/${format}?${params.toString()}`, {
         responseType: 'blob',
       });
@@ -212,6 +217,14 @@ export default function AdminPropertiesPage() {
               ...labelsToOptions(CATEGORY_LABELS),
             ],
           },
+          {
+            value: businessLine,
+            onChange: setBusinessLine,
+            options: [
+              { value: '', label: 'Todas las líneas' },
+              ...labelsToOptions(BUSINESS_LINE_LABELS),
+            ],
+          },
         ].map((sel, i) => (
           <select
             key={i}
@@ -247,6 +260,7 @@ export default function AdminPropertiesPage() {
                 <tr>
                   {[
                     'Propiedad',
+                    'Línea',
                     'Ciudad',
                     'Precio',
                     'Estatus',
@@ -285,6 +299,11 @@ export default function AdminPropertiesPage() {
                           {property.type}
                           {property.code ? ` · ${property.code}` : ''}
                         </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={BUSINESS_LINE_VARIANTS[property.businessLine]}>
+                          {BUSINESS_LINE_LABELS[property.businessLine] || property.businessLine}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
                         {CITY_LABELS[property.city]}
@@ -388,7 +407,7 @@ export default function AdminPropertiesPage() {
                 animate="visible"
                 className="text-center py-16 text-gray-400 dark:text-gray-500"
               >
-                {search || city || category ? (
+                {search || city || category || businessLine ? (
                   <>
                     <p>Ningún resultado coincide con los filtros actuales.</p>
                     <button
@@ -397,6 +416,7 @@ export default function AdminPropertiesPage() {
                         setSearch('');
                         setCity('');
                         setCategory('');
+                        setBusinessLine('');
                         setPage(1);
                       }}
                       className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
