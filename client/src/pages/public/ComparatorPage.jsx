@@ -4,12 +4,11 @@ import { GitCompare, X, MapPin, Building, PackageX } from 'lucide-react';
 import useComparator from '../../hooks/useComparator';
 import usePropertySync from '../../hooks/usePropertySync';
 import SEO from '../../components/ui/SEO';
-import Badge from '../../components/ui/Badge';
 import SyncStatusBar from '../../components/ui/SyncStatusBar';
 import { fadeInUp, staggerContainer } from '../../utils/animations';
 import { buildImageUrl } from '../../utils/images';
 import { formatPrice } from '../../utils/formatters';
-import { CITY_LABELS, TYPE_LABELS, STATUS_LABELS, STATUS_VARIANTS } from '../../utils/constants';
+import { CITY_LABELS, TYPE_LABELS } from '../../utils/constants';
 
 const val = (v, unit = '') =>
   v != null && v !== '' ? (
@@ -30,12 +29,6 @@ const ROWS = [
   },
   { label: 'Ciudad', render: (p) => val(CITY_LABELS[p.city] || p.city) },
   { label: 'Tipo', render: (p) => val(TYPE_LABELS[p.type] || p.type) },
-  {
-    label: 'Estatus',
-    render: (p) => (
-      <Badge variant={STATUS_VARIANTS[p.status]}>{STATUS_LABELS[p.status] || p.status}</Badge>
-    ),
-  },
   { label: 'Construcción', render: (p) => val(p.constructionMeters, ' m²') },
   { label: 'Terreno', render: (p) => val(p.terrainMeters, ' m²') },
   { label: 'Recámaras', render: (p) => val(p.bedrooms) },

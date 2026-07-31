@@ -1,47 +1,21 @@
-import { TrendingDown, TrendingUp, History } from 'lucide-react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 import { formatPrice, formatDate } from '../../utils/formatters';
-import { STATUS_LABELS } from '../../utils/constants';
 
 function describeEntry(entry) {
-  if (entry.changeType === 'price') {
-    const from = Number(entry.fromPrice);
-    const to = Number(entry.toPrice);
-    const down = to < from;
-    return {
-      icon: down ? (
-        <TrendingDown size={16} className="text-green-600" />
-      ) : (
-        <TrendingUp size={16} className="text-red-500" />
-      ),
-      text: (
-        <>
-          Precio {down ? 'bajó' : 'subió'} de{' '}
-          <span className="font-semibold">{formatPrice(from)}</span> a{' '}
-          <span className="font-semibold">{formatPrice(to)}</span>
-        </>
-      ),
-    };
-  }
-
-  if (!entry.fromStatus) {
-    return {
-      icon: <History size={16} className="text-primary-600" />,
-      text: (
-        <>
-          Primer ingreso al catálogo como{' '}
-          <span className="font-semibold">{STATUS_LABELS[entry.toStatus] || entry.toStatus}</span>
-        </>
-      ),
-    };
-  }
-
+  const from = Number(entry.fromPrice);
+  const to = Number(entry.toPrice);
+  const down = to < from;
   return {
-    icon: <History size={16} className="text-primary-600" />,
+    icon: down ? (
+      <TrendingDown size={16} className="text-green-600" />
+    ) : (
+      <TrendingUp size={16} className="text-red-500" />
+    ),
     text: (
       <>
-        Estatus cambió de{' '}
-        <span className="font-semibold">{STATUS_LABELS[entry.fromStatus] || entry.fromStatus}</span>{' '}
-        a <span className="font-semibold">{STATUS_LABELS[entry.toStatus] || entry.toStatus}</span>
+        Precio {down ? 'bajó' : 'subió'} de{' '}
+        <span className="font-semibold">{formatPrice(from)}</span> a{' '}
+        <span className="font-semibold">{formatPrice(to)}</span>
       </>
     ),
   };

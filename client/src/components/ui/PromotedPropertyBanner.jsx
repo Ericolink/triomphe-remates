@@ -6,15 +6,13 @@ import { buildImageUrl } from '../../utils/images';
 import { formatPrice } from '../../utils/formatters';
 import {
   CITY_LABELS,
-  STATUS_LABELS,
-  STATUS_VARIANTS,
   CATEGORY_LABELS,
   CATEGORY_VARIANTS,
   TYPE_LABELS,
 } from '../../utils/constants';
 
 // Etiqueta pequeña en mayúsculas + valor destacado debajo — mismo patrón repetido
-// para Categoría, Tipo de inmueble, Estado, Ciudad y Colonia (ver punto 6/7 del
+// para Categoría, Tipo de inmueble, Ciudad y Colonia (ver punto 6/7 del
 // ticket "Propiedad Estrella": los títulos deben pesar menos que los valores).
 function InfoField({ label, children }) {
   return (
@@ -70,11 +68,6 @@ export default function PromotedPropertyBanner({ property }) {
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-            <div className="absolute top-4 left-4 flex gap-2">
-              <Badge variant={STATUS_VARIANTS[property.status]}>
-                {STATUS_LABELS[property.status]}
-              </Badge>
-            </div>
             <div className="absolute bottom-4 left-4 flex items-center gap-1 text-white text-sm font-medium bg-black/50 rounded-lg px-3 py-1 backdrop-blur-sm">
               <MapPin size={14} />
               {CITY_LABELS[property.city]}
@@ -112,11 +105,6 @@ export default function PromotedPropertyBanner({ property }) {
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                     {TYPE_LABELS[property.type] || property.type}
                   </p>
-                </InfoField>
-                <InfoField label="Estado">
-                  <Badge variant={STATUS_VARIANTS[property.status]}>
-                    {STATUS_LABELS[property.status]}
-                  </Badge>
                 </InfoField>
                 <InfoField label="Ciudad">
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">

@@ -73,13 +73,13 @@ export default function Navbar() {
               hidden), evita que este bloque caiga en la columna 1fr del centro */}
           <div className="col-start-3 flex items-center gap-2">
             <div className="hidden dk:flex items-center gap-2">
-              <ThemeToggle />
+              <ThemeToggle className="hover:bg-primary-800" moonClassName="text-gray-200" />
               <Link
                 to="/favoritos"
                 title="Mis favoritos"
-                className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-primary-800 transition-colors"
+                className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-primary-800 transition-colors"
               >
-                <Heart size={18} className="text-gray-200" />
+                <Heart size={22} className="text-gray-200" />
                 {count > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
                     {count > 9 ? '9+' : count}
@@ -103,7 +103,19 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-2 dk:hidden">
-              <ThemeToggle />
+              <ThemeToggle className="hover:bg-primary-800" moonClassName="text-gray-200" />
+              <Link
+                to="/favoritos"
+                title="Mis favoritos"
+                className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-primary-800 transition-colors"
+              >
+                <Heart size={22} className="text-gray-200" />
+                {count > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    {count > 9 ? '9+' : count}
+                  </span>
+                )}
+              </Link>
               <button
                 className="p-2"
                 onClick={() => setOpen(!open)}

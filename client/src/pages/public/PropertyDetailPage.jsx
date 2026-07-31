@@ -41,8 +41,6 @@ import { formatPrice } from '../../utils/formatters';
 import {
   CITY_LABELS,
   TYPE_LABELS,
-  STATUS_LABELS,
-  STATUS_VARIANTS,
   CATEGORY_LABELS,
   CATEGORY_VARIANTS,
   ACQUISITION_STAGE_LABELS,
@@ -124,7 +122,7 @@ export default function PropertyDetailPage() {
     queryFn: () => getPriceHistory(property.id),
     enabled: !!property,
   });
-  const priceHistory = priceHistoryData?.data ?? [];
+  const priceHistory = (priceHistoryData?.data ?? []).filter((e) => e.changeType === 'price');
 
   const daysLeft = property?.auctionDate
     ? Math.ceil((new Date(property.auctionDate) - new Date()) / 86400000)
@@ -309,9 +307,6 @@ export default function PropertyDetailPage() {
               {property.category === 'remate'
                 ? 'Remate bancario (Cesión de Derechos)'
                 : CATEGORY_LABELS[property.category] || property.category}
-            </Badge>
-            <Badge variant={STATUS_VARIANTS[property.status]}>
-              {STATUS_LABELS[property.status]}
             </Badge>
             {property.isFeatured && <Badge variant="primary">Destacado</Badge>}
             <span className="text-gray-400 text-sm capitalize">

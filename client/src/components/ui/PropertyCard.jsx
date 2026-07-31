@@ -9,8 +9,6 @@ import { buildImageUrl } from '../../utils/images';
 import { formatPrice, toWhatsAppLink } from '../../utils/formatters';
 import {
   CITY_LABELS,
-  STATUS_LABELS,
-  STATUS_VARIANTS,
   CATEGORY_LABELS,
   CATEGORY_VARIANTS,
   WHATSAPP_NUMBER,
@@ -71,9 +69,6 @@ export default function PropertyCard({ property }) {
           <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
             <Badge variant={CATEGORY_VARIANTS[property.category]}>
               {CATEGORY_LABELS[property.category] || property.category}
-            </Badge>
-            <Badge variant={STATUS_VARIANTS[property.status]}>
-              {STATUS_LABELS[property.status]}
             </Badge>
             {showCountdown && (
               <span className="flex items-center gap-1 bg-brand-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
