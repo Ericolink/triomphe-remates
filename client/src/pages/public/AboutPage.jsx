@@ -8,6 +8,9 @@ import {
   Home,
   Landmark,
   Scale,
+  Banknote,
+  Gavel,
+  Stamp,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -42,22 +45,26 @@ const services = [
     icon: Scale,
     title: 'Te asesoramos',
     desc: 'Todos nuestros trámites son realizados ante notario público. Contamos con personal altamente capacitado en áreas legal, fiscal, contable y comercial.',
-    advisories: [
-      {
-        title: 'Resolución de crédito hipotecario',
-        detail: 'Cancelación, traspaso o reestructura.',
-      },
-      {
-        title: 'Asesoría legal',
-        detail:
-          'Servicios legales especializados para proteger los intereses del cliente y resolver conflictos inmobiliarios.',
-      },
-      {
-        title: 'Trámites notariales',
-        detail:
-          'Trabajo con diversas notarías a nivel nacional para brindar asesoramiento especializado según cada caso.',
-      },
-    ],
+  },
+];
+
+const advisories = [
+  {
+    icon: Banknote,
+    title: 'Resolución de crédito hipotecario',
+    detail: 'Cancelación, traspaso o reestructura.',
+  },
+  {
+    icon: Gavel,
+    title: 'Asesoría legal',
+    detail:
+      'Servicios legales especializados para proteger los intereses del cliente y resolver conflictos inmobiliarios.',
+  },
+  {
+    icon: Stamp,
+    title: 'Trámites notariales',
+    detail:
+      'Trabajo con diversas notarías a nivel nacional para brindar asesoramiento especializado según cada caso.',
   },
 ];
 
@@ -162,7 +169,7 @@ export default function AboutPage() {
             whileInView="visible"
             viewport={{ once: true }}
           >
-            {services.map(({ icon: Icon, title, desc, advisories }) => (
+            {services.map(({ icon: Icon, title, desc }) => (
               <motion.div
                 key={title}
                 variants={fadeInUp}
@@ -182,30 +189,57 @@ export default function AboutPage() {
                 <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-center">
                   {desc}
                 </p>
-
-                {advisories && (
-                  <div className="mt-6 pt-6 border-t border-gray-100 dark:border-[#2e3650]">
-                    <p className="text-sm font-bold text-primary-900 dark:text-white mb-3">
-                      Asesorías disponibles:
-                    </p>
-                    <ul className="space-y-3">
-                      {advisories.map(({ title: advTitle, detail }) => (
-                        <li key={advTitle} className="flex gap-2 text-sm">
-                          <CheckCircle size={16} className="text-accent-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-gray-500 dark:text-gray-400">
-                            <strong className="text-primary-900 dark:text-white font-semibold">
-                              {advTitle}:
-                            </strong>{' '}
-                            {detail}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </motion.div>
             ))}
           </motion.div>
+
+          {/* Asesorías disponibles — continuación independiente de Servicios */}
+          <AnimatedSection className="mt-12 md:mt-16">
+            <div className="bg-white dark:bg-[#1a1f2e] rounded-3xl shadow-md dark:shadow-none border border-transparent dark:border-[#2e3650] p-8 md:p-12">
+              <div className="max-w-2xl mx-auto text-center mb-10">
+                <span className="inline-flex items-center gap-2 text-accent-600 dark:text-accent-400 font-semibold text-sm uppercase tracking-wide mb-3">
+                  <Scale size={16} />
+                  Te asesoramos
+                </span>
+                <h3 className="text-2xl md:text-3xl font-bold text-primary-900 dark:text-white mb-3">
+                  Asesorías disponibles
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Personal capacitado en áreas legal, fiscal, contable y comercial te acompaña en
+                  cada trámite, siempre ante notario público.
+                </p>
+              </div>
+
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-3 gap-6"
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+              >
+                {advisories.map(({ icon: Icon, title, detail }) => (
+                  <motion.div
+                    key={title}
+                    variants={fadeInUp}
+                    whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                    className="bg-gray-50 dark:bg-[#242938] rounded-xl p-6 border border-transparent dark:border-[#2e3650]"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-lg bg-accent-50 dark:bg-accent-500/10 flex items-center justify-center flex-shrink-0">
+                        <Icon size={20} className="text-accent-500" />
+                      </div>
+                      <h4 className="font-bold text-primary-900 dark:text-white text-sm leading-snug">
+                        {title}
+                      </h4>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                      {detail}
+                    </p>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
