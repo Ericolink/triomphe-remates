@@ -61,6 +61,12 @@ Lead.belongsTo(Campaign, { foreignKey: 'campaignId', as: 'campaign' });
 User.hasMany(Lead, { foreignKey: 'assignedToUserId', as: 'assignedLeads' });
 Lead.belongsTo(User, { foreignKey: 'assignedToUserId', as: 'assignedUser' });
 
+User.hasMany(Lead, { foreignKey: 'createdByUserId', as: 'createdLeads' });
+Lead.belongsTo(User, { foreignKey: 'createdByUserId', as: 'createdByUser' });
+
+User.hasMany(LeadNote, { foreignKey: 'userId', as: 'authoredNotes' });
+LeadNote.belongsTo(User, { foreignKey: 'userId', as: 'author' });
+
 Lead.belongsToMany(Property, {
   through: LeadProperty,
   foreignKey: 'leadId',

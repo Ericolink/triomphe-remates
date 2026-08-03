@@ -1,5 +1,6 @@
 const { Lead, Property, LeadProperty } = require('../models/index');
 const { logAudit } = require('../utils/audit');
+const { canEditLead } = require('../utils/leadAccess');
 
 // POST /api/leads/:id/properties — agrega una propiedad de interés adicional (además de la
 // propiedad de origen en Lead.propertyId).
@@ -7,6 +8,9 @@ const addLeadProperty = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canEditLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const { propertyId } = req.body;
     if (!propertyId) return res.status(400).json({ error: 'propertyId requerido' });
@@ -30,6 +34,12 @@ const addLeadProperty = async (req, res) => {
 // DELETE /api/leads/:id/properties/:propertyId
 const removeLeadProperty = async (req, res) => {
   try {
+    const lead = await Lead.findByPk(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canEditLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
+
     const link = await LeadProperty.findOne({
       where: { leadId: req.params.id, propertyId: req.params.propertyId },
     });

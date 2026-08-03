@@ -26,6 +26,17 @@ const User = sequelize.define(
       type: DataTypes.ENUM('admin', 'editor'),
       defaultValue: 'editor',
     },
+    // Rol dentro del CRM de Leads — SOLO afecta autorización en el módulo de prospectos
+    // (ver server/src/utils/leadAccess.js). No debe leerse en ningún otro controller: el
+    // resto del sistema (propiedades, vacantes, testimonios, usuarios, auditoría, exports
+    // de propiedades) sigue gateado exclusivamente por `role` (admin/editor), sin cambios.
+    // null = sin acceso al CRM de leads. Un admin no necesita este campo: role==='admin'
+    // ya implica acceso total, incluido el CRM.
+    crmRole: {
+      type: DataTypes.ENUM('coordinador_ventas', 'capturista', 'asesor_ventas'),
+      allowNull: true,
+      defaultValue: null,
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

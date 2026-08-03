@@ -8,6 +8,7 @@ const {
 } = require('../controllers/appointmentController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
+const { requireCrmAccess } = require('../middleware/crmAccessMiddleware');
 const { apiLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -17,22 +18,10 @@ const { apiLimiter } = require('../middleware/rateLimitMiddleware');
  *   description: Citas de prospectos (CRM Comercial) — alimenta el Calendario
  */
 
-router.get('/', apiLimiter, authenticate, authorize('admin', 'editor'), getAppointments);
-router.post('/', apiLimiter, authenticate, authorize('admin', 'editor'), createAppointment);
-router.patch(
-  '/:id',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  updateAppointmentStatus
-);
-router.post(
-  '/:id/reschedule',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  rescheduleAppointment
-);
+router.get('/', apiLimiter, authenticate, requireCrmAccess, getAppointments);
+router.post('/', apiLimiter, authenticate, requireCrmAccess, createAppointment);
+router.patch('/:id', apiLimiter, authenticate, requireCrmAccess, updateAppointmentStatus);
+router.post('/:id/reschedule', apiLimiter, authenticate, requireCrmAccess, rescheduleAppointment);
 router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteAppointment);
 
 module.exports = router;

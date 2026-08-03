@@ -5,11 +5,15 @@ const { logAudit } = require('../utils/audit');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { paginate } = require('../utils/pagination');
 
+// CRM de Leads — mismo patrón de arrays explícitos ya usado en leadController.js.
+const VALID_CRM_ROLES = ['coordinador_ventas', 'capturista', 'asesor_ventas'];
+
 const safeUser = (user) => ({
   id: user.id,
   name: user.name,
   email: user.email,
   role: user.role,
+  crmRole: user.crmRole,
   isActive: user.isActive,
   profilePhoto: user.profilePhoto,
   lastLogin: user.lastLogin,
@@ -44,13 +48,18 @@ const getUsers = async (req, res) => {
 // POST /api/users
 const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, crmRole } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' });
     }
     if (password.length < 8) {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    }
+    if (crmRole && !VALID_CRM_ROLES.includes(crmRole)) {
+      return res
+        .status(400)
+        .json({ error: `Rol de CRM inválido. Valores permitidos: ${VALID_CRM_ROLES.join(', ')}` });
     }
 
     const existing = await User.findOne({ where: { email } });
@@ -62,12 +71,17 @@ const createUser = async (req, res) => {
       email,
       password: hashedPassword,
       role: role || 'editor',
+      // Sin default: un editor nuevo no obtiene acceso al CRM de leads automáticamente,
+      // solo si un admin lo asigna explícitamente aquí (ver migración de backfill, que
+      // solo migró a los editores YA existentes al momento del deploy).
+      crmRole: crmRole || null,
     });
 
     logAudit(req, 'create', 'user', user.id, {
       name: user.name,
       email: user.email,
       role: user.role,
+      crmRole: user.crmRole,
     });
 
     return res.status(201).json({ message: 'Usuario creado exitosamente', data: safeUser(user) });
@@ -83,11 +97,16 @@ const updateUser = async (req, res) => {
     const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    const { name, email, role, isActive, newPassword, currentPassword } = req.body;
+    const { name, email, role, crmRole, isActive, newPassword, currentPassword } = req.body;
 
     if (email && email !== user.email) {
       const existing = await User.findOne({ where: { email } });
       if (existing) return res.status(409).json({ error: 'El email ya está en uso' });
+    }
+    if (crmRole && !VALID_CRM_ROLES.includes(crmRole)) {
+      return res
+        .status(400)
+        .json({ error: `Rol de CRM inválido. Valores permitidos: ${VALID_CRM_ROLES.join(', ')}` });
     }
 
     // AUDIT-022: el admin principal (ID más bajo) no puede perder el rol de admin ni
@@ -161,6 +180,9 @@ const updateUser = async (req, res) => {
       ...(name && { name }),
       ...(email && { email }),
       ...(role && { role }),
+      // A diferencia de `role` (siempre tiene un valor), crmRole sí se puede limpiar
+      // explícitamente — el selector del frontend manda '' para "sin acceso a CRM".
+      ...(crmRole !== undefined && { crmRole: crmRole || null }),
       ...(isActive !== undefined && { isActive }),
       ...(isSensitiveChange && { tokenVersion: user.tokenVersion + 1 }),
       profilePhoto,
@@ -170,6 +192,7 @@ const updateUser = async (req, res) => {
       ...(name && { name }),
       ...(email && { email }),
       ...(role && { role }),
+      ...(crmRole !== undefined && { crmRole: crmRole || null }),
       ...(isActive !== undefined && { isActive }),
       ...(newPassword && { passwordChanged: true }),
     });

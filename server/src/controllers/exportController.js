@@ -9,6 +9,7 @@ const {
   LEAD_TYPE_LABEL: leadTypeLabel,
 } = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
+const { getLeadVisibilityWhere } = require('../utils/leadAccess');
 
 // AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
 // ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
@@ -495,6 +496,9 @@ const exportLeadsExcel = async (req, res) => {
     const where = {};
     if (status) where.status = status;
     if (type) where.type = type;
+    // CRM de Leads: cierra la fuga de "exportar todos los leads a Excel" — mismo
+    // filtrado por fila que getLeads.
+    Object.assign(where, getLeadVisibilityWhere(req.user) || {});
 
     const leads = await Lead.findAll({
       where,

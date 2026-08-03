@@ -19,7 +19,15 @@ const Activity = sequelize.define(
       allowNull: false,
     },
     type: {
-      type: DataTypes.ENUM('llamada', 'whatsapp', 'email', 'visita', 'nota', 'sistema'),
+      type: DataTypes.ENUM(
+        'llamada',
+        'whatsapp',
+        'email',
+        'visita',
+        'nota',
+        'sistema',
+        'reasignacion'
+      ),
       allowNull: false,
     },
     content: {
@@ -27,6 +35,17 @@ const Activity = sequelize.define(
       allowNull: false,
     },
     userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    // Solo se llenan cuando type = 'reasignacion' — permiten consultar el historial de
+    // asignación de un lead sin parsear el texto libre de `content`. El actor que hizo la
+    // reasignación ya se registra en `userId`; la fecha, en `occurredAt`.
+    previousAssignedToUserId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    newAssignedToUserId: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },

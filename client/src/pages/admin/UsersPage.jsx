@@ -38,11 +38,26 @@ const roleColors = {
   editor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 };
 
+// CRM de Leads — rol separado de `role`, solo gatea el módulo de prospectos (ver
+// server/src/utils/leadAccess.js). Un admin no necesita uno de estos; un editor sin
+// ninguno no tiene acceso al CRM.
+const crmRoleLabels = {
+  coordinador_ventas: 'Coordinador de Ventas',
+  capturista: 'Capturista',
+  asesor_ventas: 'Asesor de Ventas',
+};
+const crmRoleColors = {
+  coordinador_ventas: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  capturista: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+  asesor_ventas: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+};
+
 const EMPTY_FORM = {
   name: '',
   email: '',
   password: '',
   role: 'editor',
+  crmRole: '',
   currentPassword: '',
   newPassword: '',
 };
@@ -168,6 +183,7 @@ export default function UsersPage() {
       name: user.name,
       email: user.email,
       role: user.role,
+      crmRole: user.crmRole || '',
       password: '',
       currentPassword: '',
       newPassword: '',
@@ -197,12 +213,14 @@ export default function UsersPage() {
         email: form.email,
         password: form.password,
         role: form.role,
+        crmRole: form.role === 'admin' ? '' : form.crmRole,
       });
     } else {
       const fd = new FormData();
       fd.append('name', form.name);
       fd.append('email', form.email);
       fd.append('role', form.role);
+      fd.append('crmRole', form.role === 'admin' ? '' : form.crmRole);
       if (form.newPassword) {
         fd.append('newPassword', form.newPassword);
         fd.append('currentPassword', form.currentPassword);
@@ -323,17 +341,26 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{u.email}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${roleColors[u.role]}`}
-                      >
-                        {u.role === 'admin' && <ShieldCheck size={11} />}
-                        {u.role === 'admin' ? 'Admin' : 'Editor'}
-                        {u.id === currentUser?.id
-                          ? ' · Tú'
-                          : u.id === masterAdminId
-                            ? ' · Principal'
-                            : ''}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span
+                          className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${roleColors[u.role]}`}
+                        >
+                          {u.role === 'admin' && <ShieldCheck size={11} />}
+                          {u.role === 'admin' ? 'Admin' : 'Editor'}
+                          {u.id === currentUser?.id
+                            ? ' · Tú'
+                            : u.id === masterAdminId
+                              ? ' · Principal'
+                              : ''}
+                        </span>
+                        {u.crmRole && (
+                          <span
+                            className={`text-xs font-semibold px-2 py-1 rounded-full ${crmRoleColors[u.crmRole]}`}
+                          >
+                            {crmRoleLabels[u.crmRole]}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
                       {formatDate(u.lastLogin, 'Nunca')}
@@ -513,6 +540,28 @@ export default function UsersPage() {
                 <option value="admin">Admin</option>
               </select>
             </div>
+
+            {form.role === 'editor' && (
+              <div>
+                <label
+                  htmlFor={`${formId}-crmRole`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
+                  Rol CRM (Leads)
+                </label>
+                <select
+                  id={`${formId}-crmRole`}
+                  value={form.crmRole}
+                  onChange={(e) => setForm({ ...form, crmRole: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+                >
+                  <option value="">Sin acceso a CRM</option>
+                  <option value="coordinador_ventas">Coordinador de Ventas</option>
+                  <option value="capturista">Capturista</option>
+                  <option value="asesor_ventas">Asesor de Ventas</option>
+                </select>
+              </div>
+            )}
 
             {!isEditing ? (
               <div>

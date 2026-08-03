@@ -6,9 +6,9 @@ const { Activity, Task } = require('../models/index');
 
 const TERMINAL_STAGES = ['venta_realizada', 'no_interesado'];
 
-async function logActivity({ leadId, type, content, userId = null, transaction }) {
+async function logActivity({ leadId, type, content, userId = null, transaction, ...extra }) {
   return Activity.create(
-    { leadId, type, content, userId, occurredAt: new Date() },
+    { leadId, type, content, userId, occurredAt: new Date(), ...extra },
     { transaction }
   );
 }

@@ -49,6 +49,7 @@ import { getLeadAppointments, createAppointment } from '../../../services/appoin
 import { getTasks, completeTask } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
+import { canAssignLeads, canCreateLeads } from '../../../utils/permissions';
 import { downloadBlob } from '../../../utils/download';
 import Badge from '../../ui/Badge';
 import Spinner from '../../ui/Spinner';
@@ -96,6 +97,8 @@ function LeadDetailPanel({
 }) {
   const queryClient = useQueryClient();
   const formId = useId();
+  const currentUser = useAuthStore((s) => s.user);
+  const canAssign = canAssignLeads(currentUser);
   const [noteText, setNoteText] = useState('');
   const [activityType, setActivityType] = useState('llamada');
   const [activityContent, setActivityContent] = useState('');
@@ -454,27 +457,39 @@ function LeadDetailPanel({
             <label htmlFor={`${formId}-assignedToUserId`} className={fieldLabelClass}>
               Responsable
             </label>
-            <select
-              id={`${formId}-assignedToUserId`}
-              value={lead.assignedToUserId || ''}
-              onChange={(e) =>
-                updateMutation.mutate({
-                  id: selected.id,
-                  data: { assignedToUserId: e.target.value ? Number(e.target.value) : null },
-                })
-              }
-              className={fieldControlClass}
-            >
-              <option value="">Sin asignar</option>
-              {users
-                .filter((u) => u.isActive)
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-            </select>
+            {canAssign ? (
+              <select
+                id={`${formId}-assignedToUserId`}
+                value={lead.assignedToUserId || ''}
+                onChange={(e) =>
+                  updateMutation.mutate({
+                    id: selected.id,
+                    data: { assignedToUserId: e.target.value ? Number(e.target.value) : null },
+                  })
+                }
+                className={fieldControlClass}
+              >
+                <option value="">Sin asignar</option>
+                {users
+                  .filter((u) => u.isActive)
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+              </select>
+            ) : (
+              <p className={`${fieldControlClass} bg-gray-50 dark:bg-[#1a1f2e]`}>
+                {users.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
+              </p>
+            )}
           </div>
+          {(lead.createdByUser || lead.assignedAt) && (
+            <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5">
+              {lead.createdByUser && <p>Creado por: {lead.createdByUser.name}</p>}
+              {lead.assignedAt && <p>Asignado el: {formatDateTime(lead.assignedAt)}</p>}
+            </div>
+          )}
         </div>
 
         {/* Datos comerciales — información de perfil, se toca con menos frecuencia que
@@ -903,7 +918,8 @@ function DetailPanelSlot({ selected, emptyText, onDeselect, ...panelProps }) {
 export default function ProspectosSection() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const currentUserId = useAuthStore((s) => s.user?.id);
+  const currentUser = useAuthStore((s) => s.user);
+  const currentUserId = currentUser?.id;
   // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Prospectos nuevos"),
   // vía ?stage= en la URL en vez de location.state — así sobrevive un refresh.
   const [stage, setStage] = useState(searchParams.get('stage') || '');
@@ -1153,12 +1169,14 @@ export default function ProspectosSection() {
               <UserCheck size={15} /> Mis prospectos
             </button>
           )}
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors"
-          >
-            <Plus size={16} /> Nuevo prospecto
-          </button>
+          {canCreateLeads(currentUser) && (
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors"
+            >
+              <Plus size={16} /> Nuevo prospecto
+            </button>
+          )}
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"

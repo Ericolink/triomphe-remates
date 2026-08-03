@@ -8,6 +8,8 @@ import { getUsers } from '../../services/usersService';
 import { SOURCE_LABELS, PAYMENT_METHOD_LABELS } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
 import useModalA11y from '../../hooks/useModalA11y';
+import useAuthStore from '../../store/authStore';
+import { canAssignLeads } from '../../utils/permissions';
 import PropertyPicker from './PropertyPicker';
 
 const emptyForm = {
@@ -33,6 +35,8 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
   const [form, setForm] = useState(emptyForm);
   const titleId = useId();
   const formId = useId();
+  const currentUser = useAuthStore((s) => s.user);
+  const canAssign = canAssignLeads(currentUser);
 
   const { data: campaignsData } = useQuery({
     queryKey: ['campaigns-for-picker'],
@@ -292,27 +296,29 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                   onChange={(propertyId) => setForm((f) => ({ ...f, propertyId }))}
                 />
               </div>
-              <div>
-                <label
-                  htmlFor={`${formId}-assignedToUserId`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
-                  Responsable (opcional)
-                </label>
-                <select
-                  id={`${formId}-assignedToUserId`}
-                  value={form.assignedToUserId}
-                  onChange={(e) => setForm((f) => ({ ...f, assignedToUserId: e.target.value }))}
-                  className={inputClass}
-                >
-                  <option value="">Sin asignar</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {canAssign && (
+                <div>
+                  <label
+                    htmlFor={`${formId}-assignedToUserId`}
+                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                  >
+                    Responsable (opcional)
+                  </label>
+                  <select
+                    id={`${formId}-assignedToUserId`}
+                    value={form.assignedToUserId}
+                    onChange={(e) => setForm((f) => ({ ...f, assignedToUserId: e.target.value }))}
+                    className={inputClass}
+                  >
+                    <option value="">Sin asignar</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">

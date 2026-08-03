@@ -164,6 +164,13 @@ const {
   closeOpenTask,
   legacyStatusFor,
 } = require('../utils/pipelineHelpers');
+const {
+  crmAccessLevel,
+  getLeadVisibilityWhere,
+  canViewLead,
+  canEditLead,
+  canAssignLeads,
+} = require('../utils/leadAccess');
 // Etapas a las que un prospecto cerrado puede volver al reabrirse — cualquier etapa no
 // terminal es un destino válido para PUT /:id/reopen.
 const REOPEN_STAGES = VALID_PIPELINE_STAGES.filter((s) => !TERMINAL_STAGES.includes(s));
@@ -203,6 +210,19 @@ const createLead = async (req, res) => {
 
     if (!validatePhone(phone)) {
       return res.status(400).json({ error: 'Teléfono inválido — usa 10 dígitos, con o sin +52' });
+    }
+
+    // CRM de Leads: un Asesor de Ventas no puede crear prospectos manualmente (solo
+    // trabaja los que ya se le asignaron); el formulario público no tiene req.user, así
+    // que esto solo aplica a la captura manual desde el CRM.
+    if (req.user && crmAccessLevel(req.user) === 'asesor_ventas') {
+      return res.status(403).json({ error: 'Los asesores de ventas no pueden crear prospectos' });
+    }
+    // Asignar responsable al crear queda reservado a quien puede asignar (admin/
+    // coordinador_ventas) — ver utils/leadAccess.js. El formulario público nunca envía
+    // este campo, así que esto solo bloquea una captura manual mal intencionada.
+    if (assignedToUserId && req.user && !canAssignLeads(req.user)) {
+      return res.status(403).json({ error: 'No tienes permisos para asignar un responsable' });
     }
 
     if (type && !VALID_LEAD_TYPE.includes(type)) {
@@ -249,6 +269,8 @@ const createLead = async (req, res) => {
           appointmentDate: appointmentDate || null,
           campaignId: campaignId || null,
           assignedToUserId: assignedToUserId || null,
+          assignedAt: assignedToUserId ? new Date() : null,
+          createdByUserId: req.user?.id ?? null,
           ...commercialFields,
         },
         { transaction }
@@ -361,6 +383,8 @@ const getLeads = async (req, res) => {
       ];
     }
 
+    Object.assign(where, getLeadVisibilityWhere(req.user) || {});
+
     const result = await paginate(Lead, {
       page,
       limit,
@@ -403,6 +427,7 @@ const getLeadById = async (req, res) => {
           required: false,
         },
         { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
+        { model: User, as: 'createdByUser', attributes: ['id', 'name'], required: false },
         {
           model: Property,
           as: 'interestedProperties',
@@ -417,6 +442,9 @@ const getLeadById = async (req, res) => {
     });
 
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canViewLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
     return res.json({ data: lead });
   } catch (error) {
     console.error('Error en getLeadById:', error);
@@ -429,9 +457,19 @@ const updateLead = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canEditLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const { status, notes, appointmentDate, source, pipelineStage, assignedToUserId, campaignId } =
       req.body;
+
+    // Asignar/reasignar responsable queda reservado a admin/coordinador_ventas — ver
+    // utils/leadAccess.js. Un Asesor o Capturista con permiso de edición sobre este lead
+    // puede seguir cambiando otros campos, solo no este.
+    if (assignedToUserId !== undefined && !canAssignLeads(req.user)) {
+      return res.status(403).json({ error: 'No tienes permisos para asignar un responsable' });
+    }
     if (status !== undefined && !VALID_LEAD_STATUS.includes(status)) {
       return res
         .status(400)
@@ -492,7 +530,10 @@ const updateLead = async (req, res) => {
         updates.pipelineStage = pipelineStage;
         updates.status = legacyStatusFor(pipelineStage);
       }
-      if (assignedToUserId !== undefined) updates.assignedToUserId = assignedToUserId;
+      if (assignedToUserId !== undefined) {
+        updates.assignedToUserId = assignedToUserId;
+        updates.assignedAt = assignedToUserId ? new Date() : null;
+      }
       Object.assign(updates, commercialFields);
 
       await lead.update(updates, { transaction });
@@ -510,9 +551,11 @@ const updateLead = async (req, res) => {
       if (assignedToUserId !== undefined && assignedToUserId !== previousAssignee) {
         await logActivity({
           leadId: lead.id,
-          type: 'sistema',
+          type: 'reasignacion',
           content: 'Responsable cambiado',
           userId: req.user?.id ?? null,
+          previousAssignedToUserId: previousAssignee,
+          newAssignedToUserId: assignedToUserId,
           transaction,
         });
         // Un prospecto que no tenía responsable y recién se reclama obtiene su primera
@@ -540,6 +583,10 @@ const closeLeadAsWon = async (req, res) => {
     if (!lead) {
       await transaction.rollback();
       return res.status(404).json({ error: 'Lead no encontrado' });
+    }
+    if (!canEditLead(req.user, lead)) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
     }
     // Un prospecto cerrado por error como "No interesado" se puede corregir a venta —
     // pero si ya está registrado como venta, no tiene caso repetirlo (ver "reversible
@@ -617,6 +664,10 @@ const closeLeadAsLost = async (req, res) => {
       await transaction.rollback();
       return res.status(404).json({ error: 'Lead no encontrado' });
     }
+    if (!canEditLead(req.user, lead)) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
     // Un prospecto marcado por error como "Venta realizada" se puede corregir a
     // perdido — pero si ya está marcado como perdido, no tiene caso repetirlo.
     if (lead.pipelineStage === 'no_interesado') {
@@ -688,6 +739,10 @@ const reopenLead = async (req, res) => {
     if (!lead) {
       await transaction.rollback();
       return res.status(404).json({ error: 'Lead no encontrado' });
+    }
+    if (!canEditLead(req.user, lead)) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
     }
     if (!TERMINAL_STAGES.includes(lead.pipelineStage)) {
       await transaction.rollback();
@@ -795,6 +850,17 @@ const batchUpdateLeads = async (req, res) => {
           'Para cerrar prospectos usa los endpoints de cierre individuales (/close-won, /close-lost)',
       });
     }
+
+    // Rechaza el lote completo si incluye algún lead fuera del alcance del actor — sin
+    // escritura parcial (consistente con el resto de la validación de este endpoint, que
+    // también rechaza todo-o-nada ante cualquier valor inválido).
+    const leadsToUpdate = await Lead.findAll({ where: { id: ids } });
+    if (leadsToUpdate.some((l) => !canEditLead(req.user, l))) {
+      return res
+        .status(403)
+        .json({ error: 'No tienes acceso a uno o más de los prospectos seleccionados' });
+    }
+
     await Lead.update(
       { pipelineStage, status: legacyStatusFor(pipelineStage) },
       { where: { id: ids } }
@@ -859,6 +925,9 @@ const getLeadNotes = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canViewLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const notes = await LeadNote.findAll({
       where: { leadId: req.params.id },
@@ -877,6 +946,9 @@ const addLeadNote = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canViewLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const { content } = req.body;
     if (!content || !content.trim()) return res.status(400).json({ error: 'Contenido requerido' });
@@ -885,6 +957,7 @@ const addLeadNote = async (req, res) => {
       leadId: lead.id,
       content: content.trim(),
       authorName: req.user?.name || null,
+      userId: req.user?.id ?? null,
     });
 
     logAudit(req, 'update', 'lead', lead.id, { addedNote: note.id });
@@ -904,6 +977,14 @@ const deleteLeadNote = async (req, res) => {
     });
     if (!note) return res.status(404).json({ error: 'Nota no encontrada' });
 
+    const lead = await Lead.findByPk(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    // Cualquiera puede borrar su propia nota; borrar la de alguien más requiere permiso
+    // de edición sobre el lead (admin/coordinador_ventas, o el asesor/capturista dueño).
+    if (!canEditLead(req.user, lead) && note.userId !== req.user.id) {
+      return res.status(403).json({ error: 'No tienes permisos para eliminar esta nota' });
+    }
+
     await note.destroy();
     logAudit(req, 'update', 'lead', req.params.id, { removedNote: req.params.noteId });
     return res.json({ message: 'Nota eliminada' });
@@ -918,6 +999,9 @@ const sendLeadWhatsApp = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canViewLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const { message } = req.body;
     if (!message || !message.trim()) return res.status(400).json({ error: 'Mensaje requerido' });
@@ -954,6 +1038,7 @@ const sendLeadWhatsApp = async (req, res) => {
         ? `WhatsApp NO enviado (falló el envío): ${message.trim()}`
         : `WhatsApp enviado: ${message.trim()}`,
       authorName: req.user?.name || null,
+      userId: req.user?.id ?? null,
     });
 
     logAudit(req, 'update', 'lead', lead.id, {

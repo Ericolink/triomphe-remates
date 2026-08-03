@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const { Deal, Lead, Property, Image } = require('../models/index');
 const { paginate } = require('../utils/pagination');
+const { getLeadVisibilityWhere, canViewLead } = require('../utils/leadAccess');
 
 // `city` + portada van en ambos endpoints para la pantalla "Casos de éxito" (galería con
 // miniatura por caso) — el resto de datos del prospecto (actividades, notas, citas) se
@@ -36,6 +37,8 @@ const getDeals = async (req, res) => {
         { '$property.title$': { [Op.like]: `%${search}%` } },
       ];
     }
+    // CRM de Leads: cierra la fuga de "ver todas las ventas cerradas vía Casos de éxito".
+    Object.assign(where, getLeadVisibilityWhere(req.user, { alias: 'lead' }) || {});
 
     const [result, totalAmount] = await Promise.all([
       paginate(Deal, {
@@ -43,7 +46,11 @@ const getDeals = async (req, res) => {
         limit,
         where,
         include: [
-          { model: Lead, as: 'lead', attributes: ['id', 'name', 'assignedToUserId'] },
+          {
+            model: Lead,
+            as: 'lead',
+            attributes: ['id', 'name', 'assignedToUserId', 'createdByUserId'],
+          },
           propertyInclude,
         ],
         order: [['closedAt', 'DESC']],
@@ -72,6 +79,9 @@ const getDealById = async (req, res) => {
       include: [{ model: Lead, as: 'lead' }, propertyInclude],
     });
     if (!deal) return res.status(404).json({ error: 'Venta no encontrada' });
+    if (!canViewLead(req.user, deal.lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a esta venta' });
+    }
 
     return res.json({ data: deal });
   } catch (error) {

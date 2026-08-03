@@ -1,5 +1,6 @@
 const { Lead, Activity, User } = require('../models/index');
 const { logAudit } = require('../utils/audit');
+const { canViewLead } = require('../utils/leadAccess');
 
 const VALID_ACTIVITY_TYPES = ['llamada', 'whatsapp', 'email', 'visita', 'nota'];
 
@@ -8,6 +9,9 @@ const getLeadActivities = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canViewLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const activities = await Activity.findAll({
       where: { leadId: req.params.id },
@@ -27,6 +31,9 @@ const createLeadActivity = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canViewLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const { type, content, occurredAt } = req.body;
     // 'sistema' está reservado para actividades autogeneradas (ver pipelineHelpers.logActivity)

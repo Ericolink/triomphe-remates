@@ -21,6 +21,14 @@ const LeadNote = sequelize.define(
       type: DataTypes.STRING(100),
       allowNull: true,
     },
+    // FK real al autor — a diferencia de authorName (que se conserva intacta como
+    // snapshot de despliegue para notas históricas y como fallback de display si el
+    // usuario luego se elimina). Nulo para notas anteriores a esta columna (no se puede
+    // reconstruir de forma confiable a partir de authorName).
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     tableName: 'lead_notes',

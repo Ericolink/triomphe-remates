@@ -26,6 +26,7 @@ const {
   attachUserIfPresent,
 } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
+const { requireCrmAccess } = require('../middleware/crmAccessMiddleware');
 const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -39,81 +40,35 @@ const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddle
 // "Contactar asesor"), pero el CRM reusa el mismo endpoint para "Nuevo prospecto"
 // (CreateLeadModal), donde el teléfono es intencionalmente opcional. Adjuntar req.user
 // cuando hay un token válido es lo que le permite a createLead distinguir un envío del
-// sitio público (teléfono obligatorio) de una captura manual del equipo comercial.
+// sitio público (teléfono obligatorio) de una captura manual del equipo comercial, y
+// aplicar las reglas de rol de CRM (asesor no puede crear, etc.) cuando corresponde.
 router.post('/', publicFormLimiter, attachUserIfPresent, createLead);
-router.get('/stream', apiLimiter, authenticateSSE, authorize('admin', 'editor'), streamLeads);
-router.get('/', apiLimiter, authenticate, authorize('admin', 'editor'), getLeads);
-router.patch('/batch', apiLimiter, authenticate, authorize('admin', 'editor'), batchUpdateLeads);
+router.get('/stream', apiLimiter, authenticateSSE, requireCrmAccess, streamLeads);
+router.get('/', apiLimiter, authenticate, requireCrmAccess, getLeads);
+router.patch('/batch', apiLimiter, authenticate, requireCrmAccess, batchUpdateLeads);
+// Eliminar sigue siendo exclusivo de admin — ningún rol de CRM nuevo obtiene este permiso.
 router.delete('/batch', apiLimiter, authenticate, authorize('admin'), batchDeleteLeads);
-router.get('/:id', apiLimiter, authenticate, authorize('admin', 'editor'), getLeadById);
-router.put('/:id', apiLimiter, authenticate, authorize('admin', 'editor'), updateLead);
+router.get('/:id', apiLimiter, authenticate, requireCrmAccess, getLeadById);
+router.put('/:id', apiLimiter, authenticate, requireCrmAccess, updateLead);
 router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteLead);
-router.put(
-  '/:id/close-won',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  closeLeadAsWon
-);
-router.put(
-  '/:id/close-lost',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  closeLeadAsLost
-);
-router.put('/:id/reopen', apiLimiter, authenticate, authorize('admin', 'editor'), reopenLead);
-router.get('/:id/notes', apiLimiter, authenticate, authorize('admin', 'editor'), getLeadNotes);
-router.post('/:id/notes', apiLimiter, authenticate, authorize('admin', 'editor'), addLeadNote);
-router.delete(
-  '/:id/notes/:noteId',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  deleteLeadNote
-);
-router.post(
-  '/:id/whatsapp',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  sendLeadWhatsApp
-);
-router.post(
-  '/:id/properties',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  addLeadProperty
-);
+router.put('/:id/close-won', apiLimiter, authenticate, requireCrmAccess, closeLeadAsWon);
+router.put('/:id/close-lost', apiLimiter, authenticate, requireCrmAccess, closeLeadAsLost);
+router.put('/:id/reopen', apiLimiter, authenticate, requireCrmAccess, reopenLead);
+router.get('/:id/notes', apiLimiter, authenticate, requireCrmAccess, getLeadNotes);
+router.post('/:id/notes', apiLimiter, authenticate, requireCrmAccess, addLeadNote);
+router.delete('/:id/notes/:noteId', apiLimiter, authenticate, requireCrmAccess, deleteLeadNote);
+router.post('/:id/whatsapp', apiLimiter, authenticate, requireCrmAccess, sendLeadWhatsApp);
+router.post('/:id/properties', apiLimiter, authenticate, requireCrmAccess, addLeadProperty);
 router.delete(
   '/:id/properties/:propertyId',
   apiLimiter,
   authenticate,
-  authorize('admin', 'editor'),
+  requireCrmAccess,
   removeLeadProperty
 );
-router.get(
-  '/:id/activities',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  getLeadActivities
-);
-router.post(
-  '/:id/activities',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  createLeadActivity
-);
-router.get(
-  '/:id/appointments',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  getLeadAppointments
-);
-router.get('/:id/tasks', apiLimiter, authenticate, authorize('admin', 'editor'), getLeadTasks);
+router.get('/:id/activities', apiLimiter, authenticate, requireCrmAccess, getLeadActivities);
+router.post('/:id/activities', apiLimiter, authenticate, requireCrmAccess, createLeadActivity);
+router.get('/:id/appointments', apiLimiter, authenticate, requireCrmAccess, getLeadAppointments);
+router.get('/:id/tasks', apiLimiter, authenticate, requireCrmAccess, getLeadTasks);
 
 module.exports = router;

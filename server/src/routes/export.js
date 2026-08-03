@@ -8,6 +8,7 @@ const {
 } = require('../controllers/exportController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
+const { requireCrmAccess } = require('../middleware/crmAccessMiddleware');
 const { exportLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -26,13 +27,7 @@ router.get(
   authorize('admin', 'editor'),
   exportFeedbackExcel
 );
-router.get(
-  '/leads/excel',
-  exportLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  exportLeadsExcel
-);
+router.get('/leads/excel', exportLimiter, authenticate, requireCrmAccess, exportLeadsExcel);
 router.get('/property/:id/pdf', exportLimiter, exportPropertyQuotePDF);
 
 module.exports = router;

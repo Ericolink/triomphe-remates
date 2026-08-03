@@ -81,6 +81,22 @@ const Lead = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    // Quién capturó el prospecto — null para envíos del formulario público "Contactar
+    // asesor" (attachUserIfPresent no adjunta req.user sin token) y para leads creados
+    // antes de esta columna. Determina el alcance de visibilidad de un Capturista (ver
+    // getLeadVisibilityWhere en utils/leadAccess.js).
+    createdByUserId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    // Se actualiza cada vez que assignedToUserId cambia (incluido a null, que lo limpia).
+    // Para leads ya asignados antes de esta columna existir, se hizo un backfill de mejor
+    // esfuerzo con updatedAt en la migración — no representa la fecha real de la primera
+    // asignación, solo la última modificación conocida al momento del deploy.
+    assignedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     closeReason: {
       type: DataTypes.ENUM(
         'compro',

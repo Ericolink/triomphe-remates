@@ -3,6 +3,7 @@ const { sequelize, Lead, Property, Appointment } = require('../models/index');
 const { logActivity, ensureOpenTask } = require('../utils/pipelineHelpers');
 const { logAudit } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
+const { getLeadVisibilityWhere, canViewLead, canEditLead } = require('../utils/leadAccess');
 
 const VALID_APPOINTMENT_STATUS = ['programada', 'confirmada', 'completada', 'no_show', 'cancelada'];
 
@@ -22,6 +23,9 @@ const getAppointments = async (req, res) => {
       if (from) where.scheduledAt[Op.gte] = new Date(from);
       if (to) where.scheduledAt[Op.lte] = new Date(to);
     }
+    // CRM de Leads: cierra la fuga de "ver todos los leads vía Calendario" — mismo
+    // filtrado por fila que getLeads, pero contra el lead incluido ($lead.col$).
+    Object.assign(where, getLeadVisibilityWhere(req.user, { alias: 'lead' }) || {});
 
     const result = await paginate(Appointment, {
       page,
@@ -29,7 +33,11 @@ const getAppointments = async (req, res) => {
       maxLimit: 500,
       where,
       include: [
-        { model: Lead, as: 'lead', attributes: ['id', 'name', 'phone', 'email'] },
+        {
+          model: Lead,
+          as: 'lead',
+          attributes: ['id', 'name', 'phone', 'email', 'assignedToUserId', 'createdByUserId'],
+        },
         { model: Property, as: 'property', attributes: ['id', 'title'], required: false },
       ],
       order: [['scheduledAt', 'ASC']],
@@ -47,6 +55,9 @@ const getLeadAppointments = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canViewLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const appointments = await Appointment.findAll({
       where: { leadId: req.params.id },
@@ -70,6 +81,9 @@ const createAppointment = async (req, res) => {
 
     const lead = await Lead.findByPk(leadId);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canEditLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     if (propertyId) {
       const property = await Property.findByPk(propertyId);
@@ -110,9 +124,14 @@ const createAppointment = async (req, res) => {
 const updateAppointmentStatus = async (req, res) => {
   try {
     const appointment = await Appointment.findByPk(req.params.id, {
-      include: [{ model: Lead, as: 'lead', attributes: ['id', 'assignedToUserId'] }],
+      include: [
+        { model: Lead, as: 'lead', attributes: ['id', 'assignedToUserId', 'createdByUserId'] },
+      ],
     });
     if (!appointment) return res.status(404).json({ error: 'Cita no encontrada' });
+    if (!canEditLead(req.user, appointment.lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const { status, outcome } = req.body;
     if (status !== undefined && !VALID_APPOINTMENT_STATUS.includes(status)) {
@@ -165,8 +184,15 @@ const updateAppointmentStatus = async (req, res) => {
 // enlazada vía rescheduledFromId) en vez de sobreescribir la fecha.
 const rescheduleAppointment = async (req, res) => {
   try {
-    const oldAppointment = await Appointment.findByPk(req.params.id);
+    const oldAppointment = await Appointment.findByPk(req.params.id, {
+      include: [
+        { model: Lead, as: 'lead', attributes: ['id', 'assignedToUserId', 'createdByUserId'] },
+      ],
+    });
     if (!oldAppointment) return res.status(404).json({ error: 'Cita no encontrada' });
+    if (!canEditLead(req.user, oldAppointment.lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const { scheduledAt } = req.body;
     if (!scheduledAt) return res.status(400).json({ error: 'scheduledAt requerido' });

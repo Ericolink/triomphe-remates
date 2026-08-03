@@ -4,6 +4,12 @@ const { TERMINAL_STAGES, logActivity, ensureOpenTask } = require('../utils/pipel
 const { logAudit } = require('../utils/audit');
 const { MAX_BATCH_IDS } = require('../utils/batchValidation');
 const { paginate } = require('../utils/pagination');
+const {
+  getLeadVisibilityWhere,
+  canViewLead,
+  canEditLead,
+  canAssignLeads,
+} = require('../utils/leadAccess');
 
 // GET /api/tasks — filtros para el panel "seguimientos vencidos" y para pintar la
 // "próxima acción" en cada tarjeta del Kanban (leadIds CSV + done=false)
@@ -22,12 +28,20 @@ const getTasks = async (req, res) => {
       where.done = false;
       where.dueDate = { [Op.lt]: new Date() };
     }
+    // CRM de Leads: cierra la fuga de "ver todas las tareas/leads vía el widget de
+    // seguimientos" — mismo filtrado por fila que getLeads, contra el lead incluido.
+    Object.assign(where, getLeadVisibilityWhere(req.user, { alias: 'lead' }) || {});
 
     const queryOptions = {
       where,
       include: [
         { model: User, as: 'assignedTo', attributes: ['id', 'name'], required: false },
-        { model: Lead, as: 'lead', attributes: ['id', 'name', 'phone'], required: false },
+        {
+          model: Lead,
+          as: 'lead',
+          attributes: ['id', 'name', 'phone', 'assignedToUserId', 'createdByUserId'],
+          required: false,
+        },
       ],
       order: [['dueDate', 'ASC']],
     };
@@ -60,6 +74,9 @@ const getLeadTasks = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!canViewLead(req.user, lead)) {
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+    }
 
     const tasks = await Task.findAll({
       where: { leadId: req.params.id },
@@ -91,6 +108,10 @@ const completeTask = async (req, res) => {
     if (task.done) {
       await transaction.rollback();
       return res.status(400).json({ error: 'Esta tarea ya está completada' });
+    }
+    if (!canEditLead(req.user, task.lead)) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
     }
 
     await task.update({ done: true, doneAt: new Date() }, { transaction });
@@ -128,8 +149,15 @@ const completeTask = async (req, res) => {
 // PATCH /api/tasks/:id/reassign
 const reassignTask = async (req, res) => {
   try {
-    const task = await Task.findByPk(req.params.id);
+    const task = await Task.findByPk(req.params.id, {
+      include: [{ model: Lead, as: 'lead' }],
+    });
     if (!task) return res.status(404).json({ error: 'Tarea no encontrada' });
+    // Reasignar una tarea sigue la misma regla que reasignar el lead — reservado a
+    // admin/coordinador_ventas — y requiere poder ver el lead al que pertenece.
+    if (!canAssignLeads(req.user) || !canViewLead(req.user, task.lead)) {
+      return res.status(403).json({ error: 'No tienes permisos para reasignar esta tarea' });
+    }
 
     const { assignedToUserId } = req.body;
     if (!assignedToUserId) return res.status(400).json({ error: 'assignedToUserId requerido' });
