@@ -398,6 +398,8 @@ function LeadDetailPanel({
             >
               {['llamada', 'whatsapp', 'email', 'visita', 'nota'].map((t) => (
                 <option key={t} value={t}>
+                  {/* t viene del arreglo literal de arriba, no de entrada de usuario */}
+                  {/* eslint-disable-next-line security/detect-object-injection */}
                   {ACTIVITY_TYPE_LABELS[t]}
                 </option>
               ))}

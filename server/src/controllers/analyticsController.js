@@ -133,15 +133,15 @@ const getDashboard = async (req, res) => {
     const viewToLeadRate = totalViews > 0 ? (recentLeads / totalViews) * 100 : 0;
 
     // Agrupar por semana (ISO week label: "Sem N")
-    const weekMap = {};
+    const weekMap = new Map();
     leadsRaw.forEach(({ date, count }) => {
       const d = new Date(date);
       const startOfWeek = new Date(d);
       startOfWeek.setDate(d.getDate() - d.getDay() + 1); // lunes
       const key = startOfWeek.toISOString().slice(0, 10);
-      weekMap[key] = (weekMap[key] || 0) + parseInt(count);
+      weekMap.set(key, (weekMap.get(key) || 0) + parseInt(count));
     });
-    const leadsOverTime = Object.entries(weekMap)
+    const leadsOverTime = [...weekMap.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-8)
       .map(([date, count]) => {
@@ -151,15 +151,15 @@ const getDashboard = async (req, res) => {
       });
 
     // Vistas por semana — últimas 8 semanas
-    const viewWeekMap = {};
+    const viewWeekMap = new Map();
     viewsRaw.forEach(({ date, count }) => {
       const d = new Date(date);
       const startOfWeek = new Date(d);
       startOfWeek.setDate(d.getDate() - d.getDay() + 1);
       const key = startOfWeek.toISOString().slice(0, 10);
-      viewWeekMap[key] = (viewWeekMap[key] || 0) + parseInt(count);
+      viewWeekMap.set(key, (viewWeekMap.get(key) || 0) + parseInt(count));
     });
-    const viewsOverTime = Object.entries(viewWeekMap)
+    const viewsOverTime = [...viewWeekMap.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-8)
       .map(([date, count]) => {

@@ -1,3 +1,6 @@
+/* eslint-disable security/detect-object-injection -- este archivo solo indexa los mapas de
+   labels/colores de utils/constants.js con claves de enum devueltas por la API (city, type,
+   status, source), nunca con datos de entrada de usuario. */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {

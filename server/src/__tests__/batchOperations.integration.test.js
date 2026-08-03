@@ -81,7 +81,7 @@ describe('Guardarraíl de operaciones batch (ids)', () => {
         pipelineStage: 'contactado',
       });
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(new RegExp(String(MAX_BATCH_IDS)));
+      expect(res.body.error).toContain(String(MAX_BATCH_IDS));
     });
 
     test('rechaza ids con formato inválido', async () => {

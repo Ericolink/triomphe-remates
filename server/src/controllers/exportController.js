@@ -279,7 +279,7 @@ const exportPDF = async (req, res) => {
     });
 
     for (let i = 0; i < properties.length; i++) {
-      const p = properties[i];
+      const p = properties.at(i);
       const ROW_H = 22;
 
       if (y + ROW_H > doc.page.height - 40) {
@@ -322,8 +322,8 @@ const exportPDF = async (req, res) => {
       ];
 
       rowData.forEach(({ val, col, isStatus, bold, color, customX, customW }) => {
-        const colDef = PDF_COLS[col];
-        const xPos = customX !== undefined ? customX : xPositions[col] + 3;
+        const colDef = PDF_COLS.at(col);
+        const xPos = customX !== undefined ? customX : xPositions.at(col) + 3;
         const wid = customW !== undefined ? customW : colDef.width - 6;
         let fillColor = TEXT;
         if (isStatus) fillColor = statusHex[p.status] || TEXT;

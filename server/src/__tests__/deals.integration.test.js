@@ -35,7 +35,14 @@ describe('GET /api/deals', () => {
     const res = await authed(request(app).get('/api/deals?page=1&limit=10'));
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(10);
-    expect(res.body.pagination).toEqual({ total: 15, page: 1, limit: 10, totalPages: 2 });
+    expect(res.body.pagination).toEqual({
+      total: 15,
+      page: 1,
+      limit: 10,
+      totalPages: 2,
+      hasNext: true,
+      hasPrevious: false,
+    });
 
     const secondPage = await authed(request(app).get('/api/deals?page=2&limit=10'));
     expect(secondPage.body.data).toHaveLength(5);

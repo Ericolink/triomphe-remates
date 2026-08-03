@@ -25,7 +25,7 @@ describe('validateBatchIds', () => {
   test('rechaza un arreglo que excede el límite por defecto', () => {
     const tooMany = Array.from({ length: MAX_BATCH_IDS + 1 }, (_, i) => i + 1);
     const result = validateBatchIds(tooMany);
-    expect(result.error).toMatch(new RegExp(String(MAX_BATCH_IDS)));
+    expect(result.error).toContain(String(MAX_BATCH_IDS));
   });
 
   test('acepta exactamente el límite', () => {
