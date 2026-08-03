@@ -11,12 +11,6 @@ const IMAGE_SIGNATURES = [
   { type: 'image', bytes: [0x52, 0x49, 0x46, 0x46] }, // webp (RIFF....WEBP)
 ];
 
-const DOCUMENT_SIGNATURES = [
-  { type: 'pdf', bytes: [0x25, 0x50, 0x44, 0x46] }, // %PDF
-  { type: 'zip', bytes: [0x50, 0x4b, 0x03, 0x04] }, // docx/xlsx (formato OOXML, basado en zip)
-  { type: 'ole2', bytes: [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1] }, // doc/xls legado
-];
-
 // Para webp, RIFF debe ir seguido de "WEBP" en el byte 8
 const isWebp = (buffer) =>
   matchesSignature(buffer, [0x52, 0x49, 0x46, 0x46]) &&
@@ -29,9 +23,4 @@ const isValidImageBuffer = (buffer) => {
   return IMAGE_SIGNATURES.some((sig) => matchesSignature(buffer, sig.bytes));
 };
 
-const isValidDocumentBuffer = (buffer) => {
-  if (!buffer || buffer.length < 4) return false;
-  return DOCUMENT_SIGNATURES.some((sig) => matchesSignature(buffer, sig.bytes));
-};
-
-module.exports = { isValidImageBuffer, isValidDocumentBuffer };
+module.exports = { isValidImageBuffer };

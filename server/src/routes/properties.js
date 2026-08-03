@@ -19,17 +19,9 @@ const {
   getPropertyStats,
   getPropertiesSync,
 } = require('../controllers/propertyController');
-const {
-  getDocuments,
-  getAllDocuments,
-  uploadDocument,
-  deleteDocument,
-  setDocumentVisibility,
-} = require('../controllers/documentController');
 const { authenticate, attachUserIfPresent } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const upload = require('../middleware/uploadMiddleware');
-const { uploadDoc } = require('../middleware/uploadMiddleware');
 const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -89,37 +81,6 @@ router.put(
   authenticate,
   authorize('admin', 'editor'),
   reorderImages
-);
-
-router.get('/:id/documents', apiLimiter, getDocuments);
-router.get(
-  '/:id/documents/all',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  getAllDocuments
-);
-router.post(
-  '/:id/documents',
-  uploadLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  uploadDoc.single('file'),
-  uploadDocument
-);
-router.patch(
-  '/:id/documents/:docId/visibility',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  setDocumentVisibility
-);
-router.delete(
-  '/:id/documents/:docId',
-  apiLimiter,
-  authenticate,
-  authorize('admin', 'editor'),
-  deleteDocument
 );
 
 module.exports = router;

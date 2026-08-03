@@ -37,6 +37,7 @@ const getProperties = async (req, res) => {
       city,
       type,
       category,
+      businessLine,
       status,
       minPrice,
       maxPrice,
@@ -60,6 +61,7 @@ const getProperties = async (req, res) => {
     if (city) where.city = city;
     if (type) where.type = type;
     if (category) where.category = category;
+    if (businessLine) where.businessLine = businessLine;
     if (isStaff) {
       if (status) where.status = status;
     } else {
@@ -180,9 +182,13 @@ const getPropertiesSync = async (req, res) => {
 
 // GET /api/properties/stats — usado solo por páginas públicas (HomePage, AboutPage); cuenta
 // únicamente inventario disponible, igual que getProperties para clientes no-staff.
+// `businessLine` es opcional: HomePage/InfonavitHomePage lo pasan para que su tarjeta de stats
+// solo cuente su propia línea; AboutPage lo omite a propósito para mostrar el total combinado.
 const getPropertyStats = async (req, res) => {
   try {
+    const { businessLine } = req.query;
     const where = { status: 'disponible' };
+    if (businessLine) where.businessLine = businessLine;
 
     const total = await Property.count({ where });
     const byCityRaw = await Property.findAll({
@@ -261,6 +267,7 @@ const createProperty = async (req, res) => {
       city,
       type,
       category,
+      businessLine,
       status,
       squareMeters,
       terrainMeters,
@@ -299,6 +306,7 @@ const createProperty = async (req, res) => {
           city,
           type,
           category: category || 'remate',
+          businessLine: businessLine || 'remate',
           status: status || 'disponible',
           squareMeters: nullIfEmpty(squareMeters),
           terrainMeters: nullIfEmpty(terrainMeters),
@@ -369,6 +377,7 @@ const updateProperty = async (req, res) => {
       city,
       type,
       category,
+      businessLine,
       status,
       squareMeters,
       terrainMeters,
@@ -407,6 +416,7 @@ const updateProperty = async (req, res) => {
     if (city !== undefined) updates.city = city;
     if (type !== undefined) updates.type = type;
     if (category !== undefined) updates.category = category;
+    if (businessLine !== undefined) updates.businessLine = businessLine;
     if (status !== undefined) updates.status = status;
     if (squareMeters !== undefined) updates.squareMeters = nullIfEmpty(squareMeters);
     if (terrainMeters !== undefined) updates.terrainMeters = nullIfEmpty(terrainMeters);
@@ -653,11 +663,17 @@ const reorderImages = async (req, res) => {
   }
 };
 
-// GET /api/properties/promoted
+// GET /api/properties/promoted — `businessLine` opcional para que la propiedad estrella de
+// cada home solo pueda salir de esa línea (una propiedad de remate promovida no debe aparecer
+// como estrella en la sección Infonavit y viceversa).
 const getPromotedProperty = async (req, res) => {
   try {
+    const { businessLine } = req.query;
+    const where = { isPromoted: true, status: 'disponible' };
+    if (businessLine) where.businessLine = businessLine;
+
     const property = await Property.findOne({
-      where: { isPromoted: true, status: 'disponible' },
+      where,
       include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
     });
     return res.json({ data: property || null });

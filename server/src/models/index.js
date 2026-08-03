@@ -11,7 +11,6 @@ const Feedback = require('./Feedback');
 const PropertyAlert = require('./PropertyAlert');
 const AuditLog = require('./AuditLog');
 const PropertyStatusHistory = require('./PropertyStatusHistory');
-const PropertyDocument = require('./PropertyDocument');
 const Testimonial = require('./Testimonial');
 const Campaign = require('./Campaign');
 const LeadProperty = require('./LeadProperty');
@@ -39,13 +38,6 @@ Property.hasMany(PropertyStatusHistory, {
   onDelete: 'CASCADE',
 });
 PropertyStatusHistory.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
-
-Property.hasMany(PropertyDocument, {
-  foreignKey: 'propertyId',
-  as: 'documents',
-  onDelete: 'CASCADE',
-});
-PropertyDocument.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 
 Property.hasMany(Testimonial, {
   foreignKey: 'propertyId',
@@ -118,7 +110,6 @@ module.exports = {
   PropertyAlert,
   AuditLog,
   PropertyStatusHistory,
-  PropertyDocument,
   Testimonial,
   Campaign,
   LeadProperty,
