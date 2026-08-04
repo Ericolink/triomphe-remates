@@ -66,6 +66,11 @@ export const closeLeadAsLost = async (id, { closeReason, closeReasonDetail }) =>
   return data;
 };
 
+export const reopenLead = async (id, { pipelineStage } = {}) => {
+  const { data } = await api.put(`/leads/${id}/reopen`, { pipelineStage });
+  return data;
+};
+
 export const addLeadProperty = async (leadId, propertyId) => {
   const { data } = await api.post(`/leads/${leadId}/properties`, { propertyId });
   return data;

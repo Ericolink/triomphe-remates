@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { createLead } from '../../services/leadService';
 import { LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
+import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 
 const LEAD_TYPE_OPTIONS = labelsToOptions(LEAD_TYPE_LABELS, [
   'informacion',
@@ -91,8 +92,8 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
         maxLength={20}
         required
         onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-        pattern="^(\+?52)?\d{10}$"
-        title="10 dígitos, con o sin +52"
+        pattern={PHONE_PATTERN}
+        title={PHONE_PATTERN_TITLE}
         className={inputClass}
       />
       <input

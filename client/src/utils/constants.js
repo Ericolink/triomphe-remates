@@ -241,6 +241,13 @@ export const PIPELINE_STAGE_VARIANTS = {
 
 export const TERMINAL_STAGES = ['venta_realizada', 'no_interesado'];
 
+// Etapas activas del embudo — usado dondequiera que solo se pueda elegir un destino no
+// terminal (batch actions, modal de reapertura): las terminales siempre pasan por su propio
+// flujo dedicado (CloseLeadModal / ReopenLeadModal), nunca por una selección directa de etapa.
+export const NON_TERMINAL_PIPELINE_STAGE_OPTIONS = Object.entries(PIPELINE_STAGE_LABELS)
+  .filter(([value]) => !TERMINAL_STAGES.includes(value))
+  .map(([value, label]) => ({ value, label }));
+
 // Color de barra por etapa en los reportes (ReportsSection del Dashboard) — a diferencia de
 // PIPELINE_STAGE_VARIANTS (que agrupa varias etapas bajo el mismo estado de Badge), aquí
 // cada etapa necesita un color distinto para poder distinguirse en la misma gráfica. Las

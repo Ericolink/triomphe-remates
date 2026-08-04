@@ -6,6 +6,7 @@ import { subscribe } from '../../services/alertService';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '../../utils/animations';
 import { CITY_LABELS, TYPE_LABELS, labelsToOptions } from '../../utils/constants';
+import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 
 const CITIES = [
   { value: '', label: 'Cualquier ciudad' },
@@ -113,8 +114,8 @@ export default function AlertSubscriptionForm() {
           onChange={handleChange}
           placeholder="Ej: 6561234567"
           maxLength={20}
-          pattern="^(\+?52)?\d{10}$"
-          title="10 dígitos, con o sin +52"
+          pattern={PHONE_PATTERN}
+          title={PHONE_PATTERN_TITLE}
           className={inputCls}
         />
       </div>

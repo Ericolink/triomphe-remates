@@ -41,6 +41,7 @@ import {
   sendLeadWhatsApp,
   closeLeadAsWon,
   closeLeadAsLost,
+  reopenLead,
   addLeadProperty,
   removeLeadProperty,
 } from '../../../services/leadService';
@@ -56,6 +57,7 @@ import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import BatchActionBar from '../../ui/BatchActionBar';
 import CloseLeadModal from '../CloseLeadModal';
+import ReopenLeadModal from '../ReopenLeadModal';
 import StageBottomSheet from '../StageBottomSheet';
 import CreateLeadModal from '../CreateLeadModal';
 import KanbanBoard, { NextActionLine } from '../KanbanBoard';
@@ -75,16 +77,13 @@ import {
   PIPELINE_STAGE_LABELS,
   PIPELINE_STAGE_VARIANTS,
   TERMINAL_STAGES,
+  NON_TERMINAL_PIPELINE_STAGE_OPTIONS,
   ACTIVITY_TYPE_LABELS,
   ACTIVITY_TYPE_COLORS,
   PAYMENT_METHOD_LABELS,
 } from '../../../utils/constants';
 
 const LEADS_LIST_PAGE_SIZE = 20;
-
-const NON_TERMINAL_STAGE_OPTIONS = Object.entries(PIPELINE_STAGE_LABELS)
-  .filter(([value]) => !TERMINAL_STAGES.includes(value))
-  .map(([value, label]) => ({ value, label }));
 
 function LeadDetailPanel({
   selected,
@@ -930,6 +929,7 @@ export default function ProspectosSection() {
   const [checked, setChecked] = useState([]);
   const [view, setView] = useState('list');
   const [closeTarget, setCloseTarget] = useState(null); // { lead, targetStage }
+  const [reopenTarget, setReopenTarget] = useState(null); // { lead, targetStage }
   const [sheetLead, setSheetLead] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -1056,6 +1056,24 @@ export default function ProspectosSection() {
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al cerrar el prospecto'),
   });
 
+  const reopenMutation = useMutation({
+    mutationFn: ({ id, pipelineStage }) => reopenLead(id, { pipelineStage }),
+    onSuccess: (res) => {
+      toast.success('Prospecto reabierto');
+      setReopenTarget(null);
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
+      queryClient.invalidateQueries(['lead-detail']);
+      queryClient.invalidateQueries(['open-tasks']);
+      queryClient.invalidateQueries(['open-tasks-column']);
+      // A diferencia de close-won/close-lost (que deseleccionan al cerrar), aquí conviene
+      // dejar el panel abierto: reabrir es el punto de partida para seguir trabajando el
+      // prospecto (asignar responsable, etc.), no el final de su ciclo de vida.
+      setSelected((s) => (s ? { ...s, pipelineStage: res.data.pipelineStage } : s));
+    },
+    onError: (e) => toast.error(e?.response?.data?.error || 'Error al reabrir el prospecto'),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteLead,
     onSuccess: () => {
@@ -1101,11 +1119,17 @@ export default function ProspectosSection() {
   });
 
   // Único punto de entrada para cambiar de etapa (drag, bottom sheet o botón del
-  // detalle): las etapas terminales siempre pasan por el modal de cierre.
+  // detalle): las etapas terminales siempre pasan por el modal de cierre, y sacar un
+  // prospecto YA cerrado de su etapa terminal siempre pasa por el modal de reapertura —
+  // el PUT genérico (updateMutation) rechaza ese caso en el backend (ver updateLead), así
+  // que nunca debe intentarse directamente desde aquí.
   const attemptStageChange = (lead, newStage) => {
     if (newStage === lead.pipelineStage) return;
     if (TERMINAL_STAGES.includes(newStage)) {
       setCloseTarget({ lead, targetStage: newStage });
+      setSheetLead(null);
+    } else if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
+      setReopenTarget({ lead, targetStage: newStage });
       setSheetLead(null);
     } else {
       updateMutation.mutate({ id: lead.id, data: { pipelineStage: newStage } });
@@ -1442,6 +1466,18 @@ export default function ProspectosSection() {
         }
       />
 
+      <ReopenLeadModal
+        key={reopenTarget ? `${reopenTarget.lead.id}:${reopenTarget.targetStage}` : 'reopen-empty'}
+        open={!!reopenTarget}
+        lead={reopenTarget?.lead}
+        targetStage={reopenTarget?.targetStage}
+        isPending={reopenMutation.isPending}
+        onClose={() => setReopenTarget(null)}
+        onConfirm={(pipelineStage) =>
+          reopenMutation.mutate({ id: reopenTarget.lead.id, pipelineStage })
+        }
+      />
+
       <StageBottomSheet
         open={!!sheetLead}
         lead={sheetLead}
@@ -1460,7 +1496,7 @@ export default function ProspectosSection() {
         <BatchActionBar
           count={checked.length}
           onClear={() => setChecked([])}
-          statusOptions={NON_TERMINAL_STAGE_OPTIONS}
+          statusOptions={NON_TERMINAL_PIPELINE_STAGE_OPTIONS}
           onStatus={(s) => batchStatusMutation.mutate({ ids: checked, stage: s })}
           onDelete={() =>
             setConfirm({
