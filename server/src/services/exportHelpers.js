@@ -6,6 +6,8 @@ const fs = require('fs');
 const { Property, Image } = require('../models/index');
 const { PRIMARY_ARGB, ACCENT_ARGB, WHITE_ARGB } = require('./exportBranding');
 const { formatPrice, formatDate } = require('../utils/formatters');
+const { ApiError } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
 const dash = (val) => (val !== null && val !== undefined && val !== '' ? String(val) : '—');
 
@@ -173,6 +175,41 @@ const stripUnsupported = (str) => {
     .trim();
 };
 
+// Manejo de error unificado para los 5 endpoints de exportación (exportExcel, exportPDF,
+// exportFeedbackExcel, exportLeadsExcel, exportPropertyQuotePDF). Todos generan el archivo
+// escribiendo directo a `res` en streaming (ExcelJS vía workbook.xlsx.write(res), pdfkit vía
+// doc.pipe(res)) — una vez que salió el primer chunk, res.headersSent queda en true y Node
+// revienta con ERR_HTTP_HEADERS_SENT en cuanto algo (p.ej. res.json()) intenta volver a
+// llamar res.setHeader(). Por eso la respuesta de error solo es segura mientras
+// headersSent siga en false; si ya se envió, lo único seguro es loguear y cortar la
+// conexión — no hay forma de "corregir" un archivo que el cliente ya empezó a recibir.
+const handleExportError = (req, res, error, fallbackMessage) => {
+  const meta = {
+    message: error.message,
+    userId: req.user?.id || 'anonymous',
+    stack: error.stack,
+  };
+
+  if (res.headersSent) {
+    logger.error(`${req.method} ${req.originalUrl} (stream ya iniciado)`, meta);
+    // res.end() es inseguro aquí: pdfkit/ExcelJS pueden seguir escribiendo chunks ya
+    // encolados internamente y un "write after end" sobre `res` lanza un 'error' sin
+    // listener, lo que tumba el proceso. destroy() cierra el socket de inmediato y hace
+    // que Node desenganche (unpipe) la fuente automáticamente al detectar el cierre.
+    res.destroy();
+    return;
+  }
+
+  if (error instanceof ApiError) {
+    logger.error(`${req.method} ${req.originalUrl}`, { ...meta, statusCode: error.statusCode });
+    res.status(error.statusCode).json({ error: error.message });
+    return;
+  }
+
+  logger.error(`${req.method} ${req.originalUrl}`, meta);
+  res.status(500).json({ error: fallbackMessage });
+};
+
 module.exports = {
   formatPrice,
   formatDate,
@@ -184,4 +221,5 @@ module.exports = {
   getFirstImagePath,
   getImageBuffer,
   stripUnsupported,
+  handleExportError,
 };

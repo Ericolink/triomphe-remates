@@ -45,6 +45,7 @@ const {
   getFirstImagePath,
   getImageBuffer,
   stripUnsupported,
+  handleExportError,
 } = require('../services/exportHelpers');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,8 +152,7 @@ const exportExcel = async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error('Error en exportExcel:', error);
-    res.status(500).json({ error: 'Error al generar Excel' });
+    handleExportError(req, res, error, 'Error al generar Excel');
   }
 };
 
@@ -338,8 +338,7 @@ const exportPDF = async (req, res) => {
     drawPDFFooter(doc);
     doc.end();
   } catch (error) {
-    console.error('Error en exportPDF:', error);
-    res.status(500).json({ error: 'Error al generar PDF' });
+    handleExportError(req, res, error, 'Error al generar PDF');
   }
 };
 
@@ -452,8 +451,7 @@ const exportFeedbackExcel = async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error('Error en exportFeedbackExcel:', error);
-    res.status(500).json({ error: 'Error al generar Excel del buzón' });
+    handleExportError(req, res, error, 'Error al generar Excel del buzón');
   }
 };
 
@@ -588,8 +586,7 @@ const exportLeadsExcel = async (req, res) => {
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
-    console.error('Error en exportLeadsExcel:', error);
-    res.status(500).json({ error: 'Error al generar Excel de leads' });
+    handleExportError(req, res, error, 'Error al generar Excel de leads');
   }
 };
 
@@ -880,15 +877,7 @@ const exportPropertyQuotePDF = async (req, res) => {
 
     doc.end();
   } catch (error) {
-    // El único caso que puede llegar aquí antes de fijar headers/iniciar el stream es el
-    // ApiError 404 de arriba — se respeta su status/mensaje. Cualquier otro error ocurre
-    // ya con el PDF en streaming (headers y bytes ya enviados), donde no es seguro volver
-    // a llamar res.status(): se deja el manejo manual existente, sin tocar.
-    if (error instanceof ApiError && !res.headersSent) {
-      return res.status(error.statusCode).json({ error: error.message });
-    }
-    console.error('Error en exportPropertyQuotePDF:', error);
-    res.status(500).json({ error: 'Error al generar la cotización' });
+    handleExportError(req, res, error, 'Error al generar la cotización');
   }
 };
 
