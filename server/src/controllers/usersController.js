@@ -4,21 +4,11 @@ const { generateToken, hashPassword, comparePassword } = require('../utils/helpe
 const { logAudit } = require('../utils/audit');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { paginate } = require('../utils/pagination');
+const userService = require('../services/userService');
 
-// CRM de Leads — mismo patrón de arrays explícitos ya usado en leadController.js.
-const VALID_CRM_ROLES = ['coordinador_ventas', 'capturista', 'asesor_ventas'];
-
-const safeUser = (user) => ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  role: user.role,
-  crmRole: user.crmRole,
-  isActive: user.isActive,
-  profilePhoto: user.profilePhoto,
-  lastLogin: user.lastLogin,
-  createdAt: user.createdAt,
-});
+// Reexportados desde userService para no duplicar la lista/función — updateUser
+// y createUser comparten estas reglas de negocio.
+const { VALID_CRM_ROLES, safeUser } = userService;
 
 // GET /api/users
 const getUsers = async (req, res) => {
@@ -56,33 +46,26 @@ const createUser = async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
     }
-    if (crmRole && !VALID_CRM_ROLES.includes(crmRole)) {
-      return res
-        .status(400)
-        .json({ error: `Rol de CRM inválido. Valores permitidos: ${VALID_CRM_ROLES.join(', ')}` });
+
+    let user;
+    try {
+      user = await userService.createUser(
+        { name, email, password, role, crmRole },
+        {
+          audit: (created) =>
+            logAudit(req, 'create', 'user', created.id, {
+              name: created.name,
+              email: created.email,
+              role: created.role,
+              crmRole: created.crmRole,
+            }),
+        }
+      );
+    } catch (err) {
+      if (err.code === 'INVALID_CRM_ROLE') return res.status(400).json({ error: err.message });
+      if (err.code === 'DUPLICATE_EMAIL') return res.status(409).json({ error: err.message });
+      throw err;
     }
-
-    const existing = await User.findOne({ where: { email } });
-    if (existing) return res.status(409).json({ error: 'El email ya está registrado' });
-
-    const hashedPassword = await hashPassword(password);
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role: role || 'editor',
-      // Sin default: un editor nuevo no obtiene acceso al CRM de leads automáticamente,
-      // solo si un admin lo asigna explícitamente aquí (ver migración de backfill, que
-      // solo migró a los editores YA existentes al momento del deploy).
-      crmRole: crmRole || null,
-    });
-
-    logAudit(req, 'create', 'user', user.id, {
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      crmRole: user.crmRole,
-    });
 
     return res.status(201).json({ message: 'Usuario creado exitosamente', data: safeUser(user) });
   } catch (error) {

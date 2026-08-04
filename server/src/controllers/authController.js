@@ -2,6 +2,7 @@ const { User } = require('../models/index');
 const { generateToken, hashPassword, comparePassword } = require('../utils/helpers');
 const { validateRegister, validateLogin } = require('../utils/validators');
 const { logAudit } = require('../utils/audit');
+const userService = require('../services/userService');
 
 // POST /api/auth/register
 const register = async (req, res) => {
@@ -11,14 +12,18 @@ const register = async (req, res) => {
 
     const { name, email, password, role } = req.body;
 
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(409).json({ error: 'El email ya está registrado' });
+    let user;
+    try {
+      // Sin `crmRole` ni `audit`: register nunca aceptó crmRole en el body ni
+      // registró auditoría — se preserva ese comportamiento (ver reporte de
+      // refactor, diferencia conservada intencionalmente por compatibilidad).
+      user = await userService.createUser({ name, email, password, role });
+    } catch (err) {
+      if (err.code === 'DUPLICATE_EMAIL') {
+        return res.status(409).json({ error: err.message });
+      }
+      throw err;
     }
-
-    const hashedPassword = await hashPassword(password);
-
-    const user = await User.create({ name, email, password: hashedPassword, role });
 
     const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
 
