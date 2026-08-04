@@ -23,4 +23,4 @@ const isDevLocalOrigin = (origin) =>
 const isOriginAllowed = (origin) =>
   !!origin && (allowedOrigins.includes(origin) || isDevLocalOrigin(origin));
 
-module.exports = { allowedOrigins, isDevLocalOrigin, isOriginAllowed };
+module.exports = { isOriginAllowed };
