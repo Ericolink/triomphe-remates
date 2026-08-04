@@ -138,8 +138,8 @@ app.get('*path', (req, res) => {
   res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
-// AUDIT-014: middleware de error centralizado — debe ir al final. Disponible para
-// controllers nuevos vía next(error)/ApiError; los controllers existentes no se tocaron.
+// Middleware de error centralizado — debe ir al final. Todos los controllers usan
+// ApiError como mecanismo estándar de errores de dominio.
 app.use(require('./src/middleware/errorHandler').errorHandler);
 
 module.exports = app;

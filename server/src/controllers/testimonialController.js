@@ -3,6 +3,7 @@ const { cloudinary } = require('../config/cloudinary');
 const { logAudit } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
+const { ApiError } = require('../middleware/errorHandler');
 
 const uploadToCloudinary = (buffer, folder) =>
   new Promise((resolve, reject) => {
@@ -18,57 +19,42 @@ const uploadToCloudinary = (buffer, folder) =>
 
 // GET /api/testimonials/public
 const getPublicTestimonials = async (req, res) => {
-  try {
-    const { limit = 6 } = req.query;
-    const testimonials = await Testimonial.findAll({
-      where: { status: 'publicado' },
-      order: [
-        ['order', 'ASC'],
-        ['createdAt', 'DESC'],
-      ],
-      limit: parseInt(limit, 10),
-    });
-    return res.json({ data: testimonials });
-  } catch (error) {
-    console.error('Error en getPublicTestimonials:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  const { limit = 6 } = req.query;
+  const testimonials = await Testimonial.findAll({
+    where: { status: 'publicado' },
+    order: [
+      ['order', 'ASC'],
+      ['createdAt', 'DESC'],
+    ],
+    limit: parseInt(limit, 10),
+  });
+  return res.json({ data: testimonials });
 };
 
 // GET /api/testimonials/admin/all
 const getAllTestimonials = async (req, res) => {
-  try {
-    const { page = 1, limit = 20, status } = req.query;
-    const where = {};
-    if (status) where.status = status;
+  const { page = 1, limit = 20, status } = req.query;
+  const where = {};
+  if (status) where.status = status;
 
-    const result = await paginate(Testimonial, {
-      page,
-      limit,
-      where,
-      order: [
-        ['order', 'ASC'],
-        ['createdAt', 'DESC'],
-      ],
-    });
+  const result = await paginate(Testimonial, {
+    page,
+    limit,
+    where,
+    order: [
+      ['order', 'ASC'],
+      ['createdAt', 'DESC'],
+    ],
+  });
 
-    return res.json(result);
-  } catch (error) {
-    console.error('Error en getAllTestimonials:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  return res.json(result);
 };
 
 // GET /api/testimonials/:id
 const getTestimonialById = async (req, res) => {
-  try {
-    const testimonial = await Testimonial.findByPk(req.params.id);
-    if (!testimonial) return res.status(404).json({ error: 'Testimonio no encontrado' });
-    return res.json({ data: testimonial });
-  } catch (error) {
-    console.error('Error en getTestimonialById:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  const testimonial = await Testimonial.findByPk(req.params.id);
+  if (!testimonial) throw new ApiError(404, 'Testimonio no encontrado');
+  return res.json({ data: testimonial });
 };
 
 // POST /api/testimonials
@@ -77,14 +63,12 @@ const createTestimonial = async (req, res) => {
     const { clientName, clientRole, clientCity, testimonialText, rating, propertyId } = req.body;
 
     if (!clientName || !testimonialText) {
-      return res
-        .status(400)
-        .json({ error: 'Nombre del cliente y texto del testimonio son requeridos' });
+      throw new ApiError(400, 'Nombre del cliente y texto del testimonio son requeridos');
     }
 
     if (propertyId) {
       const property = await Property.findByPk(propertyId);
-      if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+      if (!property) throw new ApiError(404, 'Propiedad no encontrada');
     }
 
     const data = {
@@ -120,8 +104,8 @@ const createTestimonial = async (req, res) => {
 
     return res.status(201).json({ message: 'Testimonio creado', data: testimonial });
   } catch (error) {
-    console.error('Error en createTestimonial:', error);
-    return res.status(500).json({ error: 'Error al crear testimonio' });
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, 'Error al crear testimonio', { cause: error });
   }
 };
 
@@ -129,7 +113,7 @@ const createTestimonial = async (req, res) => {
 const updateTestimonial = async (req, res) => {
   try {
     const testimonial = await Testimonial.findByPk(req.params.id);
-    if (!testimonial) return res.status(404).json({ error: 'Testimonio no encontrado' });
+    if (!testimonial) throw new ApiError(404, 'Testimonio no encontrado');
 
     const {
       clientName,
@@ -144,7 +128,7 @@ const updateTestimonial = async (req, res) => {
 
     if (propertyId) {
       const property = await Property.findByPk(propertyId);
-      if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+      if (!property) throw new ApiError(404, 'Propiedad no encontrada');
     }
 
     const updates = {};
@@ -197,8 +181,8 @@ const updateTestimonial = async (req, res) => {
 
     return res.json({ message: 'Testimonio actualizado', data: testimonial });
   } catch (error) {
-    console.error('Error en updateTestimonial:', error);
-    return res.status(500).json({ error: 'Error al actualizar testimonio' });
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, 'Error al actualizar testimonio', { cause: error });
   }
 };
 
@@ -206,7 +190,7 @@ const updateTestimonial = async (req, res) => {
 const deleteTestimonial = async (req, res) => {
   try {
     const testimonial = await Testimonial.findByPk(req.params.id);
-    if (!testimonial) return res.status(404).json({ error: 'Testimonio no encontrado' });
+    if (!testimonial) throw new ApiError(404, 'Testimonio no encontrado');
 
     if (testimonial.beforeImageFilename) {
       await destroyCloudinaryAsset(testimonial.beforeImageFilename, {
@@ -228,8 +212,8 @@ const deleteTestimonial = async (req, res) => {
 
     return res.json({ message: 'Testimonio eliminado' });
   } catch (error) {
-    console.error('Error en deleteTestimonial:', error);
-    return res.status(500).json({ error: 'Error al eliminar testimonio' });
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, 'Error al eliminar testimonio', { cause: error });
   }
 };
 

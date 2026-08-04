@@ -171,408 +171,386 @@ const {
   canEditLead,
   canAssignLeads,
 } = require('../utils/leadAccess');
+const { ApiError } = require('../middleware/errorHandler');
 // Etapas a las que un prospecto cerrado puede volver al reabrirse — cualquier etapa no
 // terminal es un destino válido para PUT /:id/reopen.
 const REOPEN_STAGES = VALID_PIPELINE_STAGES.filter((s) => !TERMINAL_STAGES.includes(s));
 
 // POST /api/leads
 const createLead = async (req, res) => {
-  try {
-    const {
-      name,
-      email,
-      phone,
-      message,
-      type,
-      propertyId,
-      appointmentDate,
-      source,
-      campaignId,
-      assignedToUserId,
-    } = req.body;
+  const {
+    name,
+    email,
+    phone,
+    message,
+    type,
+    propertyId,
+    appointmentDate,
+    source,
+    campaignId,
+    assignedToUserId,
+  } = req.body;
 
-    // Nombre ya no es obligatorio: un prospecto capturado de prisa (llamada, feria) a
-    // veces solo trae teléfono. Se usa un placeholder en vez de dejarlo null para no
-    // tener que blindar cada vista/email que ya asume lead.name como string.
-    const resolvedName = (name && name.trim()) || 'Prospecto sin nombre';
-    // CRM Comercial: email ya no es obligatorio (prospectos de solo-WhatsApp/Facebook).
-    if (email && !validateEmail(email)) {
-      return res.status(400).json({ error: 'Email inválido' });
-    }
+  // Nombre ya no es obligatorio: un prospecto capturado de prisa (llamada, feria) a
+  // veces solo trae teléfono. Se usa un placeholder en vez de dejarlo null para no
+  // tener que blindar cada vista/email que ya asume lead.name como string.
+  const resolvedName = (name && name.trim()) || 'Prospecto sin nombre';
+  // CRM Comercial: email ya no es obligatorio (prospectos de solo-WhatsApp/Facebook).
+  if (email && !validateEmail(email)) {
+    throw new ApiError(400, 'Email inválido');
+  }
 
-    // El teléfono es obligatorio para el formulario público "Contactar asesor" (mejora la
-    // calidad de los prospectos captados) pero se mantiene opcional para la captura manual
-    // del CRM (CreateLeadModal / "Nuevo prospecto"), donde req.user viene presente porque
-    // el equipo comercial ya está autenticado — ver attachUserIfPresent en routes/leads.js.
-    if (!req.user && (!phone || !phone.trim())) {
-      return res.status(400).json({ error: 'Teléfono es requerido' });
-    }
+  // El teléfono es obligatorio para el formulario público "Contactar asesor" (mejora la
+  // calidad de los prospectos captados) pero se mantiene opcional para la captura manual
+  // del CRM (CreateLeadModal / "Nuevo prospecto"), donde req.user viene presente porque
+  // el equipo comercial ya está autenticado — ver attachUserIfPresent en routes/leads.js.
+  if (!req.user && (!phone || !phone.trim())) {
+    throw new ApiError(400, 'Teléfono es requerido');
+  }
 
-    if (!validatePhone(phone)) {
-      return res.status(400).json({ error: 'Teléfono inválido — usa 10 dígitos, con o sin +52' });
-    }
+  if (!validatePhone(phone)) {
+    throw new ApiError(400, 'Teléfono inválido — usa 10 dígitos, con o sin +52');
+  }
 
-    // CRM de Leads: un Asesor de Ventas no puede crear prospectos manualmente (solo
-    // trabaja los que ya se le asignaron); el formulario público no tiene req.user, así
-    // que esto solo aplica a la captura manual desde el CRM.
-    if (req.user && crmAccessLevel(req.user) === 'asesor_ventas') {
-      return res.status(403).json({ error: 'Los asesores de ventas no pueden crear prospectos' });
-    }
-    // Asignar responsable al crear queda reservado a quien puede asignar (admin/
-    // coordinador_ventas) — ver utils/leadAccess.js. El formulario público nunca envía
-    // este campo, así que esto solo bloquea una captura manual mal intencionada.
-    if (assignedToUserId && req.user && !canAssignLeads(req.user)) {
-      return res.status(403).json({ error: 'No tienes permisos para asignar un responsable' });
-    }
+  // CRM de Leads: un Asesor de Ventas no puede crear prospectos manualmente (solo
+  // trabaja los que ya se le asignaron); el formulario público no tiene req.user, así
+  // que esto solo aplica a la captura manual desde el CRM.
+  if (req.user && crmAccessLevel(req.user) === 'asesor_ventas') {
+    throw new ApiError(403, 'Los asesores de ventas no pueden crear prospectos');
+  }
+  // Asignar responsable al crear queda reservado a quien puede asignar (admin/
+  // coordinador_ventas) — ver utils/leadAccess.js. El formulario público nunca envía
+  // este campo, así que esto solo bloquea una captura manual mal intencionada.
+  if (assignedToUserId && req.user && !canAssignLeads(req.user)) {
+    throw new ApiError(403, 'No tienes permisos para asignar un responsable');
+  }
 
-    if (type && !VALID_LEAD_TYPE.includes(type)) {
-      return res.status(400).json({
-        error: `Motivo de contacto inválido. Valores permitidos: ${VALID_LEAD_TYPE.join(', ')}`,
-      });
-    }
+  if (type && !VALID_LEAD_TYPE.includes(type)) {
+    throw new ApiError(
+      400,
+      `Motivo de contacto inválido. Valores permitidos: ${VALID_LEAD_TYPE.join(', ')}`
+    );
+  }
 
-    const resolvedType = type || 'contacto';
+  const resolvedType = type || 'contacto';
+  if (resolvedType === 'cita') {
+    const { error: appointmentError } = validateAppointmentDate(appointmentDate);
+    if (appointmentError) throw new ApiError(400, appointmentError);
+  }
+
+  const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);
+  if (commercialError) throw new ApiError(400, commercialError);
+
+  let property = null;
+  if (propertyId) {
+    property = await Property.findByPk(propertyId);
+    if (!property) throw new ApiError(404, 'Propiedad no encontrada');
+  }
+
+  if (campaignId) {
+    const campaign = await Campaign.findByPk(campaignId);
+    if (!campaign) throw new ApiError(404, 'Campaña no encontrada');
+  }
+
+  if (assignedToUserId) {
+    const assignedUser = await User.findByPk(assignedToUserId);
+    if (!assignedUser) throw new ApiError(404, 'Usuario asignado no encontrado');
+  }
+
+  const lead = await sequelize.transaction(async (transaction) => {
+    const created = await Lead.create(
+      {
+        name: resolvedName,
+        email: email || null,
+        phone,
+        message,
+        type: resolvedType,
+        source: source || 'directo',
+        propertyId: propertyId || null,
+        appointmentDate: appointmentDate || null,
+        campaignId: campaignId || null,
+        assignedToUserId: assignedToUserId || null,
+        assignedAt: assignedToUserId ? new Date() : null,
+        createdByUserId: req.user?.id ?? null,
+        ...commercialFields,
+      },
+      { transaction }
+    );
+
+    await logActivity({
+      leadId: created.id,
+      type: 'sistema',
+      content: 'Prospecto creado',
+      transaction,
+    });
+
+    // "Agendar cita" crea también la Appointment que alimenta el Calendario admin —
+    // mismo patrón que appointmentController.createAppointment — para que la solicitud
+    // del formulario público quede visible ahí de inmediato, sin depender del
+    // Lead.appointmentDate deprecado (que solo se conserva para el email de confirmación).
     if (resolvedType === 'cita') {
-      const { error: appointmentError } = validateAppointmentDate(appointmentDate);
-      if (appointmentError) return res.status(400).json({ error: appointmentError });
-    }
-
-    const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);
-    if (commercialError) return res.status(400).json({ error: commercialError });
-
-    let property = null;
-    if (propertyId) {
-      property = await Property.findByPk(propertyId);
-      if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
-    }
-
-    if (campaignId) {
-      const campaign = await Campaign.findByPk(campaignId);
-      if (!campaign) return res.status(404).json({ error: 'Campaña no encontrada' });
-    }
-
-    if (assignedToUserId) {
-      const assignedUser = await User.findByPk(assignedToUserId);
-      if (!assignedUser) return res.status(404).json({ error: 'Usuario asignado no encontrado' });
-    }
-
-    const lead = await sequelize.transaction(async (transaction) => {
-      const created = await Lead.create(
+      await Appointment.create(
         {
-          name: resolvedName,
-          email: email || null,
-          phone,
-          message,
-          type: resolvedType,
-          source: source || 'directo',
+          leadId: created.id,
           propertyId: propertyId || null,
-          appointmentDate: appointmentDate || null,
-          campaignId: campaignId || null,
-          assignedToUserId: assignedToUserId || null,
-          assignedAt: assignedToUserId ? new Date() : null,
-          createdByUserId: req.user?.id ?? null,
-          ...commercialFields,
+          scheduledAt: appointmentDate,
         },
         { transaction }
       );
-
       await logActivity({
         leadId: created.id,
         type: 'sistema',
-        content: 'Prospecto creado',
+        content: `Cita agendada para ${new Date(appointmentDate).toLocaleString('es-MX')}`,
         transaction,
       });
-
-      // "Agendar cita" crea también la Appointment que alimenta el Calendario admin —
-      // mismo patrón que appointmentController.createAppointment — para que la solicitud
-      // del formulario público quede visible ahí de inmediato, sin depender del
-      // Lead.appointmentDate deprecado (que solo se conserva para el email de confirmación).
-      if (resolvedType === 'cita') {
-        await Appointment.create(
-          {
-            leadId: created.id,
-            propertyId: propertyId || null,
-            scheduledAt: appointmentDate,
-          },
-          { transaction }
-        );
-        await logActivity({
-          leadId: created.id,
-          type: 'sistema',
-          content: `Cita agendada para ${new Date(appointmentDate).toLocaleString('es-MX')}`,
-          transaction,
-        });
-      }
-
-      // Diferido hasta asignar: un prospecto público sin responsable no tiene "próxima
-      // acción" todavía (ver CRM_UX_DESIGN.md / plan de Fase 1).
-      if (assignedToUserId) {
-        await ensureOpenTask({ leadId: created.id, assignedToUserId, type: 'llamar', transaction });
-      }
-
-      return created;
-    });
-
-    Promise.all([
-      sendNewLeadNotification(lead, property).catch((e) =>
-        console.error('Error email notificación:', e)
-      ),
-      sendLeadConfirmation(lead).catch((e) => console.error('Error email confirmación:', e)),
-    ]);
-
-    if (property) {
-      Analytics.create({
-        event: 'contact',
-        propertyId: property.id,
-        ip: req.ip,
-        userAgent: req.headers['user-agent'],
-        referrer: req.headers['referer'] || null,
-      }).catch((e) => console.error('Error registrando analytics contact:', e));
     }
 
-    leadEvents.emit('new-lead', {
-      id: lead.id,
-      name: lead.name,
-      email: lead.email,
-      type: lead.type,
-      status: lead.status,
-      createdAt: lead.createdAt,
-      property: property ? { id: property.id, title: property.title } : null,
-    });
+    // Diferido hasta asignar: un prospecto público sin responsable no tiene "próxima
+    // acción" todavía (ver CRM_UX_DESIGN.md / plan de Fase 1).
+    if (assignedToUserId) {
+      await ensureOpenTask({ leadId: created.id, assignedToUserId, type: 'llamar', transaction });
+    }
 
-    return res.status(201).json({
-      message: 'Mensaje enviado exitosamente. Un asesor se pondrá en contacto contigo pronto.',
-      data: { id: lead.id },
-    });
-  } catch (error) {
-    console.error('Error en createLead:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    return created;
+  });
+
+  Promise.all([
+    sendNewLeadNotification(lead, property).catch((e) =>
+      console.error('Error email notificación:', e)
+    ),
+    sendLeadConfirmation(lead).catch((e) => console.error('Error email confirmación:', e)),
+  ]);
+
+  if (property) {
+    Analytics.create({
+      event: 'contact',
+      propertyId: property.id,
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      referrer: req.headers['referer'] || null,
+    }).catch((e) => console.error('Error registrando analytics contact:', e));
   }
+
+  leadEvents.emit('new-lead', {
+    id: lead.id,
+    name: lead.name,
+    email: lead.email,
+    type: lead.type,
+    status: lead.status,
+    createdAt: lead.createdAt,
+    property: property ? { id: property.id, title: property.title } : null,
+  });
+
+  return res.status(201).json({
+    message: 'Mensaje enviado exitosamente. Un asesor se pondrá en contacto contigo pronto.',
+    data: { id: lead.id },
+  });
 };
 
 // GET /api/leads
 const getLeads = async (req, res) => {
-  try {
-    const {
-      page = 1,
-      limit = 20,
-      status,
-      type,
-      propertyId,
-      source,
-      pipelineStage,
-      campaignId,
-      assignedToUserId,
-      search,
-    } = req.query;
-    const where = {};
+  const {
+    page = 1,
+    limit = 20,
+    status,
+    type,
+    propertyId,
+    source,
+    pipelineStage,
+    campaignId,
+    assignedToUserId,
+    search,
+  } = req.query;
+  const where = {};
 
-    if (status) where.status = status;
-    if (type) where.type = type;
-    if (source) where.source = source;
-    if (propertyId) where.propertyId = propertyId;
-    if (pipelineStage) where.pipelineStage = pipelineStage;
-    if (campaignId) where.campaignId = campaignId;
-    if (assignedToUserId) where.assignedToUserId = assignedToUserId;
-    // Búsqueda instantánea (Kanban/Lista) — mismo patrón Op.or/Op.like que propertyController.
-    if (search) {
-      where[Op.or] = [
-        { name: { [Op.like]: `%${search}%` } },
-        { phone: { [Op.like]: `%${search}%` } },
-        { email: { [Op.like]: `%${search}%` } },
-      ];
-    }
-
-    Object.assign(where, getLeadVisibilityWhere(req.user) || {});
-
-    const result = await paginate(Lead, {
-      page,
-      limit,
-      where,
-      include: [
-        {
-          model: Property,
-          as: 'property',
-          attributes: ['id', 'title', 'city', 'slug'],
-          required: false,
-        },
-        {
-          model: Campaign,
-          as: 'campaign',
-          attributes: ['id', 'name', 'platform'],
-          required: false,
-        },
-        { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
-      ],
-      order: [['createdAt', 'DESC']],
-    });
-
-    return res.json(result);
-  } catch (error) {
-    console.error('Error en getLeads:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  if (status) where.status = status;
+  if (type) where.type = type;
+  if (source) where.source = source;
+  if (propertyId) where.propertyId = propertyId;
+  if (pipelineStage) where.pipelineStage = pipelineStage;
+  if (campaignId) where.campaignId = campaignId;
+  if (assignedToUserId) where.assignedToUserId = assignedToUserId;
+  // Búsqueda instantánea (Kanban/Lista) — mismo patrón Op.or/Op.like que propertyController.
+  if (search) {
+    where[Op.or] = [
+      { name: { [Op.like]: `%${search}%` } },
+      { phone: { [Op.like]: `%${search}%` } },
+      { email: { [Op.like]: `%${search}%` } },
+    ];
   }
+
+  Object.assign(where, getLeadVisibilityWhere(req.user) || {});
+
+  const result = await paginate(Lead, {
+    page,
+    limit,
+    where,
+    include: [
+      {
+        model: Property,
+        as: 'property',
+        attributes: ['id', 'title', 'city', 'slug'],
+        required: false,
+      },
+      {
+        model: Campaign,
+        as: 'campaign',
+        attributes: ['id', 'name', 'platform'],
+        required: false,
+      },
+      { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
+    ],
+    order: [['createdAt', 'DESC']],
+  });
+
+  return res.json(result);
 };
 
 // GET /api/leads/:id
 const getLeadById = async (req, res) => {
-  try {
-    const lead = await Lead.findByPk(req.params.id, {
-      include: [
-        { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'slug', 'price'] },
-        {
-          model: Campaign,
-          as: 'campaign',
-          attributes: ['id', 'name', 'platform'],
-          required: false,
-        },
-        { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
-        { model: User, as: 'createdByUser', attributes: ['id', 'name'], required: false },
-        {
-          model: Property,
-          as: 'interestedProperties',
-          // `price` viaja para que CloseLeadModal pueda preasignar el monto de venta al
-          // elegir la propiedad (evita que el usuario tenga que ir a buscarlo aparte).
-          attributes: ['id', 'title', 'city', 'slug', 'price'],
-          through: { attributes: [] },
-          required: false,
-        },
-        { model: Deal, as: 'deal', required: false },
-      ],
-    });
+  const lead = await Lead.findByPk(req.params.id, {
+    include: [
+      { model: Property, as: 'property', attributes: ['id', 'title', 'city', 'slug', 'price'] },
+      {
+        model: Campaign,
+        as: 'campaign',
+        attributes: ['id', 'name', 'platform'],
+        required: false,
+      },
+      { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
+      { model: User, as: 'createdByUser', attributes: ['id', 'name'], required: false },
+      {
+        model: Property,
+        as: 'interestedProperties',
+        // `price` viaja para que CloseLeadModal pueda preasignar el monto de venta al
+        // elegir la propiedad (evita que el usuario tenga que ir a buscarlo aparte).
+        attributes: ['id', 'title', 'city', 'slug', 'price'],
+        through: { attributes: [] },
+        required: false,
+      },
+      { model: Deal, as: 'deal', required: false },
+    ],
+  });
 
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    if (!canViewLead(req.user, lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
-    }
-    return res.json({ data: lead });
-  } catch (error) {
-    console.error('Error en getLeadById:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  if (!lead) throw new ApiError(404, 'Lead no encontrado');
+  if (!canViewLead(req.user, lead)) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
   }
+  return res.json({ data: lead });
 };
 
 // PUT /api/leads/:id
 const updateLead = async (req, res) => {
-  try {
-    const lead = await Lead.findByPk(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    if (!canEditLead(req.user, lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
-    }
-
-    const { status, notes, appointmentDate, source, pipelineStage, assignedToUserId, campaignId } =
-      req.body;
-
-    // Asignar/reasignar responsable queda reservado a admin/coordinador_ventas — ver
-    // utils/leadAccess.js. Un Asesor o Capturista con permiso de edición sobre este lead
-    // puede seguir cambiando otros campos, solo no este.
-    if (assignedToUserId !== undefined && !canAssignLeads(req.user)) {
-      return res.status(403).json({ error: 'No tienes permisos para asignar un responsable' });
-    }
-    if (status !== undefined && !VALID_LEAD_STATUS.includes(status)) {
-      return res
-        .status(400)
-        .json({ error: `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}` });
-    }
-    if (source !== undefined && !VALID_LEAD_SOURCE.includes(source)) {
-      return res
-        .status(400)
-        .json({ error: `Fuente inválida. Valores permitidos: ${VALID_LEAD_SOURCE.join(', ')}` });
-    }
-    if (pipelineStage !== undefined) {
-      if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
-        return res.status(400).json({
-          error: `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}`,
-        });
-      }
-      // Las etapas terminales solo se alcanzan a través de /close-won o /close-lost, que
-      // capturan los datos obligatorios (monto+propiedad, o motivo) en la misma transacción.
-      if (TERMINAL_STAGES.includes(pipelineStage)) {
-        return res
-          .status(400)
-          .json({ error: 'Para cerrar un prospecto usa PUT /:id/close-won o PUT /:id/close-lost' });
-      }
-      // AUDIT: simétrico al bloqueo de arriba — un lead ya cerrado tampoco puede salir de
-      // su etapa terminal por esta vía genérica, porque cerrar/reabrir tiene efectos
-      // colaterales (Deal, Task, Activity) que este endpoint no conoce. Usa PUT /:id/reopen.
-      if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
-        return res
-          .status(400)
-          .json({ error: 'Este prospecto está cerrado — usa PUT /:id/reopen para reactivarlo' });
-      }
-    }
-
-    const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);
-    if (commercialError) return res.status(400).json({ error: commercialError });
-
-    if (campaignId) {
-      const campaign = await Campaign.findByPk(campaignId);
-      if (!campaign) return res.status(404).json({ error: 'Campaña no encontrada' });
-    }
-
-    if (assignedToUserId) {
-      const assignedUser = await User.findByPk(assignedToUserId);
-      if (!assignedUser) return res.status(404).json({ error: 'Usuario asignado no encontrado' });
-    }
-
-    const previousStage = lead.pipelineStage;
-    const previousAssignee = lead.assignedToUserId;
-
-    const updates = {};
-    await sequelize.transaction(async (transaction) => {
-      if (status !== undefined) updates.status = status;
-      if (notes !== undefined) updates.notes = notes;
-      if (appointmentDate !== undefined) updates.appointmentDate = appointmentDate;
-      if (source !== undefined) updates.source = source;
-      if (campaignId !== undefined) updates.campaignId = campaignId;
-      if (pipelineStage !== undefined) {
-        updates.pipelineStage = pipelineStage;
-        updates.status = legacyStatusFor(pipelineStage);
-      }
-      if (assignedToUserId !== undefined) {
-        updates.assignedToUserId = assignedToUserId;
-        updates.assignedAt = assignedToUserId ? new Date() : null;
-      }
-      Object.assign(updates, commercialFields);
-
-      await lead.update(updates, { transaction });
-
-      if (pipelineStage !== undefined && pipelineStage !== previousStage) {
-        await logActivity({
-          leadId: lead.id,
-          type: 'sistema',
-          content: `Etapa actualizada: ${previousStage} → ${pipelineStage}`,
-          userId: req.user?.id ?? null,
-          transaction,
-        });
-      }
-
-      if (assignedToUserId !== undefined && assignedToUserId !== previousAssignee) {
-        await logActivity({
-          leadId: lead.id,
-          type: 'reasignacion',
-          content: 'Responsable cambiado',
-          userId: req.user?.id ?? null,
-          previousAssignedToUserId: previousAssignee,
-          newAssignedToUserId: assignedToUserId,
-          transaction,
-        });
-        // Un prospecto que no tenía responsable y recién se reclama obtiene su primera
-        // "próxima acción" en este momento (ver decisión de diferir en createLead).
-        if (assignedToUserId && !previousAssignee) {
-          await ensureOpenTask({ leadId: lead.id, assignedToUserId, type: 'llamar', transaction });
-        }
-      }
-    });
-
-    logAudit(req, 'update', 'lead', lead.id, updates);
-
-    return res.json({ message: 'Lead actualizado exitosamente', data: lead });
-  } catch (error) {
-    console.error('Error en updateLead:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  const lead = await Lead.findByPk(req.params.id);
+  if (!lead) throw new ApiError(404, 'Lead no encontrado');
+  if (!canEditLead(req.user, lead)) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
   }
+
+  const { status, notes, appointmentDate, source, pipelineStage, assignedToUserId, campaignId } =
+    req.body;
+
+  // Asignar/reasignar responsable queda reservado a admin/coordinador_ventas — ver
+  // utils/leadAccess.js. Un Asesor o Capturista con permiso de edición sobre este lead
+  // puede seguir cambiando otros campos, solo no este.
+  if (assignedToUserId !== undefined && !canAssignLeads(req.user)) {
+    throw new ApiError(403, 'No tienes permisos para asignar un responsable');
+  }
+  if (status !== undefined && !VALID_LEAD_STATUS.includes(status)) {
+    throw new ApiError(400, `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}`);
+  }
+  if (source !== undefined && !VALID_LEAD_SOURCE.includes(source)) {
+    throw new ApiError(400, `Fuente inválida. Valores permitidos: ${VALID_LEAD_SOURCE.join(', ')}`);
+  }
+  if (pipelineStage !== undefined) {
+    if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
+      throw new ApiError(
+        400,
+        `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}`
+      );
+    }
+    // Las etapas terminales solo se alcanzan a través de /close-won o /close-lost, que
+    // capturan los datos obligatorios (monto+propiedad, o motivo) en la misma transacción.
+    if (TERMINAL_STAGES.includes(pipelineStage)) {
+      throw new ApiError(
+        400,
+        'Para cerrar un prospecto usa PUT /:id/close-won o PUT /:id/close-lost'
+      );
+    }
+    // AUDIT: simétrico al bloqueo de arriba — un lead ya cerrado tampoco puede salir de
+    // su etapa terminal por esta vía genérica, porque cerrar/reabrir tiene efectos
+    // colaterales (Deal, Task, Activity) que este endpoint no conoce. Usa PUT /:id/reopen.
+    if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
+      throw new ApiError(400, 'Este prospecto está cerrado — usa PUT /:id/reopen para reactivarlo');
+    }
+  }
+
+  const { error: commercialError, values: commercialFields } = parseCommercialFields(req.body);
+  if (commercialError) throw new ApiError(400, commercialError);
+
+  if (campaignId) {
+    const campaign = await Campaign.findByPk(campaignId);
+    if (!campaign) throw new ApiError(404, 'Campaña no encontrada');
+  }
+
+  if (assignedToUserId) {
+    const assignedUser = await User.findByPk(assignedToUserId);
+    if (!assignedUser) throw new ApiError(404, 'Usuario asignado no encontrado');
+  }
+
+  const previousStage = lead.pipelineStage;
+  const previousAssignee = lead.assignedToUserId;
+
+  const updates = {};
+  await sequelize.transaction(async (transaction) => {
+    if (status !== undefined) updates.status = status;
+    if (notes !== undefined) updates.notes = notes;
+    if (appointmentDate !== undefined) updates.appointmentDate = appointmentDate;
+    if (source !== undefined) updates.source = source;
+    if (campaignId !== undefined) updates.campaignId = campaignId;
+    if (pipelineStage !== undefined) {
+      updates.pipelineStage = pipelineStage;
+      updates.status = legacyStatusFor(pipelineStage);
+    }
+    if (assignedToUserId !== undefined) {
+      updates.assignedToUserId = assignedToUserId;
+      updates.assignedAt = assignedToUserId ? new Date() : null;
+    }
+    Object.assign(updates, commercialFields);
+
+    await lead.update(updates, { transaction });
+
+    if (pipelineStage !== undefined && pipelineStage !== previousStage) {
+      await logActivity({
+        leadId: lead.id,
+        type: 'sistema',
+        content: `Etapa actualizada: ${previousStage} → ${pipelineStage}`,
+        userId: req.user?.id ?? null,
+        transaction,
+      });
+    }
+
+    if (assignedToUserId !== undefined && assignedToUserId !== previousAssignee) {
+      await logActivity({
+        leadId: lead.id,
+        type: 'reasignacion',
+        content: 'Responsable cambiado',
+        userId: req.user?.id ?? null,
+        previousAssignedToUserId: previousAssignee,
+        newAssignedToUserId: assignedToUserId,
+        transaction,
+      });
+      // Un prospecto que no tenía responsable y recién se reclama obtiene su primera
+      // "próxima acción" en este momento (ver decisión de diferir en createLead).
+      if (assignedToUserId && !previousAssignee) {
+        await ensureOpenTask({ leadId: lead.id, assignedToUserId, type: 'llamar', transaction });
+      }
+    }
+  });
+
+  logAudit(req, 'update', 'lead', lead.id, updates);
+
+  return res.json({ message: 'Lead actualizado exitosamente', data: lead });
 };
 
 // PUT /api/leads/:id/close-won
@@ -580,34 +558,25 @@ const closeLeadAsWon = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const lead = await Lead.findByPk(req.params.id, { transaction });
-    if (!lead) {
-      await transaction.rollback();
-      return res.status(404).json({ error: 'Lead no encontrado' });
-    }
+    if (!lead) throw new ApiError(404, 'Lead no encontrado');
     if (!canEditLead(req.user, lead)) {
-      await transaction.rollback();
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+      throw new ApiError(403, 'No tienes acceso a este prospecto');
     }
     // Un prospecto cerrado por error como "No interesado" se puede corregir a venta —
     // pero si ya está registrado como venta, no tiene caso repetirlo (ver "reversible
     // antes que perfecto" en CRM_UX_DESIGN.md).
     if (lead.pipelineStage === 'venta_realizada') {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'Este prospecto ya tiene una venta registrada' });
+      throw new ApiError(400, 'Este prospecto ya tiene una venta registrada');
     }
     const wasLost = lead.pipelineStage === 'no_interesado';
 
     const { propertyId, amount, closedAt } = req.body;
     if (!propertyId || !amount) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'Propiedad y monto son requeridos' });
+      throw new ApiError(400, 'Propiedad y monto son requeridos');
     }
 
     const property = await Property.findByPk(propertyId, { transaction });
-    if (!property) {
-      await transaction.rollback();
-      return res.status(404).json({ error: 'Propiedad no encontrada' });
-    }
+    if (!property) throw new ApiError(404, 'Propiedad no encontrada');
 
     const deal = await Deal.create(
       {
@@ -649,9 +618,8 @@ const closeLeadAsWon = async (req, res) => {
 
     return res.json({ message: 'Venta registrada exitosamente', data: { lead, deal } });
   } catch (error) {
-    await transaction.rollback();
-    console.error('Error en closeLeadAsWon:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    if (!transaction.finished) await transaction.rollback();
+    throw error;
   }
 };
 
@@ -660,32 +628,23 @@ const closeLeadAsLost = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const lead = await Lead.findByPk(req.params.id, { transaction });
-    if (!lead) {
-      await transaction.rollback();
-      return res.status(404).json({ error: 'Lead no encontrado' });
-    }
+    if (!lead) throw new ApiError(404, 'Lead no encontrado');
     if (!canEditLead(req.user, lead)) {
-      await transaction.rollback();
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+      throw new ApiError(403, 'No tienes acceso a este prospecto');
     }
     // Un prospecto marcado por error como "Venta realizada" se puede corregir a
     // perdido — pero si ya está marcado como perdido, no tiene caso repetirlo.
     if (lead.pipelineStage === 'no_interesado') {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'Este prospecto ya está marcado como no interesado' });
+      throw new ApiError(400, 'Este prospecto ya está marcado como no interesado');
     }
     const wasWon = lead.pipelineStage === 'venta_realizada';
 
     const { closeReason, closeReasonDetail } = req.body;
     if (!closeReason || !VALID_CLOSE_REASONS.includes(closeReason)) {
-      await transaction.rollback();
-      return res
-        .status(400)
-        .json({ error: `Motivo inválido. Valores permitidos: ${VALID_CLOSE_REASONS.join(', ')}` });
+      throw new ApiError(400, `Motivo inválido. Valores permitidos: ${VALID_CLOSE_REASONS.join(', ')}`);
     }
     if (closeReason === 'otro' && !closeReasonDetail?.trim()) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'Especifica el motivo en el detalle' });
+      throw new ApiError(400, 'Especifica el motivo en el detalle');
     }
 
     // Un prospecto perdido no debe conservar el registro de venta de un cierre
@@ -722,9 +681,8 @@ const closeLeadAsLost = async (req, res) => {
 
     return res.json({ message: 'Prospecto cerrado', data: lead });
   } catch (error) {
-    await transaction.rollback();
-    console.error('Error en closeLeadAsLost:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    if (!transaction.finished) await transaction.rollback();
+    throw error;
   }
 };
 
@@ -736,26 +694,21 @@ const reopenLead = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const lead = await Lead.findByPk(req.params.id, { transaction });
-    if (!lead) {
-      await transaction.rollback();
-      return res.status(404).json({ error: 'Lead no encontrado' });
-    }
+    if (!lead) throw new ApiError(404, 'Lead no encontrado');
     if (!canEditLead(req.user, lead)) {
-      await transaction.rollback();
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+      throw new ApiError(403, 'No tienes acceso a este prospecto');
     }
     if (!TERMINAL_STAGES.includes(lead.pipelineStage)) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'Este prospecto no está cerrado' });
+      throw new ApiError(400, 'Este prospecto no está cerrado');
     }
 
     const { pipelineStage: targetStage } = req.body;
     const resolvedTarget = targetStage || 'contactado';
     if (!REOPEN_STAGES.includes(resolvedTarget)) {
-      await transaction.rollback();
-      return res.status(400).json({
-        error: `Etapa de reapertura inválida. Valores permitidos: ${REOPEN_STAGES.join(', ')}`,
-      });
+      throw new ApiError(
+        400,
+        `Etapa de reapertura inválida. Valores permitidos: ${REOPEN_STAGES.join(', ')}`
+      );
     }
 
     const previousStage = lead.pipelineStage;
@@ -810,81 +763,64 @@ const reopenLead = async (req, res) => {
 
     return res.json({ message: 'Prospecto reabierto exitosamente', data: lead });
   } catch (error) {
-    await transaction.rollback();
-    console.error('Error en reopenLead:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    if (!transaction.finished) await transaction.rollback();
+    throw error;
   }
 };
 
 // DELETE /api/leads/:id
 const deleteLead = async (req, res) => {
-  try {
-    const lead = await Lead.findByPk(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+  const lead = await Lead.findByPk(req.params.id);
+  if (!lead) throw new ApiError(404, 'Lead no encontrado');
 
-    await lead.destroy();
-    logAudit(req, 'delete', 'lead', req.params.id, { name: lead.name });
-    return res.json({ message: 'Lead eliminado exitosamente' });
-  } catch (error) {
-    console.error('Error en deleteLead:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  await lead.destroy();
+  logAudit(req, 'delete', 'lead', req.params.id, { name: lead.name });
+  return res.json({ message: 'Lead eliminado exitosamente' });
 };
 
 // PATCH /api/leads/batch — restringido a etapas no terminales; usar los endpoints de
 // cierre individuales para venta_realizada/no_interesado (necesitan datos adicionales).
 const batchUpdateLeads = async (req, res) => {
-  try {
-    const { pipelineStage } = req.body;
-    const { error: idsError, ids } = validateBatchIds(req.body.ids);
-    if (idsError) return res.status(400).json({ error: idsError });
-    if (!pipelineStage) return res.status(400).json({ error: 'pipelineStage requerido' });
-    if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
-      return res
-        .status(400)
-        .json({ error: `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}` });
-    }
-    if (TERMINAL_STAGES.includes(pipelineStage)) {
-      return res.status(400).json({
-        error:
-          'Para cerrar prospectos usa los endpoints de cierre individuales (/close-won, /close-lost)',
-      });
-    }
-
-    // Rechaza el lote completo si incluye algún lead fuera del alcance del actor — sin
-    // escritura parcial (consistente con el resto de la validación de este endpoint, que
-    // también rechaza todo-o-nada ante cualquier valor inválido).
-    const leadsToUpdate = await Lead.findAll({ where: { id: ids } });
-    if (leadsToUpdate.some((l) => !canEditLead(req.user, l))) {
-      return res
-        .status(403)
-        .json({ error: 'No tienes acceso a uno o más de los prospectos seleccionados' });
-    }
-
-    await Lead.update(
-      { pipelineStage, status: legacyStatusFor(pipelineStage) },
-      { where: { id: ids } }
+  const { pipelineStage } = req.body;
+  const { error: idsError, ids } = validateBatchIds(req.body.ids);
+  if (idsError) throw new ApiError(400, idsError);
+  if (!pipelineStage) throw new ApiError(400, 'pipelineStage requerido');
+  if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
+    throw new ApiError(
+      400,
+      `Etapa inválida. Valores permitidos: ${VALID_PIPELINE_STAGES.join(', ')}`
     );
-    logAudit(req, 'update', 'lead', null, { ids, pipelineStage });
-    return res.json({ message: `${ids.length} lead(s) actualizados` });
-  } catch (error) {
-    console.error('Error en batchUpdateLeads:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
   }
+  if (TERMINAL_STAGES.includes(pipelineStage)) {
+    throw new ApiError(
+      400,
+      'Para cerrar prospectos usa los endpoints de cierre individuales (/close-won, /close-lost)'
+    );
+  }
+
+  // Rechaza el lote completo si incluye algún lead fuera del alcance del actor — sin
+  // escritura parcial (consistente con el resto de la validación de este endpoint, que
+  // también rechaza todo-o-nada ante cualquier valor inválido).
+  const leadsToUpdate = await Lead.findAll({ where: { id: ids } });
+  if (leadsToUpdate.some((l) => !canEditLead(req.user, l))) {
+    throw new ApiError(403, 'No tienes acceso a uno o más de los prospectos seleccionados');
+  }
+
+  await Lead.update(
+    { pipelineStage, status: legacyStatusFor(pipelineStage) },
+    { where: { id: ids } }
+  );
+  logAudit(req, 'update', 'lead', null, { ids, pipelineStage });
+  return res.json({ message: `${ids.length} lead(s) actualizados` });
 };
 
 // DELETE /api/leads/batch
 const batchDeleteLeads = async (req, res) => {
-  try {
-    const { error: idsError, ids } = validateBatchIds(req.body.ids);
-    if (idsError) return res.status(400).json({ error: idsError });
-    await Lead.destroy({ where: { id: ids } });
-    logAudit(req, 'delete', 'lead', null, { ids });
-    return res.json({ message: `${ids.length} lead(s) eliminados` });
-  } catch (error) {
-    console.error('Error en batchDeleteLeads:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  const { error: idsError, ids } = validateBatchIds(req.body.ids);
+  if (idsError) throw new ApiError(400, idsError);
+  await Lead.destroy({ where: { id: ids } });
+  logAudit(req, 'delete', 'lead', null, { ids });
+  return res.json({ message: `${ids.length} lead(s) eliminados` });
 };
 
 // GET /api/leads/stream — notificaciones en tiempo real vía Server-Sent Events
@@ -922,91 +858,75 @@ const streamLeads = (req, res) => {
 
 // GET /api/leads/:id/notes
 const getLeadNotes = async (req, res) => {
-  try {
-    const lead = await Lead.findByPk(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    if (!canViewLead(req.user, lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
-    }
-
-    const notes = await LeadNote.findAll({
-      where: { leadId: req.params.id },
-      order: [['createdAt', 'DESC']],
-    });
-
-    return res.json({ data: notes });
-  } catch (error) {
-    console.error('Error en getLeadNotes:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  const lead = await Lead.findByPk(req.params.id);
+  if (!lead) throw new ApiError(404, 'Lead no encontrado');
+  if (!canViewLead(req.user, lead)) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
   }
+
+  const notes = await LeadNote.findAll({
+    where: { leadId: req.params.id },
+    order: [['createdAt', 'DESC']],
+  });
+
+  return res.json({ data: notes });
 };
 
 // POST /api/leads/:id/notes
 const addLeadNote = async (req, res) => {
-  try {
-    const lead = await Lead.findByPk(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    if (!canViewLead(req.user, lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
-    }
-
-    const { content } = req.body;
-    if (!content || !content.trim()) return res.status(400).json({ error: 'Contenido requerido' });
-
-    const note = await LeadNote.create({
-      leadId: lead.id,
-      content: content.trim(),
-      authorName: req.user?.name || null,
-      userId: req.user?.id ?? null,
-    });
-
-    logAudit(req, 'update', 'lead', lead.id, { addedNote: note.id });
-
-    return res.status(201).json({ data: note });
-  } catch (error) {
-    console.error('Error en addLeadNote:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  const lead = await Lead.findByPk(req.params.id);
+  if (!lead) throw new ApiError(404, 'Lead no encontrado');
+  if (!canViewLead(req.user, lead)) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
   }
+
+  const { content } = req.body;
+  if (!content || !content.trim()) throw new ApiError(400, 'Contenido requerido');
+
+  const note = await LeadNote.create({
+    leadId: lead.id,
+    content: content.trim(),
+    authorName: req.user?.name || null,
+    userId: req.user?.id ?? null,
+  });
+
+  logAudit(req, 'update', 'lead', lead.id, { addedNote: note.id });
+
+  return res.status(201).json({ data: note });
 };
 
 // DELETE /api/leads/:id/notes/:noteId
 const deleteLeadNote = async (req, res) => {
-  try {
-    const note = await LeadNote.findOne({
-      where: { id: req.params.noteId, leadId: req.params.id },
-    });
-    if (!note) return res.status(404).json({ error: 'Nota no encontrada' });
+  const note = await LeadNote.findOne({
+    where: { id: req.params.noteId, leadId: req.params.id },
+  });
+  if (!note) throw new ApiError(404, 'Nota no encontrada');
 
-    const lead = await Lead.findByPk(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    // Cualquiera puede borrar su propia nota; borrar la de alguien más requiere permiso
-    // de edición sobre el lead (admin/coordinador_ventas, o el asesor/capturista dueño).
-    if (!canEditLead(req.user, lead) && note.userId !== req.user.id) {
-      return res.status(403).json({ error: 'No tienes permisos para eliminar esta nota' });
-    }
-
-    await note.destroy();
-    logAudit(req, 'update', 'lead', req.params.id, { removedNote: req.params.noteId });
-    return res.json({ message: 'Nota eliminada' });
-  } catch (error) {
-    console.error('Error en deleteLeadNote:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  const lead = await Lead.findByPk(req.params.id);
+  if (!lead) throw new ApiError(404, 'Lead no encontrado');
+  // Cualquiera puede borrar su propia nota; borrar la de alguien más requiere permiso
+  // de edición sobre el lead (admin/coordinador_ventas, o el asesor/capturista dueño).
+  if (!canEditLead(req.user, lead) && note.userId !== req.user.id) {
+    throw new ApiError(403, 'No tienes permisos para eliminar esta nota');
   }
+
+  await note.destroy();
+  logAudit(req, 'update', 'lead', req.params.id, { removedNote: req.params.noteId });
+  return res.json({ message: 'Nota eliminada' });
 };
 
 // POST /api/leads/:id/whatsapp
 const sendLeadWhatsApp = async (req, res) => {
   try {
     const lead = await Lead.findByPk(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+    if (!lead) throw new ApiError(404, 'Lead no encontrado');
     if (!canViewLead(req.user, lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
+      throw new ApiError(403, 'No tienes acceso a este prospecto');
     }
 
     const { message } = req.body;
-    if (!message || !message.trim()) return res.status(400).json({ error: 'Mensaje requerido' });
-    if (!lead.phone)
-      return res.status(400).json({ error: 'Este lead no tiene un teléfono registrado' });
+    if (!message || !message.trim()) throw new ApiError(400, 'Mensaje requerido');
+    if (!lead.phone) throw new ApiError(400, 'Este lead no tiene un teléfono registrado');
 
     const agentName = req.user?.name || 'Triomphe Bienes Raíces';
     let warning = null;
@@ -1049,8 +969,8 @@ const sendLeadWhatsApp = async (req, res) => {
 
     return res.json({ message: warning || 'Mensaje de WhatsApp enviado', data: note, warning });
   } catch (error) {
-    console.error('Error en sendLeadWhatsApp:', error);
-    return res.status(500).json({ error: 'Error al enviar el mensaje de WhatsApp' });
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, 'Error al enviar el mensaje de WhatsApp', { cause: error });
   }
 };
 

@@ -10,6 +10,7 @@ const {
 } = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
 const { getLeadVisibilityWhere } = require('../utils/leadAccess');
+const { ApiError } = require('../middleware/errorHandler');
 
 // AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
 // ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
@@ -692,7 +693,7 @@ const exportPropertyQuotePDF = async (req, res) => {
       attributes: { exclude: ['internalNotes'] },
       include: [{ model: Image, as: 'images', order: [['order', 'ASC']] }],
     });
-    if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
+    if (!property) throw new ApiError(404, 'Propiedad no encontrada');
 
     const generatedAt = formatLongDate(new Date());
 
@@ -879,6 +880,13 @@ const exportPropertyQuotePDF = async (req, res) => {
 
     doc.end();
   } catch (error) {
+    // El único caso que puede llegar aquí antes de fijar headers/iniciar el stream es el
+    // ApiError 404 de arriba — se respeta su status/mensaje. Cualquier otro error ocurre
+    // ya con el PDF en streaming (headers y bytes ya enviados), donde no es seguro volver
+    // a llamar res.status(): se deja el manejo manual existente, sin tocar.
+    if (error instanceof ApiError && !res.headersSent) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
     console.error('Error en exportPropertyQuotePDF:', error);
     res.status(500).json({ error: 'Error al generar la cotización' });
   }

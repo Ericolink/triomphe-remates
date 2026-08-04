@@ -3,45 +3,41 @@ const { generateToken, hashPassword, comparePassword } = require('../utils/helpe
 const { validateRegister, validateLogin } = require('../utils/validators');
 const { logAudit } = require('../utils/audit');
 const userService = require('../services/userService');
+const { ApiError } = require('../middleware/errorHandler');
 
 // POST /api/auth/register
 const register = async (req, res) => {
+  const errors = validateRegister(req.body);
+  if (errors.length > 0) return res.status(400).json({ errors });
+
+  const { name, email, password, role } = req.body;
+
+  let user;
   try {
-    const errors = validateRegister(req.body);
-    if (errors.length > 0) return res.status(400).json({ errors });
-
-    const { name, email, password, role } = req.body;
-
-    let user;
-    try {
-      // Sin `crmRole` ni `audit`: register nunca aceptó crmRole en el body ni
-      // registró auditoría — se preserva ese comportamiento (ver reporte de
-      // refactor, diferencia conservada intencionalmente por compatibilidad).
-      user = await userService.createUser({ name, email, password, role });
-    } catch (err) {
-      if (err.code === 'DUPLICATE_EMAIL') {
-        return res.status(409).json({ error: err.message });
-      }
-      throw err;
+    // Sin `crmRole` ni `audit`: register nunca aceptó crmRole en el body ni
+    // registró auditoría — se preserva ese comportamiento (ver reporte de
+    // refactor, diferencia conservada intencionalmente por compatibilidad).
+    user = await userService.createUser({ name, email, password, role });
+  } catch (err) {
+    if (err.code === 'DUPLICATE_EMAIL') {
+      throw new ApiError(409, err.message);
     }
-
-    const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
-
-    return res.status(201).json({
-      message: 'Usuario creado exitosamente',
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        crmRole: user.crmRole,
-      },
-    });
-  } catch (error) {
-    console.error('Error en register:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    throw err;
   }
+
+  const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+
+  return res.status(201).json({
+    message: 'Usuario creado exitosamente',
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      crmRole: user.crmRole,
+    },
+  });
 };
 
 // POST /api/auth/login

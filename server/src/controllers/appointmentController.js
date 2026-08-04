@@ -4,6 +4,7 @@ const { logActivity, ensureOpenTask } = require('../utils/pipelineHelpers');
 const { logAudit } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
 const { getLeadVisibilityWhere, canViewLead, canEditLead } = require('../utils/leadAccess');
+const { ApiError } = require('../middleware/errorHandler');
 
 const VALID_APPOINTMENT_STATUS = ['programada', 'confirmada', 'completada', 'no_show', 'cancelada'];
 
@@ -13,237 +14,200 @@ const VALID_APPOINTMENT_STATUS = ['programada', 'confirmada', 'completada', 'no_
 // silencio. `maxLimit: 500` conserva el mismo techo práctico pero ahora es honesto sobre
 // si se truncó (pagination.hasNext), en vez de simplemente no decir nada.
 const getAppointments = async (req, res) => {
-  try {
-    const { from, to, status, leadId, page, limit = 500 } = req.query;
-    const where = {};
-    if (status) where.status = status;
-    if (leadId) where.leadId = leadId;
-    if (from || to) {
-      where.scheduledAt = {};
-      if (from) where.scheduledAt[Op.gte] = new Date(from);
-      if (to) where.scheduledAt[Op.lte] = new Date(to);
-    }
-    // CRM de Leads: cierra la fuga de "ver todos los leads vía Calendario" — mismo
-    // filtrado por fila que getLeads, pero contra el lead incluido ($lead.col$).
-    Object.assign(where, getLeadVisibilityWhere(req.user, { alias: 'lead' }) || {});
-
-    const result = await paginate(Appointment, {
-      page,
-      limit,
-      maxLimit: 500,
-      where,
-      include: [
-        {
-          model: Lead,
-          as: 'lead',
-          attributes: ['id', 'name', 'phone', 'email', 'assignedToUserId', 'createdByUserId'],
-        },
-        { model: Property, as: 'property', attributes: ['id', 'title'], required: false },
-      ],
-      order: [['scheduledAt', 'ASC']],
-    });
-
-    return res.json(result);
-  } catch (error) {
-    console.error('Error en getAppointments:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  const { from, to, status, leadId, page, limit = 500 } = req.query;
+  const where = {};
+  if (status) where.status = status;
+  if (leadId) where.leadId = leadId;
+  if (from || to) {
+    where.scheduledAt = {};
+    if (from) where.scheduledAt[Op.gte] = new Date(from);
+    if (to) where.scheduledAt[Op.lte] = new Date(to);
   }
+  // CRM de Leads: cierra la fuga de "ver todos los leads vía Calendario" — mismo
+  // filtrado por fila que getLeads, pero contra el lead incluido ($lead.col$).
+  Object.assign(where, getLeadVisibilityWhere(req.user, { alias: 'lead' }) || {});
+
+  const result = await paginate(Appointment, {
+    page,
+    limit,
+    maxLimit: 500,
+    where,
+    include: [
+      {
+        model: Lead,
+        as: 'lead',
+        attributes: ['id', 'name', 'phone', 'email', 'assignedToUserId', 'createdByUserId'],
+      },
+      { model: Property, as: 'property', attributes: ['id', 'title'], required: false },
+    ],
+    order: [['scheduledAt', 'ASC']],
+  });
+
+  return res.json(result);
 };
 
 // GET /api/leads/:id/appointments
 const getLeadAppointments = async (req, res) => {
-  try {
-    const lead = await Lead.findByPk(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    if (!canViewLead(req.user, lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
-    }
-
-    const appointments = await Appointment.findAll({
-      where: { leadId: req.params.id },
-      include: [{ model: Property, as: 'property', attributes: ['id', 'title'], required: false }],
-      order: [['scheduledAt', 'DESC']],
-    });
-
-    return res.json({ data: appointments });
-  } catch (error) {
-    console.error('Error en getLeadAppointments:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  const lead = await Lead.findByPk(req.params.id);
+  if (!lead) throw new ApiError(404, 'Lead no encontrado');
+  if (!canViewLead(req.user, lead)) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
   }
+
+  const appointments = await Appointment.findAll({
+    where: { leadId: req.params.id },
+    include: [{ model: Property, as: 'property', attributes: ['id', 'title'], required: false }],
+    order: [['scheduledAt', 'DESC']],
+  });
+
+  return res.json({ data: appointments });
 };
 
 // POST /api/appointments
 const createAppointment = async (req, res) => {
-  try {
-    const { leadId, propertyId, scheduledAt } = req.body;
-    if (!leadId || !scheduledAt)
-      return res.status(400).json({ error: 'leadId y scheduledAt son requeridos' });
+  const { leadId, propertyId, scheduledAt } = req.body;
+  if (!leadId || !scheduledAt) throw new ApiError(400, 'leadId y scheduledAt son requeridos');
 
-    const lead = await Lead.findByPk(leadId);
-    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
-    if (!canEditLead(req.user, lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
-    }
+  const lead = await Lead.findByPk(leadId);
+  if (!lead) throw new ApiError(404, 'Lead no encontrado');
+  if (!canEditLead(req.user, lead)) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
+  }
 
-    if (propertyId) {
-      const property = await Property.findByPk(propertyId);
-      if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
-    }
+  if (propertyId) {
+    const property = await Property.findByPk(propertyId);
+    if (!property) throw new ApiError(404, 'Propiedad no encontrada');
+  }
 
-    const appointment = await sequelize.transaction(async (transaction) => {
-      const created = await Appointment.create(
-        {
-          leadId,
-          propertyId: propertyId || null,
-          scheduledAt,
-        },
-        { transaction }
-      );
-
-      await logActivity({
+  const appointment = await sequelize.transaction(async (transaction) => {
+    const created = await Appointment.create(
+      {
         leadId,
-        type: 'sistema',
-        content: `Cita agendada para ${new Date(scheduledAt).toLocaleString('es-MX')}`,
-        userId: req.user?.id ?? null,
-        transaction,
-      });
+        propertyId: propertyId || null,
+        scheduledAt,
+      },
+      { transaction }
+    );
 
-      return created;
+    await logActivity({
+      leadId,
+      type: 'sistema',
+      content: `Cita agendada para ${new Date(scheduledAt).toLocaleString('es-MX')}`,
+      userId: req.user?.id ?? null,
+      transaction,
     });
 
-    logAudit(req, 'create', 'appointment', appointment.id, { leadId });
+    return created;
+  });
 
-    return res.status(201).json({ message: 'Cita agendada exitosamente', data: appointment });
-  } catch (error) {
-    console.error('Error en createAppointment:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  logAudit(req, 'create', 'appointment', appointment.id, { leadId });
+
+  return res.status(201).json({ message: 'Cita agendada exitosamente', data: appointment });
 };
 
 // PATCH /api/appointments/:id
 const updateAppointmentStatus = async (req, res) => {
-  try {
-    const appointment = await Appointment.findByPk(req.params.id, {
-      include: [
-        { model: Lead, as: 'lead', attributes: ['id', 'assignedToUserId', 'createdByUserId'] },
-      ],
-    });
-    if (!appointment) return res.status(404).json({ error: 'Cita no encontrada' });
-    if (!canEditLead(req.user, appointment.lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
-    }
+  const appointment = await Appointment.findByPk(req.params.id, {
+    include: [{ model: Lead, as: 'lead', attributes: ['id', 'assignedToUserId', 'createdByUserId'] }],
+  });
+  if (!appointment) throw new ApiError(404, 'Cita no encontrada');
+  if (!canEditLead(req.user, appointment.lead)) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
+  }
 
-    const { status, outcome } = req.body;
-    if (status !== undefined && !VALID_APPOINTMENT_STATUS.includes(status)) {
-      return res.status(400).json({
-        error: `Estatus inválido. Valores permitidos: ${VALID_APPOINTMENT_STATUS.join(', ')}`,
+  const { status, outcome } = req.body;
+  if (status !== undefined && !VALID_APPOINTMENT_STATUS.includes(status)) {
+    throw new ApiError(
+      400,
+      `Estatus inválido. Valores permitidos: ${VALID_APPOINTMENT_STATUS.join(', ')}`
+    );
+  }
+
+  await sequelize.transaction(async (transaction) => {
+    const updates = {};
+    if (status !== undefined) updates.status = status;
+    if (outcome !== undefined) updates.outcome = outcome;
+    await appointment.update(updates, { transaction });
+
+    if (status !== undefined) {
+      await logActivity({
+        leadId: appointment.leadId,
+        type: 'sistema',
+        content: `Cita ${status}`,
+        userId: req.user?.id ?? null,
+        transaction,
       });
-    }
 
-    await sequelize.transaction(async (transaction) => {
-      const updates = {};
-      if (status !== undefined) updates.status = status;
-      if (outcome !== undefined) updates.outcome = outcome;
-      await appointment.update(updates, { transaction });
-
-      if (status !== undefined) {
-        await logActivity({
+      // Una cita cancelada o a la que no se presentó el prospecto necesita una nueva
+      // próxima acción — sin esto, el prospecto se queda "olvidado" sin seguimiento.
+      if ((status === 'cancelada' || status === 'no_show') && appointment.lead?.assignedToUserId) {
+        await ensureOpenTask({
           leadId: appointment.leadId,
-          type: 'sistema',
-          content: `Cita ${status}`,
-          userId: req.user?.id ?? null,
+          assignedToUserId: appointment.lead.assignedToUserId,
+          type: 'llamar',
           transaction,
         });
-
-        // Una cita cancelada o a la que no se presentó el prospecto necesita una nueva
-        // próxima acción — sin esto, el prospecto se queda "olvidado" sin seguimiento.
-        if (
-          (status === 'cancelada' || status === 'no_show') &&
-          appointment.lead?.assignedToUserId
-        ) {
-          await ensureOpenTask({
-            leadId: appointment.leadId,
-            assignedToUserId: appointment.lead.assignedToUserId,
-            type: 'llamar',
-            transaction,
-          });
-        }
       }
-    });
+    }
+  });
 
-    logAudit(req, 'update', 'appointment', appointment.id, { status });
+  logAudit(req, 'update', 'appointment', appointment.id, { status });
 
-    return res.json({ message: 'Cita actualizada exitosamente', data: appointment });
-  } catch (error) {
-    console.error('Error en updateAppointmentStatus:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  return res.json({ message: 'Cita actualizada exitosamente', data: appointment });
 };
 
 // POST /api/appointments/:id/reschedule — conserva la cita anterior (marcada cancelada,
 // enlazada vía rescheduledFromId) en vez de sobreescribir la fecha.
 const rescheduleAppointment = async (req, res) => {
-  try {
-    const oldAppointment = await Appointment.findByPk(req.params.id, {
-      include: [
-        { model: Lead, as: 'lead', attributes: ['id', 'assignedToUserId', 'createdByUserId'] },
-      ],
-    });
-    if (!oldAppointment) return res.status(404).json({ error: 'Cita no encontrada' });
-    if (!canEditLead(req.user, oldAppointment.lead)) {
-      return res.status(403).json({ error: 'No tienes acceso a este prospecto' });
-    }
-
-    const { scheduledAt } = req.body;
-    if (!scheduledAt) return res.status(400).json({ error: 'scheduledAt requerido' });
-
-    const newAppointment = await sequelize.transaction(async (transaction) => {
-      await oldAppointment.update({ status: 'cancelada' }, { transaction });
-
-      const created = await Appointment.create(
-        {
-          leadId: oldAppointment.leadId,
-          propertyId: oldAppointment.propertyId,
-          scheduledAt,
-          rescheduledFromId: oldAppointment.id,
-        },
-        { transaction }
-      );
-
-      await logActivity({
-        leadId: oldAppointment.leadId,
-        type: 'sistema',
-        content: `Cita reagendada de ${new Date(oldAppointment.scheduledAt).toLocaleString('es-MX')} a ${new Date(scheduledAt).toLocaleString('es-MX')}`,
-        userId: req.user?.id ?? null,
-        transaction,
-      });
-
-      return created;
-    });
-
-    logAudit(req, 'update', 'appointment', oldAppointment.id, { rescheduledTo: newAppointment.id });
-
-    return res.json({ message: 'Cita reagendada exitosamente', data: newAppointment });
-  } catch (error) {
-    console.error('Error en rescheduleAppointment:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  const oldAppointment = await Appointment.findByPk(req.params.id, {
+    include: [{ model: Lead, as: 'lead', attributes: ['id', 'assignedToUserId', 'createdByUserId'] }],
+  });
+  if (!oldAppointment) throw new ApiError(404, 'Cita no encontrada');
+  if (!canEditLead(req.user, oldAppointment.lead)) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
   }
+
+  const { scheduledAt } = req.body;
+  if (!scheduledAt) throw new ApiError(400, 'scheduledAt requerido');
+
+  const newAppointment = await sequelize.transaction(async (transaction) => {
+    await oldAppointment.update({ status: 'cancelada' }, { transaction });
+
+    const created = await Appointment.create(
+      {
+        leadId: oldAppointment.leadId,
+        propertyId: oldAppointment.propertyId,
+        scheduledAt,
+        rescheduledFromId: oldAppointment.id,
+      },
+      { transaction }
+    );
+
+    await logActivity({
+      leadId: oldAppointment.leadId,
+      type: 'sistema',
+      content: `Cita reagendada de ${new Date(oldAppointment.scheduledAt).toLocaleString('es-MX')} a ${new Date(scheduledAt).toLocaleString('es-MX')}`,
+      userId: req.user?.id ?? null,
+      transaction,
+    });
+
+    return created;
+  });
+
+  logAudit(req, 'update', 'appointment', oldAppointment.id, { rescheduledTo: newAppointment.id });
+
+  return res.json({ message: 'Cita reagendada exitosamente', data: newAppointment });
 };
 
 // DELETE /api/appointments/:id — solo para registros creados por error
 const deleteAppointment = async (req, res) => {
-  try {
-    const appointment = await Appointment.findByPk(req.params.id);
-    if (!appointment) return res.status(404).json({ error: 'Cita no encontrada' });
+  const appointment = await Appointment.findByPk(req.params.id);
+  if (!appointment) throw new ApiError(404, 'Cita no encontrada');
 
-    await appointment.destroy();
-    logAudit(req, 'delete', 'appointment', req.params.id);
+  await appointment.destroy();
+  logAudit(req, 'delete', 'appointment', req.params.id);
 
-    return res.json({ message: 'Cita eliminada exitosamente' });
-  } catch (error) {
-    console.error('Error en deleteAppointment:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
-  }
+  return res.json({ message: 'Cita eliminada exitosamente' });
 };
 
 module.exports = {
