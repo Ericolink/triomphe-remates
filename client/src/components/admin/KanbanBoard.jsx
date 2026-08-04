@@ -6,6 +6,7 @@ import { getLeads } from '../../services/leadService';
 import { getTasks } from '../../services/taskService';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
+import { canEditLead } from '../../utils/permissions';
 import { formatDate, toWhatsAppLink } from '../../utils/formatters';
 import {
   PIPELINE_STAGE_LABELS,
@@ -188,6 +189,7 @@ function KanbanColumn({
   col,
   filters,
   fullWidth,
+  currentUser,
   onSelect,
   dragging,
   onDragStart,
@@ -305,7 +307,10 @@ function KanbanColumn({
                       lead={lead}
                       openTask={openTaskByLead[lead.id]}
                       onSelect={onSelect}
-                      draggable
+                      // Solo arrastrable si el backend aceptará el cambio de etapa que
+                      // resultaría (updateLead/close-won/close-lost/reopen están gateados
+                      // por canEditLead) — evita iniciar un drag que terminará en un 403.
+                      draggable={canEditLead(currentUser, lead)}
                       onDragStart={(e) => onDragStart(e, lead)}
                       onDragEnd={onDragEnd}
                       isDragging={dragging?.id === lead.id}
@@ -327,7 +332,13 @@ function KanbanColumn({
 // compartido con la vista Lista) — así solo esa etapa se ve y además evita pedir datos de
 // las otras 7 columnas en una conexión móvil. En pc se muestran las 8 al mismo tiempo,
 // repartiéndose el ancho disponible sin scroll horizontal.
-export default function KanbanBoard({ filters, focusStage, onSelect, onAttemptStageChange }) {
+export default function KanbanBoard({
+  filters,
+  focusStage,
+  currentUser,
+  onSelect,
+  onAttemptStageChange,
+}) {
   const [dragging, setDragging] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const isMobile = useIsMobile();
@@ -375,6 +386,7 @@ export default function KanbanBoard({ filters, focusStage, onSelect, onAttemptSt
             col={col}
             filters={filters}
             fullWidth={isMobile}
+            currentUser={currentUser}
             onSelect={onSelect}
             dragging={dragging}
             onDragStart={handleDragStart}

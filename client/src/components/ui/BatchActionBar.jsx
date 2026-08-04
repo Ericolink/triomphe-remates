@@ -35,12 +35,14 @@ export default function BatchActionBar({ count, onClear, onDelete, statusOptions
             ))}
           </select>
         )}
-        <button
-          onClick={onDelete}
-          className="flex items-center gap-1.5 text-sm bg-red-500 hover:bg-red-600 transition-colors px-3 py-1.5 rounded-lg"
-        >
-          <Trash2 size={14} /> Eliminar
-        </button>
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="flex items-center gap-1.5 text-sm bg-red-500 hover:bg-red-600 transition-colors px-3 py-1.5 rounded-lg"
+          >
+            <Trash2 size={14} /> Eliminar
+          </button>
+        )}
         <button onClick={onClear} className="p-1.5 hover:bg-primary-800 rounded-lg transition-colors">
           <X size={16} />
         </button>

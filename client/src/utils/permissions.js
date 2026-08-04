@@ -10,6 +10,10 @@ export function crmAccessLevel(user) {
 
 export const hasCrmAccess = (user) => crmAccessLevel(user) !== null;
 
+// Eliminar leads (individual o en lote) siempre fue exclusivo de `role==='admin'` en el
+// backend (ver routes/leads.js) — ningún crmRole lo obtiene, ni siquiera coordinador_ventas.
+export const isAdmin = (user) => user?.role === 'admin';
+
 export const canAssignLeads = (user) =>
   ['admin', 'coordinador_ventas'].includes(crmAccessLevel(user));
 
@@ -22,3 +26,21 @@ export const isCapturista = (user) => crmAccessLevel(user) === 'capturista';
 export const isAsesor = (user) => crmAccessLevel(user) === 'asesor_ventas';
 
 export const seesAllLeads = (user) => ['admin', 'coordinador_ventas'].includes(crmAccessLevel(user));
+
+// Espejo exacto de canEditLead en leadAccess.js — autorización por-registro (no solo por
+// rol): un capturista pierde edición sobre un lead en cuanto se le asigna un responsable,
+// y un asesor solo edita lo que tiene asignado. Gatea el mismo conjunto de acciones que el
+// backend cubre con esta función: PUT /leads/:id (campos generales, cambio de etapa no
+// terminal, close-won/close-lost/reopen), agendar citas y agregar/quitar propiedades de
+// interés. No cubre notas/actividades/WhatsApp, que en el backend solo requieren
+// `canViewLead` (cualquiera con acceso de lectura al lead puede registrar seguimiento).
+export function canEditLead(user, lead) {
+  if (!lead) return false;
+  const level = crmAccessLevel(user);
+  if (level === 'admin' || level === 'coordinador_ventas') return true;
+  if (level === 'asesor_ventas') return lead.assignedToUserId === user.id;
+  if (level === 'capturista') {
+    return lead.createdByUserId === user.id && lead.assignedToUserId == null;
+  }
+  return false;
+}

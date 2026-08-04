@@ -50,7 +50,7 @@ import { getLeadAppointments, createAppointment } from '../../../services/appoin
 import { getTasks, completeTask } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
-import { canAssignLeads, canCreateLeads } from '../../../utils/permissions';
+import { canAssignLeads, canCreateLeads, canEditLead, isAdmin } from '../../../utils/permissions';
 import { downloadBlob } from '../../../utils/download';
 import Badge from '../../ui/Badge';
 import Spinner from '../../ui/Spinner';
@@ -123,6 +123,11 @@ function LeadDetailPanel({
     enabled: !!selected?.id,
   });
   const lead = detailData?.data || selected;
+  // Espejo de canEditLead del backend — gatea los mismos campos que el PUT genérico,
+  // agendar citas y agregar/quitar propiedades de interés. Notas/actividad/WhatsApp NO se
+  // incluyen: el backend solo exige `canViewLead` para esos (cualquiera con acceso de
+  // lectura puede seguir registrando avance aunque ya no pueda editar el lead).
+  const canEdit = canEditLead(currentUser, lead);
 
   const { data: notesData, isLoading: notesLoading } = useQuery({
     queryKey: ['lead-notes', selected?.id],
@@ -299,15 +304,17 @@ function LeadDetailPanel({
                 <MessageCircle size={18} />
               </a>
             )}
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onDelete}
-              title="Eliminar prospecto"
-              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            >
-              <Trash2 size={18} />
-            </motion.button>
+            {isAdmin(currentUser) && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onDelete}
+                title="Eliminar prospecto"
+                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              >
+                <Trash2 size={18} />
+              </motion.button>
+            )}
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -448,10 +455,11 @@ function LeadDetailPanel({
             <button
               id={`${formId}-stage`}
               onClick={() => onAttemptStageChange(lead)}
-              className="w-full flex items-center justify-between px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+              disabled={!canEdit}
+              className="w-full flex items-center justify-between px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-[#1a1f2e] transition-colors"
             >
               <span>{PIPELINE_STAGE_LABELS[lead.pipelineStage]}</span>
-              <ArrowRightLeft size={14} className="text-gray-400 flex-shrink-0" />
+              {canEdit && <ArrowRightLeft size={14} className="text-gray-400 flex-shrink-0" />}
             </button>
           </div>
           <div>
@@ -509,7 +517,8 @@ function LeadDetailPanel({
               onChange={(e) => {
                 updateMutation.mutate({ id: selected.id, data: { source: e.target.value } });
               }}
-              className={fieldControlClass}
+              disabled={!canEdit}
+              className={`${fieldControlClass} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {Object.entries(SOURCE_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>
@@ -529,7 +538,8 @@ function LeadDetailPanel({
                 max={todayISODate()}
                 value={firstContactInput}
                 onChange={(e) => setFirstContactInput(e.target.value)}
-                className={`${rowControlClass} text-sm`}
+                disabled={!canEdit}
+                className={`${rowControlClass} text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
               />
               <button
                 onClick={() =>
@@ -539,8 +549,9 @@ function LeadDetailPanel({
                   })
                 }
                 disabled={
+                  !canEdit ||
                   firstContactInput ===
-                  (lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : '')
+                    (lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : '')
                 }
                 className={`${rowButtonClass} text-sm`}
               >
@@ -561,7 +572,8 @@ function LeadDetailPanel({
                   data: { paymentMethod: e.target.value || null },
                 })
               }
-              className={fieldControlClass}
+              disabled={!canEdit}
+              className={`${fieldControlClass} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <option value="">Sin especificar</option>
               {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => (
@@ -593,7 +605,8 @@ function LeadDetailPanel({
                       },
                     });
                   }}
-                  className="w-3.5 h-3.5 rounded accent-accent-400"
+                  disabled={!canEdit}
+                  className="w-3.5 h-3.5 rounded accent-accent-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 No especificó
               </label>
@@ -605,7 +618,7 @@ function LeadDetailPanel({
                 min="0"
                 step="1000"
                 value={budgetAmountInput}
-                disabled={lead.budgetNotSpecified}
+                disabled={!canEdit || lead.budgetNotSpecified}
                 onChange={(e) => setBudgetAmountInput(e.target.value)}
                 placeholder="Ej. 1500000"
                 className={`${rowControlClass} text-sm disabled:opacity-50 disabled:cursor-not-allowed ${budgetAmountInvalid ? 'ring-2 ring-red-400' : ''}`}
@@ -622,6 +635,7 @@ function LeadDetailPanel({
                   })
                 }
                 disabled={
+                  !canEdit ||
                   lead.budgetNotSpecified ||
                   budgetAmountInvalid ||
                   (budgetAmountInput.trim() === ''
@@ -659,42 +673,46 @@ function LeadDetailPanel({
                 className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-1.5 text-xs"
               >
                 <span className="text-gray-700 dark:text-gray-300 truncate">{p.title}</span>
-                <button
-                  onClick={() =>
-                    removePropertyMutation.mutate({ leadId: selected.id, propertyId: p.id })
-                  }
-                  className="text-gray-400 hover:text-red-500 flex-shrink-0"
-                >
-                  <X size={13} />
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() =>
+                      removePropertyMutation.mutate({ leadId: selected.id, propertyId: p.id })
+                    }
+                    className="text-gray-400 hover:text-red-500 flex-shrink-0"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1 min-w-0">
-              <PropertyPicker
-                value={addPropertyId}
-                onChange={setAddPropertyId}
-                excludeIds={excludePropertyIds}
-                placeholder="Agregar propiedad..."
-                className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#1a1f2e]"
-              />
+          {canEdit && (
+            <div className="flex gap-2">
+              <div className="flex-1 min-w-0">
+                <PropertyPicker
+                  value={addPropertyId}
+                  onChange={setAddPropertyId}
+                  excludeIds={excludePropertyIds}
+                  placeholder="Agregar propiedad..."
+                  className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#1a1f2e]"
+                />
+              </div>
+              <button
+                onClick={() =>
+                  addPropertyId &&
+                  addPropertyMutation.mutate({
+                    leadId: selected.id,
+                    propertyId: Number(addPropertyId),
+                  })
+                }
+                disabled={!addPropertyId}
+                title="Agregar propiedad"
+                className={rowButtonClass}
+              >
+                <Plus size={14} />
+              </button>
             </div>
-            <button
-              onClick={() =>
-                addPropertyId &&
-                addPropertyMutation.mutate({
-                  leadId: selected.id,
-                  propertyId: Number(addPropertyId),
-                })
-              }
-              disabled={!addPropertyId}
-              title="Agregar propiedad"
-              className={rowButtonClass}
-            >
-              <Plus size={14} />
-            </button>
-          </div>
+          )}
         </div>
 
         {/* Citas */}
@@ -730,28 +748,30 @@ function LeadDetailPanel({
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
-            <input
-              type="datetime-local"
-              value={appointmentDate}
-              onChange={(e) => setAppointmentDate(e.target.value)}
-              className={rowControlClass}
-            />
-            <button
-              onClick={() =>
-                appointmentDate &&
-                scheduleMutation.mutate({
-                  leadId: selected.id,
-                  propertyId: appointmentPropertyId || undefined,
-                  scheduledAt: appointmentDate,
-                })
-              }
-              disabled={!appointmentDate || scheduleMutation.isPending}
-              className={rowButtonClass}
-            >
-              Agendar
-            </button>
-          </div>
+          {canEdit && (
+            <div className="flex gap-2">
+              <input
+                type="datetime-local"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+                className={rowControlClass}
+              />
+              <button
+                onClick={() =>
+                  appointmentDate &&
+                  scheduleMutation.mutate({
+                    leadId: selected.id,
+                    propertyId: appointmentPropertyId || undefined,
+                    scheduledAt: appointmentDate,
+                  })
+                }
+                disabled={!appointmentDate || scheduleMutation.isPending}
+                className={rowButtonClass}
+              >
+                Agendar
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Envío de WhatsApp */}
@@ -803,14 +823,18 @@ function LeadDetailPanel({
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{note.content}</p>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-gray-400">{formatDateTime(note.createdAt)}</span>
-                    <button
-                      onClick={() =>
-                        deleteNoteMutation.mutate({ leadId: selected.id, noteId: note.id })
-                      }
-                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity"
-                    >
-                      <Trash2 size={11} />
-                    </button>
+                    {/* Espejo de deleteLeadNote en el backend: puede borrar quien tiene
+                        canEditLead sobre el prospecto, o el autor de su propia nota. */}
+                    {(canEdit || note.userId === currentUser?.id) && (
+                      <button
+                        onClick={() =>
+                          deleteNoteMutation.mutate({ leadId: selected.id, noteId: note.id })
+                        }
+                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -1247,6 +1271,7 @@ export default function ProspectosSection() {
             <KanbanBoard
               filters={{ search, assignedToUserId }}
               focusStage={stage}
+              currentUser={currentUser}
               onSelect={setSelected}
               onAttemptStageChange={attemptStageChange}
             />
@@ -1498,15 +1523,21 @@ export default function ProspectosSection() {
           onClear={() => setChecked([])}
           statusOptions={NON_TERMINAL_PIPELINE_STAGE_OPTIONS}
           onStatus={(s) => batchStatusMutation.mutate({ ids: checked, stage: s })}
-          onDelete={() =>
-            setConfirm({
-              title: `¿Eliminar ${checked.length} prospecto(s)?`,
-              message: 'Esta acción no se puede deshacer.',
-              onConfirm: () => {
-                batchDeleteMutation.mutate(checked);
-                setConfirm(null);
-              },
-            })
+          // DELETE /leads/batch es admin-exclusivo en el backend (routes/leads.js) — sin
+          // onDelete, BatchActionBar oculta el botón en vez de ofrecer una acción que
+          // siempre devolverá 403.
+          onDelete={
+            isAdmin(currentUser)
+              ? () =>
+                  setConfirm({
+                    title: `¿Eliminar ${checked.length} prospecto(s)?`,
+                    message: 'Esta acción no se puede deshacer.',
+                    onConfirm: () => {
+                      batchDeleteMutation.mutate(checked);
+                      setConfirm(null);
+                    },
+                  })
+              : undefined
           }
         />
       )}

@@ -20,6 +20,7 @@ import ThemeToggle from '../ui/ThemeToggle';
 import { buildImageUrl } from '../../utils/images';
 import toast from 'react-hot-toast';
 import useModalA11y from '../../hooks/useModalA11y';
+import { hasCrmAccess } from '../../utils/permissions';
 
 // Agrupado por tema (en vez de una lista plana de 11 ítems) para que la ubicación de
 // cada sección sea predecible sin tener que leer cada label — ver auditoría UX admin.
@@ -31,10 +32,6 @@ const navGroups = [
   {
     label: 'Propiedades',
     links: [{ to: '/admin/propiedades', icon: <Building2 size={18} />, label: 'Propiedades' }],
-  },
-  {
-    label: 'CRM Comercial',
-    links: [{ to: '/admin/crm', icon: <Users size={18} />, label: 'CRM Comercial' }],
   },
   {
     label: 'Comunicación',
@@ -58,6 +55,11 @@ const navGroups = [
   },
 ];
 
+const crmGroup = {
+  label: 'CRM Comercial',
+  links: [{ to: '/admin/crm', icon: <Users size={18} />, label: 'CRM Comercial' }],
+};
+
 const adminOnlyGroup = {
   label: 'Sistema',
   links: [
@@ -67,7 +69,16 @@ const adminOnlyGroup = {
 };
 
 function Sidebar({ user, onClose, onLogout }) {
-  const groups = [...navGroups, ...(user?.role === 'admin' ? [adminOnlyGroup] : [])];
+  // El CRM se oculta para un editor sin crmRole (o cualquier usuario sin hasCrmAccess):
+  // sin esto, el link llevaba a una pantalla que solo mostraba errores 403 en cada
+  // request, porque requireCrmAccess en el backend ya la bloquea por completo.
+  const groups = [
+    navGroups[0],
+    navGroups[1],
+    ...(hasCrmAccess(user) ? [crmGroup] : []),
+    ...navGroups.slice(2),
+    ...(user?.role === 'admin' ? [adminOnlyGroup] : []),
+  ];
   return (
     <div className="flex flex-col h-full bg-primary-900 text-white w-64">
       <div className="p-6 border-b border-primary-800">
