@@ -105,7 +105,10 @@ const updateUser = async (req, res) => {
     if (req.user.id === user.id) {
       if (!currentPassword) throw new ApiError(400, 'Se requiere la contraseña actual');
       const isMatch = await comparePassword(currentPassword, user.password);
-      if (!isMatch) throw new ApiError(401, 'Contraseña actual incorrecta');
+      // Mismo `code` que authController.changePassword — ambos endpoints permiten a un
+      // usuario cambiar su propia contraseña, y ambos deben distinguirse de "sesión
+      // inválida" ante el interceptor global de axios (ver client/src/services/api.js).
+      if (!isMatch) throw new ApiError(401, 'Contraseña actual incorrecta', { code: 'INVALID_CURRENT_PASSWORD' });
     }
     const hashed = await hashPassword(newPassword);
     await user.update({ password: hashed });

@@ -143,34 +143,32 @@ const getMe = async (req, res) => {
 
 // PUT /api/auth/change-password
 const changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
+  const { currentPassword, newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < 8) {
-      return res
-        .status(400)
-        .json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
-    }
-
-    const user = await User.findByPk(req.user.id);
-    const isMatch = await comparePassword(currentPassword, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Contraseña actual incorrecta' });
-    }
-
-    const hashedPassword = await hashPassword(newPassword);
-    await user.update({ password: hashedPassword, tokenVersion: user.tokenVersion + 1 });
-
-    // El token actual quedó invalidado por el cambio de tokenVersion — se reemite uno
-    // nuevo en la respuesta para que el usuario no se quede sin sesión tras el cambio.
-    const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
-
-    return res.json({ message: 'Contraseña actualizada exitosamente', token });
-  } catch (error) {
-    console.error('Error en changePassword:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  if (!newPassword || newPassword.length < 8) {
+    throw new ApiError(400, 'La nueva contraseña debe tener al menos 8 caracteres');
   }
+
+  const user = await User.findByPk(req.user.id);
+  const isMatch = await comparePassword(currentPassword, user.password);
+
+  if (!isMatch) {
+    // authMiddleware ya validó el token antes de llegar aquí — este 401 es un rechazo de
+    // negocio (contraseña actual incorrecta), no una sesión inválida. El `code` distingue
+    // ambos casos de forma estable para el interceptor global de axios (client/src/services/
+    // api.js), que de otro modo trataría cualquier 401 como "sesión expirada" y cerraría
+    // sesión al usuario en medio del formulario.
+    throw new ApiError(401, 'Contraseña actual incorrecta', { code: 'INVALID_CURRENT_PASSWORD' });
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  await user.update({ password: hashedPassword, tokenVersion: user.tokenVersion + 1 });
+
+  // El token actual quedó invalidado por el cambio de tokenVersion — se reemite uno
+  // nuevo en la respuesta para que el usuario no se quede sin sesión tras el cambio.
+  const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+
+  return res.json({ message: 'Contraseña actualizada exitosamente', token });
 };
 
 module.exports = { register, login, getMe, changePassword };

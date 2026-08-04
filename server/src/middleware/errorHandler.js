@@ -5,9 +5,13 @@
 const logger = require('../utils/logger');
 
 class ApiError extends Error {
+  // `code` es un identificador estable y opcional (ej. 'INVALID_CURRENT_PASSWORD') para
+  // que el frontend distinga variantes del mismo statusCode sin parsear `message` (que es
+  // texto para humanos y puede cambiar de redacción). Ver client/src/services/api.js.
   constructor(statusCode = 500, message = 'Error interno del servidor', options = {}) {
     super(message, options.cause ? { cause: options.cause } : undefined);
     this.statusCode = statusCode;
+    this.code = options.code;
   }
 }
 
@@ -27,7 +31,11 @@ const errorHandler = (err, req, res, _next) => {
     userId: req.user?.id || 'anonymous',
     stack: err.stack,
   });
-  res.status(statusCode).json({ error: message });
+  const body = { error: message };
+  // Solo ApiError puede traer `code` (errores 500 genéricos nunca lo exponen). El campo
+  // es aditivo — consumidores que ya solo leen `error` no se ven afectados.
+  if (isApiError && err.code) body.code = err.code;
+  res.status(statusCode).json(body);
 };
 
 module.exports = { ApiError, errorHandler };

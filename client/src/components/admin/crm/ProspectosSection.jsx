@@ -52,6 +52,7 @@ import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
 import { canAssignLeads, canCreateLeads, canEditLead, isAdmin } from '../../../utils/permissions';
 import { downloadBlob } from '../../../utils/download';
+import { isInvalidOptionalAmount } from '../../../utils/validation';
 import Badge from '../../ui/Badge';
 import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
@@ -113,9 +114,7 @@ function LeadDetailPanel({
   const [firstContactInput, setFirstContactInput] = useState(
     selected.firstContactDate ? selected.firstContactDate.slice(0, 10) : ''
   );
-  const budgetAmountInvalid =
-    budgetAmountInput.trim() !== '' &&
-    (Number.isNaN(Number(budgetAmountInput)) || Number(budgetAmountInput) < 0);
+  const budgetAmountInvalid = isInvalidOptionalAmount(budgetAmountInput);
 
   const { data: detailData } = useQuery({
     queryKey: ['lead-detail', selected?.id],

@@ -2,7 +2,11 @@ const router = require('express').Router();
 const { register, login, getMe, changePassword } = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
-const { authLimiter, apiLimiter } = require('../middleware/rateLimitMiddleware');
+const {
+  authLimiter,
+  apiLimiter,
+  changePasswordLimiter,
+} = require('../middleware/rateLimitMiddleware');
 
 /**
  * @swagger
@@ -109,9 +113,42 @@ router.get('/me', apiLimiter, authenticate, getMe);
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword: { type: string }
+ *               newPassword: { type: string, minLength: 8 }
  *     responses:
- *       200: { description: Contraseña actualizada }
+ *       200:
+ *         description: Contraseña actualizada. Se devuelve un JWT nuevo — el anterior queda invalidado (tokenVersion).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 token: { type: string }
+ *       400: { description: La nueva contraseña no cumple los requisitos mínimos, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       401:
+ *         description: >
+ *           Dos causas posibles bajo el mismo statusCode, distinguidas por `code`: `INVALID_CURRENT_PASSWORD`
+ *           (la contraseña actual no coincide — el token sigue siendo válido, no debe cerrar sesión) o
+ *           `INVALID_SESSION` (token ausente/inválido/expirado, emitido por `authMiddleware` antes de
+ *           llegar al controlador — sí debe cerrar sesión). El interceptor global de axios del frontend
+ *           (`client/src/services/api.js`) usa `code` para decidir, no el texto de `error`.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error: { type: string }
+ *                 code: { type: string, enum: [INVALID_CURRENT_PASSWORD, INVALID_SESSION] }
  */
-router.put('/change-password', authLimiter, authenticate, changePassword);
+router.put('/change-password', changePasswordLimiter, authenticate, changePassword);
 
 module.exports = router;

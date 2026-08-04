@@ -59,6 +59,10 @@ describe('PUT /api/auth/change-password', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe('Contraseña actual incorrecta');
+    // `code` distingue este 401 de negocio de un 401 de sesión inválida (ver
+    // authMiddleware.js) — es lo que consulta el interceptor global de axios en el
+    // frontend (client/src/services/api.js) para no cerrar sesión en este caso.
+    expect(res.body.code).toBe('INVALID_CURRENT_PASSWORD');
 
     const stillOld = await login();
     expect(stillOld.status).toBe(200);
@@ -75,12 +79,23 @@ describe('PUT /api/auth/change-password', () => {
     expect(res.status).toBe(400);
   });
 
-  test('rechaza sin token con 401', async () => {
+  test('rechaza sin token con 401 y code INVALID_SESSION', async () => {
     const res = await request(app)
       .put('/api/auth/change-password')
       .send({ currentPassword: 'OldPassword123', newPassword: 'NewPassword456' });
 
     expect(res.status).toBe(401);
+    expect(res.body.code).toBe('INVALID_SESSION');
+  });
+
+  test('rechaza un token con firma inválida con 401 y code INVALID_SESSION', async () => {
+    const res = await request(app)
+      .put('/api/auth/change-password')
+      .set('Authorization', 'Bearer token.invalido.falsificado')
+      .send({ currentPassword: 'OldPassword123', newPassword: 'NewPassword456' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('INVALID_SESSION');
   });
 
   test('el token emitido antes del cambio queda invalidado (tokenVersion) tras un cambio exitoso', async () => {
@@ -94,5 +109,6 @@ describe('PUT /api/auth/change-password', () => {
 
     const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${oldToken}`);
     expect(res.status).toBe(401);
+    expect(res.body.code).toBe('INVALID_SESSION');
   });
 });

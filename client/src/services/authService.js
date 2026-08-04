@@ -11,12 +11,6 @@ export const getMe = async () => {
 };
 
 export const changePassword = async (currentPassword, newPassword) => {
-  // skipAuthRedirect: un 401 aquí es "contraseña actual incorrecta", no una sesión
-  // inválida — ver el interceptor en api.js.
-  const { data } = await api.put(
-    '/auth/change-password',
-    { currentPassword, newPassword },
-    { skipAuthRedirect: true }
-  );
+  const { data } = await api.put('/auth/change-password', { currentPassword, newPassword });
   return data;
 };

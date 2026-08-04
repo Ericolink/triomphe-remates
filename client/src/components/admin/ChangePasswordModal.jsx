@@ -1,6 +1,5 @@
 import { useId, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,8 +21,7 @@ export default function ChangePasswordModal({ open, onClose }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showPass, setShowPass] = useState(EMPTY_SHOW);
   const [fieldErrors, setFieldErrors] = useState({});
-  const { setToken, logout } = useAuthStore();
-  const navigate = useNavigate();
+  const { setToken } = useAuthStore();
   const titleId = useId();
   const formId = useId();
 
@@ -51,38 +49,31 @@ export default function ChangePasswordModal({ open, onClose }) {
       onClose();
     },
     onError: (err) => {
-      const status = err?.response?.status;
-      const message = err?.response?.data?.error;
-
       if (!err?.response) {
         toast.error('No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.');
         return;
       }
 
+      const { status, data } = err.response;
+
       if (status === 401) {
-        // El controlador solo responde 401 en change-password por una razón: la
-        // contraseña actual no coincide (ver authController.js). Cualquier otro 401 en
-        // este endpoint (token vencido/inválido) viene de authMiddleware, no del
-        // controlador — ahí sí corresponde cerrar la sesión, como hacía el interceptor
-        // global antes de que este endpoint optara por skipAuthRedirect.
-        if (message === 'Contraseña actual incorrecta') {
-          setFieldErrors({ currentPassword: message });
-        } else {
-          toast.error('Tu sesión expiró. Inicia sesión de nuevo.');
-          reset();
-          onClose();
-          logout();
-          navigate('/admin/login');
+        // Un 401 con code 'INVALID_CURRENT_PASSWORD' (ver authController.js) es el único
+        // 401 que este endpoint puede devolver sin que el interceptor global de axios
+        // (client/src/services/api.js) ya haya cerrado la sesión y redirigido — cualquier
+        // otro 401 (token vencido/inválido) es manejado enteramente por ese interceptor
+        // antes de llegar aquí, así que no hay nada más que hacer en ese caso.
+        if (data?.code === 'INVALID_CURRENT_PASSWORD') {
+          setFieldErrors({ currentPassword: data.error || 'Contraseña actual incorrecta' });
         }
         return;
       }
 
       if (status === 400) {
-        setFieldErrors({ newPassword: message || 'La nueva contraseña no es válida' });
+        setFieldErrors({ newPassword: data?.error || 'La nueva contraseña no es válida' });
         return;
       }
 
-      toast.error(message || 'Error inesperado del servidor. Intenta de nuevo más tarde.');
+      toast.error(data?.error || 'Error inesperado del servidor. Intenta de nuevo más tarde.');
     },
   });
 

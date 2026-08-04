@@ -10,16 +10,9 @@ vi.mock('../../../services/authService', () => ({
 }));
 
 const mockSetToken = vi.fn();
-const mockLogout = vi.fn();
 vi.mock('../../../store/authStore', () => ({
-  default: () => ({ setToken: mockSetToken, logout: mockLogout }),
+  default: () => ({ setToken: mockSetToken }),
 }));
-
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal();
-  return { ...actual, useNavigate: () => mockNavigate };
-});
 
 vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
@@ -98,12 +91,14 @@ describe('ChangePasswordModal', () => {
     await waitFor(() => expect(mockSetToken).toHaveBeenCalledWith('new-jwt-token'));
     expect(toast.success).toHaveBeenCalledWith('Contraseña actualizada exitosamente');
     expect(onClose).toHaveBeenCalled();
-    expect(mockLogout).not.toHaveBeenCalled();
   });
 
-  it('contraseña actual incorrecta: muestra el error en el campo sin cerrar sesión', async () => {
+  it('contraseña actual incorrecta (401 + code INVALID_CURRENT_PASSWORD): muestra el error en el campo sin cerrar sesión', async () => {
     changePassword.mockRejectedValueOnce({
-      response: { status: 401, data: { error: 'Contraseña actual incorrecta' } },
+      response: {
+        status: 401,
+        data: { error: 'Contraseña actual incorrecta', code: 'INVALID_CURRENT_PASSWORD' },
+      },
     });
     const onClose = vi.fn();
     const user = userEvent.setup();
@@ -114,13 +109,12 @@ describe('ChangePasswordModal', () => {
 
     expect(await screen.findByText('Contraseña actual incorrecta')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
-    expect(mockLogout).not.toHaveBeenCalled();
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
-  it('sesión expirada (401 de authMiddleware, no del controlador): cierra sesión y redirige', async () => {
+  it('sesión expirada (401 sin code de negocio, ej. de authMiddleware): no muestra error de campo ni toast — el interceptor global de axios ya cerró la sesión antes de que la promesa llegara aquí', async () => {
     changePassword.mockRejectedValueOnce({
-      response: { status: 401, data: { error: 'No autorizado' } },
+      response: { status: 401, data: { error: 'Usuario no autorizado', code: 'INVALID_SESSION' } },
     });
     const onClose = vi.fn();
     const user = userEvent.setup();
@@ -129,10 +123,10 @@ describe('ChangePasswordModal', () => {
     await fillForm(user);
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
 
-    await waitFor(() => expect(mockLogout).toHaveBeenCalled());
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/login');
-    expect(toast.error).toHaveBeenCalledWith('Tu sesión expiró. Inicia sesión de nuevo.');
-    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => expect(changePassword).toHaveBeenCalled());
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.queryByText('Contraseña actual incorrecta')).not.toBeInTheDocument();
   });
 
   it('error de validación del servidor (400): muestra el mensaje bajo el campo de nueva contraseña', async () => {

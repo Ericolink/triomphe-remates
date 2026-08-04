@@ -8,6 +8,7 @@ import { getUsers } from '../../services/usersService';
 import { SOURCE_LABELS, PAYMENT_METHOD_LABELS } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
 import useModalA11y from '../../hooks/useModalA11y';
+import { isInvalidOptionalAmount } from '../../utils/validation';
 import useAuthStore from '../../store/authStore';
 import { canAssignLeads } from '../../utils/permissions';
 import PropertyPicker from './PropertyPicker';
@@ -63,10 +64,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
 
   // Solo bloquea el envío si el monto viene mal formado; nunca es obligatorio (ver
   // requerimiento "no especificó el monto").
-  const budgetInvalid =
-    !form.budgetNotSpecified &&
-    form.budgetAmount.trim() !== '' &&
-    (Number.isNaN(Number(form.budgetAmount)) || Number(form.budgetAmount) < 0);
+  const budgetInvalid = !form.budgetNotSpecified && isInvalidOptionalAmount(form.budgetAmount);
 
   const handleSubmit = () => {
     if (budgetInvalid) return;
