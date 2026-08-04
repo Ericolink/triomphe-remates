@@ -30,6 +30,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -41,6 +44,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "eslint-plugin-security": "^4.0.1",
     "globals": "^17.5.0",
+    "jsdom": "^30.0.1",
     "nodemon": "^3.1.14",
     "postcss": "^8.5.14",
     "prettier": "^3.8.3",
