@@ -5,24 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { Property, Image } = require('../models/index');
 const { PRIMARY_ARGB, ACCENT_ARGB, WHITE_ARGB } = require('./exportBranding');
-
-const formatPrice = (price) => {
-  if (price === null || price === undefined || price === '') return 'PENDIENTE';
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    maximumFractionDigits: 0,
-  }).format(price);
-};
-
-const formatDate = (date) => {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-};
+const { formatPrice, formatDate } = require('../utils/formatters');
 
 const dash = (val) => (val !== null && val !== undefined && val !== '' ? String(val) : '—');
 

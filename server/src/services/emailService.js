@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const { CITY_LABEL, PROPERTY_TYPE_LABEL, LEAD_TYPE_LABEL: typeLabel } = require('../utils/labels');
+const { formatCurrency, formatLongDate, formatLongDateTime } = require('../utils/formatters');
 
 const getLogoAttachment = async () => {
   const candidates = [
@@ -73,7 +74,7 @@ const buildEmail = ({ title, subtitle, badge = '', body, cta = '', footerNote = 
       ${cta ? `<div style="padding:0 32px 28px;text-align:center">${cta}</div>` : ''}
       <div style="background:#22273A;padding:20px 32px;text-align:center">
         <p style="margin:0 0 6px;color:#D2A057;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Triomphe Bienes Raíces</p>
-        <p style="margin:0;color:#7da8cc;font-size:11px;line-height:1.6">${footerNote || `Este correo fue generado automáticamente. ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`}</p>
+        <p style="margin:0;color:#7da8cc;font-size:11px;line-height:1.6">${footerNote || `Este correo fue generado automáticamente. ${formatLongDateTime()}.`}</p>
       </div>
     </div>
   </body>
@@ -116,14 +117,7 @@ const sendNewLeadNotification = async (lead, property) => {
       )
     : '';
   const appointmentRow = lead.appointmentDate
-    ? tableRow(
-        'Fecha cita',
-        new Date(lead.appointmentDate).toLocaleDateString('es-MX', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric',
-        })
-      )
+    ? tableRow('Fecha cita', formatLongDate(lead.appointmentDate))
     : '';
 
   const html = buildEmail({
@@ -202,7 +196,7 @@ const sendJobApplicationNotification = async (application, position) => {
       ${application.motivation ? `<div style="margin-top:20px;background:#f8f9fa;border-radius:10px;padding:16px"><p style="margin:0 0 6px;color:#6b7280;font-size:12px;font-weight:600;text-transform:uppercase">Motivación</p><p style="margin:0;color:#374151;font-size:13px;line-height:1.6">${escapeHtml(application.motivation)}</p></div>` : ''}
     `,
     cta: ctaButton(`${process.env.CLIENT_URL}/admin/jobs`, 'Ver en el panel admin →'),
-    footerNote: `Postulación recibida el ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+    footerNote: `Postulación recibida el ${formatLongDateTime()}`,
   });
 
   await transporter.sendMail({
@@ -277,14 +271,6 @@ const sendFeedbackNotification = async (feedback) => {
 };
 
 const sendPropertyAlertNotification = async (alert, property) => {
-  const formatPrice = (p) =>
-    p
-      ? new Intl.NumberFormat('es-MX', {
-          style: 'currency',
-          currency: 'MXN',
-          maximumFractionDigits: 0,
-        }).format(p)
-      : 'Consultar';
   const unsubscribeUrl = `${process.env.CLIENT_URL}/cancelar-alerta?token=${alert.token}`;
   const propertyUrl = `${process.env.CLIENT_URL}/propiedades/${property.slug}`;
 
@@ -300,7 +286,7 @@ const sendPropertyAlertNotification = async (alert, property) => {
         <p style="margin:0;color:#374151;font-size:13px">${escapeHtml(CITY_LABEL[property.city] || property.city)} · ${escapeHtml(PROPERTY_TYPE_LABEL[property.type] || property.type)}</p>
       </div>
       <table style="width:100%;border-collapse:collapse">
-        ${tableRow('Precio', `<strong style="color:#22273A">${formatPrice(property.price)}</strong>`)}
+        ${tableRow('Precio', `<strong style="color:#22273A">${formatCurrency(property.price, 'Consultar')}</strong>`)}
         ${property.constructionMeters ? tableRow('Construcción', `${property.constructionMeters} m²`) : ''}
         ${property.terrainMeters ? tableRow('Terreno', `${property.terrainMeters} m²`) : ''}
         ${property.bedrooms ? tableRow('Recámaras', property.bedrooms) : ''}

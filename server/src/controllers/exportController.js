@@ -32,6 +32,7 @@ const {
   COMPANY_EMAIL,
   COMPANY_ADDRESS,
 } = require('../services/exportBranding');
+const { formatLongDate, formatLongDateTime } = require('../utils/formatters');
 const {
   formatPrice,
   formatDate,
@@ -56,13 +57,7 @@ const exportExcel = async (req, res) => {
       count: properties.length,
       query: req.query,
     });
-    const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const generatedAt = formatLongDateTime();
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Triomphe Bienes Raíces';
@@ -249,13 +244,7 @@ const exportPDF = async (req, res) => {
       count: properties.length,
       query: req.query,
     });
-    const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const generatedAt = formatLongDateTime();
 
     const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
     res.setHeader('Content-Type', 'application/pdf');
@@ -376,13 +365,7 @@ const exportFeedbackExcel = async (req, res) => {
       query: req.query,
     });
 
-    const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const generatedAt = formatLongDateTime();
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Triomphe Bienes Raíces';
@@ -511,13 +494,7 @@ const exportLeadsExcel = async (req, res) => {
       query: req.query,
     });
 
-    const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const generatedAt = formatLongDateTime();
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Triomphe Bienes Raíces';
@@ -717,11 +694,7 @@ const exportPropertyQuotePDF = async (req, res) => {
     });
     if (!property) return res.status(404).json({ error: 'Propiedad no encontrada' });
 
-    const generatedAt = new Date().toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+    const generatedAt = formatLongDate(new Date());
 
     const doc = new PDFDocument({ margin: 0, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');

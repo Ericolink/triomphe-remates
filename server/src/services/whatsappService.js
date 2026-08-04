@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { CITY_LABEL } = require('../utils/labels');
+const { formatCurrency } = require('../utils/formatters');
 
 const API_VERSION = 'v21.0';
 
@@ -54,14 +55,6 @@ const sendTemplateMessage = async (to, templateName, components) => {
 };
 
 const sendPropertyAlertWhatsApp = async (alert, property) => {
-  const formatPrice = (p) =>
-    p
-      ? new Intl.NumberFormat('es-MX', {
-          style: 'currency',
-          currency: 'MXN',
-          maximumFractionDigits: 0,
-        }).format(p)
-      : 'Consultar';
   const propertyUrl = `${process.env.CLIENT_URL}/propiedades/${property.slug}`;
   const templateName = process.env.WHATSAPP_TEMPLATE_ALERT || 'alerta_propiedad';
 
@@ -69,7 +62,7 @@ const sendPropertyAlertWhatsApp = async (alert, property) => {
     alert.name,
     CITY_LABEL[property.city] || property.city,
     property.title,
-    formatPrice(property.price),
+    formatCurrency(property.price, 'Consultar'),
     propertyUrl,
   ]);
 };

@@ -1,6 +1,9 @@
 const { Analytics, Property, Lead } = require('../models/index');
 const { Op, fn, col, literal } = require('sequelize');
 
+// Etiqueta corta ("03 ago") para los puntos de las gráficas semanales de este archivo.
+const formatWeekLabel = (d) => d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+
 // GET /api/analytics/dashboard
 const getDashboard = async (req, res) => {
   try {
@@ -146,7 +149,7 @@ const getDashboard = async (req, res) => {
       .slice(-8)
       .map(([date, count]) => {
         const d = new Date(date + 'T12:00:00');
-        const label = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+        const label = formatWeekLabel(d);
         return { date, label, count };
       });
 
@@ -164,7 +167,7 @@ const getDashboard = async (req, res) => {
       .slice(-8)
       .map(([date, count]) => {
         const d = new Date(date + 'T12:00:00');
-        const label = d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+        const label = formatWeekLabel(d);
         return { date, label, count };
       });
 

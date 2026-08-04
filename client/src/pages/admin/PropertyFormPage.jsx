@@ -26,6 +26,7 @@ import {
   getStatusHistory,
 } from '../../services/propertyService';
 import { getPropertyAnalytics } from '../../services/analyticsService';
+import { formatPrice, formatDate } from '../../utils/formatters';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useFilePreviews from '../../hooks/useFilePreviews';
@@ -704,7 +705,7 @@ export default function PropertyFormPage() {
                         Precio:{' '}
                         {h.fromPrice !== null ? (
                           <span className="text-gray-400 line-through">
-                            ${Number(h.fromPrice).toLocaleString('es-MX')}
+                            {formatPrice(h.fromPrice)}
                           </span>
                         ) : (
                           <span className="text-gray-400">PENDIENTE</span>
@@ -712,7 +713,7 @@ export default function PropertyFormPage() {
                         {' → '}
                         {h.toPrice !== null ? (
                           <span className="font-medium text-gray-800 dark:text-gray-100">
-                            ${Number(h.toPrice).toLocaleString('es-MX')}
+                            {formatPrice(h.toPrice)}
                           </span>
                         ) : (
                           <span className="font-medium text-yellow-500">PENDIENTE</span>
@@ -747,11 +748,7 @@ export default function PropertyFormPage() {
                     </>
                   )}
                   <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
-                    {new Date(h.createdAt).toLocaleDateString('es-MX', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+                    {formatDate(h.createdAt)}
                     {h.userName ? ` · ${h.userName}` : ''}
                   </span>
                 </div>
