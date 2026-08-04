@@ -3,6 +3,7 @@ const { createUser, createLead } = require('../../__tests__/helpers/factories');
 const {
   ensureOpenTask,
   closeOpenTask,
+  syncOpenTaskAssignee,
   legacyStatusFor,
   logActivity,
 } = require('../pipelineHelpers');
@@ -133,6 +134,80 @@ describe('pipelineHelpers', () => {
 
       expect(first).toBe(1);
       expect(second).toBe(0);
+    });
+  });
+
+  describe('syncOpenTaskAssignee', () => {
+    let userB;
+
+    beforeAll(async () => {
+      userB = await createUser();
+    });
+
+    afterAll(async () => {
+      await User.destroy({ where: { id: userB.id }, force: true });
+    });
+
+    test('actualiza el assignedToUserId de la task abierta existente', async () => {
+      const lead = await createLead();
+      const task = await ensureOpenTask({ leadId: lead.id, assignedToUserId: user.id });
+
+      await syncOpenTaskAssignee({ leadId: lead.id, assignedToUserId: userB.id });
+
+      await task.reload();
+      expect(task.assignedToUserId).toBe(userB.id);
+      expect(task.done).toBe(false);
+      const count = await Task.count({ where: { leadId: lead.id } });
+      expect(count).toBe(1); // no se creó una segunda task
+    });
+
+    test('sin task abierta y con assignedToUserId, crea una nueva (self-heal)', async () => {
+      const lead = await createLead();
+
+      const task = await syncOpenTaskAssignee({ leadId: lead.id, assignedToUserId: user.id });
+
+      expect(task).not.toBeNull();
+      expect(task.assignedToUserId).toBe(user.id);
+      expect(task.done).toBe(false);
+    });
+
+    test('sin task abierta y en etapa terminal, no crea ninguna task', async () => {
+      const lead = await createLead();
+
+      const result = await syncOpenTaskAssignee({
+        leadId: lead.id,
+        assignedToUserId: user.id,
+        pipelineStage: 'venta_realizada',
+      });
+
+      expect(result).toBeNull();
+      const count = await Task.count({ where: { leadId: lead.id } });
+      expect(count).toBe(0);
+    });
+
+    test('assignedToUserId null cierra la task abierta', async () => {
+      const lead = await createLead();
+      const task = await ensureOpenTask({ leadId: lead.id, assignedToUserId: user.id });
+
+      await syncOpenTaskAssignee({ leadId: lead.id, assignedToUserId: null });
+
+      await task.reload();
+      expect(task.done).toBe(true);
+      expect(task.doneAt).not.toBeNull();
+    });
+
+    test('no toca tasks cerradas (históricas)', async () => {
+      const lead = await createLead();
+      const closedTask = await ensureOpenTask({ leadId: lead.id, assignedToUserId: user.id });
+      await closeOpenTask({ leadId: lead.id });
+      await closedTask.reload();
+      expect(closedTask.done).toBe(true);
+
+      await syncOpenTaskAssignee({ leadId: lead.id, assignedToUserId: userB.id });
+
+      await closedTask.reload();
+      expect(closedTask.assignedToUserId).toBe(user.id); // sin cambios
+      expect(closedTask.done).toBe(true);
     });
   });
 

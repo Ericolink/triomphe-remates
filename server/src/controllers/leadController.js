@@ -162,6 +162,7 @@ const {
   logActivity,
   ensureOpenTask,
   closeOpenTask,
+  syncOpenTaskAssignee,
   legacyStatusFor,
 } = require('../utils/pipelineHelpers');
 const {
@@ -540,11 +541,17 @@ const updateLead = async (req, res) => {
         newAssignedToUserId: assignedToUserId,
         transaction,
       });
-      // Un prospecto que no tenía responsable y recién se reclama obtiene su primera
-      // "próxima acción" en este momento (ver decisión de diferir en createLead).
-      if (assignedToUserId && !previousAssignee) {
-        await ensureOpenTask({ leadId: lead.id, assignedToUserId, type: 'llamar', transaction });
-      }
+      // Mantiene sincronizada la task abierta con el nuevo responsable — cubre tanto la
+      // primera asignación (crea, vía ensureOpenTask) como una reasignación entre asesores
+      // (actualiza la task existente) y una desasignación (la cierra). Ver pipelineHelpers.
+      // lead.pipelineStage ya refleja el valor resultante de este mismo update (lead.update
+      // ya corrió arriba), así que sirve para el chequeo "etapa terminal, sin task nueva".
+      await syncOpenTaskAssignee({
+        leadId: lead.id,
+        assignedToUserId,
+        pipelineStage: lead.pipelineStage,
+        transaction,
+      });
     }
   });
 
