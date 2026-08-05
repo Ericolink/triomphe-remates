@@ -1,8 +1,10 @@
 import { Helmet } from 'react-helmet-async';
+import { BUSINESS_LINE_CONTENT } from '../../utils/constants';
 
 const SITE_NAME = 'Triomphe Remates Bancarios';
 const SITE_URL = import.meta.env.VITE_SITE_URL || window.location.origin;
-const DEFAULT_DESCRIPTION = 'Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos hasta 40% por debajo del valor comercial.';
+const DEFAULT_DESCRIPTION =
+  'Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos hasta 40% por debajo del valor comercial.';
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
 
 const cityName = { juarez: 'Ciudad Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
@@ -16,10 +18,7 @@ const ORGANIZATION = {
   logo: `${SITE_URL}/logo.png`,
   description: DEFAULT_DESCRIPTION,
   areaServed: ['Ciudad Juárez', 'Chihuahua', 'Querétaro'],
-  sameAs: [
-    'https://www.facebook.com/TriomphePagOficial',
-    'https://www.instagram.com/triomphejrz',
-  ],
+  sameAs: ['https://www.facebook.com/TriomphePagOficial', 'https://www.instagram.com/triomphejrz'],
   contactPoint: {
     '@type': 'ContactPoint',
     telephone: '+52-656-579-2750',
@@ -29,9 +28,14 @@ const ORGANIZATION = {
 };
 
 const buildPropertySchema = (property, fullUrl, image, description) => {
-  const floorSize = (property.constructionMeters || property.squareMeters)
-    ? { '@type': 'QuantitativeValue', value: property.constructionMeters || property.squareMeters, unitCode: 'MTK' }
-    : undefined;
+  const floorSize =
+    property.constructionMeters || property.squareMeters
+      ? {
+          '@type': 'QuantitativeValue',
+          value: property.constructionMeters || property.squareMeters,
+          unitCode: 'MTK',
+        }
+      : undefined;
 
   const landSize = property.terrainMeters
     ? { '@type': 'QuantitativeValue', value: property.terrainMeters, unitCode: 'MTK' }
@@ -40,10 +44,12 @@ const buildPropertySchema = (property, fullUrl, image, description) => {
   const address = {
     '@type': 'PostalAddress',
     ...(property.address ? { streetAddress: property.address } : {}),
-    ...(property.city ? {
-      addressLocality: cityName[property.city] || property.city,
-      addressRegion: cityRegion[property.city] || property.city,
-    } : {}),
+    ...(property.city
+      ? {
+          addressLocality: cityName[property.city] || property.city,
+          addressRegion: cityRegion[property.city] || property.city,
+        }
+      : {}),
     addressCountry: 'MX',
   };
 
@@ -60,9 +66,10 @@ const buildPropertySchema = (property, fullUrl, image, description) => {
       '@type': 'Offer',
       price: property.price || undefined,
       priceCurrency: 'MXN',
-      availability: property.status === 'disponible'
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
+      availability:
+        property.status === 'disponible'
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
       seller: { '@id': `${SITE_URL}/#organization` },
     },
     address,
@@ -122,15 +129,13 @@ export default function SEO({
         name="keywords"
         content={
           property
-            ? `remate bancario, ${property.type}, ${cityName[property.city] || property.city}, ${property.title}, bienes raices chihuahua`
+            ? `${(BUSINESS_LINE_CONTENT[property.businessLine] || BUSINESS_LINE_CONTENT.remate).keywordsPrefix}, ${property.type}, ${cityName[property.city] || property.city}, ${property.title}, bienes raices chihuahua`
             : 'remates bancarios, propiedades remate, casas baratas chihuahua, juarez, queretaro, bienes raices'
         }
       />
 
       {/* Organization — siempre presente */}
-      <script type="application/ld+json">
-        {JSON.stringify(ORGANIZATION)}
-      </script>
+      <script type="application/ld+json">{JSON.stringify(ORGANIZATION)}</script>
 
       {/* RealEstateListing + BreadcrumbList — solo en detalle de propiedad */}
       {property && (

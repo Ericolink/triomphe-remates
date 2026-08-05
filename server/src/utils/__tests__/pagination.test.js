@@ -23,7 +23,14 @@ describe('paginate', () => {
   test('primera página respeta el límite', async () => {
     const result = await paginate(Property, { page: 1, limit: 10, order: [['id', 'ASC']] });
     expect(result.data).toHaveLength(10);
-    expect(result.pagination).toEqual({ total: 25, page: 1, limit: 10, totalPages: 3 });
+    expect(result.pagination).toEqual({
+      total: 25,
+      page: 1,
+      limit: 10,
+      totalPages: 3,
+      hasNext: true,
+      hasPrevious: false,
+    });
   });
 
   test('última página devuelve el resto', async () => {
@@ -39,7 +46,13 @@ describe('paginate', () => {
   });
 
   test('respeta los filtros where', async () => {
-    await Property.create({ title: 'Única en Chihuahua', city: 'chihuahua', type: 'terreno', price: 50000, status: 'disponible' });
+    await Property.create({
+      title: 'Única en Chihuahua',
+      city: 'chihuahua',
+      type: 'terreno',
+      price: 50000,
+      status: 'disponible',
+    });
     const result = await paginate(Property, { page: 1, limit: 10, where: { city: 'chihuahua' } });
     expect(result.data).toHaveLength(1);
     expect(result.data[0].city).toBe('chihuahua');

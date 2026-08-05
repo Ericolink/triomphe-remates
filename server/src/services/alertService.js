@@ -13,9 +13,7 @@ const notifyMatchingAlerts = async (property) => {
     if (property.city) alertWhere[Op.or] = [{ city: null }, { city: property.city }];
     if (property.type) {
       const typeFilter = [{ type: null }, { type: property.type }];
-      alertWhere[Op.or] = alertWhere[Op.or]
-        ? alertWhere[Op.or].concat(typeFilter)
-        : typeFilter;
+      alertWhere[Op.or] = alertWhere[Op.or] ? alertWhere[Op.or].concat(typeFilter) : typeFilter;
     }
 
     const alerts = await PropertyAlert.findAll({ where: alertWhere });
@@ -36,7 +34,10 @@ const notifyMatchingAlerts = async (property) => {
 
     return matching;
   } catch (e) {
-    logger.error('Error buscando alertas coincidentes', { propertyId: property.id, error: e.message });
+    logger.error('Error buscando alertas coincidentes', {
+      propertyId: property.id,
+      error: e.message,
+    });
     return [];
   }
 };
@@ -52,13 +53,21 @@ const sendAlertBatch = async (matching, property) => {
       batch.flatMap((a) => {
         const tasks = [
           sendPropertyAlertNotification(a, property).catch((e) =>
-            logger.error('Error enviando alerta de propiedad por email', { alertId: a.id, propertyId: property.id, error: e.message })
+            logger.error('Error enviando alerta de propiedad por email', {
+              alertId: a.id,
+              propertyId: property.id,
+              error: e.message,
+            })
           ),
         ];
         if (a.phone) {
           tasks.push(
             sendPropertyAlertWhatsApp(a, property).catch((e) =>
-              logger.error('Error enviando WhatsApp de alerta', { alertId: a.id, propertyId: property.id, error: e.message })
+              logger.error('Error enviando WhatsApp de alerta', {
+                alertId: a.id,
+                propertyId: property.id,
+                error: e.message,
+              })
             )
           );
         }
@@ -72,7 +81,12 @@ const sendAlertBatch = async (matching, property) => {
 const notifyAndSend = (property) => {
   notifyMatchingAlerts(property)
     .then((matching) => sendAlertBatch(matching, property))
-    .catch((e) => logger.error('Error en notifyAndSend de alertas', { propertyId: property.id, error: e.message }));
+    .catch((e) =>
+      logger.error('Error en notifyAndSend de alertas', {
+        propertyId: property.id,
+        error: e.message,
+      })
+    );
 };
 
 module.exports = { notifyMatchingAlerts, sendAlertBatch, notifyAndSend };

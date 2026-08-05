@@ -19,19 +19,4 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-const uploadDoc = multer({
-  storage: multer.memoryStorage(),
-  fileFilter: (req, file, cb) => {
-    const allowed = /pdf|doc|docx|xlsx|xls/;
-    const ext = file.originalname.toLowerCase().split('.').pop();
-    if (allowed.test(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Solo se permiten archivos PDF, DOC, DOCX, XLSX o XLS'));
-    }
-  },
-  limits: { fileSize: 20 * 1024 * 1024 },
-});
-
 module.exports = upload;
-module.exports.uploadDoc = uploadDoc;

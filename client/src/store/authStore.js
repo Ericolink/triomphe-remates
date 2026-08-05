@@ -18,11 +18,12 @@ const useAuthStore = create((set) => ({
     set({ token });
   },
 
-  updateUser: (updatedFields) => set((state) => {
-    const user = { ...state.user, ...updatedFields };
-    localStorage.setItem('user', JSON.stringify(user));
-    return { user };
-  }),
+  updateUser: (updatedFields) =>
+    set((state) => {
+      const user = { ...state.user, ...updatedFields };
+      localStorage.setItem('user', JSON.stringify(user));
+      return { user };
+    }),
 
   logout: () => {
     localStorage.removeItem('token');

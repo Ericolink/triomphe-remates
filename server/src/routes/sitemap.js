@@ -18,17 +18,25 @@ router.get('/', async (req, res) => {
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${staticPages.map(({ url, priority, changefreq }) => `  <url>
+${staticPages
+  .map(
+    ({ url, priority, changefreq }) => `  <url>
     <loc>${baseUrl}${url}</loc>
     <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>
-  </url>`).join('\n')}
-${properties.map((p) => `  <url>
+  </url>`
+  )
+  .join('\n')}
+${properties
+  .map(
+    (p) => `  <url>
     <loc>${baseUrl}/propiedades/${p.slug}</loc>
     <lastmod>${new Date(p.updatedAt).toISOString().split('T')[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`).join('\n')}
+  </url>`
+  )
+  .join('\n')}
 </urlset>`;
 
     res.setHeader('Content-Type', 'application/xml');

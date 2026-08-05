@@ -19,10 +19,30 @@ const testimonialImages = upload.fields([
 
 router.get('/public', apiLimiter, getPublicTestimonials);
 
-router.get('/admin/all', apiLimiter, authenticate, authorize('admin', 'editor'), getAllTestimonials);
+router.get(
+  '/admin/all',
+  apiLimiter,
+  authenticate,
+  authorize('admin', 'editor'),
+  getAllTestimonials
+);
 router.get('/:id', apiLimiter, authenticate, authorize('admin', 'editor'), getTestimonialById);
-router.post('/', uploadLimiter, authenticate, authorize('admin', 'editor'), testimonialImages, createTestimonial);
-router.put('/:id', uploadLimiter, authenticate, authorize('admin', 'editor'), testimonialImages, updateTestimonial);
+router.post(
+  '/',
+  uploadLimiter,
+  authenticate,
+  authorize('admin', 'editor'),
+  testimonialImages,
+  createTestimonial
+);
+router.put(
+  '/:id',
+  uploadLimiter,
+  authenticate,
+  authorize('admin', 'editor'),
+  testimonialImages,
+  updateTestimonial
+);
 router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteTestimonial);
 
 module.exports = router;

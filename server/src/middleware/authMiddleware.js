@@ -21,13 +21,17 @@ const authenticate = async (req, res, next) => {
     // (tokens emitidos antes de este cambio) se trata como 0 para no cerrar sesión
     // a todos los usuarios ya logueados en el momento del deploy.
     if (!user || !user.isActive || (decoded.tokenVersion ?? 0) !== user.tokenVersion) {
-      return res.status(401).json({ error: 'Usuario no autorizado' });
+      // `code: 'INVALID_SESSION'` marca este 401 como "sesión inválida/expirada" para el
+      // interceptor global de axios (client/src/services/api.js) — es el único statusCode+code
+      // que dispara logout automático. Cualquier controlador que quiera devolver 401 sin
+      // cerrar sesión (ej. authController.changePassword) debe usar un `code` distinto.
+      return res.status(401).json({ error: 'Usuario no autorizado', code: 'INVALID_SESSION' });
     }
 
     req.user = user;
     return next();
   } catch {
-    return res.status(401).json({ error: 'No autorizado' });
+    return res.status(401).json({ error: 'No autorizado', code: 'INVALID_SESSION' });
   }
 };
 

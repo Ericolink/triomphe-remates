@@ -8,6 +8,8 @@ node_modules/
 # Builds
 dist/
 build/
+# Frontend compilado por el build raíz (npm run build lo regenera por completo en cada corrida)
+server/client/
 
 # Logs
 *.log
@@ -24,9 +26,13 @@ server/uploads/*
 # Configuración de deploy con secretos (AUDIT-001) — usar variables de entorno reales, no archivos
 web.config
 server/web.config
-server/update-admin.js
-*.tar.gz.backup
 
-# Herramientas de diagnóstico temporal (eliminar después de verificar versión de Node en SmarterASP)
-server/version-check.js
+# Respaldos/scripts internos que no deben vivir dentro de server/ (es la carpeta que se sube por FTP).
+# Ver scripts/check-deploy-safety.js — bloquea el build si aparece alguno de estos patrones ahí.
+server/update-admin.js
+server/version-check*.js
 server/web.config.version-check
+*.tar.gz
+*.tar.gz.backup
+*.backup
+*.bak

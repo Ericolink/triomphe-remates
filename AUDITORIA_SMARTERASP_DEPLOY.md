@@ -55,7 +55,7 @@ repo root/
 
 **1.7 — `CLIENT_URLS`/CORS no incluye ningún dominio de SmarterASP.** La lista hardcodeada en `app.js:61-67` trae Netlify y localhost, y todo lo demás viene de `CLIENT_URL`/`CLIENT_URLS` por env var — correcto en diseño, pero hay que recordar setear esa variable con el dominio real de SmarterASP (temporal y/o final) o el navegador bloqueará las llamadas a la API por CORS.
 
-**1.8 — Migraciones manuales embebidas en `server.js`, no Sequelize CLI/Umzug.** Ya señalado en `IMPLEMENTATION_MASTER_PLAN.md` como ítem P3 pendiente. Riesgo bajo para una sola instancia, pero significa que cualquier cambio de esquema requiere editar `server.js` y redeployar — no hay forma de "aplicar migraciones" como paso independiente del Roadmap (ver Fase 4).
+**1.8 — Migraciones manuales embebidas en `server.js`, no Sequelize CLI/Umzug.** Ya señalado en `IMPLEMENTATION_MASTER_PLAN.md` como ítem P3 pendiente. Riesgo bajo para una sola instancia, pero significa que cualquier cambio de esquema requiere editar `server.js` y redeployar — no hay forma de "aplicar migraciones" como paso independiente del Roadmap (ver Fase 4). **Resuelto 2026-07-22:** `runMigrations()` fue eliminado; `server/migrations/` (Sequelize CLI) es ahora la única fuente de verdad, con un gate de arranque (`checkPendingMigrations`) que aborta el proceso si la DB no está al día — ver fila 13 de la tabla de la Fase 3 y el paso E1 actualizado abajo.
 
 **1.9 — Carpeta `server/uploads` se sirve estáticamente (`app.js:92`) pero no se usa en ningún controlador** (verificado por grep) — todo el flujo real de imágenes pasa por Cloudinary vía buffer en memoria (`multer.memoryStorage()`, sin escribir a disco). Es código muerto inofensivo, no bloqueante, pero confunde sobre si el hosting necesita persistir disco para uploads (no lo necesita).
 
@@ -110,7 +110,7 @@ repo root/
 | 10 | CORS configurado para el dominio final | ⚠ Requiere cambios | `CLIENT_URLS`/`CLIENT_URL` ya es configurable por env var, pero nadie ha puesto ahí el dominio de SmarterASP (temporal `*.ktempurl.com` o el definitivo) | Frontend no puede llamar a la API — bloqueado por CORS | Setear `CLIENT_URL`/`CLIENT_URLS` con el dominio real en el `web.config`/panel antes de probar |
 | 11 | Sitemap/SEO con dominio correcto | ⚠ Requiere cambios | `sitemap.js:11` tiene `https://rematesbancarios.net` hardcodeado | URLs canónicas incorrectas en Google Search Console si el dominio final difiere o durante la fase con dominio temporal | Reemplazar el literal por `process.env.CLIENT_URL` |
 | 12 | Logs persistentes/accesibles | ✔ Cumple | winston→Console + `stdoutLogEnabled`/`stdoutLogFile` en `web.config` es exactamente el patrón que IIS espera | — | Validar una vez desplegado que `log.txt` efectivamente recibe contenido |
-| 13 | Migraciones de esquema aplicables de forma controlada | ⚠ Requiere cambios | Migraciones embebidas como `ALTER TABLE` ad-hoc dentro de `server.js`, no Sequelize CLI/Umzug (ya señalado en `IMPLEMENTATION_MASTER_PLAN.md` como P3) | Cualquier cambio de esquema futuro requiere editar código fuente y redeployar; sin rollback fácil | No bloqueante para el primer despliegue; formalizar con Sequelize CLI antes de que el equipo crezca |
+| 13 | Migraciones de esquema aplicables de forma controlada | ✔ Resuelto (2026-07-22) | El `runMigrations()` ad-hoc en `server.js` fue eliminado. `server/migrations/` (Sequelize CLI) es ahora la única fuente de verdad; `checkPendingMigrations` (`server/src/config/checkPendingMigrations.js`) aborta el arranque si la DB no está al día — ver Bloque E1 actualizado | — | — |
 | 14 | Dependencias del `client/package.json` limpias (no se sube código fuente del frontend, solo el build) | ⚠ Requiere cambios | `express`, `cors`, `multer`, `mysql2`, `nodemailer`, `sequelize` están en dependencies del SPA sin usarse — no rompen el despliegue (no se suben, solo afectan tiempo de `npm install` en build) | Bajo — solo build más lento y confusión, no afecta runtime en SmarterASP | Eliminar esas 6 dependencias de `client/package.json` |
 | 15 | Verificar que `processPath`/`arguments` de `web.config` apunten al `server.js` correcto desde la raíz real del sitio IIS | ❌ No cumple (sin verificar) | Los dos `web.config` actuales tienen rutas relativas inconsistentes entre sí (ver hallazgo 1.2); ninguno fue probado contra una cuenta SmarterASP real | Despliegue falla en el primer arranque con error 502/500 de IIS sin mensaje claro | Definir explícitamente cuál carpeta es la raíz del sitio IIS y escribir un único `web.config` consistente con esa raíz |
 
@@ -203,6 +203,12 @@ repo root/
 
 ### Bloque E — `web.config` final y despliegue
 
+**□ E0. Ejecutar las migraciones pendientes contra la DB de producción, ANTES de subir código nuevo.**
+- *Objetivo:* que ningún deploy dependa de que alguien recuerde este paso — es la causa raíz del incidente de schema drift del 2026-07-17.
+- *Comando:* desde la máquina local, con las variables `DB_*` de producción cargadas: `cd server && npm run migrate`. La conexión saliente a `mysql5048.site4now.net:3306` ya está confirmada abierta desde fuera (ver memoria del proyecto).
+- *Riesgo:* si una migración falla a mitad de camino, no subir código nuevo hasta resolverlo — revisar columnas reales vs. lo que la migración asume (`SHOW COLUMNS`) antes de reintentar; no asumir que un `down()`/reintento ciego es seguro.
+- *Validación:* `npm run migrate` termina sin error; `SELECT name FROM SequelizeMeta ORDER BY name` en prod incluye todos los archivos de `server/migrations/`. Si en vez de esto arrancas el servidor con código viejo primero, el nuevo `checkPendingMigrations` (E3) lo detectará igual y abortará el arranque — es una segunda red de seguridad, no un sustituto de este paso.
+
 **□ E1. Escribir UN solo `web.config` consistente con la raíz real del sitio IIS** (consolidar los dos existentes, eliminando el inconsistente).
 - *Contenido:* `processPath="node"` (o ruta a `node.exe` propio), `arguments` apuntando al `server.js` real desde esa raíz, `stdoutLogEnabled="true"`, y el bloque `<environmentVariables>` con TODAS las variables (`PORT`, `NODE_ENV=production`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` rotado, `JWT_SECRET` rotado, `JWT_EXPIRES_IN`, `EMAIL_USER`, `EMAIL_PASS` rotado, `EMAIL_TO`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLIENT_URL`/`CLIENT_URLS`).
 - *Riesgo:* este archivo final, con secretos reales, **nunca debe commitearse** — subir solo por FTP directo al servidor.
@@ -210,7 +216,7 @@ repo root/
 **□ E2. Subir vía FTP/File Manager: `server/` completo (incluyendo `node_modules` y `client/` compilado dentro de `server/client/`), excluyendo `server/uploads/*` (vacío, código muerto), tests, `.env*` locales.**
 
 **□ E3. Confirmar arranque** revisando `log.txt` generado por `stdoutLogFile`.
-- *Validación:* sin stack traces de `validateEnvironment()` ni de `sequelize.authenticate()`.
+- *Validación:* sin stack traces de `validateEnvironment()`, `sequelize.authenticate()` ni de `checkPendingMigrations` (este último indicaría que E0 no se corrió o no llegó a completar contra esta DB).
 
 **□ E4. Probar `GET /api/health`** desde el dominio público.
 

@@ -21,8 +21,10 @@ export default function DownloadQuoteButton({ propertyId, slug, className = '' }
 
   return (
     <motion.button
-      onClick={handleDownload} disabled={loading}
-      whileHover={buttonHover} whileTap={buttonTap}
+      onClick={handleDownload}
+      disabled={loading}
+      whileHover={buttonHover}
+      whileTap={buttonTap}
       className={`flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 dark:border-[#2e3650] hover:bg-gray-50 dark:hover:bg-[#242938] text-gray-700 dark:text-gray-200 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 ${className}`}
     >
       {loading ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />}

@@ -1,9 +1,11 @@
 require('dotenv').config();
 const { CITY_LABEL } = require('../utils/labels');
+const { formatCurrency } = require('../utils/formatters');
 
 const API_VERSION = 'v21.0';
 
-const isConfigured = () => Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
+const isConfigured = () =>
+  Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
 
 // AUDIT-006: defensivo ante null/undefined/no-string — antes un phone inválido lanzaba
 // TypeError dentro de sendTemplateMessage, lo que en sendLeadFollowUpWhatsApp se perdía
@@ -36,7 +38,12 @@ const sendTemplateMessage = async (to, templateName, components) => {
       template: {
         name: templateName,
         language: { code: 'es_MX' },
-        components: [{ type: 'body', parameters: components.map((text) => ({ type: 'text', text: String(text) })) }],
+        components: [
+          {
+            type: 'body',
+            parameters: components.map((text) => ({ type: 'text', text: String(text) })),
+          },
+        ],
       },
     }),
   });
@@ -48,8 +55,6 @@ const sendTemplateMessage = async (to, templateName, components) => {
 };
 
 const sendPropertyAlertWhatsApp = async (alert, property) => {
-  const formatPrice = (p) =>
-    p ? new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(p) : 'Consultar';
   const propertyUrl = `${process.env.CLIENT_URL}/propiedades/${property.slug}`;
   const templateName = process.env.WHATSAPP_TEMPLATE_ALERT || 'alerta_propiedad';
 
@@ -57,7 +62,7 @@ const sendPropertyAlertWhatsApp = async (alert, property) => {
     alert.name,
     CITY_LABEL[property.city] || property.city,
     property.title,
-    formatPrice(property.price),
+    formatCurrency(property.price, 'Consultar'),
     propertyUrl,
   ]);
 };

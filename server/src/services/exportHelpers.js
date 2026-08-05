@@ -4,18 +4,12 @@
 const path = require('path');
 const fs = require('fs');
 const { Property, Image } = require('../models/index');
+const { PRIMARY_ARGB, ACCENT_ARGB, WHITE_ARGB } = require('./exportBranding');
+const { formatPrice, formatDate } = require('../utils/formatters');
+const { ApiError } = require('../middleware/errorHandler');
+const logger = require('../utils/logger');
 
-const formatPrice = (price) => {
-  if (price === null || price === undefined || price === '') return 'PENDIENTE';
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(price);
-};
-
-const formatDate = (date) => {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
-
-const dash = (val) => (val !== null && val !== undefined && val !== '') ? String(val) : '—';
+const dash = (val) => (val !== null && val !== undefined && val !== '' ? String(val) : '—');
 
 const getLogoPath = () => {
   const candidates = [
@@ -36,7 +30,7 @@ const getWhiteLogoBuffer = async (logoPath) => {
       for (let x = 0; x < img.width; x++) {
         const idx = (img.width * y + x) * 4;
         if (img.bitmap.data[idx + 3] > 10) {
-          img.bitmap.data[idx]     = 255;
+          img.bitmap.data[idx] = 255;
           img.bitmap.data[idx + 1] = 255;
           img.bitmap.data[idx + 2] = 255;
         }
@@ -49,30 +43,99 @@ const getWhiteLogoBuffer = async (logoPath) => {
   }
 };
 
+// Filas 1-3 compartidas por las exportaciones Excel: título+logo, subtítulo y
+// encabezado de columnas. Solo el texto de título/subtítulo y las columnas cambian
+// entre reportes — el resto (colores, tamaños, alturas) es idéntico en los tres.
+const buildExcelHeader = async ({ workbook, sheet, headers, title, subtitle }) => {
+  const LAST_COL = String.fromCharCode(64 + headers.length);
+
+  // Fila 1: fondo azul + logo blanco + título
+  sheet.mergeCells(`A1:${LAST_COL}1`);
+  const titleCell = sheet.getCell('A1');
+  titleCell.value = title;
+  titleCell.font = { bold: true, size: 13, color: { argb: WHITE_ARGB } };
+  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+  titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+  sheet.getRow(1).height = 42;
+
+  const logoPath = getLogoPath();
+  if (logoPath) {
+    try {
+      const whiteBuf = await getWhiteLogoBuffer(logoPath);
+      if (whiteBuf) {
+        const logoId = workbook.addImage({ buffer: whiteBuf, extension: 'png' });
+        sheet.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 40 } });
+      }
+    } catch {
+      /* ignorado */
+    }
+  }
+
+  // Fila 2: subtítulo
+  sheet.mergeCells(`A2:${LAST_COL}2`);
+  const subCell = sheet.getCell('A2');
+  subCell.value = subtitle;
+  subCell.font = { size: 9, italic: true, color: { argb: 'FF6b7280' } };
+  subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe8eef4' } };
+  subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getRow(2).height = 18;
+
+  // Fila 3: encabezados de columna
+  const headerRow = sheet.getRow(3);
+  headerRow.values = headers.map((h) => h.header);
+  headerRow.height = 22;
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: WHITE_ARGB }, size: 9 };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIMARY_ARGB } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = { bottom: { style: 'medium', color: { argb: ACCENT_ARGB } } };
+  });
+};
+
 const getFilteredProperties = async (query) => {
-  const { city, type, status } = query;
+  const { city, type, category, status } = query;
   const where = {};
-  if (city)   where.city   = city;
-  if (type)   where.type   = type;
+  if (city) where.city = city;
+  if (type) where.type = type;
+  if (category) where.category = category;
   if (status) where.status = status;
 
   return Property.findAll({
     where,
-    order: [['city', 'ASC'], ['createdAt', 'DESC']],
-    attributes: [
-      'id', 'title', 'city', 'type', 'status', 'price',
-      'squareMeters', 'terrainMeters', 'constructionMeters',
-      'bedrooms', 'bathrooms', 'address',
-      'views', 'createdAt', 'updatedAt',
+    order: [
+      ['city', 'ASC'],
+      ['createdAt', 'DESC'],
     ],
-    include: [{
-      model: Image,
-      as: 'images',
-      attributes: ['url', 'isCover'],
-      separate: true,
-      order: [['isCover', 'DESC'], ['createdAt', 'ASC']],
-      limit: 1,
-    }],
+    attributes: [
+      'id',
+      'title',
+      'city',
+      'type',
+      'status',
+      'price',
+      'squareMeters',
+      'terrainMeters',
+      'constructionMeters',
+      'bedrooms',
+      'bathrooms',
+      'address',
+      'views',
+      'createdAt',
+      'updatedAt',
+    ],
+    include: [
+      {
+        model: Image,
+        as: 'images',
+        attributes: ['url', 'isCover'],
+        separate: true,
+        order: [
+          ['isCover', 'DESC'],
+          ['createdAt', 'ASC'],
+        ],
+        limit: 1,
+      },
+    ],
   });
 };
 
@@ -104,16 +167,59 @@ const getImageBuffer = async (url) => {
 const stripUnsupported = (str) => {
   if (!str) return str;
   return str
-    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')   // Supplementary planes (emoji, symbols)
-    .replace(/[\u{2600}-\u{27BF}]/gu, '')       // Misc symbols, dingbats
-    .replace(/️/gu, '')                     // Emoji variation selector
-    .replace(/‍/gu, '')                     // Zero-width joiner
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // Supplementary planes (emoji, symbols)
+    .replace(/[\u{2600}-\u{27BF}]/gu, '') // Misc symbols, dingbats
+    .replace(/️/gu, '') // Emoji variation selector
+    .replace(/‍/gu, '') // Zero-width joiner
     .replace(/\s+/g, ' ')
     .trim();
 };
 
+// Manejo de error unificado para los 5 endpoints de exportación (exportExcel, exportPDF,
+// exportFeedbackExcel, exportLeadsExcel, exportPropertyQuotePDF). Todos generan el archivo
+// escribiendo directo a `res` en streaming (ExcelJS vía workbook.xlsx.write(res), pdfkit vía
+// doc.pipe(res)) — una vez que salió el primer chunk, res.headersSent queda en true y Node
+// revienta con ERR_HTTP_HEADERS_SENT en cuanto algo (p.ej. res.json()) intenta volver a
+// llamar res.setHeader(). Por eso la respuesta de error solo es segura mientras
+// headersSent siga en false; si ya se envió, lo único seguro es loguear y cortar la
+// conexión — no hay forma de "corregir" un archivo que el cliente ya empezó a recibir.
+const handleExportError = (req, res, error, fallbackMessage) => {
+  const meta = {
+    message: error.message,
+    userId: req.user?.id || 'anonymous',
+    stack: error.stack,
+  };
+
+  if (res.headersSent) {
+    logger.error(`${req.method} ${req.originalUrl} (stream ya iniciado)`, meta);
+    // res.end() es inseguro aquí: pdfkit/ExcelJS pueden seguir escribiendo chunks ya
+    // encolados internamente y un "write after end" sobre `res` lanza un 'error' sin
+    // listener, lo que tumba el proceso. destroy() cierra el socket de inmediato y hace
+    // que Node desenganche (unpipe) la fuente automáticamente al detectar el cierre.
+    res.destroy();
+    return;
+  }
+
+  if (error instanceof ApiError) {
+    logger.error(`${req.method} ${req.originalUrl}`, { ...meta, statusCode: error.statusCode });
+    res.status(error.statusCode).json({ error: error.message });
+    return;
+  }
+
+  logger.error(`${req.method} ${req.originalUrl}`, meta);
+  res.status(500).json({ error: fallbackMessage });
+};
+
 module.exports = {
-  formatPrice, formatDate, dash,
-  getLogoPath, getWhiteLogoBuffer, getFilteredProperties, getFirstImagePath, getImageBuffer,
+  formatPrice,
+  formatDate,
+  dash,
+  getLogoPath,
+  getWhiteLogoBuffer,
+  buildExcelHeader,
+  getFilteredProperties,
+  getFirstImagePath,
+  getImageBuffer,
   stripUnsupported,
+  handleExportError,
 };

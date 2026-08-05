@@ -1,7 +1,10 @@
 const js = require('@eslint/js');
+const eslintConfigPrettier = require('eslint-config-prettier');
+const eslintPluginSecurity = require('eslint-plugin-security');
 
 module.exports = [
   js.configs.recommended,
+  eslintPluginSecurity.configs.recommended,
   {
     languageOptions: {
       ecmaVersion: 'latest',
@@ -18,6 +21,8 @@ module.exports = [
         Buffer: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
       },
     },
     rules: {
@@ -41,4 +46,5 @@ module.exports = [
       },
     },
   },
+  eslintConfigPrettier,
 ];

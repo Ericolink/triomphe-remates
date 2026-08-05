@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { buildImageUrl } from '../../utils/images';
+import useModalA11y from '../../hooks/useModalA11y';
 
 export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext }) {
+  const isOpen = Boolean(images[currentIndex]);
+  const panelRef = useModalA11y(isOpen, onClose);
+
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowLeft') onPrev();
       if (e.key === 'ArrowRight') onNext();
     };
@@ -15,15 +18,30 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
       window.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
     };
-  }, [onClose, onPrev, onNext]);
+  }, [onPrev, onNext]);
 
-  if (!images[currentIndex]) return null;
+  if (!isOpen) return null;
 
+  // El clic en el fondo es un atajo solo para mouse; el equivalente de teclado real es
+  // Escape, ya manejado globalmente por useModalA11y (activo mientras el diálogo esté
+  // abierto, sin depender de qué elemento tenga el foco). Convertir este contenedor en
+  // focalizable no aportaría nada y metería una parada vacía en el orden de Tab.
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
-      onClick={onClose}>
-      <button onClick={onClose}
-        className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors z-10">
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Galería de imágenes"
+      tabIndex={-1}
+      className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        aria-label="Cerrar galería"
+        className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors z-10"
+      >
         <X size={20} />
       </button>
 
@@ -33,17 +51,33 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
 
       {images.length > 1 && (
         <>
-          <button onClick={(e) => { e.stopPropagation(); onPrev(); }}
-            className="absolute left-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPrev();
+            }}
+            aria-label="Imagen anterior"
+            className="absolute left-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
+          >
             <ChevronLeft size={24} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext(); }}
-            className="absolute right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNext();
+            }}
+            aria-label="Imagen siguiente"
+            className="absolute right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
+          >
             <ChevronRight size={24} />
           </button>
         </>
       )}
 
+      {/* No tiene acción propia: el onClick solo evita que el clic en la imagen cierre el
+          diálogo (ver onClick del contenedor arriba). No hay nada que un usuario de
+          teclado deba "activar" aquí. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <img
         src={buildImageUrl(images[currentIndex].url, 1600)}
         alt={`Imagen ${currentIndex + 1}`}
@@ -54,8 +88,13 @@ export default function Lightbox({ images, currentIndex, onClose, onPrev, onNext
       {images.length > 1 && (
         <div className="absolute bottom-4 flex gap-2">
           {images.map((_, i) => (
-            <button key={i} onClick={(e) => { e.stopPropagation(); }}
-              className={`w-2 h-2 rounded-full transition-colors ${i === currentIndex ? 'bg-white' : 'bg-white/30'}`} />
+            <button
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              className={`w-2 h-2 rounded-full transition-colors ${i === currentIndex ? 'bg-white' : 'bg-white/30'}`}
+            />
           ))}
         </div>
       )}

@@ -6,6 +6,8 @@
   },
   "scripts": {
     "start": "node server/server.js",
-    "build": "cd client && npm install --include=dev && npm run build && rm -rf ../server/client && mkdir -p ../server/client && cp -r dist/. ../server/client && cd ../server && npm install --omit=dev"
+    "build": "cd client && npm install --include=dev && npm run build && rm -rf ../server/client && mkdir -p ../server/client && cp -r dist/. ../server/client && cd ../server && npm install --omit=dev",
+    "postbuild": "node scripts/check-deploy-safety.js",
+    "predeploy:check": "node scripts/check-deploy-safety.js"
   }
 }

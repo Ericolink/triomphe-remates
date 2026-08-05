@@ -15,8 +15,8 @@ export const applyToPosition = async (id, applicationData) => {
   return data;
 };
 
-export const getAllPositions = async () => {
-  const { data } = await api.get('/jobs/admin/all');
+export const getAllPositions = async (params = {}) => {
+  const { data } = await api.get('/jobs/admin/all', { params });
   return data;
 };
 

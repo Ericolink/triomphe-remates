@@ -3,6 +3,8 @@ name: Security — Audit de dependencias
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
     - cron: '0 9 * * 1'
 
@@ -29,5 +31,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - run: npm audit --audit-level=high --omit=dev
+      - name: npm audit (con excepciones documentadas)
         working-directory: client
+        run: |
+          npm audit --audit-level=high --omit=dev --json > /tmp/audit-result.json || true
+          node ../scripts/check-audit-exceptions.js /tmp/audit-result.json

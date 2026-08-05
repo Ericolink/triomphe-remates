@@ -1,4 +1,5 @@
 import api from './api';
+import { downloadBlob } from '../utils/download';
 
 export const getProperties = async (params = {}) => {
   const { data } = await api.get('/properties', { params });
@@ -54,13 +55,21 @@ export const reorderImages = async (propertyId, imageIds) => {
   return data;
 };
 
-export const getPropertyStats = async () => {
-  const { data } = await api.get('/properties/stats');
+// Revalida en un solo request los campos dinámicos (precio, status) de una
+// lista de propiedades guardadas localmente. Usado por Favoritos/Comparador.
+export const syncProperties = async (ids) => {
+  if (!ids.length) return [];
+  const { data } = await api.get('/properties/sync', { params: { ids: ids.join(',') } });
+  return data.data;
+};
+
+export const getPropertyStats = async (params = {}) => {
+  const { data } = await api.get('/properties/stats', { params });
   return data;
 };
 
-export const getPromotedProperty = async () => {
-  const { data } = await api.get('/properties/promoted');
+export const getPromotedProperty = async (params = {}) => {
+  const { data } = await api.get('/properties/promoted', { params });
   return data;
 };
 
@@ -79,48 +88,15 @@ export const getPriceHistory = async (id) => {
   return data;
 };
 
+export const trackView = async (id) => {
+  await api.post(`/properties/${id}/view`);
+};
+
 export const trackShare = async (id) => {
   await api.post(`/properties/${id}/share`);
 };
 
-export const getDocuments = async (id) => {
-  const { data } = await api.get(`/properties/${id}/documents`);
-  return data;
-};
-
-// AUDIT-007: panel admin necesita ver también los documentos privados
-export const getAllDocuments = async (id) => {
-  const { data } = await api.get(`/properties/${id}/documents/all`);
-  return data;
-};
-
-export const uploadDocument = async (id, file, name, isPublic = true) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  if (name) formData.append('name', name);
-  formData.append('isPublic', isPublic);
-  const { data } = await api.post(`/properties/${id}/documents`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
-};
-
-export const setDocumentVisibility = async (propertyId, docId, isPublic) => {
-  const { data } = await api.patch(`/properties/${propertyId}/documents/${docId}/visibility`, { isPublic });
-  return data;
-};
-
-export const deleteDocument = async (propertyId, docId) => {
-  const { data } = await api.delete(`/properties/${propertyId}/documents/${docId}`);
-  return data;
-};
-
 export const downloadPropertyQuotePDF = async (id, filename) => {
   const response = await api.get(`/export/property/${id}/pdf`, { responseType: 'blob' });
-  const url = window.URL.createObjectURL(new Blob([response.data]));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  window.URL.revokeObjectURL(url);
+  downloadBlob(response.data, filename);
 };

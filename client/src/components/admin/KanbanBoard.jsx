@@ -6,10 +6,13 @@ import { getLeads } from '../../services/leadService';
 import { getTasks } from '../../services/taskService';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
+import { canEditLead } from '../../utils/permissions';
 import { formatDate, toWhatsAppLink } from '../../utils/formatters';
 import {
-  PIPELINE_STAGE_LABELS, TERMINAL_STAGES,
-  LEAD_TYPE_LABELS as typeLabel, TASK_TYPE_LABELS,
+  PIPELINE_STAGE_LABELS,
+  TERMINAL_STAGES,
+  LEAD_TYPE_LABELS as typeLabel,
+  TASK_TYPE_LABELS,
 } from '../../utils/constants';
 
 // Prospectos por página/columna — suficiente para llenar varias pantallas antes de que
@@ -17,24 +20,37 @@ import {
 const COLUMN_PAGE_SIZE = 30;
 
 const KANBAN_COLUMNS = Object.entries(PIPELINE_STAGE_LABELS).map(([key, label]) => ({
-  key, label,
+  key,
+  label,
   color: TERMINAL_STAGES.includes(key)
-    ? (key === 'venta_realizada' ? 'border-green-400' : 'border-gray-300 dark:border-gray-600')
-    : 'border-blue-400',
+    ? key === 'venta_realizada'
+      ? 'border-green-400'
+      : 'border-gray-300 dark:border-gray-600'
+    : 'border-primary-400',
   headerBg: TERMINAL_STAGES.includes(key)
-    ? (key === 'venta_realizada' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-[#2e3650]')
-    : 'bg-blue-50 dark:bg-blue-900/20',
+    ? key === 'venta_realizada'
+      ? 'bg-green-50 dark:bg-green-900/20'
+      : 'bg-gray-50 dark:bg-[#2e3650]'
+    : 'bg-primary-50 dark:bg-primary-900/20',
   dot: TERMINAL_STAGES.includes(key)
-    ? (key === 'venta_realizada' ? 'bg-green-500' : 'bg-gray-400')
-    : 'bg-blue-500',
+    ? key === 'venta_realizada'
+      ? 'bg-green-500'
+      : 'bg-gray-400'
+    : 'bg-primary-500',
 }));
 
 export function NextActionLine({ task }) {
   if (!task) return null;
   const overdue = new Date(task.dueDate) < new Date();
   return (
-    <p className={`text-xs mt-1.5 flex items-center gap-1 ${overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-      {overdue ? <AlertCircle size={12} className="flex-shrink-0" /> : <Pin size={12} className="flex-shrink-0" />}
+    <p
+      className={`text-xs mt-1.5 flex items-center gap-1 ${overdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}
+    >
+      {overdue ? (
+        <AlertCircle size={12} className="flex-shrink-0" />
+      ) : (
+        <Pin size={12} className="flex-shrink-0" />
+      )}
       {TASK_TYPE_LABELS[task.type] || task.type} · {formatDate(task.dueDate)}
     </p>
   );
@@ -62,7 +78,9 @@ function sortByUrgency(leads, openTaskByLead) {
 // encabezado tenga activa); en pc se ven las 8 al mismo tiempo, sin scroll horizontal.
 function useIsMobile() {
   const query = '(max-width: 767px)';
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches
+  );
   useEffect(() => {
     const mql = window.matchMedia(query);
     const handler = (e) => setIsMobile(e.matches);
@@ -75,15 +93,16 @@ function useIsMobile() {
 function useColumnLeads(stageKey, filters) {
   return useInfiniteQuery({
     queryKey: ['leads-column', stageKey, filters.search, filters.assignedToUserId],
-    queryFn: ({ pageParam = 1 }) => getLeads({
-      pipelineStage: stageKey,
-      page: pageParam,
-      limit: COLUMN_PAGE_SIZE,
-      search: filters.search || undefined,
-      assignedToUserId: filters.assignedToUserId || undefined,
-    }),
+    queryFn: ({ pageParam = 1 }) =>
+      getLeads({
+        pipelineStage: stageKey,
+        page: pageParam,
+        limit: COLUMN_PAGE_SIZE,
+        search: filters.search || undefined,
+        assignedToUserId: filters.assignedToUserId || undefined,
+      }),
     getNextPageParam: (lastPage) =>
-      lastPage.pagination.page < lastPage.pagination.totalPages ? lastPage.pagination.page + 1 : undefined,
+      lastPage.pagination.hasNext ? lastPage.pagination.page + 1 : undefined,
     initialPageParam: 1,
   });
 }
@@ -91,16 +110,46 @@ function useColumnLeads(stageKey, filters) {
 // Sin ícono de cambiar etapa en la tarjeta: a 8 columnas simultáneas en pc no sobra
 // espacio junto al nombre. La etapa se sigue cambiando por drag&drop (desktop) o desde
 // el panel de detalle (mobile y desktop) — ver botón "Etapa" en LeadDetailPanel.
-export function KanbanCard({ lead, openTask, onSelect, draggable, onDragStart, onDragEnd, isDragging }) {
+export function KanbanCard({
+  lead,
+  openTask,
+  onSelect,
+  draggable,
+  onDragStart,
+  onDragEnd,
+  isDragging,
+}) {
+  // role="button" en vez de un <button> nativo: la tarjeta es `draggable` y contiene
+  // enlaces propios (llamar, WhatsApp) — un <button> no puede envolver <a>. El guard
+  // target===currentTarget evita que Enter/Espacio activado sobre esos enlaces internos
+  // (que ya son focalizables y bubblean su keydown) dispare también onSelect de la tarjeta.
   return (
-    <div draggable={draggable}
-      onDragStart={onDragStart} onDragEnd={onDragEnd}
+    <div
+      role="button"
+      tabIndex={0}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={() => onSelect(lead)}
-      className={`bg-white dark:bg-[#242938] rounded-xl p-3 shadow-sm border border-gray-100 dark:border-[#2e3650] cursor-pointer hover:shadow-md transition-shadow select-none ${draggable ? 'active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}>
-      <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm line-clamp-2 break-words">{lead.name}</p>
-      {lead.campaign && <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5 truncate">{lead.campaign.name}</p>}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(lead);
+        }
+      }}
+      className={`bg-white dark:bg-[#242938] rounded-xl p-3 shadow-sm border border-gray-100 dark:border-[#2e3650] cursor-pointer hover:shadow-md transition-shadow select-none ${draggable ? 'active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}
+    >
+      <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm line-clamp-2 break-words">
+        {lead.name}
+      </p>
+      {lead.campaign && (
+        <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5 truncate">
+          {lead.campaign.name}
+        </p>
+      )}
       {lead.property && (
-        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1 truncate">
+        <p className="text-xs text-primary-600 dark:text-primary-400 mt-1 flex items-center gap-1 truncate">
           <Building2 size={10} /> {lead.property.title}
         </p>
       )}
@@ -108,12 +157,26 @@ export function KanbanCard({ lead, openTask, onSelect, draggable, onDragStart, o
       <div className="flex items-center justify-between mt-2">
         <div className="flex items-center gap-1">
           {lead.phone && (
-            <a href={`tel:${lead.phone}`} onClick={(e) => e.stopPropagation()} title="Llamar"
-              className="p-2 -m-1 text-gray-400 hover:text-blue-500"><PhoneCall size={12} /></a>
+            <a
+              href={`tel:${lead.phone}`}
+              onClick={(e) => e.stopPropagation()}
+              title="Llamar"
+              className="p-2 -m-1 text-gray-400 hover:text-primary-500"
+            >
+              <PhoneCall size={12} />
+            </a>
           )}
           {lead.phone && (
-            <a href={toWhatsAppLink(lead.phone)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="WhatsApp"
-              className="p-2 -m-1 text-gray-400 hover:text-green-500"><MessageCircle size={12} /></a>
+            <a
+              href={toWhatsAppLink(lead.phone)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title="WhatsApp"
+              className="p-2 -m-1 text-gray-400 hover:text-green-500"
+            >
+              <MessageCircle size={12} />
+            </a>
           )}
         </div>
         <Badge variant="default">{typeLabel[lead.type]}</Badge>
@@ -122,11 +185,27 @@ export function KanbanCard({ lead, openTask, onSelect, draggable, onDragStart, o
   );
 }
 
-function KanbanColumn({ col, filters, fullWidth, onSelect,
-  dragging, onDragStart, onDragEnd, onDrop, isDragOver, onDragOver, onDragLeave, columnRef }) {
+function KanbanColumn({
+  col,
+  filters,
+  fullWidth,
+  currentUser,
+  onSelect,
+  dragging,
+  onDragStart,
+  onDragEnd,
+  onDrop,
+  isDragOver,
+  onDragOver,
+  onDragLeave,
+  columnRef,
+}) {
   const parentRef = useRef(null);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useColumnLeads(col.key, filters);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useColumnLeads(
+    col.key,
+    filters
+  );
   const rawLeads = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
   const total = data?.pages?.[0]?.pagination?.total ?? 0;
 
@@ -138,7 +217,9 @@ function KanbanColumn({ col, filters, fullWidth, onSelect,
   });
   const openTaskByLead = useMemo(() => {
     const map = {};
-    (openTasksData?.data ?? []).forEach((t) => { map[t.leadId] = t; });
+    (openTasksData?.data ?? []).forEach((t) => {
+      map[t.leadId] = t;
+    });
     return map;
   }, [openTasksData]);
 
@@ -162,11 +243,14 @@ function KanbanColumn({ col, filters, fullWidth, onSelect,
   }, [virtualItems, leads.length, hasNextPage, isFetchingNextPage]);
 
   return (
-    <div ref={columnRef} data-stage={col.key}
+    <div
+      ref={columnRef}
+      data-stage={col.key}
       onDragOver={(e) => onDragOver(e, col.key)}
       onDrop={(e) => onDrop(e, col.key)}
       onDragLeave={onDragLeave}
-      className={`flex flex-col rounded-2xl border-2 transition-colors ${fullWidth ? 'w-full flex-shrink-0' : 'flex-1 min-w-0'} ${col.color} ${isDragOver ? 'bg-blue-50 dark:bg-blue-900/10' : 'bg-gray-50/60 dark:bg-[#1a1f2e]/60'}`}>
+      className={`flex flex-col rounded-2xl border-2 transition-colors ${fullWidth ? 'w-full flex-shrink-0' : 'flex-1 min-w-0'} ${col.color} ${isDragOver ? 'bg-primary-50 dark:bg-primary-900/10' : 'bg-gray-50/60 dark:bg-[#1a1f2e]/60'}`}
+    >
       {/* Encabezado a una sola línea siempre: con 8 columnas simultáneas en pc, algunas
           etiquetas ("Cita agendada", "Venta realizada") no caben enteras junto al contador.
           Envolver a 2 líneas rompía la alineación (el contador, centrado con `items-center`
@@ -174,9 +258,16 @@ function KanbanColumn({ col, filters, fullWidth, onSelect,
           texto). `truncate` + `title` (tooltip) es el mismo patrón que usan Trello/Jira para
           títulos de columna angostos: nunca se rompe la fila, el nombre completo sigue
           disponible al pasar el cursor. */}
-      <div className={`px-3 py-2.5 rounded-t-xl flex items-center gap-2 flex-shrink-0 ${col.headerBg}`}>
+      <div
+        className={`px-3 py-2.5 rounded-t-xl flex items-center gap-2 flex-shrink-0 ${col.headerBg}`}
+      >
         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${col.dot}`} />
-        <span className="font-semibold text-sm text-gray-700 dark:text-gray-200 truncate min-w-0 flex-1" title={col.label}>{col.label}</span>
+        <span
+          className="font-semibold text-sm text-gray-700 dark:text-gray-200 truncate min-w-0 flex-1"
+          title={col.label}
+        >
+          {col.label}
+        </span>
         <span className="flex-shrink-0 text-xs bg-white dark:bg-[#242938] text-gray-500 dark:text-gray-400 rounded-full px-2 py-0.5 font-medium">
           {isLoading ? '…' : total}
         </span>
@@ -185,22 +276,45 @@ function KanbanColumn({ col, filters, fullWidth, onSelect,
         {isLoading ? (
           <Spinner size="sm" className="py-8" />
         ) : leads.length === 0 ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4 italic">Sin prospectos</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4 italic">
+            Sin prospectos
+          </p>
         ) : (
           <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
             {virtualItems.map((virtualRow) => {
               const isLoaderRow = virtualRow.index > leads.length - 1;
               const lead = leads[virtualRow.index];
               return (
-                <div key={virtualRow.key} ref={rowVirtualizer.measureElement} data-index={virtualRow.index}
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}
-                  className="pb-2">
+                <div
+                  key={virtualRow.key}
+                  ref={rowVirtualizer.measureElement}
+                  data-index={virtualRow.index}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="pb-2"
+                >
                   {isLoaderRow ? (
-                    <div className="py-3 flex justify-center"><Spinner size="sm" /></div>
+                    <div className="py-3 flex justify-center">
+                      <Spinner size="sm" />
+                    </div>
                   ) : (
-                    <KanbanCard lead={lead} openTask={openTaskByLead[lead.id]} onSelect={onSelect}
-                      draggable onDragStart={(e) => onDragStart(e, lead)} onDragEnd={onDragEnd}
-                      isDragging={dragging?.id === lead.id} />
+                    <KanbanCard
+                      lead={lead}
+                      openTask={openTaskByLead[lead.id]}
+                      onSelect={onSelect}
+                      // Solo arrastrable si el backend aceptará el cambio de etapa que
+                      // resultaría (updateLead/close-won/close-lost/reopen están gateados
+                      // por canEditLead) — evita iniciar un drag que terminará en un 403.
+                      draggable={canEditLead(currentUser, lead)}
+                      onDragStart={(e) => onDragStart(e, lead)}
+                      onDragEnd={onDragEnd}
+                      isDragging={dragging?.id === lead.id}
+                    />
                   )}
                 </div>
               );
@@ -218,25 +332,45 @@ function KanbanColumn({ col, filters, fullWidth, onSelect,
 // compartido con la vista Lista) — así solo esa etapa se ve y además evita pedir datos de
 // las otras 7 columnas en una conexión móvil. En pc se muestran las 8 al mismo tiempo,
 // repartiéndose el ancho disponible sin scroll horizontal.
-export default function KanbanBoard({ filters, focusStage, onSelect, onAttemptStageChange }) {
+export default function KanbanBoard({
+  filters,
+  focusStage,
+  currentUser,
+  onSelect,
+  onAttemptStageChange,
+}) {
   const [dragging, setDragging] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const isMobile = useIsMobile();
   const columnRefs = useRef({});
 
-  const handleDragStart = (e, lead) => { setDragging(lead); e.dataTransfer.effectAllowed = 'move'; };
-  const handleDragOver = (e, colKey) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOver(colKey); };
+  const handleDragStart = (e, lead) => {
+    setDragging(lead);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDragOver = (e, colKey) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOver(colKey);
+  };
   const handleDrop = (e, colKey) => {
     e.preventDefault();
     setDragOver(null);
     if (dragging && dragging.pipelineStage !== colKey) onAttemptStageChange(dragging, colKey);
     setDragging(null);
   };
-  const handleDragEnd = () => { setDragging(null); setDragOver(null); };
+  const handleDragEnd = () => {
+    setDragging(null);
+    setDragOver(null);
+  };
 
   useEffect(() => {
     if (isMobile || !focusStage) return;
-    columnRefs.current[focusStage]?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    columnRefs.current[focusStage]?.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'start',
+      block: 'nearest',
+    });
   }, [focusStage, isMobile]);
 
   const visibleColumns = isMobile
@@ -247,12 +381,24 @@ export default function KanbanBoard({ filters, focusStage, onSelect, onAttemptSt
     <div className="flex flex-col h-[70vh] min-h-[440px]">
       <div className={`flex-1 min-h-0 flex ${isMobile ? '' : 'gap-2'}`}>
         {visibleColumns.map((col) => (
-          <KanbanColumn key={col.key} col={col} filters={filters} fullWidth={isMobile}
+          <KanbanColumn
+            key={col.key}
+            col={col}
+            filters={filters}
+            fullWidth={isMobile}
+            currentUser={currentUser}
             onSelect={onSelect}
-            dragging={dragging} onDragStart={handleDragStart} onDragEnd={handleDragEnd}
-            onDrop={handleDrop} isDragOver={dragOver === col.key}
-            onDragOver={handleDragOver} onDragLeave={() => setDragOver(null)}
-            columnRef={(el) => { columnRefs.current[col.key] = el; }} />
+            dragging={dragging}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDrop={handleDrop}
+            isDragOver={dragOver === col.key}
+            onDragOver={handleDragOver}
+            onDragLeave={() => setDragOver(null)}
+            columnRef={(el) => {
+              columnRefs.current[col.key] = el;
+            }}
+          />
         ))}
       </div>
     </div>

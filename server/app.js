@@ -59,24 +59,13 @@ const docsCsp = helmet.contentSecurityPolicy({
 app.use((req, res, next) => (req.path.startsWith('/api/docs') ? docsCsp(req, res, next) : publicCsp(req, res, next)));
 
 // CORS primero — así las respuestas de rate limit también llevan los headers correctos
-// CLIENT_URLS acepta múltiples orígenes separados por coma
-const allowedOrigins = [
-  ...(process.env.CLIENT_URLS ? process.env.CLIENT_URLS.split(',').map((u) => u.trim()) : []),
-  process.env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://localhost:4173',
-].filter(Boolean);
-
-// Vite incrementa el puerto (5174, 5175...) si 5173 ya está ocupado (ej. otra instancia
-// de `npm run dev` corriendo en paralelo) — fijar un solo puerto en la whitelist es frágil
-// en desarrollo. Solo aplica fuera de producción; en producción la whitelist explícita
-// (CLIENT_URL/CLIENT_URLS) sigue siendo la única fuente de verdad.
-const isDevLocalOrigin = (origin) =>
-  process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+// La whitelist de orígenes vive en utils/corsOrigins.js — es la misma fuente de verdad
+// que usa el stream SSE de leadController.js, para que ambos no puedan desincronizarse.
+const { isOriginAllowed } = require('./src/utils/corsOrigins');
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || isDevLocalOrigin(origin)) {
+    if (!origin || isOriginAllowed(origin)) {
       callback(null, true);
     } else {
       callback(new Error('No permitido por CORS'));
@@ -113,8 +102,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Swagger docs
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger docs — solo fuera de producción, para no exponer el mapa de rutas/schemas públicamente
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 
 // Rutas
 app.use('/api/auth',       require('./src/routes/auth'));
@@ -147,8 +138,8 @@ app.get('*path', (req, res) => {
   res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
-// AUDIT-014: middleware de error centralizado — debe ir al final. Disponible para
-// controllers nuevos vía next(error)/ApiError; los controllers existentes no se tocaron.
+// Middleware de error centralizado — debe ir al final. Todos los controllers usan
+// ApiError como mecanismo estándar de errores de dominio.
 app.use(require('./src/middleware/errorHandler').errorHandler);
 
 module.exports = app;

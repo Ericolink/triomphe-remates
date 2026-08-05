@@ -34,11 +34,16 @@ export default function DashboardPage() {
   });
   const crm = crmData?.data;
 
+  // AUDIT: getTasks siempre pagina cuando no se pasa `leadIds` (ver taskController.js) —
+  // acotarlo aquí no afecta a Kanban/detalle de lead, que llaman getTasks con `leadIds`.
+  // `pagination.total` viene del backend para poder avisar cuántas quedan fuera en vez de
+  // ocultarlas en silencio.
   const { data: overdueData } = useQuery({
     queryKey: ['tasks-overdue'],
-    queryFn: () => getTasks({ overdue: true }),
+    queryFn: () => getTasks({ overdue: true, limit: 20 }),
   });
   const overdueTasks = overdueData?.data ?? [];
+  const overdueTotal = overdueData?.pagination?.total ?? overdueTasks.length;
 
   const { data: newFeedbackData } = useQuery({
     queryKey: ['dashboard-new-feedback'],
@@ -68,11 +73,14 @@ export default function DashboardPage() {
     <div>
       <motion.div variants={fadeIn} initial="hidden" animate="visible" className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Todo lo importante, en un solo lugar</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+          Todo lo importante, en un solo lugar
+        </p>
       </motion.div>
 
       <UrgentSection
         overdueTasks={overdueTasks}
+        overdueTotal={overdueTotal}
         onCompleteTask={(id) => completeMutation.mutate(id)}
         prospectosNuevos={crm?.prospectosNuevos ?? 0}
         prospectosPendientes={crm?.prospectosPendientes ?? 0}
