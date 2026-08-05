@@ -191,7 +191,7 @@ export default function AdminPropertiesPage() {
           <Search size={16} className="text-gray-400 flex-shrink-0" />
           <input
             type="text"
-            placeholder="Buscar..."
+            placeholder="Buscar por nombre o código..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);

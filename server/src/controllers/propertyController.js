@@ -108,14 +108,20 @@ const getProperties = async (req, res) => {
       if (matches.length > 0) matchedIds = matches.map((m) => m.id);
     }
 
+    // `code` (ej. JRCH-0227) no forma parte del índice FULLTEXT y su guion lo rompe como
+    // token de una sola palabra, así que se busca aparte con LIKE siempre, sin importar si
+    // el camino rápido de FULLTEXT ya encontró algo por título/dirección/descripción.
     if (matchedIds) {
-      andConditions.push({ id: { [Op.in]: matchedIds } });
+      andConditions.push({
+        [Op.or]: [{ id: { [Op.in]: matchedIds } }, { code: { [Op.like]: `%${search}%` } }],
+      });
     } else {
       andConditions.push({
         [Op.or]: [
           { title: { [Op.like]: `%${search}%` } },
           { address: { [Op.like]: `%${search}%` } },
           { description: { [Op.like]: `%${search}%` } },
+          { code: { [Op.like]: `%${search}%` } },
         ],
       });
     }
