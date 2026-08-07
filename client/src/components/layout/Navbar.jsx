@@ -79,26 +79,32 @@ export default function Navbar() {
               <Link
                 to="/favoritos"
                 title="Mis favoritos"
-                className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-primary-800 transition-colors"
+                className="flex items-center gap-1.5 h-11 px-2 rounded-lg hover:bg-primary-800 transition-colors"
               >
-                <Heart size={22} className="text-gray-200" />
-                {count > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                    {count > 9 ? '9+' : count}
-                  </span>
-                )}
+                <span className="relative flex items-center justify-center w-[22px] h-[22px]">
+                  <Heart size={22} className="text-gray-200" />
+                  {count > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                      {count > 9 ? '9+' : count}
+                    </span>
+                  )}
+                </span>
+                <span className="text-sm font-medium text-gray-200">Favoritos</span>
               </Link>
               <Link
                 to="/comparar"
                 title="Comparar propiedades"
-                className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-primary-800 transition-colors"
+                className="flex items-center gap-1.5 h-11 px-2 rounded-lg hover:bg-primary-800 transition-colors"
               >
-                <GitCompare size={22} className="text-gray-200" />
-                {compareCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-accent-400 text-primary-900 text-xs rounded-full flex items-center justify-center font-bold">
-                    {compareCount}
-                  </span>
-                )}
+                <span className="relative flex items-center justify-center w-[22px] h-[22px]">
+                  <GitCompare size={22} className="text-gray-200" />
+                  {compareCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-5 h-5 px-1 bg-accent-400 text-primary-900 text-xs rounded-full flex items-center justify-center font-bold">
+                      {compareCount}
+                    </span>
+                  )}
+                </span>
+                <span className="text-sm font-medium text-gray-200">Comparar</span>
               </Link>
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -121,26 +127,36 @@ export default function Navbar() {
               <Link
                 to="/favoritos"
                 title="Mis favoritos"
-                className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-primary-800 transition-colors"
+                className="flex items-center gap-1.5 h-11 px-2 rounded-lg hover:bg-primary-800 transition-colors"
               >
-                <Heart size={22} className="text-gray-200" />
-                {count > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                    {count > 9 ? '9+' : count}
-                  </span>
-                )}
+                <span className="relative flex items-center justify-center w-[22px] h-[22px]">
+                  <Heart size={22} className="text-gray-200" />
+                  {count > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                      {count > 9 ? '9+' : count}
+                    </span>
+                  )}
+                </span>
+                <span className="hidden sm:inline text-sm font-medium text-gray-200">
+                  Favoritos
+                </span>
               </Link>
               <Link
                 to="/comparar"
                 title="Comparar propiedades"
-                className="relative w-11 h-11 flex items-center justify-center rounded-lg hover:bg-primary-800 transition-colors"
+                className="flex items-center gap-1.5 h-11 px-2 rounded-lg hover:bg-primary-800 transition-colors"
               >
-                <GitCompare size={22} className="text-gray-200" />
-                {compareCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-accent-400 text-primary-900 text-xs rounded-full flex items-center justify-center font-bold">
-                    {compareCount}
-                  </span>
-                )}
+                <span className="relative flex items-center justify-center w-[22px] h-[22px]">
+                  <GitCompare size={22} className="text-gray-200" />
+                  {compareCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-5 h-5 px-1 bg-accent-400 text-primary-900 text-xs rounded-full flex items-center justify-center font-bold">
+                      {compareCount}
+                    </span>
+                  )}
+                </span>
+                <span className="hidden sm:inline text-sm font-medium text-gray-200">
+                  Comparar
+                </span>
               </Link>
               <button
                 className="p-2"

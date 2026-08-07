@@ -74,14 +74,6 @@ export default function HomePage() {
         />
         <div className="relative max-w-7xl mx-auto px-4 py-24 text-center">
           <motion.div variants={staggerContainer} initial="hidden" animate="visible">
-            <motion.div
-              variants={fadeInUp}
-              className="inline-flex items-center gap-2 bg-accent-400 text-primary-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
-            >
-              <TrendingDown size={16} />
-              {content.heroBadge}
-            </motion.div>
-
             <motion.h1
               variants={fadeInUp}
               className="text-4xl md:text-6xl font-bold mb-6 leading-tight"
@@ -91,15 +83,33 @@ export default function HomePage() {
               <span className="text-accent-400">{content.heroTitleAccent}</span>
             </motion.h1>
 
-            <motion.p variants={fadeInUp} className="text-xl text-primary-100 mb-3 max-w-2xl mx-auto">
-              {content.heroSubtitle}
+            <motion.div
+              variants={fadeInUp}
+              className="inline-flex items-center gap-2 bg-accent-400 text-primary-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
+            >
+              <TrendingDown size={16} />
+              {content.heroBadge}
+            </motion.div>
+
+            <motion.p
+              variants={fadeInUp}
+              className="text-2xl md:text-3xl font-bold text-white mb-8 max-w-3xl mx-auto leading-snug"
+            >
+              {content.heroSlogan}
             </motion.p>
 
             <motion.p
               variants={fadeInUp}
-              className="text-lg font-semibold text-accent-300 mb-10 max-w-2xl mx-auto"
+              className="text-2xl font-semibold text-accent-300 mb-2 max-w-2xl mx-auto"
             >
               Contamos con inventario a nivel nacional.
+            </motion.p>
+
+            <motion.p
+              variants={fadeInUp}
+              className="text-lg text-primary-100 mb-10 max-w-2xl mx-auto"
+            >
+              Visita nuestras secciones de Chihuahua, Cd. Juárez y Querétaro, próximamente más.
             </motion.p>
 
             <motion.form
@@ -163,6 +173,23 @@ export default function HomePage() {
               <p className="text-sm font-medium opacity-80">{label}</p>
             </motion.div>
           ))}
+        </motion.div>
+
+        <motion.div
+          className="max-w-7xl mx-auto px-4 mt-8 text-center"
+          variants={fadeInUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+        >
+          <motion.button
+            onClick={() => navigate('/contacto')}
+            whileHover={buttonHover}
+            whileTap={buttonTap}
+            className="bg-primary-900 text-white px-8 py-3 rounded-xl font-medium hover:bg-primary-800 transition-colors"
+          >
+            Contáctanos
+          </motion.button>
         </motion.div>
       </motion.section>
 
@@ -251,12 +278,12 @@ export default function HomePage() {
               {
                 icon: <Shield size={32} className="text-accent-500" />,
                 title: 'Proceso Seguro',
-                desc: 'Acompañamos todo el proceso legal y notarial. Tu inversión está protegida.',
+                desc: 'Te acompañamos todo el proceso legal y notarial. Tu inversión está protegida.',
               },
               {
                 icon: <Building2 size={32} className="text-accent-500" />,
                 title: 'Amplio Inventario',
-                desc: 'Casas, departamentos, terrenos y locales en las principales ciudades del norte.',
+                desc: 'Casas, departamentos, terrenos y locales en toda la república.',
               },
             ].map(({ icon, title, desc }) => (
               <motion.div

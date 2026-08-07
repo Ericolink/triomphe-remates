@@ -81,6 +81,7 @@ const FIELDS = [
     section: 'ubicacion',
     options: labelsToOptions(CITY_LABELS, ['otra']),
   },
+  { key: 'state', label: 'Estado (opcional)', type: 'text', col: 1, section: 'ubicacion' },
   {
     key: 'type',
     label: 'Tipo *',
@@ -140,6 +141,7 @@ const emptyForm = {
   price: '',
   pricePending: false,
   city: 'juarez',
+  state: '',
   type: 'casa',
   category: 'remate',
   businessLine: 'remate',
@@ -166,6 +168,7 @@ const propertyToForm = (p) => ({
   price: p.price ?? '',
   pricePending: p.price === null || p.price === undefined,
   city: p.city || 'juarez',
+  state: p.state || '',
   type: p.type || 'casa',
   category: p.category || 'remate',
   businessLine: p.businessLine || 'remate',

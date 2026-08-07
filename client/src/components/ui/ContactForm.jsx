@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { createLead } from '../../services/leadService';
-import { LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
+import { LEAD_TYPE_LABELS, PROPERTY_LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 
@@ -11,6 +11,7 @@ const LEAD_TYPE_OPTIONS = labelsToOptions(LEAD_TYPE_LABELS, [
   'informacion',
   'propiedades_similares',
 ]);
+const PROPERTY_LEAD_TYPE_OPTIONS = labelsToOptions(PROPERTY_LEAD_TYPE_LABELS);
 
 // Horario comercial anunciado en ContactPage.jsx ("Lun - Vie: 9:00 AM - 6:00 PM") — mismo
 // rango que valida leadController.validateAppointmentDate en el backend. Slots fijos en
@@ -38,6 +39,7 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
   const source =
     defaultSource || searchParams.get('source') || searchParams.get('utm_source') || 'directo';
   const [form, setForm] = useState(emptyForm);
+  const typeOptions = propertyId ? PROPERTY_LEAD_TYPE_OPTIONS : LEAD_TYPE_OPTIONS;
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data) => createLead(data),
@@ -108,7 +110,7 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
         onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
         className={inputClass}
       >
-        {LEAD_TYPE_OPTIONS.map((option) => (
+        {typeOptions.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>

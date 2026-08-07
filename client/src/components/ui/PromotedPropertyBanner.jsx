@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Maximize2, LandPlot, Bed, Bath, Star, ArrowRight, Building } from 'lucide-react';
+import { Maximize2, LandPlot, Bed, Bath, Star, ArrowRight, Building } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Badge from './Badge';
 import { buildImageUrl } from '../../utils/images';
@@ -67,11 +67,6 @@ export default function PromotedPropertyBanner({ property }) {
                 <Building size={64} />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-            <div className="absolute bottom-4 left-4 flex items-center gap-1 text-white text-sm font-medium bg-black/50 rounded-lg px-3 py-1 backdrop-blur-sm">
-              <MapPin size={14} />
-              {CITY_LABELS[property.city]}
-            </div>
           </div>
 
           {/* Detalles */}
@@ -111,6 +106,17 @@ export default function PromotedPropertyBanner({ property }) {
                     {CITY_LABELS[property.city]}
                   </p>
                 </InfoField>
+                <InfoField label="Estado">
+                  <p
+                    className={
+                      property.state
+                        ? 'text-sm font-semibold text-gray-800 dark:text-gray-100'
+                        : 'text-sm italic text-gray-400 dark:text-gray-500'
+                    }
+                  >
+                    {property.state || 'No especificado'}
+                  </p>
+                </InfoField>
                 <InfoField label="Colonia">
                   <p
                     className={
@@ -127,19 +133,19 @@ export default function PromotedPropertyBanner({ property }) {
               <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mb-6">
                 <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
                   <Maximize2 size={15} className="text-primary-600 dark:text-primary-400" />
-                  {formatMetric(property.constructionMeters ?? property.squareMeters, ' m²c')}
+                  {formatMetric(property.constructionMeters ?? property.squareMeters, ' M² Construcción')}
                 </span>
                 <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
                   <LandPlot size={15} className="text-primary-600 dark:text-primary-400" />
-                  {formatMetric(property.terrainMeters, ' m²t')}
+                  {formatMetric(property.terrainMeters, ' M² Terreno')}
                 </span>
                 <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
                   <Bed size={15} className="text-primary-600 dark:text-primary-400" />
-                  {formatMetric(property.bedrooms, ' rec.')}
+                  {formatMetric(property.bedrooms, ' Recámaras')}
                 </span>
                 <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-[#1a1f2e] px-3 py-1.5 rounded-lg">
                   <Bath size={15} className="text-primary-600 dark:text-primary-400" />
-                  {formatMetric(property.bathrooms, ' baños')}
+                  {formatMetric(property.bathrooms, ' Baños')}
                 </span>
               </div>
             </div>

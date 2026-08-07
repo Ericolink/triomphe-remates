@@ -14,7 +14,15 @@ const CITIES = [
 ];
 const TYPES = [{ value: '', label: 'Cualquier tipo' }, ...labelsToOptions(TYPE_LABELS)];
 
-const INIT = { name: '', email: '', phone: '', city: '', type: '', maxPrice: '' };
+const INIT = {
+  name: '',
+  email: '',
+  phone: '',
+  city: '',
+  type: '',
+  minPrice: '',
+  maxPrice: '',
+};
 
 export default function AlertSubscriptionForm() {
   const [form, setForm] = useState(INIT);
@@ -31,12 +39,13 @@ export default function AlertSubscriptionForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim()) {
-      toast.error('Nombre y email son requeridos');
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
+      toast.error('Nombre, email y teléfono son requeridos');
       return;
     }
     mutation.mutate({
       ...form,
+      minPrice: form.minPrice ? form.minPrice.replace(/[^0-9]/g, '') : undefined,
       maxPrice: form.maxPrice ? form.maxPrice.replace(/[^0-9]/g, '') : undefined,
     });
   };
@@ -104,12 +113,13 @@ export default function AlertSubscriptionForm() {
           htmlFor={`${formId}-phone`}
           className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
         >
-          Teléfono / WhatsApp (opcional)
+          Teléfono / WhatsApp *
         </label>
         <input
           id={`${formId}-phone`}
           name="phone"
           type="tel"
+          required
           value={form.phone}
           onChange={handleChange}
           placeholder="Ej: 6561234567"
@@ -163,25 +173,47 @@ export default function AlertSubscriptionForm() {
           </select>
         </div>
       </div>
-      <div>
-        <label
-          htmlFor={`${formId}-maxPrice`}
-          className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-        >
-          Precio máximo (opcional)
-        </label>
-        <input
-          id={`${formId}-maxPrice`}
-          name="maxPrice"
-          value={
-            form.maxPrice
-              ? Number(form.maxPrice.replace(/[^0-9]/g, '')).toLocaleString('es-MX')
-              : ''
-          }
-          onChange={handleChange}
-          placeholder="Ej: 1,500,000"
-          className={inputCls}
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label
+            htmlFor={`${formId}-minPrice`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
+            Precio mínimo (opcional)
+          </label>
+          <input
+            id={`${formId}-minPrice`}
+            name="minPrice"
+            value={
+              form.minPrice
+                ? Number(form.minPrice.replace(/[^0-9]/g, '')).toLocaleString('es-MX')
+                : ''
+            }
+            onChange={handleChange}
+            placeholder="Ej: 500,000"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label
+            htmlFor={`${formId}-maxPrice`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
+            Precio máximo (opcional)
+          </label>
+          <input
+            id={`${formId}-maxPrice`}
+            name="maxPrice"
+            value={
+              form.maxPrice
+                ? Number(form.maxPrice.replace(/[^0-9]/g, '')).toLocaleString('es-MX')
+                : ''
+            }
+            onChange={handleChange}
+            placeholder="Ej: 1,500,000"
+            className={inputCls}
+          />
+        </div>
       </div>
       <button
         type="submit"

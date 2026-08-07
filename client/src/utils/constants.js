@@ -1,8 +1,8 @@
 export const WHATSAPP_NUMBER = '526565792750';
 
 // Oficinas físicas de Triomphe — fuente única de verdad para Footer.jsx y ContactPage.jsx
-// (antes vivía solo en Footer.jsx). TODO: reemplazar los datos de Chihuahua con la
-// información real de la oficina.
+// (antes vivía solo en Footer.jsx). TODO: reemplazar el email de Chihuahua con el real
+// de esa oficina (dirección y teléfono ya son los definitivos).
 export const OFFICES = [
   {
     city: 'Ciudad Juárez',
@@ -11,14 +11,16 @@ export const OFFICES = [
     email: 't.bienesraicesmx@gmail.com',
     street: 'Av. Paseo Triunfo de la República 215-INT 24',
     location: 'San Lorenzo, 32320 Juárez, Chih.',
+    mapsUrl: 'https://maps.app.goo.gl/iRTMK1476tSHDiw36',
   },
   {
     city: 'Chihuahua',
     cityLabel: 'Chihuahua, Chih.',
-    phone: 'Próximamente',
+    phone: '+52 (614) 477-9231',
     email: 'Próximamente',
-    street: 'Próximamente',
-    location: 'Chihuahua, Chih.',
+    street: 'C. Alabama 2400',
+    location: 'Quintas del Sol, Campestre-Lomas, 31214 Chihuahua, Chih.',
+    mapsUrl: 'https://maps.app.goo.gl/Cq64eJ4sxtLvTwAW9',
   },
 ];
 
@@ -114,13 +116,14 @@ export const BUSINESS_LINE_CONTENT = {
     heroBadge: 'Precios del 30% al 70% por debajo del mercado.',
     heroTitle: 'Remates Bancarios',
     heroTitleAccent: 'en México',
-    heroSubtitle:
-      'Encuentra propiedades a precios de remate en Chihuahua, Ciudad Juárez y Querétaro. Has llegado al lugar correcto para hacer crecer tus inversiones, con más de 28 años de experiencia a nivel nacional.',
+    heroSlogan:
+      'Has llegado al lugar correcto para hacer crecer tus inversiones, con más de 28 años de experiencia a nivel nacional.',
     ctaText: '¿Te interesa alguna propiedad o inversión?',
     listingPath: '/propiedades',
     listingTitle: 'Propiedades en Remate',
-    listingDescription: 'Explora nuestro inventario de remates bancarios.',
-    seoTitle: 'Remates Bancarios en México',
+    listingDescription:
+      'Compra casas, departamentos y terrenos en remate bancario a precios por debajo del mercado en Chihuahua, Ciudad Juárez y Querétaro.',
+    seoTitle: 'Comprar Casas en Remate Bancario en México',
     seoDescription:
       'Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos del 30% al 70% por debajo del valor comercial.',
     priceLabel: 'Precio de remate',
@@ -193,6 +196,21 @@ export const LEAD_TYPE_LABELS = {
   otro: 'Otro',
   informacion: 'Información del remate',
   propiedades_similares: 'Conocer propiedades similares',
+};
+
+// Mismos valores de `type` que LEAD_TYPE_LABELS (el backend solo acepta las claves de
+// VALID_LEAD_TYPE en leadController.js) pero con textos redactados en referencia a "esta
+// propiedad" — usados por ContactForm.jsx únicamente cuando el formulario vive dentro de
+// PropertyDetailPage (recibe `propertyId`), para que el listado de motivos no sea idéntico
+// al del formulario genérico de ContactPage.jsx. Se excluyen rentar_propiedad/vender_propiedad
+// porque no aplican al contexto de "estoy viendo esta propiedad en venta".
+export const PROPERTY_LEAD_TYPE_LABELS = {
+  comprar_propiedad: 'Quiero adquirir esta propiedad',
+  invertir_remates: 'Me interesa como inversión',
+  cita: 'Quiero agendar una visita a esta propiedad',
+  contacto: 'Quiero más información de esta propiedad',
+  asesoria_financiera: 'Quiero asesoría de financiamiento para esta propiedad',
+  otro: 'Otro',
 };
 
 export const SOURCE_LABELS = {

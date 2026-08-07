@@ -539,15 +539,9 @@ export default function JobsPage() {
           initial="hidden"
           animate="visible"
         >
-          <motion.div
-            variants={fadeInUp}
-            className="inline-flex items-center gap-2 bg-accent-400 text-primary-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6"
-          >
-            <Send size={16} /> Postulación general
-          </motion.div>
           <motion.h2
             variants={fadeInUp}
-            className="text-3xl md:text-5xl font-extrabold mb-8 leading-tight max-w-2xl mx-auto"
+            className="text-4xl md:text-6xl font-extrabold mb-8 leading-tight"
           >
             Envíanos tu postulación general y te consideraremos para futuras oportunidades.
           </motion.h2>

@@ -112,6 +112,7 @@ export default function AlertsAdminPage() {
                 {[
                   alert.city ? CITY_LABELS[alert.city] : 'Cualquier ciudad',
                   alert.type ? TYPE_LABELS_SHORT[alert.type] : null,
+                  alert.minPrice ? `desde ${formatPrice(alert.minPrice)}` : null,
                   alert.maxPrice ? `hasta ${formatPrice(alert.maxPrice)}` : null,
                 ]
                   .filter(Boolean)

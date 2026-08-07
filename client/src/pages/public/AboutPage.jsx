@@ -4,31 +4,83 @@ import {
   TrendingDown,
   Award,
   MapPin,
-  CheckCircle,
   Home,
   Landmark,
   Scale,
   Banknote,
   Gavel,
   Stamp,
+  ExternalLink,
+  Image as ImageIcon,
+  Handshake,
+  Lightbulb,
+  Target,
+  Flame,
+  Compass,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import SEO from '../../components/ui/SEO';
 import AnimatedSection from '../../components/ui/AnimatedSection';
-import { fadeInUp, fadeInLeft, fadeInRight, staggerContainer } from '../../utils/animations';
+import {
+  fadeInUp,
+  fadeInLeft,
+  fadeInRight,
+  staggerContainer,
+  buttonHover,
+  buttonTap,
+} from '../../utils/animations';
 import { getPropertyStats } from '../../services/propertyService';
 
+// El orden importa: la primera letra de cada valor deletrea TRIOMPHE (T-R-I-O-M-P-H-E).
+// Se resalta esa letra en el render — no reordenar esta lista sin mantener el acróstico.
 const values = [
-  'Trabajo en equipo',
-  'Respeto',
-  'Innovación',
-  'Orientación al cliente',
-  'Motivación',
-  'Principios',
-  'Honradez',
-  'Entusiasmo',
+  { name: 'Trabajo en equipo', icon: Users },
+  { name: 'Respeto', icon: Handshake },
+  { name: 'Innovación', icon: Lightbulb },
+  { name: 'Orientación al cliente', icon: Target },
+  { name: 'Motivación', icon: Flame },
+  { name: 'Principios', icon: Compass },
+  { name: 'Honradez', icon: ShieldCheck },
+  { name: 'Entusiasmo', icon: Sparkles },
 ];
+
+// Fotos de "Nuestros Valores": no requieren tocar este archivo para activarse — basta con
+// colocar un archivo con exactamente uno de estos 3 nombres en client/public/valores/
+// (jpg o png, cualquiera de las dos extensiones sirve). Mientras el archivo no exista,
+// <ValuePhoto> cae automáticamente al placeholder vía onError.
+const valuePhotoSlots = [
+  { base: '/valores/foto-1', alt: 'Foto que representa nuestros valores 1' },
+  { base: '/valores/foto-2', alt: 'Foto que representa nuestros valores 2' },
+  { base: '/valores/foto-3', alt: 'Foto que representa nuestros valores 3' },
+];
+
+function ValuePhoto({ base, alt }) {
+  const [srcIndex, setSrcIndex] = useState(0);
+  const extensions = ['jpg', 'jpeg', 'png'];
+  const src = srcIndex < extensions.length ? `${base}.${extensions[srcIndex]}` : null;
+
+  if (!src) {
+    return (
+      <div className="h-full min-h-[140px] rounded-2xl border-2 border-dashed border-gray-300 dark:border-[#2e3650] flex items-center justify-center text-gray-300 dark:text-gray-600">
+        <ImageIcon size={32} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setSrcIndex((i) => i + 1)}
+      className="h-full min-h-[140px] w-full rounded-2xl object-cover"
+    />
+  );
+}
 
 const services = [
   {
@@ -77,7 +129,7 @@ const advantages = [
   {
     icon: <Shield size={32} className="text-accent-500" />,
     title: 'Proceso Seguro',
-    desc: 'Cesiones de derechos inscritas en el Registro Público de la Propiedad, respaldadas por instituciones financieras y acompañadas durante todo el proceso legal y notarial.',
+    desc: 'Cesiones de derechos inscritas en el Registro Público de la Propiedad, respaldadas por instituciones financieras y acompañamiento durante todo el proceso legal y notarial.',
   },
   {
     icon: <Users size={32} className="text-accent-500" />,
@@ -108,22 +160,29 @@ export default function AboutPage() {
           initial="hidden"
           animate="visible"
         >
-          <motion.img
+          <motion.div
             variants={fadeInUp}
-            src="/logo.png"
-            alt="Triomphe Bienes Raíces"
-            className="h-20 w-auto mx-auto mb-6 brightness-0 invert"
-          />
-          <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-bold mb-4">
-            Sobre Nosotros
-          </motion.h1>
+            className="inline-block bg-white rounded-3xl p-6 md:p-8 mb-8 shadow-xl"
+          >
+            <img src="/logo.png" alt="Triomphe Bienes Raíces" className="h-28 md:h-36 w-auto" />
+          </motion.div>
           <motion.p
             variants={fadeInUp}
-            className="text-primary-200 dark:text-gray-400 text-lg max-w-2xl mx-auto"
+            className="text-primary-100 dark:text-gray-300 text-xl max-w-2xl mx-auto mb-8"
           >
-            Más de 28 años conectando inversionistas con las mejores oportunidades de remates
-            bancarios en México.
+            Has llegado al lugar correcto para hacer crecer tus inversiones.
           </motion.p>
+          <motion.a
+            variants={fadeInUp}
+            href="https://triomphebienesraices.com.mx/"
+            target="_blank"
+            rel="noopener noreferrer"
+            whileHover={buttonHover}
+            whileTap={buttonTap}
+            className="inline-flex items-center gap-2 bg-accent-400 text-primary-900 px-8 py-3.5 rounded-xl font-bold hover:bg-accent-300 transition-colors"
+          >
+            Visitar sitio web <ExternalLink size={18} />
+          </motion.a>
         </motion.div>
       </section>
 
@@ -131,22 +190,22 @@ export default function AboutPage() {
       <section className="max-w-7xl mx-auto px-4 py-16">
         <AnimatedSection variant={fadeInLeft} className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-primary-900 dark:text-white mb-6">Conócenos</h2>
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+          <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
             Somos un despacho administrador líder en el ramo inmobiliario y financiero, dedicado a
             la venta de cesiones de derechos litigiosos, adjudicatarios o de escritura.
           </p>
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+          <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
             De manera profesional, ofrecemos a nuestros inversionistas importantes ahorros y
             utilidades, respaldados por garantías hipotecarias.
           </p>
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+          <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
             Contamos con más de{' '}
             <strong className="text-primary-900 dark:text-white">28 años de experiencia</strong> en
             el ramo inmobiliario y somos expertos en remates bancarios. Tenemos presencia física
             en los estados de Chihuahua y Querétaro, con oficinas ubicadas en Ciudad Juárez,
             Chihuahua Capital y el municipio de Querétaro.
           </p>
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+          <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
             Ofrecemos inventario de cesiones en toda la República Mexicana, compra y venta de
             propiedades, además de asesorías legales, notariales y financieras.
           </p>
@@ -197,14 +256,10 @@ export default function AboutPage() {
           <AnimatedSection className="mt-12 md:mt-16">
             <div className="bg-white dark:bg-[#1a1f2e] rounded-3xl shadow-md dark:shadow-none border border-transparent dark:border-[#2e3650] p-8 md:p-12">
               <div className="max-w-2xl mx-auto text-center mb-10">
-                <span className="inline-flex items-center gap-2 text-accent-600 dark:text-accent-400 font-semibold text-sm uppercase tracking-wide mb-3">
-                  <Scale size={16} />
-                  Te asesoramos
-                </span>
-                <h3 className="text-2xl md:text-3xl font-bold text-primary-900 dark:text-white mb-3">
+                <h3 className="text-3xl md:text-4xl font-bold text-primary-900 dark:text-white mb-3">
                   Asesorías disponibles
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+                <p className="text-lg text-gray-500 dark:text-gray-400 leading-relaxed">
                   Personal capacitado en áreas legal, fiscal, contable y comercial te acompaña en
                   cada trámite, siempre ante notario público.
                 </p>
@@ -246,15 +301,15 @@ export default function AboutPage() {
       {/* Remates Bancarios */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <AnimatedSection className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-primary-900 dark:text-white mb-6">
-            Remates Bancarios
+          <h2 className="text-4xl font-bold text-primary-900 dark:text-white mb-6">
+            ¿Qué son los Remates Bancarios?
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+          <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
             Las cesiones de derechos, conocidas comúnmente como remates bancarios, surgen cuando
             una persona adquiere un crédito hipotecario con una institución financiera y
             posteriormente incumple con sus pagos, generando una cartera vencida.
           </p>
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+          <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
             La institución financiera pone a la venta los derechos del crédito sobre el inmueble
             en garantía a través de un tercero, recuperando mediante esta operación parte del
             préstamo otorgado.
@@ -266,10 +321,10 @@ export default function AboutPage() {
       <section className="bg-gray-50 dark:bg-[#242938] py-16">
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-primary-900 dark:text-white mb-4">
+            <h2 className="text-4xl font-bold text-primary-900 dark:text-white mb-4">
               ¿Qué adquiere el cliente?
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+            <p className="text-lg text-gray-500 dark:text-gray-400 leading-relaxed">
               El cliente adquiere{' '}
               <strong className="text-primary-900 dark:text-white">cesiones de derechos</strong>:
               documentos notariales inscritos en el Registro Público de la Propiedad (RPP), que
@@ -283,7 +338,7 @@ export default function AboutPage() {
       {/* Por qué elegirnos */}
       <section className="max-w-7xl mx-auto px-4 py-16">
         <AnimatedSection>
-          <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
+          <h2 className="text-4xl font-bold text-primary-900 dark:text-white text-center mb-12">
             ¿Por qué elegirnos?
           </h2>
         </AnimatedSection>
@@ -310,7 +365,7 @@ export default function AboutPage() {
                 {icon}
               </motion.div>
               <h3 className="text-xl font-bold text-primary-900 dark:text-white mb-3">{title}</h3>
-              <p className="text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
+              <p className="text-lg text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -320,7 +375,7 @@ export default function AboutPage() {
       <section className="bg-gray-50 dark:bg-[#242938] py-16">
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection>
-            <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-primary-900 dark:text-white text-center mb-12">
               Misión y Visión
             </h2>
           </AnimatedSection>
@@ -341,7 +396,7 @@ export default function AboutPage() {
                   <Shield size={24} className="text-primary-900" />
                 </motion.div>
                 <h3 className="text-2xl font-bold mb-4">Misión</h3>
-                <p className="text-primary-100 leading-relaxed">
+                <p className="text-lg text-primary-100 leading-relaxed">
                   Proporcionar una asesoría inmobiliaria con ética, honestidad y discreción,
                   siempre orientados al servicio en todas las etapas de nuestra intervención en la
                   venta, compra o alquiler, basados en nuestra experiencia y capacitación en el
@@ -360,7 +415,7 @@ export default function AboutPage() {
                   <Award size={24} className="text-accent-400" />
                 </motion.div>
                 <h3 className="text-2xl font-bold text-primary-900 mb-4">Visión</h3>
-                <p className="text-primary-900 leading-relaxed">
+                <p className="text-lg text-primary-900 leading-relaxed">
                   Ser la mejor alternativa para quienes busquen la ayuda de un profesional
                   inmobiliario, ofreciendo las propuestas más innovadoras. Que nuestros clientes se
                   sientan plenamente acompañados y asesorados durante todo el proceso de compra,
@@ -379,25 +434,45 @@ export default function AboutPage() {
             Nuestros Valores
           </h2>
         </AnimatedSection>
-        <motion.div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-4"
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          {values.map((value) => (
-            <motion.div
-              key={value}
-              variants={fadeInUp}
-              whileHover={{ y: -4, scale: 1.03, transition: { duration: 0.2 } }}
-              className="bg-gray-50 dark:bg-[#1a1f2e] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 flex items-center gap-3 cursor-default"
-            >
-              <CheckCircle size={20} className="text-accent-500 flex-shrink-0" />
-              <span className="font-medium text-primary-900 dark:text-white text-sm">{value}</span>
-            </motion.div>
-          ))}
-        </motion.div>
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_220px] gap-8 items-stretch">
+          <motion.div
+            className="flex flex-col gap-4"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            {values.map(({ name, icon: Icon }) => (
+              <motion.div
+                key={name}
+                variants={fadeInUp}
+                whileHover={{ x: 4, transition: { duration: 0.2 } }}
+                className="bg-gray-50 dark:bg-[#1a1f2e] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-4 flex items-center gap-4 cursor-default"
+              >
+                <Icon size={28} className="text-accent-500 flex-shrink-0" />
+                <span className="font-medium text-primary-900 dark:text-white">
+                  <span className="text-accent-500 font-extrabold text-xl">{name[0]}</span>
+                  {name.slice(1)}
+                </span>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Fotos que resumen los valores — el cliente las coloca aquí; placeholder mientras tanto */}
+          <motion.div
+            className="flex flex-col gap-4"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            {valuePhotoSlots.map(({ base, alt }) => (
+              <motion.div key={base} variants={fadeInUp} className="flex-1">
+                <ValuePhoto base={base} alt={alt} />
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
       </section>
 
       {/* Ciudades */}
@@ -405,7 +480,10 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection>
             <h2 className="text-3xl font-bold text-primary-900 dark:text-white text-center mb-12">
-              Dónde operamos
+              Operamos a nivel nacional, visita nuestra{' '}
+              <Link to="/propiedades" className="text-accent-500 hover:underline">
+                sección de propiedades
+              </Link>
             </h2>
           </AnimatedSection>
           <motion.div
@@ -446,7 +524,7 @@ export default function AboutPage() {
                     <MapPin size={20} className="text-accent-500 flex-shrink-0" />
                   </motion.div>
                   <div>
-                    <p className="font-bold text-primary-900 dark:text-white">{city}</p>
+                    <p className="text-lg font-bold text-primary-900 dark:text-white">{city}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">{state}</p>
                   </div>
                   <span className="ml-auto bg-primary-50 dark:bg-primary-900/30 text-primary-900 dark:text-primary-300 text-xs font-bold px-2.5 py-1 rounded-full">

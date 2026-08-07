@@ -64,8 +64,9 @@ export default function ContactPage() {
               whileHover={{ x: 4, transition: { duration: 0.2 } }}
               className="p-5 bg-gray-50 dark:bg-[#242938] rounded-xl border border-transparent dark:border-[#2e3650]"
             >
-              <p className="font-bold text-primary-900 dark:text-white text-lg mb-3">
-                Contacto {office.city}
+              <p className="flex items-center gap-2 font-bold text-primary-900 dark:text-white text-lg mb-3">
+                <MapPin size={18} className="text-accent-500 flex-shrink-0" />
+                {office.cityLabel}
               </p>
               <ul className="space-y-2.5">
                 <li className="flex items-center gap-3">
@@ -91,15 +92,20 @@ export default function ContactPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <MapPin size={18} className="text-accent-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-base text-gray-600 dark:text-gray-300">
-                    {office.cityLabel}
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <MapPin size={18} className="text-accent-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-base text-gray-600 dark:text-gray-300">
-                    {office.street}, {office.location}
-                  </span>
+                  {office.mapsUrl ? (
+                    <a
+                      href={office.mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-base text-gray-600 dark:text-gray-300 hover:text-accent-500 transition-colors"
+                    >
+                      {office.street}, {office.location}
+                    </a>
+                  ) : (
+                    <span className="text-base text-gray-600 dark:text-gray-300">
+                      {office.street}, {office.location}
+                    </span>
+                  )}
                 </li>
               </ul>
             </motion.div>

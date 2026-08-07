@@ -46,7 +46,7 @@ export default function Footer() {
             className="h-12 w-auto mb-4 brightness-0 invert"
           />
           <p className="text-gray-300 text-sm leading-relaxed">
-            Especialistas en remates bancarios en Chihuahua, Ciudad Juárez y Querétaro.
+            Especialistas en remates bancarios (cesión de derechos) a nivel nacional.
           </p>
           <div className="flex gap-3 mt-4">
             {socialLinks.map(({ icon, href, label }) => (
@@ -82,9 +82,12 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-        {OFFICES.map(({ city, cityLabel, phone, email, street, location }) => (
+        {OFFICES.map(({ city, cityLabel, phone, email, street, location, mapsUrl }) => (
           <div key={city}>
-            <h4 className="font-semibold text-accent-400 mb-4">Contacto {city}</h4>
+            <h4 className="flex items-center gap-2 font-semibold text-accent-400 mb-4">
+              <MapPin size={16} className="flex-shrink-0" />
+              {cityLabel}
+            </h4>
             <ul className="space-y-3 text-gray-300 text-sm">
               <li className="flex items-center gap-2">
                 <Phone size={14} className="flex-shrink-0" />
@@ -105,13 +108,20 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-2">
                 <MapPin size={14} className="flex-shrink-0 mt-0.5" />
-                <span>{cityLabel}</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <MapPin size={14} className="flex-shrink-0 mt-0.5" />
-                <span>
-                  {street}, {location}
-                </span>
+                {mapsUrl ? (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-accent-400 transition-colors"
+                  >
+                    {street}, {location}
+                  </a>
+                ) : (
+                  <span>
+                    {street}, {location}
+                  </span>
+                )}
               </li>
             </ul>
           </div>

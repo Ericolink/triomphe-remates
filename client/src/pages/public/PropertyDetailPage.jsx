@@ -141,6 +141,16 @@ export default function PropertyDetailPage() {
     return parts.filter(Boolean).join(' ');
   };
 
+  // Título de pestaña/buscador — property.title solo (ej. "LOS ARCOS") no dice nada de tipo
+  // ni ciudad, que es justo lo que la gente busca ("casa en remate en Cd. Juárez"). El <h1>
+  // visible más abajo sigue usando property.title solo, este título es solo para <SEO>.
+  const buildSeoTitle = (p) => {
+    const content = BUSINESS_LINE_CONTENT[p.businessLine] || BUSINESS_LINE_CONTENT.remate;
+    const parts = [TYPE_LABELS[p.type] || p.type, content.descriptionSuffix];
+    if (p.city) parts.push(`en ${CITY_LABELS[p.city]}`);
+    return `${p.title} - ${parts.join(' ')}`;
+  };
+
   if (isLoading) return <Spinner size="lg" className="py-40" />;
   if (isError || !property)
     return (
@@ -159,7 +169,7 @@ export default function PropertyDetailPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-10 dark:bg-[#1a1f2e]">
       <SEO
-        title={property.title}
+        title={buildSeoTitle(property)}
         description={buildDescription(property)}
         image={coverUrl}
         url={`/propiedades/${property.slug}`}
@@ -331,7 +341,7 @@ export default function PropertyDetailPage() {
           {(property.address || property.colonia) && (
             <p className="flex items-center gap-1 text-gray-500 mb-4">
               <MapPin size={16} />
-              {[property.address, property.colonia, CITY_LABELS[property.city]]
+              {[property.address, property.colonia, CITY_LABELS[property.city], property.state]
                 .filter(Boolean)
                 .join(', ')}
             </p>
@@ -344,22 +354,22 @@ export default function PropertyDetailPage() {
                 <span className="font-medium">
                   {formatMetric(property.constructionMeters ?? property.squareMeters)}
                 </span>{' '}
-                m² construcción
+                M² Construcción
               </span>
             </span>
             <span className="flex items-center gap-2">
               <LandPlot size={18} className="text-primary-700 dark:text-primary-400" />
               <span>
-                <span className="font-medium">{formatMetric(property.terrainMeters)}</span> m² terreno
+                <span className="font-medium">{formatMetric(property.terrainMeters)}</span> M² Terreno
               </span>
             </span>
             <span className="flex items-center gap-2">
               <Bed size={18} className="text-primary-700 dark:text-primary-400" />{' '}
-              {formatMetric(property.bedrooms)} recámaras
+              {formatMetric(property.bedrooms)} Recámaras
             </span>
             <span className="flex items-center gap-2">
               <Bath size={18} className="text-primary-700 dark:text-primary-400" />{' '}
-              {formatMetric(property.bathrooms)} baños
+              {formatMetric(property.bathrooms)} Baños
             </span>
           </div>
 
@@ -393,7 +403,9 @@ export default function PropertyDetailPage() {
             >
               {formatPrice(property.price)}
             </p>
-            <p className="text-xs text-primary-300 mt-1">{CITY_LABELS[property.city]}</p>
+            <p className="text-xs text-primary-300 mt-1">
+              {[CITY_LABELS[property.city], property.state].filter(Boolean).join(', ')}
+            </p>
           </div>
 
           <WhatsAppButton
