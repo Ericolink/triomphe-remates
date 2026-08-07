@@ -29,6 +29,11 @@ const PropertyAlert = sequelize.define(
       allowNull: true,
       comment: 'null = cualquier tipo',
     },
+    minPrice: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      comment: 'null = sin límite inferior de precio',
+    },
     maxPrice: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: true,

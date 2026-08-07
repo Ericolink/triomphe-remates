@@ -6,30 +6,44 @@ const { ApiError } = require('../middleware/errorHandler');
 
 // POST /api/alerts
 const subscribe = async (req, res) => {
-  const { name, email, phone, city, type, maxPrice } = req.body;
+  const { name, email, phone, city, type, minPrice, maxPrice } = req.body;
 
-  if (!name || !email) throw new ApiError(400, 'Nombre y email son requeridos');
+  if (!name || !email || !phone) {
+    throw new ApiError(400, 'Nombre, email y teléfono son requeridos');
+  }
   if (!validateEmail(email)) throw new ApiError(400, 'Email inválido');
   if (!validatePhone(phone))
     throw new ApiError(400, 'Teléfono inválido — usa 10 dígitos, con o sin +52');
 
+  const attrs = {
+    name: name.trim(),
+    phone: phone.trim(),
+    city: city || null,
+    type: type || null,
+    minPrice: minPrice ? parseFloat(minPrice) : null,
+    maxPrice: maxPrice ? parseFloat(maxPrice) : null,
+  };
+
+  // Un mismo email puede volver a suscribirse con un rango/filtro distinto (p. ej.
+  // cambió de idea sobre el precio) — en vez de rechazar el registro repetido con un
+  // 409, la suscripción activa existente se actualiza con los datos nuevos. `token`
+  // e `id` nunca se tocan: el link de baja ya enviado por correo con el token viejo
+  // debe seguir funcionando después de esta actualización.
   const existing = await PropertyAlert.findOne({
     where: { email: email.trim().toLowerCase(), isActive: true },
   });
+
   if (existing) {
-    throw new ApiError(
-      409,
-      'Ya tienes una alerta activa con este email. Revisa tu bandeja de entrada para modificarla.'
-    );
+    await existing.update(attrs);
+    return res.status(200).json({
+      message: 'Tu alerta ya estaba activa — se actualizó con los nuevos datos.',
+      data: { id: existing.id },
+    });
   }
 
   const alert = await PropertyAlert.create({
-    name: name.trim(),
+    ...attrs,
     email: email.trim().toLowerCase(),
-    phone: phone?.trim() || null,
-    city: city || null,
-    type: type || null,
-    maxPrice: maxPrice ? parseFloat(maxPrice) : null,
   });
 
   return res.status(201).json({

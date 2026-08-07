@@ -22,6 +22,7 @@ const notifyMatchingAlerts = async (property) => {
       if (a.city && a.city !== property.city) return false;
       if (a.type && a.type !== property.type) return false;
       if (a.maxPrice && parsedPrice && parsedPrice > parseFloat(a.maxPrice)) return false;
+      if (a.minPrice && parsedPrice && parsedPrice < parseFloat(a.minPrice)) return false;
       return true;
     });
 

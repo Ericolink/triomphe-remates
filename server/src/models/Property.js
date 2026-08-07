@@ -25,6 +25,11 @@ const Property = sequelize.define(
       type: DataTypes.ENUM('juarez', 'chihuahua', 'queretaro'),
       allowNull: false,
     },
+    state: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'Estado de la república (texto libre, no ligado al ENUM de city)',
+    },
     type: {
       type: DataTypes.ENUM('casa', 'departamento', 'terreno', 'local', 'bodega'),
       allowNull: false,

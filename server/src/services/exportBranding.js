@@ -24,8 +24,9 @@ const statusHex = { disponible: ST_GREEN, apartado: ST_YELLOW, vendido: ST_RED }
 const COMPANY_PHONE = '+52 (656) 579-2750';
 const COMPANY_WHATSAPP = '526565792750';
 const COMPANY_EMAIL = 't.bienesraicesmx@gmail.com';
-// Misma dirección de oficina que client/src/components/layout/Footer.jsx (Cd. Juárez).
+// Misma dirección de oficina que client/src/utils/constants.js OFFICES (Cd. Juárez).
 const COMPANY_ADDRESS = 'Av. Paseo Triunfo de la República 215-INT 24, San Lorenzo, 32320 Juárez, Chih.';
+const COMPANY_ADDRESS_MAPS_URL = 'https://maps.app.goo.gl/iRTMK1476tSHDiw36';
 
 module.exports = {
   PRIMARY,
@@ -47,4 +48,5 @@ module.exports = {
   COMPANY_WHATSAPP,
   COMPANY_EMAIL,
   COMPANY_ADDRESS,
+  COMPANY_ADDRESS_MAPS_URL,
 };

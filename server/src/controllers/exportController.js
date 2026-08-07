@@ -32,6 +32,7 @@ const {
   COMPANY_WHATSAPP,
   COMPANY_EMAIL,
   COMPANY_ADDRESS,
+  COMPANY_ADDRESS_MAPS_URL,
 } = require('../services/exportBranding');
 const { formatLongDate, formatLongDateTime } = require('../utils/formatters');
 const {
@@ -669,7 +670,12 @@ const drawQuoteFooter = (doc, PW, MX, FOOTER_H) => {
     .fillColor('white')
     .fontSize(9)
     .font('Helvetica')
-    .text(COMPANY_ADDRESS, MX + colW, top + 30, { width: colW, lineGap: 1 })
+    .text(COMPANY_ADDRESS, MX + colW, top + 30, {
+      width: colW,
+      lineGap: 1,
+      link: COMPANY_ADDRESS_MAPS_URL,
+      underline: true,
+    })
     .text(`https://wa.me/${COMPANY_WHATSAPP}`, MX + colW, top + 58, { width: colW });
 
   doc

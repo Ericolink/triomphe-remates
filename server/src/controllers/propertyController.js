@@ -246,6 +246,7 @@ const createProperty = async (req, res) => {
     description,
     price,
     city,
+    state,
     type,
     category,
     businessLine,
@@ -285,6 +286,7 @@ const createProperty = async (req, res) => {
         description,
         price: nullIfEmpty(price),
         city,
+        state: nullIfEmpty(state),
         type,
         category: category || 'remate',
         businessLine: businessLine || 'remate',
@@ -351,6 +353,7 @@ const updateProperty = async (req, res) => {
     description,
     price,
     city,
+    state,
     type,
     category,
     businessLine,
@@ -390,6 +393,7 @@ const updateProperty = async (req, res) => {
   if (description !== undefined) updates.description = description;
   if (price !== undefined) updates.price = nullIfEmpty(price);
   if (city !== undefined) updates.city = city;
+  if (state !== undefined) updates.state = nullIfEmpty(state);
   if (type !== undefined) updates.type = type;
   if (category !== undefined) updates.category = category;
   if (businessLine !== undefined) updates.businessLine = businessLine;
