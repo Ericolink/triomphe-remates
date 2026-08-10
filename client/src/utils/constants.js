@@ -17,7 +17,7 @@ export const OFFICES = [
     city: 'Chihuahua',
     cityLabel: 'Chihuahua, Chih.',
     phone: '+52 (614) 477-9231',
-    email: 'Próximamente',
+    email: 't.bienesraicesmx@gmail.com',
     street: 'C. Alabama 2400',
     location: 'Quintas del Sol, Campestre-Lomas, 31214 Chihuahua, Chih.',
     mapsUrl: 'https://maps.app.goo.gl/Cq64eJ4sxtLvTwAW9',

@@ -34,15 +34,15 @@ const processSteps = [
   },
   {
     step: 3,
-    icon: Search,
-    title: 'Verificación legal',
-    desc: 'Se revisa la disponibilidad y se realiza la verificación legal de la propiedad. Se confirman resultados positivos antes de continuar con la operación.',
+    icon: Tag,
+    title: 'Apartado de la propiedad',
+    desc: 'El cliente realiza el apartado de la propiedad ya con el conocimiento del proceso y detalles de la propiedad, con su INE, y monto requerido.',
   },
   {
     step: 4,
-    icon: Tag,
-    title: 'Apartado de la propiedad',
-    desc: 'El cliente realiza el apartado de la propiedad con el monto requerido, asegurando su reserva en el inventario.',
+    icon: Search,
+    title: 'Verificación de disponibilidad y viabilidad de la propiedad',
+    desc: 'Se revisa la disponibilidad comercial y se realiza la verificación legal de la propiedad mediante un dictamen legal y se confirman resultados positivos antes de continuar con la operación.',
   },
   {
     step: 5,
@@ -53,7 +53,7 @@ const processSteps = [
   {
     step: 6,
     icon: Banknote,
-    title: 'Pago del remate',
+    title: 'Pago del Remate Bancario a institución financiera y a Triomphe',
     desc: 'El cliente realiza el pago o transferencia a la institución financiera (banco) correspondiente y a Triomphe.',
   },
   {
@@ -66,7 +66,7 @@ const processSteps = [
     step: 8,
     icon: Scale,
     title: 'Periodo legal',
-    desc: 'Se gestiona el seguimiento de las etapas legales y se mantiene comunicación mensual con el cliente mediante WhatsApp.',
+    desc: 'Se gestiona el seguimiento de las etapas legales y se mantiene comunicación mensual con el cliente.',
   },
   {
     step: 9,
