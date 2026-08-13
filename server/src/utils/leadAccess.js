@@ -3,18 +3,21 @@
 // puede ver/editar/asignar un usuario en el módulo de prospectos importa de aquí.
 //
 // Niveles (de más a menos acceso):
-//  - admin: acceso total, siempre (role==='admin', crmRole no se consulta).
-//  - coordinador_ventas: ve/edita todos los leads, puede asignar/reasignar responsable.
-//  - capturista: ve los leads que él creó (incluso ya asignados a un asesor, solo lectura
-//    en ese caso); solo puede editar mientras el lead no tenga responsable asignado.
+//  - admin: acceso total, siempre.
+//  - asistente_administrativo: ve/edita todos los leads, puede asignar/reasignar
+//    responsable, puede crear. Ocupa el lugar que antes de la unificación de roles tenía
+//    'coordinador_ventas' — ver comentario en server/src/models/User.js.
 //  - asesor_ventas: ve/edita únicamente los leads asignados a él; no puede crear ni
 //    reasignar.
-//  - null (sin crmRole y no admin): sin acceso al CRM de leads.
+//  - coordinador_ventas / null: sin acceso al CRM de leads (coordinador_ventas solo tiene
+//    acceso a inventario, gateado aparte en las rutas de propiedades/export).
 
 function crmAccessLevel(user) {
   if (!user) return null;
-  if (user.role === 'admin') return 'admin';
-  return user.crmRole || null;
+  if (user.role === 'admin' || user.role === 'asistente_administrativo' || user.role === 'asesor_ventas') {
+    return user.role;
+  }
+  return null;
 }
 
 function hasCrmAccess(user) {
@@ -29,8 +32,7 @@ function getLeadVisibilityWhere(user, { alias } = {}) {
   const level = crmAccessLevel(user);
   const key = (field) => (alias ? `$${alias}.${field}$` : field);
 
-  if (level === 'admin' || level === 'coordinador_ventas') return null;
-  if (level === 'capturista') return { [key('createdByUserId')]: user.id };
+  if (level === 'admin' || level === 'asistente_administrativo') return null;
   if (level === 'asesor_ventas') return { [key('assignedToUserId')]: user.id };
   // Defensa en profundidad — no debería llegar aquí, la ruta ya bloqueó con
   // requireCrmAccess antes de que el controller alcance a construir el where.
@@ -39,25 +41,21 @@ function getLeadVisibilityWhere(user, { alias } = {}) {
 
 function canViewLead(user, lead) {
   const level = crmAccessLevel(user);
-  if (level === 'admin' || level === 'coordinador_ventas') return true;
-  if (level === 'capturista') return lead.createdByUserId === user.id;
+  if (level === 'admin' || level === 'asistente_administrativo') return true;
   if (level === 'asesor_ventas') return lead.assignedToUserId === user.id;
   return false;
 }
 
 function canEditLead(user, lead) {
   const level = crmAccessLevel(user);
-  if (level === 'admin' || level === 'coordinador_ventas') return true;
+  if (level === 'admin' || level === 'asistente_administrativo') return true;
   if (level === 'asesor_ventas') return lead.assignedToUserId === user.id;
-  if (level === 'capturista') {
-    return lead.createdByUserId === user.id && lead.assignedToUserId == null;
-  }
   return false;
 }
 
 function canAssignLeads(user) {
   const level = crmAccessLevel(user);
-  return level === 'admin' || level === 'coordinador_ventas';
+  return level === 'admin' || level === 'asistente_administrativo';
 }
 
 module.exports = {

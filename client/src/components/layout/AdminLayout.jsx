@@ -24,19 +24,27 @@ import { buildImageUrl } from '../../utils/images';
 import toast from 'react-hot-toast';
 import useModalA11y from '../../hooks/useModalA11y';
 import usePopoverA11y from '../../hooks/usePopoverA11y';
-import { hasCrmAccess } from '../../utils/permissions';
+import { hasCrmAccess, hasBackofficeAccess } from '../../utils/permissions';
+import { ROLE_LABELS } from '../../utils/constants';
 
 // Agrupado por tema (en vez de una lista plana de 11 ítems) para que la ubicación de
 // cada sección sea predecible sin tener que leer cada label — ver auditoría UX admin.
-const navGroups = [
-  {
-    label: null,
-    links: [{ to: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' }],
-  },
-  {
-    label: 'Propiedades',
-    links: [{ to: '/admin/propiedades', icon: <Building2 size={18} />, label: 'Propiedades' }],
-  },
+// Dashboard y Propiedades se separan del resto porque tienen su propia regla de
+// visibilidad (ver Sidebar): Dashboard es de soporte (admin/asistente_administrativo),
+// Propiedades lo ve cualquier rol (con distinto nivel de acceso dentro de la página).
+const dashboardGroup = {
+  label: null,
+  links: [{ to: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' }],
+};
+
+const propertiesGroup = {
+  label: 'Propiedades',
+  links: [{ to: '/admin/propiedades', icon: <Building2 size={18} />, label: 'Propiedades' }],
+};
+
+// Módulos de soporte — solo Admin y Asistente administrativo (ver hasBackofficeAccess).
+// Coordinador de ventas y Asesor de ventas no los ven.
+const backofficeGroups = [
   {
     label: 'Comunicación',
     links: [
@@ -73,14 +81,15 @@ const adminOnlyGroup = {
 };
 
 function Sidebar({ user, onClose, onLogout }) {
-  // El CRM se oculta para un editor sin crmRole (o cualquier usuario sin hasCrmAccess):
-  // sin esto, el link llevaba a una pantalla que solo mostraba errores 403 en cada
-  // request, porque requireCrmAccess en el backend ya la bloquea por completo.
+  // El CRM se oculta para quien no tiene hasCrmAccess (Coordinador de ventas): sin esto,
+  // el link llevaba a una pantalla que solo mostraba errores 403 en cada request, porque
+  // requireCrmAccess en el backend ya la bloquea por completo. Lo mismo para los módulos
+  // de soporte (Comunicación/Reclutamiento/Contenido/Dashboard) con hasBackofficeAccess.
   const groups = [
-    navGroups[0],
-    navGroups[1],
+    ...(hasBackofficeAccess(user) ? [dashboardGroup] : []),
+    propertiesGroup,
     ...(hasCrmAccess(user) ? [crmGroup] : []),
-    ...navGroups.slice(2),
+    ...(hasBackofficeAccess(user) ? backofficeGroups : []),
     ...(user?.role === 'admin' ? [adminOnlyGroup] : []),
   ];
   return (
@@ -262,8 +271,8 @@ export default function AdminLayout() {
             >
               <Menu size={22} aria-hidden="true" />
             </button>
-            <span className="hidden md:inline-block text-xs bg-accent-400 text-primary-900 px-2 py-0.5 rounded-full font-semibold capitalize">
-              {user?.role}
+            <span className="hidden md:inline-block text-xs bg-accent-400 text-primary-900 px-2 py-0.5 rounded-full font-semibold">
+              {ROLE_LABELS[user?.role] || user?.role}
             </span>
           </div>
 

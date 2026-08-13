@@ -15,7 +15,7 @@ const {
 
 router.post('/', publicFormLimiter, alertSubscribeLimiter, subscribe);
 router.get('/unsubscribe', apiLimiter, unsubscribe);
-router.get('/', apiLimiter, authenticate, authorize('admin', 'editor'), getAlerts);
+router.get('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getAlerts);
 router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteAlert);
 
 module.exports = router;

@@ -2,6 +2,13 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import Spinner from './components/ui/Spinner';
+import {
+  defaultRouteFor,
+  isAdmin,
+  hasCrmAccess,
+  hasBackofficeAccess,
+  canManageInventory,
+} from './utils/permissions';
 
 // Páginas públicas — cargadas de forma diferida para no bloquear el primer render
 const HomePage = lazy(() => import('./pages/public/HomePage'));
@@ -39,6 +46,22 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/admin/login" replace />;
 };
 
+// Coordinador de ventas y Asesor de ventas no tienen acceso al dashboard de analytics
+// (ver hasBackofficeAccess en utils/permissions.js) — cada rol aterriza en el módulo que
+// sí puede usar en vez de pegarle a "/admin/dashboard" y recibir un 403 de por vida.
+const DefaultAdminRoute = () => {
+  const { user } = useAuthStore();
+  return <Navigate to={defaultRouteFor(user)} replace />;
+};
+
+// Defensa en profundidad para navegación directa por URL (la SPA ya oculta estos links
+// del sidebar según el rol — ver AdminLayout.jsx — pero sin esto quien tipeara la URL a
+// mano llegaba a una página que solo mostraba errores 403 en cada request).
+const RoleRoute = ({ allow, children }) => {
+  const { user } = useAuthStore();
+  return allow(user) ? children : <Navigate to={defaultRouteFor(user)} replace />;
+};
+
 const PageFallback = () => <Spinner size="lg" className="py-40" />;
 
 export default function App() {
@@ -70,13 +93,41 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route index element={<DefaultAdminRoute />} />
+            <Route
+              path="dashboard"
+              element={
+                <RoleRoute allow={hasBackofficeAccess}>
+                  <DashboardPage />
+                </RoleRoute>
+              }
+            />
             <Route path="estadisticas" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="propiedades" element={<AdminPropertiesPage />} />
-            <Route path="propiedades/nueva" element={<PropertyFormPage />} />
-            <Route path="propiedades/:id/editar" element={<PropertyFormPage />} />
-            <Route path="crm" element={<CrmPage />} />
+            <Route
+              path="propiedades/nueva"
+              element={
+                <RoleRoute allow={canManageInventory}>
+                  <PropertyFormPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="propiedades/:id/editar"
+              element={
+                <RoleRoute allow={canManageInventory}>
+                  <PropertyFormPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="crm"
+              element={
+                <RoleRoute allow={hasCrmAccess}>
+                  <CrmPage />
+                </RoleRoute>
+              }
+            />
             <Route path="leads" element={<Navigate to="/admin/crm?tab=prospectos" replace />} />
             <Route
               path="calendario"
@@ -87,13 +138,62 @@ export default function App() {
               path="casos-exito"
               element={<Navigate to="/admin/crm?tab=casos-exito" replace />}
             />
-            <Route path="vacantes" element={<JobsAdminPage />} />
-            <Route path="postulaciones" element={<ApplicationsPage />} />
-            <Route path="usuarios" element={<UsersPage />} />
-            <Route path="buzon" element={<BuzonAdminPage />} />
-            <Route path="alertas" element={<AlertsAdminPage />} />
-            <Route path="auditoria" element={<AuditPage />} />
-            <Route path="testimonios" element={<TestimonialsAdminPage />} />
+            <Route
+              path="vacantes"
+              element={
+                <RoleRoute allow={hasBackofficeAccess}>
+                  <JobsAdminPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="postulaciones"
+              element={
+                <RoleRoute allow={hasBackofficeAccess}>
+                  <ApplicationsPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="usuarios"
+              element={
+                <RoleRoute allow={isAdmin}>
+                  <UsersPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="buzon"
+              element={
+                <RoleRoute allow={hasBackofficeAccess}>
+                  <BuzonAdminPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="alertas"
+              element={
+                <RoleRoute allow={hasBackofficeAccess}>
+                  <AlertsAdminPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="auditoria"
+              element={
+                <RoleRoute allow={isAdmin}>
+                  <AuditPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="testimonios"
+              element={
+                <RoleRoute allow={hasBackofficeAccess}>
+                  <TestimonialsAdminPage />
+                </RoleRoute>
+              }
+            />
             <Route
               path="dashboard-comercial"
               element={<Navigate to="/admin/dashboard" replace />}

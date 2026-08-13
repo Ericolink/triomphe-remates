@@ -56,7 +56,10 @@ const getProperties = async (req, res) => {
   // El inventario público solo muestra "disponible": apartado/vendido salen de circulación
   // y de ahí en adelante solo son visibles desde el panel admin (getPropertyById/By Slug ya
   // aplican la misma regla). El staff autenticado sí puede filtrar por cualquier status.
-  const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
+  // Todo usuario autenticado en `users` es staff (ya no hay un rol "no-staff"): los 4
+  // roles (admin/coordinador_ventas/asesor_ventas/asistente_administrativo) pueden ver
+  // borradores/internalNotes — el detalle de qué puede EDITAR sigue gateado aparte por ruta.
+  const isStaff = Boolean(req.user);
 
   if (city) where.city = city;
   if (type) where.type = type;
@@ -206,7 +209,10 @@ const getPropertyStats = async (req, res) => {
 // registra vistas: el registro de vistas vive solo en trackView, disparado explícitamente
 // por la ficha pública. Ver POST /:id/view.
 const getPropertyById = async (req, res) => {
-  const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
+  // Todo usuario autenticado en `users` es staff (ya no hay un rol "no-staff"): los 4
+  // roles (admin/coordinador_ventas/asesor_ventas/asistente_administrativo) pueden ver
+  // borradores/internalNotes — el detalle de qué puede EDITAR sigue gateado aparte por ruta.
+  const isStaff = Boolean(req.user);
   const property = await Property.findByPk(req.params.id, {
     attributes: isStaff ? undefined : { exclude: ['internalNotes'] },
     include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
@@ -224,7 +230,10 @@ const getPropertyById = async (req, res) => {
 // (ver nota en getPropertyById); el cliente llama a POST /:id/view por separado una vez
 // que la propiedad carga.
 const getPropertyBySlug = async (req, res) => {
-  const isStaff = req.user && ['admin', 'editor'].includes(req.user.role);
+  // Todo usuario autenticado en `users` es staff (ya no hay un rol "no-staff"): los 4
+  // roles (admin/coordinador_ventas/asesor_ventas/asistente_administrativo) pueden ver
+  // borradores/internalNotes — el detalle de qué puede EDITAR sigue gateado aparte por ruta.
+  const isStaff = Boolean(req.user);
   const property = await Property.findOne({
     where: { slug: req.params.slug },
     attributes: { exclude: ['internalNotes'] },

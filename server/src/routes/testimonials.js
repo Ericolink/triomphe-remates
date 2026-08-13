@@ -23,15 +23,15 @@ router.get(
   '/admin/all',
   apiLimiter,
   authenticate,
-  authorize('admin', 'editor'),
+  authorize('admin', 'asistente_administrativo'),
   getAllTestimonials
 );
-router.get('/:id', apiLimiter, authenticate, authorize('admin', 'editor'), getTestimonialById);
+router.get('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getTestimonialById);
 router.post(
   '/',
   uploadLimiter,
   authenticate,
-  authorize('admin', 'editor'),
+  authorize('admin', 'asistente_administrativo'),
   testimonialImages,
   createTestimonial
 );
@@ -39,7 +39,7 @@ router.put(
   '/:id',
   uploadLimiter,
   authenticate,
-  authorize('admin', 'editor'),
+  authorize('admin', 'asistente_administrativo'),
   testimonialImages,
   updateTestimonial
 );

@@ -28,22 +28,22 @@ router.get(
   '/applications',
   apiLimiter,
   authenticate,
-  authorize('admin', 'editor'),
+  authorize('admin', 'asistente_administrativo'),
   getApplications
 );
-router.get('/admin/all', apiLimiter, authenticate, authorize('admin', 'editor'), getAllPositions);
+router.get('/admin/all', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getAllPositions);
 router.get('/:id', apiLimiter, getPositionById);
 router.post('/:id/apply', publicFormLimiter, applyToPosition);
 
 // Rutas admin
-router.post('/', apiLimiter, authenticate, authorize('admin', 'editor'), createPosition);
-router.put('/:id', apiLimiter, authenticate, authorize('admin', 'editor'), updatePosition);
+router.post('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), createPosition);
+router.put('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), updatePosition);
 router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deletePosition);
 router.put(
   '/applications/:id',
   apiLimiter,
   authenticate,
-  authorize('admin', 'editor'),
+  authorize('admin', 'asistente_administrativo'),
   updateApplication
 );
 router.delete('/applications/:id', apiLimiter, authenticate, authorize('admin'), deleteApplication);

@@ -18,13 +18,28 @@ const { exportLimiter } = require('../middleware/rateLimitMiddleware');
  *   description: Exportación de inventario
  */
 
-router.get('/excel', exportLimiter, authenticate, authorize('admin', 'editor'), exportExcel);
-router.get('/pdf', exportLimiter, authenticate, authorize('admin', 'editor'), exportPDF);
+// Exportación de inventario: Coordinador de ventas solo tiene este permiso (ver
+// exportarpropiedades) además de Admin y Asistente administrativo — Asesor de ventas
+// solo puede ver el inventario, no exportarlo.
+router.get(
+  '/excel',
+  exportLimiter,
+  authenticate,
+  authorize('admin', 'coordinador_ventas', 'asistente_administrativo'),
+  exportExcel
+);
+router.get(
+  '/pdf',
+  exportLimiter,
+  authenticate,
+  authorize('admin', 'coordinador_ventas', 'asistente_administrativo'),
+  exportPDF
+);
 router.get(
   '/feedback/excel',
   exportLimiter,
   authenticate,
-  authorize('admin', 'editor'),
+  authorize('admin', 'asistente_administrativo'),
   exportFeedbackExcel
 );
 router.get('/leads/excel', exportLimiter, authenticate, requireCrmAccess, exportLeadsExcel);

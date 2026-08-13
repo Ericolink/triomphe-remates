@@ -57,12 +57,11 @@ const register = async (req, res) => {
 
   let user;
   try {
-    // Sin `crmRole`: register nunca aceptó ese campo en el body — se preserva ese
-    // comportamiento (ver AUDITORIA_CREACION_USUARIOS.md). El `audit` callback sí se
-    // agrega ahora —mismo patrón que usersController.createUser— pero únicamente como
-    // parte de la instrumentación de uso de arriba, para poder consultar después quién
-    // usó este endpoint legacy; no reemplaza la recomendación de esa auditoría de
-    // consolidar ambos endpoints en un servicio único.
+    // El `audit` callback se agrega aquí —mismo patrón que usersController.createUser—
+    // pero únicamente como parte de la instrumentación de uso de arriba, para poder
+    // consultar después quién usó este endpoint legacy (ver AUDITORIA_CREACION_USUARIOS.md);
+    // no reemplaza la recomendación de esa auditoría de consolidar ambos endpoints en un
+    // servicio único.
     user = await userService.createUser(
       { name, email, password, role },
       {
@@ -91,7 +90,6 @@ const register = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      crmRole: user.crmRole,
     },
   });
 };
@@ -127,7 +125,6 @@ const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        crmRole: user.crmRole,
       },
     });
   } catch (error) {

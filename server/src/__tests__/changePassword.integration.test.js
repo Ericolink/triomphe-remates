@@ -16,7 +16,7 @@ describe('PUT /api/auth/change-password', () => {
       name: 'Editor de prueba',
       email: 'change-password-test@triomphe.test',
       password: await hashPassword('OldPassword123'),
-      role: 'editor',
+      role: 'asistente_administrativo',
       isActive: true,
     });
   });

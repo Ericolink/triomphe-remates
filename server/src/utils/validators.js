@@ -35,7 +35,13 @@ const validateRegister = (data) => {
   if (!validateEmail(data.email)) errors.push('Email inválido');
   if (!validatePassword(data.password))
     errors.push('La contraseña debe tener al menos 8 caracteres');
-  if (!data.role || !['admin', 'editor'].includes(data.role)) errors.push('Rol inválido');
+  if (
+    !data.role ||
+    !['admin', 'coordinador_ventas', 'asesor_ventas', 'asistente_administrativo'].includes(
+      data.role
+    )
+  )
+    errors.push('Rol inválido');
   return errors;
 };
 

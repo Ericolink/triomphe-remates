@@ -31,12 +31,10 @@ const options = {
             id: { type: 'integer', example: 1 },
             name: { type: 'string', example: 'Juana Pérez' },
             email: { type: 'string', format: 'email', example: 'juana@triomphe.com' },
-            role: { type: 'string', enum: ['admin', 'editor'], example: 'editor' },
-            crmRole: {
+            role: {
               type: 'string',
-              enum: ['coordinador_ventas', 'capturista', 'asesor_ventas'],
-              nullable: true,
-              description: 'Rol dentro del CRM de Leads. null = sin acceso al CRM',
+              enum: ['admin', 'coordinador_ventas', 'asesor_ventas', 'asistente_administrativo'],
+              example: 'asistente_administrativo',
             },
             isActive: { type: 'boolean', example: true },
             profilePhoto: { type: 'string', nullable: true, example: 'https://res.cloudinary.com/.../avatars/xyz.jpg' },

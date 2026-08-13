@@ -7,10 +7,11 @@ import toast from 'react-hot-toast';
 import { login } from '../../services/authService';
 import useAuthStore from '../../store/authStore';
 import WelcomeScreen from '../../components/ui/WelcomeScreen';
+import { defaultRouteFor } from '../../utils/permissions';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, setAuth } = useAuthStore();
+  const { isAuthenticated, user, setAuth } = useAuthStore();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [welcome, setWelcome] = useState(null); // nombre del usuario
@@ -25,7 +26,7 @@ export default function LoginPage() {
     onError: () => toast.error('Credenciales incorrectas'),
   });
 
-  if (isAuthenticated && !welcome) return <Navigate to="/admin/dashboard" replace />;
+  if (isAuthenticated && !welcome) return <Navigate to={defaultRouteFor(user)} replace />;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -36,7 +37,9 @@ export default function LoginPage() {
   return (
     <>
       <AnimatePresence>
-        {welcome && <WelcomeScreen name={welcome} onDone={() => navigate('/admin/dashboard')} />}
+        {welcome && (
+          <WelcomeScreen name={welcome} onDone={() => navigate(defaultRouteFor(user))} />
+        )}
       </AnimatePresence>
 
       <div className="min-h-screen bg-gradient-to-br from-primary-900 to-primary-700 dark:from-primary-950 dark:to-[#242938] flex items-center justify-center p-4">

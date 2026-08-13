@@ -27,9 +27,15 @@ import {
   labelsToOptions,
 } from '../../utils/constants';
 import { downloadBlob } from '../../utils/download';
+import useAuthStore from '../../store/authStore';
+import { canManageInventory, canExportInventory, isAdmin } from '../../utils/permissions';
 
 export default function AdminPropertiesPage() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const canManage = canManageInventory(user);
+  const canExport = canExportInventory(user);
+  const canDelete = isAdmin(user);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
@@ -149,34 +155,38 @@ export default function AdminPropertiesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-2 mr-2">
+          {canExport && (
+            <div className="flex gap-2 mr-2">
+              <motion.button
+                whileHover={buttonHover}
+                whileTap={buttonTap}
+                onClick={() => handleExport('excel')}
+                disabled={exporting === 'excel'}
+                className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
+              >
+                <FileSpreadsheet size={14} /> {exporting === 'excel' ? 'Generando...' : 'Excel'}
+              </motion.button>
+              <motion.button
+                whileHover={buttonHover}
+                whileTap={buttonTap}
+                onClick={() => handleExport('pdf')}
+                disabled={exporting === 'pdf'}
+                className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+              >
+                <FileText size={14} /> {exporting === 'pdf' ? 'Generando...' : 'PDF'}
+              </motion.button>
+            </div>
+          )}
+          {canManage && (
             <motion.button
               whileHover={buttonHover}
               whileTap={buttonTap}
-              onClick={() => handleExport('excel')}
-              disabled={exporting === 'excel'}
-              className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
+              onClick={() => navigate('/admin/propiedades/nueva')}
+              className="flex items-center gap-1.5 bg-accent-400 dark:bg-accent-500 text-primary-900 px-4 py-2 rounded-xl text-xs font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
             >
-              <FileSpreadsheet size={14} /> {exporting === 'excel' ? 'Generando...' : 'Excel'}
+              <Plus size={16} /> Nueva propiedad
             </motion.button>
-            <motion.button
-              whileHover={buttonHover}
-              whileTap={buttonTap}
-              onClick={() => handleExport('pdf')}
-              disabled={exporting === 'pdf'}
-              className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-            >
-              <FileText size={14} /> {exporting === 'pdf' ? 'Generando...' : 'PDF'}
-            </motion.button>
-          </div>
-          <motion.button
-            whileHover={buttonHover}
-            whileTap={buttonTap}
-            onClick={() => navigate('/admin/propiedades/nueva')}
-            className="flex items-center gap-1.5 bg-accent-400 dark:bg-accent-500 text-primary-900 px-4 py-2 rounded-xl text-xs font-medium hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
-          >
-            <Plus size={16} /> Nueva propiedad
-          </motion.button>
+          )}
         </div>
       </motion.div>
 
@@ -320,17 +330,25 @@ export default function AdminPropertiesPage() {
                         {formatPrice(property.price)}
                       </td>
                       <td className="px-4 py-3">
-                        <select
-                          value={property.status}
-                          onChange={(e) => handleStatusChange(property, e.target.value)}
-                          className={`text-xs border-0 rounded-lg px-2 py-1 font-medium focus:outline-none focus:ring-2 focus:ring-accent-400 ${STATUS_SELECT_COLORS[property.status]}`}
-                        >
-                          {labelsToOptions(STATUS_LABELS).map((o) => (
-                            <option key={o.value} value={o.value}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
+                        {canManage ? (
+                          <select
+                            value={property.status}
+                            onChange={(e) => handleStatusChange(property, e.target.value)}
+                            className={`text-xs border-0 rounded-lg px-2 py-1 font-medium focus:outline-none focus:ring-2 focus:ring-accent-400 ${STATUS_SELECT_COLORS[property.status]}`}
+                          >
+                            {labelsToOptions(STATUS_LABELS).map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            className={`text-xs rounded-lg px-2 py-1 font-medium ${STATUS_SELECT_COLORS[property.status]}`}
+                          >
+                            {STATUS_LABELS[property.status]}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
                         {property.views ?? 0}
@@ -342,25 +360,36 @@ export default function AdminPropertiesPage() {
                         {formatDate(property.updatedAt)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <motion.button
-                          onClick={() => promoteMutation.mutate(property.id)}
-                          disabled={promoteMutation.isPending}
-                          whileHover={{ scale: 1.2 }}
-                          whileTap={{ scale: 0.85 }}
-                          title={
-                            property.isPromoted ? 'Quitar promoción' : 'Promover como estrella'
-                          }
-                          className="p-1.5 rounded-lg transition-colors hover:bg-accent-50 dark:hover:bg-accent-900/20 disabled:opacity-50"
-                        >
+                        {canManage ? (
+                          <motion.button
+                            onClick={() => promoteMutation.mutate(property.id)}
+                            disabled={promoteMutation.isPending}
+                            whileHover={{ scale: 1.2 }}
+                            whileTap={{ scale: 0.85 }}
+                            title={
+                              property.isPromoted ? 'Quitar promoción' : 'Promover como estrella'
+                            }
+                            className="p-1.5 rounded-lg transition-colors hover:bg-accent-50 dark:hover:bg-accent-900/20 disabled:opacity-50"
+                          >
+                            <Star
+                              size={18}
+                              className={
+                                property.isPromoted
+                                  ? 'text-accent-400 fill-accent-400'
+                                  : 'text-gray-300 dark:text-gray-600'
+                              }
+                            />
+                          </motion.button>
+                        ) : (
                           <Star
                             size={18}
                             className={
                               property.isPromoted
-                                ? 'text-accent-400 fill-accent-400'
-                                : 'text-gray-300 dark:text-gray-600'
+                                ? 'text-accent-400 fill-accent-400 mx-auto'
+                                : 'text-gray-300 dark:text-gray-600 mx-auto'
                             }
                           />
-                        </motion.button>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
@@ -371,17 +400,27 @@ export default function AdminPropertiesPage() {
                                 'hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20',
                               action: () => window.open(`/propiedades/${property.slug}`, '_blank'),
                             },
-                            {
-                              icon: <Pencil size={20} />,
-                              color:
-                                'hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2e3650]',
-                              action: () => navigate(`/admin/propiedades/${property.id}/editar`),
-                            },
-                            {
-                              icon: <Trash2 size={20} />,
-                              color: 'hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20',
-                              action: () => confirmDelete(property.id, property.title),
-                            },
+                            ...(canManage
+                              ? [
+                                  {
+                                    icon: <Pencil size={20} />,
+                                    color:
+                                      'hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2e3650]',
+                                    action: () =>
+                                      navigate(`/admin/propiedades/${property.id}/editar`),
+                                  },
+                                ]
+                              : []),
+                            ...(canDelete
+                              ? [
+                                  {
+                                    icon: <Trash2 size={20} />,
+                                    color:
+                                      'hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20',
+                                    action: () => confirmDelete(property.id, property.title),
+                                  },
+                                ]
+                              : []),
                           ].map(({ icon, color, action }, i) => (
                             <motion.button
                               key={i}
@@ -427,13 +466,15 @@ export default function AdminPropertiesPage() {
                 ) : (
                   <>
                     <p>Todavía no hay propiedades cargadas.</p>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/admin/propiedades/nueva')}
-                      className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
-                    >
-                      Crear la primera propiedad
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/admin/propiedades/nueva')}
+                        className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
+                      >
+                        Crear la primera propiedad
+                      </button>
+                    )}
                   </>
                 )}
               </motion.div>

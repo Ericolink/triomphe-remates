@@ -31,6 +31,20 @@ export const labelsToOptions = (labels, exclude = []) =>
     .filter(([value]) => !exclude.includes(value))
     .map(([value, label]) => ({ value, label }));
 
+export const ROLE_LABELS = {
+  admin: 'Admin',
+  coordinador_ventas: 'Coordinador de Ventas',
+  asesor_ventas: 'Asesor',
+  asistente_administrativo: 'Asistente Administrativo',
+};
+
+export const ROLE_COLORS = {
+  admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  coordinador_ventas: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  asesor_ventas: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  asistente_administrativo: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+};
+
 export const CITY_LABELS = {
   juarez: 'Cd. Juárez',
   chihuahua: 'Chihuahua',

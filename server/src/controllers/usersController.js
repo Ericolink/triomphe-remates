@@ -9,7 +9,7 @@ const { ApiError } = require('../middleware/errorHandler');
 
 // Reexportados desde userService para no duplicar la lista/función — updateUser
 // y createUser comparten estas reglas de negocio.
-const { VALID_CRM_ROLES, safeUser } = userService;
+const { VALID_ROLES, safeUser } = userService;
 
 // GET /api/users
 const getUsers = async (req, res) => {
@@ -33,7 +33,7 @@ const getUsers = async (req, res) => {
 
 // POST /api/users
 const createUser = async (req, res) => {
-  const { name, email, password, role, crmRole } = req.body;
+  const { name, email, password, role } = req.body;
 
   if (!name || !email || !password) {
     throw new ApiError(400, 'Nombre, email y contraseña son requeridos');
@@ -45,19 +45,18 @@ const createUser = async (req, res) => {
   let user;
   try {
     user = await userService.createUser(
-      { name, email, password, role, crmRole },
+      { name, email, password, role },
       {
         audit: (created) =>
           logAudit(req, 'create', 'user', created.id, {
             name: created.name,
             email: created.email,
             role: created.role,
-            crmRole: created.crmRole,
           }),
       }
     );
   } catch (err) {
-    if (err.code === 'INVALID_CRM_ROLE') throw new ApiError(400, err.message);
+    if (err.code === 'INVALID_ROLE') throw new ApiError(400, err.message);
     if (err.code === 'DUPLICATE_EMAIL') throw new ApiError(409, err.message);
     throw err;
   }
@@ -70,17 +69,14 @@ const updateUser = async (req, res) => {
   const user = await User.findByPk(req.params.id);
   if (!user) throw new ApiError(404, 'Usuario no encontrado');
 
-  const { name, email, role, crmRole, isActive, newPassword, currentPassword } = req.body;
+  const { name, email, role, isActive, newPassword, currentPassword } = req.body;
 
   if (email && email !== user.email) {
     const existing = await User.findOne({ where: { email } });
     if (existing) throw new ApiError(409, 'El email ya está en uso');
   }
-  if (crmRole && !VALID_CRM_ROLES.includes(crmRole)) {
-    throw new ApiError(
-      400,
-      `Rol de CRM inválido. Valores permitidos: ${VALID_CRM_ROLES.join(', ')}`
-    );
+  if (role && !VALID_ROLES.includes(role)) {
+    throw new ApiError(400, `Rol inválido. Valores permitidos: ${VALID_ROLES.join(', ')}`);
   }
 
   // AUDIT-022: el admin principal (ID más bajo) no puede perder el rol de admin ni
@@ -154,9 +150,6 @@ const updateUser = async (req, res) => {
     ...(name && { name }),
     ...(email && { email }),
     ...(role && { role }),
-    // A diferencia de `role` (siempre tiene un valor), crmRole sí se puede limpiar
-    // explícitamente — el selector del frontend manda '' para "sin acceso a CRM".
-    ...(crmRole !== undefined && { crmRole: crmRole || null }),
     ...(isActive !== undefined && { isActive }),
     ...(isSensitiveChange && { tokenVersion: user.tokenVersion + 1 }),
     profilePhoto,
@@ -166,7 +159,6 @@ const updateUser = async (req, res) => {
     ...(name && { name }),
     ...(email && { email }),
     ...(role && { role }),
-    ...(crmRole !== undefined && { crmRole: crmRole || null }),
     ...(isActive !== undefined && { isActive }),
     ...(newPassword && { passwordChanged: true }),
   });

@@ -18,7 +18,6 @@ async function createUser(overrides = {}) {
     email: overrides.email || `usuario-test-${RUN_TAG}-${n}@triomphe.test`,
     password: overrides.password || (await hashPassword('Password123')),
     role: overrides.role || 'admin',
-    crmRole: overrides.crmRole ?? null,
     isActive: overrides.isActive ?? true,
     tokenVersion: overrides.tokenVersion ?? 0,
   });

@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { getCrmDashboard, getCrmReports } = require('../controllers/crmAnalyticsController');
 const { authenticate } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware');
+const { requireCrmAccess } = require('../middleware/crmAccessMiddleware');
 const { apiLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -11,7 +11,10 @@ const { apiLimiter } = require('../middleware/rateLimitMiddleware');
  *   description: Dashboard y reportes comerciales agregados (CRM Comercial)
  */
 
-router.get('/dashboard', apiLimiter, authenticate, authorize('admin', 'editor'), getCrmDashboard);
-router.get('/reports', apiLimiter, authenticate, authorize('admin', 'editor'), getCrmReports);
+// Antes gateado por role (admin/editor), inconsistente con el resto del módulo CRM que
+// usa requireCrmAccess — corregido de paso: ahora un Coordinador de ventas (sin CRM)
+// tampoco puede pegarle a estos endpoints, igual que ya no ve el link en el sidebar.
+router.get('/dashboard', apiLimiter, authenticate, requireCrmAccess, getCrmDashboard);
+router.get('/reports', apiLimiter, authenticate, requireCrmAccess, getCrmReports);
 
 module.exports = router;

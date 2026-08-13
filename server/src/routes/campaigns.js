@@ -17,10 +17,14 @@ const { apiLimiter } = require('../middleware/rateLimitMiddleware');
  *   description: Campañas publicitarias de origen (CRM Comercial)
  */
 
-router.post('/', apiLimiter, authenticate, authorize('admin', 'editor'), createCampaign);
-router.get('/', apiLimiter, authenticate, authorize('admin', 'editor'), getCampaigns);
-router.get('/:id', apiLimiter, authenticate, authorize('admin', 'editor'), getCampaignById);
-router.put('/:id', apiLimiter, authenticate, authorize('admin', 'editor'), updateCampaign);
+// Campañas vive dentro del CRM Comercial (tab dentro de CrmPage) pero es un módulo
+// aparte de leads: Coordinador de ventas y Asesor de ventas no tienen acceso aunque sí
+// tengan CRM de leads (Asesor) o ninguno (Coordinador) — solo Admin y Asistente
+// administrativo, que es quien pidió explícitamente poder "modificar campañas".
+router.post('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), createCampaign);
+router.get('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getCampaigns);
+router.get('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getCampaignById);
+router.put('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), updateCampaign);
 router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteCampaign);
 
 module.exports = router;

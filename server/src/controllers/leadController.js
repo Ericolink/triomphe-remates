@@ -220,7 +220,7 @@ const createLead = async (req, res) => {
     throw new ApiError(403, 'Los asesores de ventas no pueden crear prospectos');
   }
   // Asignar responsable al crear queda reservado a quien puede asignar (admin/
-  // coordinador_ventas) — ver utils/leadAccess.js. El formulario público nunca envía
+  // asistente_administrativo) — ver utils/leadAccess.js. El formulario público nunca envía
   // este campo, así que esto solo bloquea una captura manual mal intencionada.
   if (assignedToUserId && req.user && !canAssignLeads(req.user)) {
     throw new ApiError(403, 'No tienes permisos para asignar un responsable');
@@ -451,9 +451,9 @@ const updateLead = async (req, res) => {
   const { status, notes, appointmentDate, source, pipelineStage, assignedToUserId, campaignId } =
     req.body;
 
-  // Asignar/reasignar responsable queda reservado a admin/coordinador_ventas — ver
-  // utils/leadAccess.js. Un Asesor o Capturista con permiso de edición sobre este lead
-  // puede seguir cambiando otros campos, solo no este.
+  // Asignar/reasignar responsable queda reservado a admin/asistente_administrativo — ver
+  // utils/leadAccess.js. Un Asesor con permiso de edición sobre este lead puede seguir
+  // cambiando otros campos, solo no este.
   if (assignedToUserId !== undefined && !canAssignLeads(req.user)) {
     throw new ApiError(403, 'No tienes permisos para asignar un responsable');
   }
@@ -912,7 +912,7 @@ const deleteLeadNote = async (req, res) => {
   const lead = await Lead.findByPk(req.params.id);
   if (!lead) throw new ApiError(404, 'Lead no encontrado');
   // Cualquiera puede borrar su propia nota; borrar la de alguien más requiere permiso
-  // de edición sobre el lead (admin/coordinador_ventas, o el asesor/capturista dueño).
+  // de edición sobre el lead (admin/asistente_administrativo, o el asesor dueño).
   if (!canEditLead(req.user, lead) && note.userId !== req.user.id) {
     throw new ApiError(403, 'No tienes permisos para eliminar esta nota');
   }

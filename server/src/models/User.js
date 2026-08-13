@@ -22,20 +22,28 @@ const User = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+    // Único campo de rol para todo el sistema (ver server/src/utils/leadAccess.js para el
+    // detalle de qué puede hacer cada uno dentro del CRM de leads, y las rutas admin para
+    // el resto de módulos). Reemplaza el viejo par role(admin/editor)+crmRole — unificados
+    // en la migración 20260813000000-unify-user-roles.
+    //  - admin: acceso total a todo el sistema.
+    //  - coordinador_ventas: solo inventario — ver y exportar propiedades a Excel/PDF. Sin
+    //    acceso al CRM de leads (antes de la unificación este valor significaba lo opuesto:
+    //    acceso total a leads; no confundir con ese comportamiento previo).
+    //  - asesor_ventas: ve/edita únicamente los prospectos que tiene asignados; inventario
+    //    de solo lectura (sin exportar).
+    //  - asistente_administrativo: acceso total al CRM de leads (ver/editar/asignar/crear
+    //    todos los prospectos), inventario (crear/editar, sin eliminar), campañas, y el
+    //    resto de módulos operativos (vacantes, testimonios, buzón, alertas, analytics) —
+    //    salvo gestión de usuarios/auditoría, exclusiva de admin.
     role: {
-      type: DataTypes.ENUM('admin', 'editor'),
-      defaultValue: 'editor',
-    },
-    // Rol dentro del CRM de Leads — SOLO afecta autorización en el módulo de prospectos
-    // (ver server/src/utils/leadAccess.js). No debe leerse en ningún otro controller: el
-    // resto del sistema (propiedades, vacantes, testimonios, usuarios, auditoría, exports
-    // de propiedades) sigue gateado exclusivamente por `role` (admin/editor), sin cambios.
-    // null = sin acceso al CRM de leads. Un admin no necesita este campo: role==='admin'
-    // ya implica acceso total, incluido el CRM.
-    crmRole: {
-      type: DataTypes.ENUM('coordinador_ventas', 'capturista', 'asesor_ventas'),
-      allowNull: true,
-      defaultValue: null,
+      type: DataTypes.ENUM(
+        'admin',
+        'coordinador_ventas',
+        'asesor_ventas',
+        'asistente_administrativo'
+      ),
+      defaultValue: 'asistente_administrativo',
     },
     isActive: {
       type: DataTypes.BOOLEAN,

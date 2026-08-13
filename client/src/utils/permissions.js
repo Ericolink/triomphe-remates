@@ -1,46 +1,60 @@
-// CRM de Leads — espejo del helper de autorización del backend
-// (server/src/utils/leadAccess.js). Solo se usa para decidir qué mostrar/ocultar en la UI;
-// el backend es la única fuente de verdad real, esto nunca reemplaza la validación del API.
+// Espejo del helper de autorización del backend para todo lo que no sea CRM de leads
+// (server/src/utils/leadAccess.js cubre esa parte) — solo se usa para decidir qué
+// mostrar/ocultar en la UI; el backend es la única fuente de verdad real, esto nunca
+// reemplaza la validación del API.
 
+export const isAdmin = (user) => user?.role === 'admin';
+
+// --- CRM de Leads --------------------------------------------------------
+// Espejo exacto de crmAccessLevel en leadAccess.js.
 export function crmAccessLevel(user) {
   if (!user) return null;
-  if (user.role === 'admin') return 'admin';
-  return user.crmRole || null;
+  if (['admin', 'asistente_administrativo', 'asesor_ventas'].includes(user.role)) {
+    return user.role;
+  }
+  return null;
 }
 
 export const hasCrmAccess = (user) => crmAccessLevel(user) !== null;
 
 // Eliminar leads (individual o en lote) siempre fue exclusivo de `role==='admin'` en el
-// backend (ver routes/leads.js) — ningún crmRole lo obtiene, ni siquiera coordinador_ventas.
-export const isAdmin = (user) => user?.role === 'admin';
-
+// backend (ver routes/leads.js) — ningún otro rol lo obtiene.
 export const canAssignLeads = (user) =>
-  ['admin', 'coordinador_ventas'].includes(crmAccessLevel(user));
+  ['admin', 'asistente_administrativo'].includes(user?.role);
 
 // Un Asesor de Ventas solo trabaja los leads que ya se le asignaron, no crea nuevos.
-export const canCreateLeads = (user) =>
-  hasCrmAccess(user) && crmAccessLevel(user) !== 'asesor_ventas';
-
-export const isCapturista = (user) => crmAccessLevel(user) === 'capturista';
-
-export const isAsesor = (user) => crmAccessLevel(user) === 'asesor_ventas';
-
-export const seesAllLeads = (user) => ['admin', 'coordinador_ventas'].includes(crmAccessLevel(user));
+export const canCreateLeads = (user) => hasCrmAccess(user) && user?.role !== 'asesor_ventas';
 
 // Espejo exacto de canEditLead en leadAccess.js — autorización por-registro (no solo por
-// rol): un capturista pierde edición sobre un lead en cuanto se le asigna un responsable,
-// y un asesor solo edita lo que tiene asignado. Gatea el mismo conjunto de acciones que el
-// backend cubre con esta función: PUT /leads/:id (campos generales, cambio de etapa no
-// terminal, close-won/close-lost/reopen), agendar citas y agregar/quitar propiedades de
-// interés. No cubre notas/actividades/WhatsApp, que en el backend solo requieren
-// `canViewLead` (cualquiera con acceso de lectura al lead puede registrar seguimiento).
+// rol): un asesor solo edita lo que tiene asignado.
 export function canEditLead(user, lead) {
   if (!lead) return false;
   const level = crmAccessLevel(user);
-  if (level === 'admin' || level === 'coordinador_ventas') return true;
+  if (level === 'admin' || level === 'asistente_administrativo') return true;
   if (level === 'asesor_ventas') return lead.assignedToUserId === user.id;
-  if (level === 'capturista') {
-    return lead.createdByUserId === user.id && lead.assignedToUserId == null;
-  }
   return false;
+}
+
+// --- Inventario / Propiedades --------------------------------------------
+// Crear/editar/eliminar-imagen/promover propiedades — Coordinador de ventas y Asesor de
+// ventas solo pueden VER el inventario (ver canExportInventory / lectura sin gate).
+export const canManageInventory = (user) =>
+  ['admin', 'asistente_administrativo'].includes(user?.role);
+
+// Descargar el inventario a Excel/PDF — Coordinador de ventas lo tiene aunque no pueda
+// editar propiedades (es su único acceso: "ver y descargar inventario completo").
+export const canExportInventory = (user) =>
+  ['admin', 'coordinador_ventas', 'asistente_administrativo'].includes(user?.role);
+
+// --- Módulos de soporte (vacantes, testimonios, buzón, alertas, analytics, campañas) ---
+// Coordinador de ventas y Asesor de ventas no tienen acceso a ninguno de estos.
+export const hasBackofficeAccess = (user) =>
+  ['admin', 'asistente_administrativo'].includes(user?.role);
+
+// Ruta a la que se manda a cada rol después de iniciar sesión / al entrar a "/admin" —
+// Coordinador de ventas y Asesor de ventas no tienen acceso al dashboard de analytics.
+export function defaultRouteFor(user) {
+  if (user?.role === 'coordinador_ventas') return '/admin/propiedades';
+  if (user?.role === 'asesor_ventas') return '/admin/crm';
+  return '/admin/dashboard';
 }

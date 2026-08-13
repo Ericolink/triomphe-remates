@@ -29,9 +29,9 @@ describe('Paginación opcional en listados admin', () => {
 
     beforeAll(async () => {
       extraUsers = await Promise.all([
-        createUser({ role: 'editor' }),
-        createUser({ role: 'editor' }),
-        createUser({ role: 'editor' }),
+        createUser({ role: 'asistente_administrativo' }),
+        createUser({ role: 'asistente_administrativo' }),
+        createUser({ role: 'asistente_administrativo' }),
       ]);
     });
 

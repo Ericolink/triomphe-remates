@@ -59,7 +59,7 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *     summary: Crear usuario (endpoint usado por el panel admin)
  *     description: >
  *       Único endpoint de alta de usuarios consumido por el frontend (`UsersPage.jsx` vía `usersService.js`).
- *       Registra en la bitácora de auditoría (`logAudit`) y admite `crmRole`.
+ *       Registra en la bitácora de auditoría (`logAudit`).
  *       Ver también `POST /api/auth/register`, que cubre el mismo caso de uso de forma legacy.
  *     tags: [Users]
  *     security:
@@ -75,12 +75,10 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *               name: { type: string, example: 'Juana Pérez' }
  *               email: { type: string, format: email }
  *               password: { type: string, minLength: 8 }
- *               role: { type: string, enum: [admin, editor], default: editor }
- *               crmRole:
+ *               role:
  *                 type: string
- *                 enum: [coordinador_ventas, capturista, asesor_ventas]
- *                 nullable: true
- *                 description: Rol dentro del CRM de Leads. Omitir o null = sin acceso al CRM.
+ *                 enum: [admin, coordinador_ventas, asesor_ventas, asistente_administrativo]
+ *                 default: asistente_administrativo
  *     responses:
  *       201:
  *         description: Usuario creado exitosamente
@@ -91,7 +89,7 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *               properties:
  *                 message: { type: string, example: 'Usuario creado exitosamente' }
  *                 data: { $ref: '#/components/schemas/User' }
- *       400: { description: 'Datos inválidos (faltan campos, password corta, o crmRole fuera de la whitelist)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       400: { description: 'Datos inválidos (faltan campos, password corta, o rol fuera de la whitelist)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       401: { description: No autenticado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       403: { description: No autorizado (solo admin), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       409: { description: Email ya registrado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
@@ -123,11 +121,9 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *             properties:
  *               name: { type: string }
  *               email: { type: string, format: email }
- *               role: { type: string, enum: [admin, editor] }
- *               crmRole:
+ *               role:
  *                 type: string
- *                 enum: [coordinador_ventas, capturista, asesor_ventas, '']
- *                 description: "'' limpia explícitamente el acceso al CRM"
+ *                 enum: [admin, coordinador_ventas, asesor_ventas, asistente_administrativo]
  *               isActive: { type: boolean }
  *               newPassword: { type: string, minLength: 8 }
  *               currentPassword:
@@ -145,7 +141,7 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *                 message: { type: string, example: 'Usuario actualizado exitosamente' }
  *                 data: { $ref: '#/components/schemas/User' }
  *                 token: { type: string, description: 'JWT reemitido, solo presente si aplica' }
- *       400: { description: 'Datos inválidos (password corta, crmRole inválido, falta currentPassword)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       400: { description: 'Datos inválidos (password corta, rol inválido, falta currentPassword)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       401: { description: 'No autenticado, o currentPassword incorrecta', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       403: { description: 'No autorizado, o intento de modificar al admin principal', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       404: { description: Usuario no encontrado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }

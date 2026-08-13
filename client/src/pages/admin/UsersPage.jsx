@@ -22,32 +22,13 @@ import useAuthStore from '../../store/authStore';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
 import { buildImageUrl } from '../../utils/images';
-
-const roleColors = {
-  admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  editor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-};
-
-// CRM de Leads — rol separado de `role`, solo gatea el módulo de prospectos (ver
-// server/src/utils/leadAccess.js). Un admin no necesita uno de estos; un editor sin
-// ninguno no tiene acceso al CRM.
-const crmRoleLabels = {
-  coordinador_ventas: 'Coordinador de Ventas',
-  capturista: 'Capturista',
-  asesor_ventas: 'Asesor de Ventas',
-};
-const crmRoleColors = {
-  coordinador_ventas: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  capturista: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-  asesor_ventas: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
-};
+import { ROLE_LABELS, ROLE_COLORS } from '../../utils/constants';
 
 const EMPTY_FORM = {
   name: '',
   email: '',
   password: '',
-  role: 'editor',
-  crmRole: '',
+  role: 'asistente_administrativo',
   currentPassword: '',
   newPassword: '',
 };
@@ -148,7 +129,6 @@ export default function UsersPage() {
       name: user.name,
       email: user.email,
       role: user.role,
-      crmRole: user.crmRole || '',
       password: '',
       currentPassword: '',
       newPassword: '',
@@ -178,14 +158,12 @@ export default function UsersPage() {
         email: form.email,
         password: form.password,
         role: form.role,
-        crmRole: form.role === 'admin' ? '' : form.crmRole,
       });
     } else {
       const fd = new FormData();
       fd.append('name', form.name);
       fd.append('email', form.email);
       fd.append('role', form.role);
-      fd.append('crmRole', form.role === 'admin' ? '' : form.crmRole);
       if (form.newPassword) {
         fd.append('newPassword', form.newPassword);
         fd.append('currentPassword', form.currentPassword);
@@ -308,23 +286,16 @@ export default function UsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-1">
                         <span
-                          className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${roleColors[u.role]}`}
+                          className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${ROLE_COLORS[u.role]}`}
                         >
                           {u.role === 'admin' && <ShieldCheck size={11} />}
-                          {u.role === 'admin' ? 'Admin' : 'Editor'}
+                          {ROLE_LABELS[u.role]}
                           {u.id === currentUser?.id
                             ? ' · Tú'
                             : u.id === masterAdminId
                               ? ' · Principal'
                               : ''}
                         </span>
-                        {u.crmRole && (
-                          <span
-                            className={`text-xs font-semibold px-2 py-1 rounded-full ${crmRoleColors[u.crmRole]}`}
-                          >
-                            {crmRoleLabels[u.crmRole]}
-                          </span>
-                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
@@ -501,32 +472,13 @@ export default function UsersPage() {
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
               >
-                <option value="editor">Editor</option>
-                <option value="admin">Admin</option>
+                {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
             </div>
-
-            {form.role === 'editor' && (
-              <div>
-                <label
-                  htmlFor={`${formId}-crmRole`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
-                  Rol CRM (Leads)
-                </label>
-                <select
-                  id={`${formId}-crmRole`}
-                  value={form.crmRole}
-                  onChange={(e) => setForm({ ...form, crmRole: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
-                >
-                  <option value="">Sin acceso a CRM</option>
-                  <option value="coordinador_ventas">Coordinador de Ventas</option>
-                  <option value="capturista">Capturista</option>
-                  <option value="asesor_ventas">Asesor de Ventas</option>
-                </select>
-              </div>
-            )}
 
             {!isEditing ? (
               <div>

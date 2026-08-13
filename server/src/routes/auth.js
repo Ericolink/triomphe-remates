@@ -23,12 +23,11 @@ const {
  *     deprecated: true
  *     description: >
  *       **Endpoint legacy, sin consumidor conocido en el frontend.** Use `POST /api/users` para
- *       crear usuarios desde el panel admin — tiene mejor UX (auditoría en `logAudit`, soporte de
- *       `crmRole`, respuesta saneada vía `safeUser()`) y es el único endpoint que el frontend
- *       (`UsersPage.jsx`) invoca hoy. `register` no escribe en la bitácora de auditoría y no
- *       acepta `crmRole`. Ver `AUDITORIA_CREACION_USUARIOS.md` para el análisis completo; el uso
- *       de este endpoint se está instrumentando temporalmente (`legacy_register_endpoint_used`)
- *       antes de una eventual eliminación.
+ *       crear usuarios desde el panel admin — tiene mejor UX (auditoría en `logAudit`, respuesta
+ *       saneada vía `safeUser()`) y es el único endpoint que el frontend (`UsersPage.jsx`) invoca
+ *       hoy. `register` no escribe en la bitácora de auditoría. Ver `AUDITORIA_CREACION_USUARIOS.md`
+ *       para el análisis completo; el uso de este endpoint se está instrumentando temporalmente
+ *       (`legacy_register_endpoint_used`) antes de una eventual eliminación.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -43,7 +42,9 @@ const {
  *               name: { type: string }
  *               email: { type: string }
  *               password: { type: string, minLength: 8 }
- *               role: { type: string, enum: [admin, editor] }
+ *               role:
+ *                 type: string
+ *                 enum: [admin, coordinador_ventas, asesor_ventas, asistente_administrativo]
  *     responses:
  *       201:
  *         description: Usuario creado. A diferencia de `POST /api/users`, devuelve un JWT nuevo para el usuario recién creado en vez de sus datos saneados.
@@ -60,8 +61,9 @@ const {
  *                     id: { type: integer }
  *                     name: { type: string }
  *                     email: { type: string }
- *                     role: { type: string, enum: [admin, editor] }
- *                     crmRole: { type: string, nullable: true, description: 'Siempre null — register no acepta este campo' }
+ *                     role:
+ *                       type: string
+ *                       enum: [admin, coordinador_ventas, asesor_ventas, asistente_administrativo]
  *       400: { description: Datos inválidos, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       401: { description: No autenticado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *       403: { description: No autorizado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }

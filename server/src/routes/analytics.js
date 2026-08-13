@@ -11,12 +11,12 @@ const { apiLimiter } = require('../middleware/rateLimitMiddleware');
  *   description: Métricas y estadísticas del sistema
  */
 
-router.get('/dashboard', apiLimiter, authenticate, authorize('admin', 'editor'), getDashboard);
+router.get('/dashboard', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getDashboard);
 router.get(
   '/properties/:id',
   apiLimiter,
   authenticate,
-  authorize('admin', 'editor'),
+  authorize('admin', 'asistente_administrativo'),
   getPropertyAnalytics
 );
 

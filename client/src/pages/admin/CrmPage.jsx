@@ -7,14 +7,17 @@ import CalendarioSection from '../../components/admin/crm/CalendarioSection';
 import CampanasSection from '../../components/admin/crm/CampanasSection';
 import CasosExitoSection from '../../components/admin/crm/CasosExitoSection';
 import { fadeIn } from '../../utils/animations';
+import useAuthStore from '../../store/authStore';
+import { hasBackofficeAccess } from '../../utils/permissions';
 
-const TABS = [
+const ALL_TABS = [
   { key: 'prospectos', label: 'Prospectos', icon: <Users size={15} /> },
   { key: 'calendario', label: 'Calendario', icon: <CalendarDays size={15} /> },
-  { key: 'campanas', label: 'Campañas', icon: <Megaphone size={15} /> },
+  // Campañas es de soporte administrativo, no de leads: Asesor de ventas tiene CRM
+  // (prospectos propios) pero no campañas — ver routes/campaigns.js.
+  { key: 'campanas', label: 'Campañas', icon: <Megaphone size={15} />, backofficeOnly: true },
   { key: 'casos-exito', label: 'Casos de éxito', icon: <Trophy size={15} /> },
 ];
-const TAB_KEYS = TABS.map((t) => t.key);
 
 // Prospectos, Calendario, Campañas y Casos de éxito vivían en 4 páginas/rutas separadas.
 // Se unifican aquí con pestañas (montaje condicional, no solo oculto con CSS) para que
@@ -22,6 +25,9 @@ const TAB_KEYS = TABS.map((t) => t.key);
 // de navegación admin. El tab vive en la URL (?tab=) en vez de useState para que sea
 // enlazable y sobreviva un refresh, a diferencia del location.state que usaba antes Prospectos.
 export default function CrmPage() {
+  const { user } = useAuthStore();
+  const TABS = ALL_TABS.filter((t) => !t.backofficeOnly || hasBackofficeAccess(user));
+  const TAB_KEYS = TABS.map((t) => t.key);
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = TAB_KEYS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'prospectos';
 

@@ -134,7 +134,7 @@ const reassignTask = async (req, res) => {
   });
   if (!task) throw new ApiError(404, 'Tarea no encontrada');
   // Reasignar una tarea sigue la misma regla que reasignar el lead — reservado a
-  // admin/coordinador_ventas — y requiere poder ver el lead al que pertenece.
+  // admin/asistente_administrativo — y requiere poder ver el lead al que pertenece.
   if (!canAssignLeads(req.user) || !canViewLead(req.user, task.lead)) {
     throw new ApiError(403, 'No tienes permisos para reasignar esta tarea');
   }
