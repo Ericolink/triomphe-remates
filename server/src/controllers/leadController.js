@@ -20,9 +20,10 @@ const VALID_PIPELINE_STAGES = [
   'nuevo',
   'contactado',
   'interesado',
+  'negociacion',
   'cita_agendada',
   'cita_realizada',
-  'negociacion',
+  'cita_con_seguimiento',
   'venta_realizada',
   'no_interesado',
 ];
@@ -36,6 +37,9 @@ const VALID_CLOSE_REASONS = [
   'otro',
 ];
 const VALID_PAYMENT_METHODS = ['credito_hipotecario', 'contado'];
+// Se elige manualmente al crear/editar el prospecto — a diferencia de Property, un lead no
+// siempre tiene una propiedad asociada de la que derivarlo (ver Lead.js businessLine).
+const VALID_BUSINESS_LINES = ['remate', 'infonavit', 'inversion'];
 // Motivos de contacto seleccionables para leads nuevos. 'informacion' y
 // 'propiedades_similares' siguen existiendo en el ENUM de la base (leads históricos ya
 // los tienen guardados) pero se excluyen aquí a propósito para que ya no puedan asignarse
@@ -126,6 +130,15 @@ function parseCommercialFields(body) {
       }
       values.budgetAmount = amount;
     }
+  }
+
+  if (body.businessLine !== undefined) {
+    if (body.businessLine !== null && !VALID_BUSINESS_LINES.includes(body.businessLine)) {
+      return {
+        error: `Línea de negocio inválida. Valores permitidos: ${VALID_BUSINESS_LINES.join(', ')}`,
+      };
+    }
+    values.businessLine = body.businessLine || null;
   }
 
   if (body.firstContactDate !== undefined) {

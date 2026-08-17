@@ -35,7 +35,7 @@ const Property = sequelize.define(
       allowNull: false,
     },
     category: {
-      type: DataTypes.ENUM('remate', 'renta', 'compra_venta_credito', 'compra_venta_contado'),
+      type: DataTypes.ENUM('remate', 'renta', 'compra_venta'),
       allowNull: false,
       defaultValue: 'remate',
       comment: 'Categoría comercial de la propiedad',
@@ -47,7 +47,7 @@ const Property = sequelize.define(
       comment: 'Línea de negocio: remate bancario o Infonavit',
     },
     status: {
-      type: DataTypes.ENUM('disponible', 'apartado', 'vendido'),
+      type: DataTypes.ENUM('disponible', 'en_revision', 'apartado', 'vendido', 'de_vuelta'),
       defaultValue: 'disponible',
     },
     squareMeters: {
@@ -66,20 +66,34 @@ const Property = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    // Baños completos — `halfBathrooms` (más abajo) cubre los incompletos.
     bathrooms: {
       type: DataTypes.INTEGER,
       allowNull: true,
+    },
+    halfBathrooms: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'Baños incompletos',
     },
     address: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    // Fraccionamiento y Colonia se fusionaron en un solo campo de texto libre — ver
+    // migración 20260813000007-property-form-fields.
     colonia: {
       type: DataTypes.STRING(150),
       allowNull: true,
+      comment: 'Fraccionamiento/Colonia',
     },
-    fraccionamiento: {
-      type: DataTypes.STRING(150),
+    propertyNumber: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Número de la casa/lote, ej. 2512 — distinto de `code` (código interno)',
+    },
+    postalCode: {
+      type: DataTypes.STRING(10),
       allowNull: true,
     },
     auctionDate: {

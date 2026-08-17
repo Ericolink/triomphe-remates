@@ -1,6 +1,7 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
-const { Property, Image, Feedback, Lead } = require('../models/index');
+const { Op } = require('sequelize');
+const { Property, Image, Feedback, Lead, PropertyAlert } = require('../models/index');
 const {
   CITY_LABEL: cityLabel,
   PROPERTY_TYPE_LABEL: typeLabel,
@@ -10,6 +11,7 @@ const {
 } = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
 const { getLeadVisibilityWhere } = require('../utils/leadAccess');
+const { validateEmail, validatePhone } = require('../utils/validators');
 const { ApiError } = require('../middleware/errorHandler');
 
 // AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
@@ -806,13 +808,12 @@ const exportPropertyQuotePDF = async (req, res) => {
       .text(formatPrice(property.price), MX, y);
     y += 34;
 
-    // Ubicación — orden fijo Estado → Ciudad → Fraccionamiento → Colonia → Calle; se
-    // omiten las filas sin dato (ej. propiedades antiguas sin fraccionamiento capturado).
+    // Ubicación — orden fijo Estado → Ciudad → Fraccionamiento/Colonia → Calle; se omiten
+    // las filas sin dato (ej. propiedades antiguas sin colonia capturada).
     const locationRows = [
       { label: 'Estado', value: stateLabel[property.city] },
       { label: 'Ciudad', value: cityLabel[property.city] || property.city },
-      { label: 'Fraccionamiento', value: stripUnsupported(property.fraccionamiento) },
-      { label: 'Colonia', value: stripUnsupported(property.colonia) },
+      { label: 'Fraccionamiento/Colonia', value: stripUnsupported(property.colonia) },
       { label: 'Calle', value: stripUnsupported(property.address) },
     ].filter((row) => row.value);
 
@@ -838,7 +839,10 @@ const exportPropertyQuotePDF = async (req, res) => {
         ? { label: 'M²', value: `${property.squareMeters} m²` }
         : null,
       property.bedrooms ? { label: 'Recámaras', value: String(property.bedrooms) } : null,
-      property.bathrooms ? { label: 'Baños', value: String(property.bathrooms) } : null,
+      property.bathrooms ? { label: 'Baños completos', value: String(property.bathrooms) } : null,
+      property.halfBathrooms
+        ? { label: 'Medios baños', value: String(property.halfBathrooms) }
+        : null,
     ].filter(Boolean);
 
     y = drawInfoBox(doc, {
@@ -887,10 +891,535 @@ const exportPropertyQuotePDF = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EXCEL/PDF — Lista de espera
+// ─────────────────────────────────────────────────────────────────────────────
+const businessLineLabel = { remate: 'Remate Bancario', infonavit: 'Infonavit', inversion: 'Inversión' };
+
+// Mismo criterio de filtros que waitingListController.getWaitingList (city/state/amount/
+// name/phone/businessLine) — se reimplementa acá en vez de importarse porque ese controller
+// además pagina, y estos exports siempre quieren la lista completa que matchea los filtros.
+const getFilteredWaitingList = async (query) => {
+  const { city, state, amount, name, phone, businessLine } = query;
+  const where = { source: 'staff' };
+
+  if (city) where.city = city;
+  if (businessLine) where.businessLine = businessLine;
+  if (state) where.state = { [Op.like]: `%${state}%` };
+  if (name) where.name = { [Op.like]: `%${name}%` };
+  if (phone) where.phone = { [Op.like]: `%${phone}%` };
+  if (amount !== undefined && amount !== '') {
+    const parsed = Number(amount);
+    if (Number.isFinite(parsed)) {
+      where[Op.and] = [
+        { [Op.or]: [{ minPrice: null }, { minPrice: { [Op.lte]: parsed } }] },
+        { [Op.or]: [{ maxPrice: null }, { maxPrice: { [Op.gte]: parsed } }] },
+      ];
+    }
+  }
+
+  return PropertyAlert.findAll({ where, order: [['createdAt', 'DESC']] });
+};
+
+const priceRangeLabel = (entry) => {
+  if (entry.minPrice && entry.maxPrice)
+    return `${formatPrice(entry.minPrice)} – ${formatPrice(entry.maxPrice)}`;
+  if (entry.maxPrice) return `Hasta ${formatPrice(entry.maxPrice)}`;
+  if (entry.minPrice) return `Desde ${formatPrice(entry.minPrice)}`;
+  return '—';
+};
+
+const exportWaitingListExcel = async (req, res) => {
+  try {
+    const entries = await getFilteredWaitingList(req.query);
+    logAudit(req, 'export', 'alert', null, {
+      format: 'excel',
+      count: entries.length,
+      query: req.query,
+    });
+    const generatedAt = formatLongDateTime();
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Triomphe Bienes Raíces';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Lista de espera', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+
+    const headers = [
+      { header: '#', key: 'num', width: 5 },
+      { header: 'Nombre', key: 'name', width: 24 },
+      { header: 'Teléfono', key: 'phone', width: 16 },
+      { header: 'Ciudad', key: 'city', width: 16 },
+      { header: 'Estado', key: 'state', width: 16 },
+      { header: 'Línea de negocio', key: 'businessLine', width: 18 },
+      { header: 'Tipo', key: 'type', width: 14 },
+      { header: 'Monto', key: 'amount', width: 24 },
+      { header: 'Fecha', key: 'createdAt', width: 14 },
+    ];
+    sheet.columns = headers;
+
+    await buildExcelHeader({
+      workbook,
+      sheet,
+      headers,
+      title: '                                         TRIOMPHE BIENES RAÍCES — Lista de espera',
+      subtitle: `Generado el ${generatedAt}   ·   Total: ${entries.length} clientes`,
+    });
+
+    entries.forEach((entry, i) => {
+      const isAlt = i % 2 === 0;
+      const row = sheet.addRow({
+        num: i + 1,
+        name: dash(entry.name),
+        phone: dash(entry.phone),
+        city: cityLabel[entry.city] || dash(entry.city),
+        state: dash(entry.state),
+        businessLine: businessLineLabel[entry.businessLine] || 'Sin especificar',
+        type: typeLabel[entry.type] || dash(entry.type),
+        amount: priceRangeLabel(entry),
+        createdAt: formatDate(entry.createdAt),
+      });
+      row.height = 18;
+      row.eachCell((cell) => {
+        cell.font = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.alignment = { vertical: 'middle', wrapText: false };
+        cell.border = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+      });
+    });
+
+    const totalRow = sheet.addRow({ num: '', name: `TOTAL: ${entries.length} clientes` });
+    totalRow.height = 20;
+    totalRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
+    });
+    totalRow.getCell(2).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=triomphe-lista-espera-${Date.now()}.xlsx`
+    );
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    handleExportError(req, res, error, 'Error al generar Excel de la lista de espera');
+  }
+};
+
+const WAITING_LIST_PDF_COLS = [
+  { label: 'Nombre', width: 140, key: 'name' },
+  { label: 'Teléfono', width: 90, key: 'phone' },
+  { label: 'Ciudad', width: 80, key: 'city' },
+  { label: 'Estado', width: 90, key: 'state' },
+  { label: 'Línea de negocio', width: 100, key: 'businessLine' },
+  { label: 'Monto', width: 140, key: 'amount' },
+  { label: 'Fecha', width: 70, key: 'createdAt' },
+];
+
+const drawWaitingListPDFHeader = async (doc, entries, generatedAt, logoPath) => {
+  doc.rect(0, 0, doc.page.width, 72).fill(PRIMARY);
+  if (logoPath) {
+    try {
+      const whiteBuf = await getWhiteLogoBuffer(logoPath);
+      if (whiteBuf) doc.image(whiteBuf, 40, 12, { height: 48 });
+    } catch {
+      /* ignorado */
+    }
+  }
+  doc.fillColor('white').fontSize(15).font('Helvetica-Bold').text('TRIOMPHE BIENES RAÍCES', 168, 16);
+  doc.fontSize(9).font('Helvetica').text('Lista de espera de clientes', 168, 35);
+  doc.fontSize(7.5).text(`Generado: ${generatedAt}`, 168, 51);
+
+  doc.roundedRect(doc.page.width - 152, 20, 112, 32, 5).fill(ACCENT);
+  doc
+    .fillColor(PRIMARY)
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .text(`${entries.length} clientes`, doc.page.width - 148, 30, { width: 104, align: 'center' });
+};
+
+const drawWaitingListPDFTableHeader = (doc, y) => {
+  const pw = doc.page.width - 80;
+  doc.rect(40, y, pw, 20).fill(PRIMARY);
+  let x = 40;
+  WAITING_LIST_PDF_COLS.forEach((col) => {
+    doc
+      .fillColor('white')
+      .fontSize(7)
+      .font('Helvetica-Bold')
+      .text(col.label, x + 3, y + 6, { width: col.width - 6, ellipsis: true, lineBreak: false });
+    x += col.width;
+  });
+  return y + 20;
+};
+
+const exportWaitingListPDF = async (req, res) => {
+  try {
+    const entries = await getFilteredWaitingList(req.query);
+    logAudit(req, 'export', 'alert', null, {
+      format: 'pdf',
+      count: entries.length,
+      query: req.query,
+    });
+    const generatedAt = formatLongDateTime();
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=triomphe-lista-espera-${Date.now()}.pdf`
+    );
+    doc.pipe(res);
+
+    const logoPath = getLogoPath();
+    await drawWaitingListPDFHeader(doc, entries, generatedAt, logoPath);
+    let y = drawWaitingListPDFTableHeader(doc, 80);
+
+    const xPositions = [];
+    let acc = 40;
+    WAITING_LIST_PDF_COLS.forEach((c) => {
+      xPositions.push(acc);
+      acc += c.width;
+    });
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const ROW_H = 20;
+      if (y + ROW_H > doc.page.height - 40) {
+        drawPDFFooter(doc);
+        doc.addPage({ layout: 'landscape' });
+        await drawWaitingListPDFHeader(doc, entries, generatedAt, logoPath);
+        y = drawWaitingListPDFTableHeader(doc, 80);
+      }
+
+      doc.rect(40, y, doc.page.width - 80, ROW_H).fill(i % 2 === 0 ? BG_ALT : '#ffffff');
+
+      const rowValues = [
+        dash(entry.name),
+        dash(entry.phone),
+        cityLabel[entry.city] || dash(entry.city),
+        dash(entry.state),
+        businessLineLabel[entry.businessLine] || 'Sin especificar',
+        priceRangeLabel(entry),
+        formatDate(entry.createdAt),
+      ];
+      rowValues.forEach((val, i) => {
+        const colDef = WAITING_LIST_PDF_COLS[i];
+        doc
+          .fillColor(TEXT)
+          .fontSize(7)
+          .font('Helvetica')
+          .text(stripUnsupported(String(val)), xPositions[i] + 3, y + 6, {
+            width: colDef.width - 6,
+            ellipsis: true,
+            lineBreak: false,
+          });
+      });
+
+      doc
+        .moveTo(40, y + ROW_H)
+        .lineTo(doc.page.width - 40, y + ROW_H)
+        .strokeColor('#e5e7eb')
+        .lineWidth(0.4)
+        .stroke();
+
+      y += ROW_H;
+    }
+
+    drawPDFFooter(doc);
+    doc.end();
+  } catch (error) {
+    handleExportError(req, res, error, 'Error al generar PDF de la lista de espera');
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXCEL/PDF — Catálogo público (sitio principal, sin auth, gateado por datos de contacto)
+// ─────────────────────────────────────────────────────────────────────────────
+const CATALOG_PDF_COLS = [
+  { label: 'Título', width: 180, key: 'title' },
+  { label: 'Ciudad', width: 90, key: 'city' },
+  { label: 'Tipo', width: 80, key: 'type' },
+  { label: 'Categoría', width: 90, key: 'category' },
+  { label: 'Precio', width: 100, key: 'price' },
+  { label: 'M² Terreno', width: 70, key: 'terrainMeters' },
+  { label: 'M² Constr.', width: 70, key: 'constructionMeters' },
+  { label: 'Recámaras', width: 65, key: 'bedrooms' },
+  { label: 'Baños', width: 65, key: 'bathrooms' },
+];
+
+// Solo inventario público (`status: 'disponible'`, sin `internalNotes` ni columnas de uso
+// interno como visitas/fechas de alta) — a diferencia de `getFilteredProperties`
+// (exportHelpers.js), que un visitante público nunca debe poder invocar directamente.
+const getPublicCatalogProperties = async (query) => {
+  const { city, type, category, businessLine } = query;
+  const where = { status: 'disponible' };
+  if (city) where.city = city;
+  if (type) where.type = type;
+  if (category) where.category = category;
+  if (businessLine) where.businessLine = businessLine;
+
+  return Property.findAll({
+    where,
+    order: [
+      ['city', 'ASC'],
+      ['createdAt', 'DESC'],
+    ],
+    attributes: [
+      'id',
+      'title',
+      'city',
+      'type',
+      'category',
+      'price',
+      'terrainMeters',
+      'constructionMeters',
+      'bedrooms',
+      'bathrooms',
+      'halfBathrooms',
+    ],
+  });
+};
+
+const categoryLabelPublic = { remate: 'Remates', renta: 'Renta', compra_venta: 'Compra-Venta' };
+
+// Crea el Lead que registra quién descargó el catálogo — mismas reglas de validación que
+// el formulario público "Contactar asesor" (leadController.createLead): nombre y teléfono
+// requeridos, email opcional.
+const createCatalogDownloadLead = async ({ name, phone, email }, format) => {
+  if (!name || !name.trim()) throw new ApiError(400, 'Nombre es requerido');
+  if (!phone || !validatePhone(phone))
+    throw new ApiError(400, 'Teléfono inválido — usa 10 dígitos, con o sin +52');
+  if (email && !validateEmail(email)) throw new ApiError(400, 'Email inválido');
+
+  await Lead.create({
+    name: name.trim(),
+    phone: phone.trim(),
+    email: email ? email.trim() : null,
+    type: 'contacto',
+    source: 'directo',
+    message: `Descargó el catálogo de propiedades (${format === 'excel' ? 'Excel' : 'PDF'})`,
+  });
+};
+
+// POST /api/export/catalog/excel — público, sin auth
+const exportCatalogExcel = async (req, res) => {
+  try {
+    await createCatalogDownloadLead(req.body, 'excel');
+    const properties = await getPublicCatalogProperties(req.body);
+    const generatedAt = formatLongDateTime();
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Triomphe Bienes Raíces';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Catálogo', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+
+    const headers = [
+      { header: '#', key: 'num', width: 5 },
+      { header: 'Título', key: 'title', width: 34 },
+      { header: 'Ciudad', key: 'city', width: 13 },
+      { header: 'Tipo', key: 'type', width: 13 },
+      { header: 'Categoría', key: 'category', width: 15 },
+      { header: 'Precio', key: 'price', width: 17 },
+      { header: 'M² Terreno', key: 'terrainMeters', width: 12 },
+      { header: 'M² Construcción', key: 'constructionMeters', width: 16 },
+      { header: 'Recámaras', key: 'bedrooms', width: 11 },
+      { header: 'Baños', key: 'bathrooms', width: 9 },
+    ];
+    sheet.columns = headers;
+
+    await buildExcelHeader({
+      workbook,
+      sheet,
+      headers,
+      title: '                                         TRIOMPHE BIENES RAÍCES — Catálogo de Propiedades',
+      subtitle: `Generado el ${generatedAt}   ·   Total: ${properties.length} propiedades`,
+    });
+
+    properties.forEach((p, i) => {
+      const isAlt = i % 2 === 0;
+      const bathsLabel = p.halfBathrooms
+        ? `${dash(p.bathrooms)} + ${p.halfBathrooms} medio`
+        : dash(p.bathrooms);
+      const row = sheet.addRow({
+        num: i + 1,
+        title: dash(p.title),
+        city: cityLabel[p.city] || p.city,
+        type: typeLabel[p.type] || p.type,
+        category: categoryLabelPublic[p.category] || p.category,
+        price: formatPrice(p.price),
+        terrainMeters: p.terrainMeters ? `${p.terrainMeters} m²` : '—',
+        constructionMeters: p.constructionMeters ? `${p.constructionMeters} m²` : '—',
+        bedrooms: dash(p.bedrooms),
+        bathrooms: bathsLabel,
+      });
+      row.height = 18;
+      row.eachCell((cell) => {
+        cell.font = { size: 9, color: { argb: TEXT_ARGB } };
+        cell.alignment = { vertical: 'middle', wrapText: false };
+        cell.border = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
+        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
+      });
+    });
+
+    const totalRow = sheet.addRow({ num: '', title: `TOTAL: ${properties.length} propiedades` });
+    totalRow.height = 20;
+    totalRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
+    });
+    totalRow.getCell(2).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=triomphe-catalogo-${Date.now()}.xlsx`
+    );
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    handleExportError(req, res, error, 'Error al generar el catálogo en Excel');
+  }
+};
+
+const drawCatalogPDFHeader = async (doc, properties, generatedAt, logoPath) => {
+  doc.rect(0, 0, doc.page.width, 72).fill(PRIMARY);
+  if (logoPath) {
+    try {
+      const whiteBuf = await getWhiteLogoBuffer(logoPath);
+      if (whiteBuf) doc.image(whiteBuf, 40, 12, { height: 48 });
+    } catch {
+      /* ignorado */
+    }
+  }
+  doc.fillColor('white').fontSize(15).font('Helvetica-Bold').text('TRIOMPHE BIENES RAÍCES', 168, 16);
+  doc.fontSize(9).font('Helvetica').text('Catálogo de Propiedades', 168, 35);
+  doc.fontSize(7.5).text(`Generado: ${generatedAt}`, 168, 51);
+
+  doc.roundedRect(doc.page.width - 152, 20, 112, 32, 5).fill(ACCENT);
+  doc
+    .fillColor(PRIMARY)
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .text(`${properties.length} propiedades`, doc.page.width - 148, 30, {
+      width: 104,
+      align: 'center',
+    });
+};
+
+const drawCatalogPDFTableHeader = (doc, y) => {
+  const pw = doc.page.width - 80;
+  doc.rect(40, y, pw, 20).fill(PRIMARY);
+  let x = 40;
+  CATALOG_PDF_COLS.forEach((col) => {
+    doc
+      .fillColor('white')
+      .fontSize(7)
+      .font('Helvetica-Bold')
+      .text(col.label, x + 3, y + 6, { width: col.width - 6, ellipsis: true, lineBreak: false });
+    x += col.width;
+  });
+  return y + 20;
+};
+
+// POST /api/export/catalog/pdf — público, sin auth
+const exportCatalogPDF = async (req, res) => {
+  try {
+    await createCatalogDownloadLead(req.body, 'pdf');
+    const properties = await getPublicCatalogProperties(req.body);
+    const generatedAt = formatLongDateTime();
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=triomphe-catalogo-${Date.now()}.pdf`);
+    doc.pipe(res);
+
+    const logoPath = getLogoPath();
+    await drawCatalogPDFHeader(doc, properties, generatedAt, logoPath);
+    let y = drawCatalogPDFTableHeader(doc, 80);
+
+    const xPositions = [];
+    let acc = 40;
+    CATALOG_PDF_COLS.forEach((c) => {
+      xPositions.push(acc);
+      acc += c.width;
+    });
+
+    for (let i = 0; i < properties.length; i++) {
+      const p = properties[i];
+      const ROW_H = 20;
+      if (y + ROW_H > doc.page.height - 40) {
+        drawPDFFooter(doc);
+        doc.addPage({ layout: 'landscape' });
+        await drawCatalogPDFHeader(doc, properties, generatedAt, logoPath);
+        y = drawCatalogPDFTableHeader(doc, 80);
+      }
+
+      doc.rect(40, y, doc.page.width - 80, ROW_H).fill(i % 2 === 0 ? BG_ALT : '#ffffff');
+
+      const bathsLabel = p.halfBathrooms
+        ? `${dash(p.bathrooms)} + ${p.halfBathrooms} medio`
+        : dash(p.bathrooms);
+      const rowValues = [
+        dash(p.title),
+        cityLabel[p.city] || p.city,
+        typeLabel[p.type] || p.type,
+        categoryLabelPublic[p.category] || p.category,
+        formatPrice(p.price),
+        p.terrainMeters ? `${p.terrainMeters} m²` : '—',
+        p.constructionMeters ? `${p.constructionMeters} m²` : '—',
+        dash(p.bedrooms),
+        bathsLabel,
+      ];
+      rowValues.forEach((val, colIdx) => {
+        const colDef = CATALOG_PDF_COLS[colIdx];
+        doc
+          .fillColor(TEXT)
+          .fontSize(7)
+          .font('Helvetica')
+          .text(stripUnsupported(String(val)), xPositions[colIdx] + 3, y + 6, {
+            width: colDef.width - 6,
+            ellipsis: true,
+            lineBreak: false,
+          });
+      });
+
+      doc
+        .moveTo(40, y + ROW_H)
+        .lineTo(doc.page.width - 40, y + ROW_H)
+        .strokeColor('#e5e7eb')
+        .lineWidth(0.4)
+        .stroke();
+
+      y += ROW_H;
+    }
+
+    drawPDFFooter(doc);
+    doc.end();
+  } catch (error) {
+    handleExportError(req, res, error, 'Error al generar el catálogo en PDF');
+  }
+};
+
 module.exports = {
   exportExcel,
   exportPDF,
   exportFeedbackExcel,
   exportLeadsExcel,
   exportPropertyQuotePDF,
+  exportWaitingListExcel,
+  exportWaitingListPDF,
+  exportCatalogExcel,
+  exportCatalogPDF,
 };

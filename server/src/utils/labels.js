@@ -21,8 +21,10 @@ const PROPERTY_TYPE_LABEL = {
 
 const STATUS_LABEL = {
   disponible: 'Disponible',
+  en_revision: 'En revisión',
   apartado: 'Apartado',
   vendido: 'Vendido',
+  de_vuelta: 'De vuelta',
 };
 
 // Motivos de contacto de un Lead — debe coincidir con LEAD_TYPE_LABELS en

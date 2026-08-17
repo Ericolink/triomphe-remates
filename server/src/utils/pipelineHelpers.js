@@ -92,6 +92,7 @@ const LEGACY_STATUS_MAP = {
   interesado: 'contactado',
   cita_agendada: 'contactado',
   cita_realizada: 'contactado',
+  cita_con_seguimiento: 'contactado',
   negociacion: 'contactado',
   venta_realizada: 'cerrado',
   no_interesado: 'descartado',

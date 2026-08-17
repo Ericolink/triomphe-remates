@@ -265,9 +265,11 @@ const createProperty = async (req, res) => {
     constructionMeters,
     bedrooms,
     bathrooms,
+    halfBathrooms,
     address,
     colonia,
-    fraccionamiento,
+    propertyNumber,
+    postalCode,
     auctionDate,
     acquisitionStage,
     isFeatured,
@@ -305,9 +307,11 @@ const createProperty = async (req, res) => {
         constructionMeters: nullIfEmpty(constructionMeters),
         bedrooms: nullIfEmpty(bedrooms),
         bathrooms: nullIfEmpty(bathrooms),
+        halfBathrooms: nullIfEmpty(halfBathrooms),
         address,
         colonia,
-        fraccionamiento,
+        propertyNumber: nullIfEmpty(propertyNumber),
+        postalCode: nullIfEmpty(postalCode),
         auctionDate: auctionDate || null,
         acquisitionStage: acquisitionStage || 'sin_proceso',
         isFeatured: isFeatured || false,
@@ -372,9 +376,11 @@ const updateProperty = async (req, res) => {
     constructionMeters,
     bedrooms,
     bathrooms,
+    halfBathrooms,
     address,
     colonia,
-    fraccionamiento,
+    propertyNumber,
+    postalCode,
     auctionDate,
     acquisitionStage,
     isFeatured,
@@ -413,9 +419,11 @@ const updateProperty = async (req, res) => {
     updates.constructionMeters = nullIfEmpty(constructionMeters);
   if (bedrooms !== undefined) updates.bedrooms = nullIfEmpty(bedrooms);
   if (bathrooms !== undefined) updates.bathrooms = nullIfEmpty(bathrooms);
+  if (halfBathrooms !== undefined) updates.halfBathrooms = nullIfEmpty(halfBathrooms);
   if (address !== undefined) updates.address = address;
   if (colonia !== undefined) updates.colonia = colonia;
-  if (fraccionamiento !== undefined) updates.fraccionamiento = fraccionamiento;
+  if (propertyNumber !== undefined) updates.propertyNumber = nullIfEmpty(propertyNumber);
+  if (postalCode !== undefined) updates.postalCode = nullIfEmpty(postalCode);
   if (auctionDate !== undefined) updates.auctionDate = auctionDate || null;
   if (acquisitionStage !== undefined)
     updates.acquisitionStage = acquisitionStage || 'sin_proceso';

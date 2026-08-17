@@ -14,13 +14,15 @@ const getDashboard = async (req, res) => {
   const eightWeeksAgo = new Date();
   eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
 
-  // Ninguna de estas 18 consultas depende del resultado de otra — solo de las fechas ya
+  // Ninguna de estas 20 consultas depende del resultado de otra — solo de las fechas ya
   // calculadas arriba — así que se lanzan todas en paralelo en vez de una por una.
   const [
     totalProperties,
     availableProperties,
+    enRevisionProperties,
     apartadoProperties,
     soldProperties,
+    deVueltaProperties,
     propertiesByCity,
     propertiesByType,
     topProperties,
@@ -38,8 +40,10 @@ const getDashboard = async (req, res) => {
   ] = await Promise.all([
     Property.count(),
     Property.count({ where: { status: 'disponible' } }),
+    Property.count({ where: { status: 'en_revision' } }),
     Property.count({ where: { status: 'apartado' } }),
     Property.count({ where: { status: 'vendido' } }),
+    Property.count({ where: { status: 'de_vuelta' } }),
     Property.findAll({
       attributes: ['city', [fn('COUNT', col('id')), 'total']],
       group: ['city'],
@@ -176,8 +180,10 @@ const getDashboard = async (req, res) => {
       properties: {
         total: totalProperties,
         disponible: availableProperties,
+        en_revision: enRevisionProperties,
         apartado: apartadoProperties,
         vendido: soldProperties,
+        de_vuelta: deVueltaProperties,
       },
       byCity: propertiesByCity,
       byType: propertiesByType,

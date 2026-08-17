@@ -29,8 +29,10 @@ const subscribe = async (req, res) => {
   // 409, la suscripción activa existente se actualiza con los datos nuevos. `token`
   // e `id` nunca se tocan: el link de baja ya enviado por correo con el token viejo
   // debe seguir funcionando después de esta actualización.
+  // Acotado a source:'public' — un email que coincida con una entrada de la lista de
+  // espera capturada por staff (source:'staff') nunca debe actualizarse desde acá.
   const existing = await PropertyAlert.findOne({
-    where: { email: email.trim().toLowerCase(), isActive: true },
+    where: { email: email.trim().toLowerCase(), isActive: true, source: 'public' },
   });
 
   if (existing) {
@@ -44,6 +46,7 @@ const subscribe = async (req, res) => {
   const alert = await PropertyAlert.create({
     ...attrs,
     email: email.trim().toLowerCase(),
+    source: 'public',
   });
 
   return res.status(201).json({
@@ -64,10 +67,11 @@ const unsubscribe = async (req, res) => {
   return res.json({ message: 'Alerta cancelada exitosamente. Ya no recibirás notificaciones.' });
 };
 
-// GET /api/alerts  (admin)
+// GET /api/alerts  (admin) — solo suscripciones públicas del sitio; las entradas de la
+// lista de espera (source:'staff') se administran aparte, ver waitingListController.js.
 const getAlerts = async (req, res) => {
   const { page = 1, limit = 30, isActive } = req.query;
-  const where = {};
+  const where = { source: 'public' };
   if (isActive !== undefined) where.isActive = isActive === 'true';
 
   const result = await paginate(PropertyAlert, {
@@ -82,7 +86,9 @@ const getAlerts = async (req, res) => {
 
 // DELETE /api/alerts/:id  (admin)
 const deleteAlert = async (req, res) => {
-  const alert = await PropertyAlert.findByPk(req.params.id);
+  const alert = await PropertyAlert.findOne({
+    where: { id: req.params.id, source: 'public' },
+  });
   if (!alert) throw new ApiError(404, 'Alerta no encontrada');
   await alert.destroy();
   logAudit(req, 'delete', 'alert', req.params.id, { email: alert.email });

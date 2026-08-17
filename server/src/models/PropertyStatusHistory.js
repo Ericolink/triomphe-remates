@@ -7,11 +7,11 @@ const PropertyStatusHistory = sequelize.define(
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     propertyId: { type: DataTypes.INTEGER, allowNull: false },
     fromStatus: {
-      type: DataTypes.ENUM('disponible', 'apartado', 'vendido'),
+      type: DataTypes.ENUM('disponible', 'en_revision', 'apartado', 'vendido', 'de_vuelta'),
       allowNull: true,
     },
     toStatus: {
-      type: DataTypes.ENUM('disponible', 'apartado', 'vendido'),
+      type: DataTypes.ENUM('disponible', 'en_revision', 'apartado', 'vendido', 'de_vuelta'),
       allowNull: false,
     },
     userName: { type: DataTypes.STRING(100), allowNull: true },

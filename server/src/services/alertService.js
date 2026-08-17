@@ -21,6 +21,7 @@ const notifyMatchingAlerts = async (property) => {
     const matching = alerts.filter((a) => {
       if (a.city && a.city !== property.city) return false;
       if (a.type && a.type !== property.type) return false;
+      if (a.businessLine && a.businessLine !== property.businessLine) return false;
       if (a.maxPrice && parsedPrice && parsedPrice > parseFloat(a.maxPrice)) return false;
       if (a.minPrice && parsedPrice && parsedPrice < parseFloat(a.minPrice)) return false;
       return true;
@@ -52,15 +53,20 @@ const sendAlertBatch = async (matching, property) => {
     const batch = matching.slice(i, i + CONCURRENCY_LIMIT);
     await Promise.allSettled(
       batch.flatMap((a) => {
-        const tasks = [
-          sendPropertyAlertNotification(a, property).catch((e) =>
-            logger.error('Error enviando alerta de propiedad por email', {
-              alertId: a.id,
-              propertyId: property.id,
-              error: e.message,
-            })
-          ),
-        ];
+        // El email dejó de ser obligatorio (ver PropertyAlert.js) — una entrada de lista de
+        // espera capturada por staff puede no tener uno.
+        const tasks = [];
+        if (a.email) {
+          tasks.push(
+            sendPropertyAlertNotification(a, property).catch((e) =>
+              logger.error('Error enviando alerta de propiedad por email', {
+                alertId: a.id,
+                propertyId: property.id,
+                error: e.message,
+              })
+            )
+          );
+        }
         if (a.phone) {
           tasks.push(
             sendPropertyAlertWhatsApp(a, property).catch((e) =>

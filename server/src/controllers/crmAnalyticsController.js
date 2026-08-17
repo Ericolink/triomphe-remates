@@ -18,9 +18,10 @@ const PIPELINE_STAGES = [
   'nuevo',
   'contactado',
   'interesado',
+  'negociacion',
   'cita_agendada',
   'cita_realizada',
-  'negociacion',
+  'cita_con_seguimiento',
   'venta_realizada',
   'no_interesado',
 ];
@@ -34,6 +35,19 @@ const CLOSE_REASONS = [
   'otro',
 ];
 const APPOINTMENT_STATUSES = ['programada', 'confirmada', 'completada', 'no_show', 'cancelada'];
+const VALID_BUSINESS_LINES = ['remate', 'infonavit', 'inversion'];
+
+// `month` viene como "YYYY-MM" del selector del Dashboard — se traduce al rango
+// [primer día, último día] en hora local para filtrar por `createdAt`/`scheduledAt`.
+// Valores inválidos se ignoran (sin filtro) en vez de fallar: este es un endpoint de
+// reportes internos, no un boundary público que necesite rechazar input con un 400.
+function monthRange(month) {
+  if (!/^\d{4}-\d{2}$/.test(month || '')) return null;
+  const [year, m] = month.split('-').map(Number);
+  const start = new Date(year, m - 1, 1);
+  const end = new Date(year, m, 0, 23, 59, 59, 999);
+  return { start, end };
+}
 
 // GET /api/crm/dashboard
 const getCrmDashboard = async (req, res) => {
@@ -169,33 +183,54 @@ const getCrmDashboard = async (req, res) => {
   });
 };
 
-// GET /api/crm/reports
+// GET /api/crm/reports?businessLine=remate|infonavit|inversion&month=YYYY-MM
 const getCrmReports = async (req, res) => {
+  const { businessLine, month } = req.query;
+  const validBusinessLine = VALID_BUSINESS_LINES.includes(businessLine) ? businessLine : null;
+  const range = monthRange(month);
+
+  // Filtro compartido por las 3 consultas basadas en Lead (funnel/closeReasons/porAsesor) —
+  // Appointment no tiene businessLine propio (no siempre está ligado a un Lead con línea
+  // asignada), así que "Citas por estado" solo respeta el filtro de mes, no el de línea.
+  const leadWhere = {
+    ...(validBusinessLine && { businessLine: validBusinessLine }),
+    ...(range && { createdAt: { [Op.between]: [range.start, range.end] } }),
+  };
+  const appointmentWhere = range ? { scheduledAt: { [Op.between]: [range.start, range.end] } } : {};
+
   // Las 4 consultas de base no dependen entre sí — se lanzan en paralelo. advisorUsers/
   // advisorDeals sí dependen de advisorIds (derivado de advisorLeadCounts), así que van
   // en un segundo paso, aunque tampoco dependen entre sí.
   const [funnelRaw, closeReasonsRaw, advisorLeadCounts, appointmentStatusRaw] = await Promise.all([
     Lead.findAll({
       attributes: ['pipelineStage', [fn('COUNT', col('id')), 'total']],
+      where: leadWhere,
       group: ['pipelineStage'],
       raw: true,
     }),
     Lead.findAll({
       attributes: ['closeReason', [fn('COUNT', col('id')), 'total']],
-      where: { pipelineStage: 'no_interesado', closeReason: { [Op.ne]: null } },
+      where: { ...leadWhere, pipelineStage: 'no_interesado', closeReason: { [Op.ne]: null } },
       group: ['closeReason'],
       raw: true,
     }),
     // Por asesor — tabla plana con números, deliberadamente sin ranking/medallas (esa
-    // funcionalidad de "leaderboard" queda fuera del alcance de la Fase 1).
+    // funcionalidad de "leaderboard" queda fuera del alcance de la Fase 1). Se agrupa
+    // también por businessLine para poder mostrar de qué línea es cada prospecto sin
+    // tener que cambiar de tab (ver `byLine` en el reshape de abajo).
     Lead.findAll({
-      attributes: ['assignedToUserId', [fn('COUNT', col('id')), 'leadCount']],
-      where: { assignedToUserId: { [Op.ne]: null } },
-      group: ['assignedToUserId'],
+      attributes: [
+        'assignedToUserId',
+        'businessLine',
+        [fn('COUNT', col('id')), 'leadCount'],
+      ],
+      where: { ...leadWhere, assignedToUserId: { [Op.ne]: null } },
+      group: ['assignedToUserId', 'businessLine'],
       raw: true,
     }),
     Appointment.findAll({
       attributes: ['status', [fn('COUNT', col('id')), 'total']],
+      where: appointmentWhere,
       group: ['status'],
       raw: true,
     }),
@@ -211,7 +246,7 @@ const getCrmReports = async (req, res) => {
     total: parseInt(closeReasonsRaw.find((r) => r.closeReason === reason)?.total || 0, 10),
   }));
 
-  const advisorIds = advisorLeadCounts.map((r) => r.assignedToUserId);
+  const advisorIds = [...new Set(advisorLeadCounts.map((r) => r.assignedToUserId))];
   const [advisorUsers, advisorDeals] = advisorIds.length
     ? await Promise.all([
         User.findAll({
@@ -225,7 +260,7 @@ const getCrmReports = async (req, res) => {
               model: Lead,
               as: 'lead',
               attributes: [],
-              where: { assignedToUserId: { [Op.in]: advisorIds } },
+              where: { ...leadWhere, assignedToUserId: { [Op.in]: advisorIds } },
               required: true,
             },
           ],
@@ -239,13 +274,25 @@ const getCrmReports = async (req, res) => {
         }),
       ])
     : [[], []];
-  const porAsesor = advisorLeadCounts.map((row) => {
-    const user = advisorUsers.find((u) => u.id === row.assignedToUserId);
-    const dealRow = advisorDeals.find((d) => d.assignedToUserId === row.assignedToUserId);
-    return {
+
+  const porAsesorMap = new Map();
+  for (const row of advisorLeadCounts) {
+    const leadCount = parseInt(row.leadCount, 10);
+    const entry = porAsesorMap.get(row.assignedToUserId) || {
       userId: row.assignedToUserId,
+      leadCount: 0,
+      byLine: { remate: 0, infonavit: 0, inversion: 0, sin_especificar: 0 },
+    };
+    entry.leadCount += leadCount;
+    entry.byLine[row.businessLine || 'sin_especificar'] += leadCount;
+    porAsesorMap.set(row.assignedToUserId, entry);
+  }
+  const porAsesor = [...porAsesorMap.values()].map((entry) => {
+    const user = advisorUsers.find((u) => u.id === entry.userId);
+    const dealRow = advisorDeals.find((d) => d.assignedToUserId === entry.userId);
+    return {
+      ...entry,
       name: user?.name || 'Desconocido',
-      leadCount: parseInt(row.leadCount, 10),
       dealCount: parseInt(dealRow?.dealCount || 0, 10),
       revenue: parseFloat(dealRow?.revenue || 0),
     };

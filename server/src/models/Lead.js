@@ -66,6 +66,7 @@ const Lead = sequelize.define(
         'interesado',
         'cita_agendada',
         'cita_realizada',
+        'cita_con_seguimiento',
         'negociacion',
         'venta_realizada',
         'no_interesado'
@@ -75,6 +76,13 @@ const Lead = sequelize.define(
     },
     campaignId: {
       type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    // Se elige manualmente al crear/editar el prospecto — a diferencia de Property, un lead
+    // no siempre tiene una propiedad asociada (contacto general, WhatsApp) de la que
+    // derivarlo. null = sin línea de negocio asignada (leads previos a este campo).
+    businessLine: {
+      type: DataTypes.ENUM('remate', 'infonavit', 'inversion'),
       allowNull: true,
     },
     assignedToUserId: {

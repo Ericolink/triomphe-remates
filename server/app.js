@@ -118,6 +118,7 @@ app.use('/api/analytics',  require('./src/routes/analytics'));
 app.use('/api/users',      require('./src/routes/users'));
 app.use('/api/feedback',   require('./src/routes/feedback'));
 app.use('/api/alerts',     require('./src/routes/alerts'));
+app.use('/api/waiting-list', require('./src/routes/waitingList'));
 app.use('/api/audit',      require('./src/routes/audit'));
 app.use('/api/testimonials', require('./src/routes/testimonials'));
 app.use('/api/campaigns',    require('./src/routes/campaigns'));
