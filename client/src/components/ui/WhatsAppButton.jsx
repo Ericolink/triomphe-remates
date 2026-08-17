@@ -17,6 +17,7 @@ export default function WhatsAppButton({
   message,
   label = 'Consultar por WhatsApp',
   className = '',
+  floating = false,
 }) {
   const resolvedMessage =
     message ??
@@ -25,6 +26,29 @@ export default function WhatsAppButton({
       return `Hola, me interesa esta propiedad: ${title}${priceLabel ? ` (${priceLabel})` : ''}\n${fullUrl}`;
     })();
   const href = toWhatsAppLink(WHATSAPP_NUMBER, resolvedMessage);
+
+  // Variante flotante (botón circular solo-ícono, ver FloatingWhatsAppButton.jsx): usa un
+  // className base completo propio en vez de intentar sobreescribir el de la píldora vía
+  // concatenación — dos utilidades de Tailwind con la misma propiedad (rounded-xl vs.
+  // rounded-full, px-4 py-3 vs. tamaño fijo) no tienen forma confiable de "ganarle" a la
+  // otra solo por orden en el string de clases. El texto del label se conserva como
+  // aria-label/title ya que no hay texto visible que lo exponga como nombre accesible.
+  if (floating) {
+    return (
+      <motion.a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        whileHover={buttonHover}
+        whileTap={buttonTap}
+        aria-label={label}
+        title={label}
+        className={`flex items-center justify-center w-14 h-14 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg transition-colors ${className}`}
+      >
+        <WhatsAppIcon />
+      </motion.a>
+    );
+  }
 
   return (
     <motion.a

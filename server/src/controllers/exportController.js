@@ -8,6 +8,7 @@ const {
   STATUS_LABEL: statusLabel,
   CITY_STATE_LABEL: stateLabel,
   LEAD_TYPE_LABEL: leadTypeLabel,
+  LEGAL_PROCESS_TYPE_LABEL: legalProcessTypeLabel,
 } = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
 const { getLeadVisibilityWhere } = require('../utils/leadAccess');
@@ -72,23 +73,62 @@ const exportExcel = async (req, res) => {
       pageSetup: { paperSize: 9, orientation: 'landscape' },
     });
 
+    // Orden: columnas de la hoja maestra de inventario del negocio (ver captura del pedido
+    // original), usando los campos reales donde ya existían (Calle→address, Número→
+    // propertyNumber, etc.), seguidas de las columnas que el export ya tenía y que no
+    // están en esa hoja (Ciudad/Tipo/Estatus/Recámaras/Baños/fechas) — y sin "Visitas".
+    // "Título" se mantiene junto a "#" porque, aunque no es una columna de la hoja
+    // maestra, sigue siendo el identificador principal de cada fila.
+    //
+    // Los encabezados de las columnas que sí vienen de la hoja maestra usan el texto
+    // EXACTO de esa hoja (mayúsculas, sin acentos donde la hoja tampoco los tiene) —
+    // pedido explícito, no una libertad de estilo. "Precio comercial N"/"Fecha comercial
+    // N" son la excepción: en la hoja original ese encabezado trae una fecha fija
+    // ("PRECIO COMERCIAL 16/02/2026"), pero acá la fecha varía por propiedad (columna
+    // aparte), así que un encabezado fijo con una sola fecha sería engañoso para el resto
+    // de las filas.
     const headers = [
       { header: '#', key: 'num', width: 5 },
-      { header: 'Título', key: 'title', width: 34 },
+      { header: 'Título', key: 'title', width: 30 },
+      { header: 'CALLE', key: 'address', width: 26 },
+      { header: 'NUMERO', key: 'propertyNumber', width: 10 },
+      { header: 'LT', key: 'lot', width: 8 },
+      { header: 'MZ', key: 'block', width: 8 },
+      { header: 'COLONIA', key: 'colonia', width: 20 },
+      { header: 'CODIGO POSTAL', key: 'postalCode', width: 12 },
+      { header: 'MTS. T', key: 'terrainMeters', width: 12 },
+      { header: 'MTS. C', key: 'constructionMeters', width: 16 },
+      { header: 'PORTAFOLIO', key: 'portfolio', width: 11 },
+      { header: 'COFINAVIT/VIABILIDAD/TIPO', key: 'legalProcessType', width: 20 },
+      { header: 'PRECIO VENTA', key: 'price', width: 16 },
+      { header: 'PLANTILLA', key: 'template', width: 12 },
+      { header: 'CLAVE DE BUSQUEDA', key: 'code', width: 14 },
+      { header: 'PLANO CATASTRAL', key: 'cadastralPlan', width: 14 },
+      { header: 'OBSERVACIONES', key: 'internalNotes', width: 30 },
+      { header: 'FOTO', key: 'photo', width: 8 },
+      { header: 'PAGINA FB', key: 'facebookPage', width: 20 },
+      { header: 'FICHA TECNICA', key: 'technicalSheet', width: 14 },
+      { header: 'ZONA', key: 'zone', width: 12 },
+      { header: 'TIPO DE ZONA', key: 'zoneType', width: 14 },
+      { header: 'Precio comercial 1', key: 'commercialPrice1', width: 16 },
+      { header: 'Fecha comercial 1', key: 'commercialPrice1Date', width: 14 },
+      { header: 'Precio comercial 2', key: 'commercialPrice2', width: 16 },
+      { header: 'Fecha comercial 2', key: 'commercialPrice2Date', width: 14 },
+      { header: 'UTILIDAD', key: 'utility', width: 14 },
+      { header: 'INGRESO A INVENTARIO', key: 'inventoryEntryDate', width: 18 },
       { header: 'Ciudad', key: 'city', width: 13 },
       { header: 'Tipo', key: 'type', width: 13 },
       { header: 'Estatus', key: 'status', width: 12 },
-      { header: 'Precio', key: 'price', width: 17 },
-      { header: 'M² Terreno', key: 'terrainMeters', width: 12 },
-      { header: 'M² Construcción', key: 'constructionMeters', width: 16 },
       { header: 'Recámaras', key: 'bedrooms', width: 11 },
       { header: 'Baños', key: 'bathrooms', width: 9 },
-      { header: 'Dirección', key: 'address', width: 28 },
-      { header: 'Visitas', key: 'views', width: 9 },
       { header: 'Fecha alta', key: 'createdAt', width: 13 },
       { header: 'Última modif.', key: 'updatedAt', width: 13 },
     ];
     sheet.columns = headers;
+    // Posiciones (1-based) usadas por el coloreado de celdas más abajo — recalcular si se
+    // vuelve a reordenar `headers`.
+    const PRICE_COL = headers.findIndex((h) => h.key === 'price') + 1;
+    const STATUS_COL = headers.findIndex((h) => h.key === 'status') + 1;
 
     await buildExcelHeader({
       workbook,
@@ -105,16 +145,37 @@ const exportExcel = async (req, res) => {
       const row = sheet.addRow({
         num: i + 1,
         title: dash(p.title),
+        address: dash(p.address),
+        propertyNumber: dash(p.propertyNumber),
+        lot: dash(p.lot),
+        block: dash(p.block),
+        colonia: dash(p.colonia),
+        postalCode: dash(p.postalCode),
+        terrainMeters: p.terrainMeters ? `${p.terrainMeters} m²` : '—',
+        constructionMeters: p.constructionMeters ? `${p.constructionMeters} m²` : '—',
+        portfolio: dash(p.portfolio),
+        legalProcessType: legalProcessTypeLabel[p.legalProcessType] || dash(p.legalProcessType),
+        price: formatPrice(p.price),
+        template: dash(p.template),
+        code: dash(p.code),
+        cadastralPlan: dash(p.cadastralPlan),
+        internalNotes: dash(p.internalNotes),
+        photo: p.images && p.images.length > 0 ? 'Sí' : 'No',
+        facebookPage: dash(p.facebookPage),
+        technicalSheet: dash(p.technicalSheet),
+        zone: dash(p.zone),
+        zoneType: dash(p.zoneType),
+        commercialPrice1: p.commercialPrice1 != null ? formatPrice(p.commercialPrice1) : '—',
+        commercialPrice1Date: formatDate(p.commercialPrice1Date),
+        commercialPrice2: p.commercialPrice2 != null ? formatPrice(p.commercialPrice2) : '—',
+        commercialPrice2Date: formatDate(p.commercialPrice2Date),
+        utility: p.utility != null ? formatPrice(p.utility) : '—',
+        inventoryEntryDate: formatDate(p.inventoryEntryDate),
         city: cityLabel[p.city] || p.city,
         type: typeLabel[p.type] || p.type,
         status: statusLabel[p.status] || p.status,
-        price: formatPrice(p.price),
-        terrainMeters: p.terrainMeters ? `${p.terrainMeters} m²` : '—',
-        constructionMeters: p.constructionMeters ? `${p.constructionMeters} m²` : '—',
         bedrooms: dash(p.bedrooms),
         bathrooms: dash(p.bathrooms),
-        address: dash(p.address),
-        views: p.views ?? 0,
         createdAt: formatDate(p.createdAt),
         updatedAt: formatDate(p.updatedAt),
       });
@@ -128,12 +189,12 @@ const exportExcel = async (req, res) => {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
       });
 
-      row.getCell(5).font = {
+      row.getCell(STATUS_COL).font = {
         bold: true,
         size: 9,
         color: { argb: statusArgb[p.status] || TEXT_ARGB },
       };
-      row.getCell(6).font = { bold: true, size: 9, color: { argb: PRIMARY_ARGB } };
+      row.getCell(PRICE_COL).font = { bold: true, size: 9, color: { argb: PRIMARY_ARGB } };
     });
 
     // Fila total

@@ -143,6 +143,80 @@ const Property = sequelize.define(
       allowNull: true,
       comment: 'Código interno de Triomphe, ej. JRCH-0164',
     },
+    // Campos de seguimiento de inventario alineados con la hoja maestra de Excel del
+    // negocio — ver migración 20260817000000-add-inventory-tracking-fields-to-properties.
+    // Varios se dejan como texto libre a propósito (ver comentario de esa migración).
+    lot: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Lote — columna "LT" en la hoja de inventario',
+    },
+    block: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Manzana — columna "MZ" en la hoja de inventario',
+    },
+    portfolio: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    legalProcessType: {
+      type: DataTypes.ENUM('cesion', 'dacion', 'adjudicacion'),
+      allowNull: true,
+      comment: 'Tipo de proceso legal de adquisición (columna COFINAVIT/VIABILIDAD/TIPO)',
+    },
+    template: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    cadastralPlan: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    technicalSheet: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    facebookPage: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+    },
+    zone: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    zoneType: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    commercialPrice1: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      comment: 'Primer precio de avalúo comercial capturado',
+    },
+    commercialPrice1Date: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    commercialPrice2: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      comment: 'Segundo precio de avalúo comercial capturado (actualización posterior)',
+    },
+    commercialPrice2Date: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    utility: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      comment: 'Utilidad — se captura a mano, no se calcula automáticamente',
+    },
+    inventoryEntryDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Fecha en que la propiedad ingresó al inventario',
+    },
   },
   {
     tableName: 'properties',

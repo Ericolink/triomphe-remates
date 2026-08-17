@@ -22,6 +22,7 @@ export default function FavoriteButton({ property, size = 16, className = '' }) 
       whileTap={{ scale: 0.8 }}
       whileHover={{ scale: 1.1 }}
       onClick={handleClick}
+      aria-label={active ? 'Quitar de favoritos' : 'Guardar en favoritos'}
       title={active ? 'Quitar de favoritos' : 'Guardar en favoritos'}
       className={`flex items-center justify-center rounded-full transition-colors ${
         active

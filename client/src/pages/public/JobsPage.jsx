@@ -420,7 +420,7 @@ export default function JobsPage() {
           >
             <Users size={16} /> Únete a nuestro equipo
           </motion.div>
-          <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-bold mb-4">
+          <motion.h1 variants={fadeInUp} className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
             Trabaja con Nosotros
           </motion.h1>
           <motion.p
@@ -541,7 +541,7 @@ export default function JobsPage() {
         >
           <motion.h2
             variants={fadeInUp}
-            className="text-4xl md:text-6xl font-extrabold mb-8 leading-tight"
+            className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-8 leading-snug"
           >
             Envíanos tu postulación general y te consideraremos para futuras oportunidades.
           </motion.h2>

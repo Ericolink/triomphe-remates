@@ -136,7 +136,7 @@ export default function FAQPage() {
           <motion.div variants={fadeInUp} className="flex justify-center mb-4">
             <HelpCircle size={48} className="text-accent-400" />
           </motion.div>
-          <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-bold mb-4">
+          <motion.h1 variants={fadeInUp} className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
             Preguntas Frecuentes
           </motion.h1>
           <motion.p

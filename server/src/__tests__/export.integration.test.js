@@ -93,16 +93,37 @@ describe('exportController', () => {
       expect(headerRow).toEqual([
         '#',
         'Título',
+        'CALLE',
+        'NUMERO',
+        'LT',
+        'MZ',
+        'COLONIA',
+        'CODIGO POSTAL',
+        'MTS. T',
+        'MTS. C',
+        'PORTAFOLIO',
+        'COFINAVIT/VIABILIDAD/TIPO',
+        'PRECIO VENTA',
+        'PLANTILLA',
+        'CLAVE DE BUSQUEDA',
+        'PLANO CATASTRAL',
+        'OBSERVACIONES',
+        'FOTO',
+        'PAGINA FB',
+        'FICHA TECNICA',
+        'ZONA',
+        'TIPO DE ZONA',
+        'Precio comercial 1',
+        'Fecha comercial 1',
+        'Precio comercial 2',
+        'Fecha comercial 2',
+        'UTILIDAD',
+        'INGRESO A INVENTARIO',
         'Ciudad',
         'Tipo',
         'Estatus',
-        'Precio',
-        'M² Terreno',
-        'M² Construcción',
         'Recámaras',
         'Baños',
-        'Dirección',
-        'Visitas',
         'Fecha alta',
         'Última modif.',
       ]);
@@ -119,19 +140,19 @@ describe('exportController', () => {
       };
 
       const completa = findRowByTitle('Casa completa');
-      expect(completa[3]).toBe(CITY_LABEL.chihuahua);
-      expect(completa[4]).toBe(PROPERTY_TYPE_LABEL.casa);
-      expect(completa[5]).toBe(STATUS_LABEL.disponible);
-      expect(completa[6]).toBe(formatPrice(1250000));
-      expect(completa[7]).toBe('300.00 m²'); // DECIMAL(8,2) vuelve como string desde MySQL
-      expect(completa[11]).toBe('Av. Siempre Viva 123');
-      expect(completa[13]).toBe(formatDate(withEverything.createdAt)); // dd/mm/aaaa, no ISO
+      expect(completa[3]).toBe('Av. Siempre Viva 123'); // CALLE
+      expect(completa[9]).toBe('300.00 m²'); // MTS. T — DECIMAL(8,2) vuelve como string desde MySQL
+      expect(completa[13]).toBe(formatPrice(1250000)); // PRECIO VENTA
+      expect(completa[29]).toBe(CITY_LABEL.chihuahua);
+      expect(completa[30]).toBe(PROPERTY_TYPE_LABEL.casa);
+      expect(completa[31]).toBe(STATUS_LABEL.disponible);
+      expect(completa[34]).toBe(formatDate(withEverything.createdAt)); // Fecha alta, dd/mm/aaaa no ISO
 
       const pendiente = findRowByTitle('Terreno en remate');
-      expect(pendiente[3]).toBe(CITY_LABEL.juarez);
-      expect(pendiente[6]).toBe('PENDIENTE'); // price: null — regla de dominio, no un error
-      expect(pendiente[7]).toBe(dash(null)); // '—' cuando no hay M² de terreno
-      expect(pendiente[9]).toBe(dash(null)); // recámaras faltantes
+      expect(pendiente[9]).toBe(dash(null)); // '—' cuando no hay MTS. T
+      expect(pendiente[13]).toBe('PENDIENTE'); // price: null — regla de dominio, no un error
+      expect(pendiente[29]).toBe(CITY_LABEL.juarez);
+      expect(pendiente[32]).toBe(dash(null)); // recámaras faltantes
 
       const totalRow = sheet.getRow(sheet.rowCount).values;
       expect(totalRow[2]).toBe('TOTAL: 2 propiedades');
@@ -186,7 +207,7 @@ describe('exportController', () => {
       const workbook = await readWorkbook(res.body);
       const sheet = workbook.getWorksheet('Inventario');
       expect(sheet.rowCount - 4).toBe(1);
-      expect(sheet.getRow(4).values[3]).toBe(CITY_LABEL.chihuahua);
+      expect(sheet.getRow(4).values[29]).toBe(CITY_LABEL.chihuahua);
     });
 
     test('caracteres especiales y acentos se preservan tal cual (Excel no los recorta)', async () => {

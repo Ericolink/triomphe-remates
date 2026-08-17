@@ -76,7 +76,7 @@ export default function HomePage() {
           <motion.div variants={staggerContainer} initial="hidden" animate="visible">
             <motion.h1
               variants={fadeInUp}
-              className="text-4xl md:text-6xl font-bold mb-6 leading-tight"
+              className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 leading-tight"
             >
               {content.heroTitle}
               <br />
@@ -91,16 +91,18 @@ export default function HomePage() {
               {content.heroBadge}
             </motion.div>
 
+            {/* Copy de apoyo bajo el H1 — texto explicativo, deliberadamente más chico
+                que el título para no competir con él ni retrasar la llegada al buscador. */}
             <motion.p
               variants={fadeInUp}
-              className="text-2xl md:text-3xl font-bold text-white mb-8 max-w-3xl mx-auto leading-snug"
+              className="text-lg md:text-xl font-medium text-white mb-8 max-w-3xl mx-auto leading-snug"
             >
               {content.heroSlogan}
             </motion.p>
 
             <motion.p
               variants={fadeInUp}
-              className="text-2xl font-semibold text-accent-300 mb-2 max-w-2xl mx-auto"
+              className="text-base md:text-lg font-semibold text-accent-300 mb-2 max-w-2xl mx-auto"
             >
               Contamos con inventario a nivel nacional.
             </motion.p>

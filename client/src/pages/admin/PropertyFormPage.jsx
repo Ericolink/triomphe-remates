@@ -37,6 +37,7 @@ import {
   CITY_LABELS,
   TYPE_LABELS,
   CATEGORY_LABELS,
+  LEGAL_PROCESS_TYPE_LABELS,
   STATUS_DOT_COLORS,
   labelsToOptions,
 } from '../../utils/constants';
@@ -62,6 +63,8 @@ const SECTIONS = [
   { key: 'ubicacion', title: 'Ubicación y tipo' },
   { key: 'detalles', title: 'Detalles (opcional)' },
   { key: 'remate', title: 'Remate y estatus' },
+  { key: 'legal', title: 'Datos catastrales y legales (opcional)' },
+  { key: 'valuacion', title: 'Valuación comercial (opcional)' },
 ];
 
 const FIELDS = [
@@ -158,6 +161,83 @@ const FIELDS = [
     options: labelsToOptions(STATUS_LABELS),
   },
   { key: 'price', label: 'Precio (opcional)', type: 'price', col: 1, section: 'remate' },
+
+  // Campos de seguimiento de inventario, alineados con la hoja maestra de Excel del negocio
+  // (ver export de propiedades) — todos opcionales, sin default fuerte de negocio.
+  { key: 'lot', label: 'Lote (opcional)', type: 'text', col: 1, section: 'legal' },
+  { key: 'block', label: 'Manzana (opcional)', type: 'text', col: 1, section: 'legal' },
+  { key: 'portfolio', label: 'Portafolio (opcional)', type: 'text', col: 1, section: 'legal' },
+  {
+    key: 'legalProcessType',
+    label: 'Tipo de proceso legal (opcional)',
+    type: 'select',
+    col: 1,
+    section: 'legal',
+    options: [
+      { value: '', label: 'No especificado' },
+      ...labelsToOptions(LEGAL_PROCESS_TYPE_LABELS),
+    ],
+  },
+  { key: 'template', label: 'Plantilla (opcional)', type: 'text', col: 1, section: 'legal' },
+  {
+    key: 'cadastralPlan',
+    label: 'Plano catastral (opcional)',
+    type: 'text',
+    col: 1,
+    section: 'legal',
+  },
+  {
+    key: 'technicalSheet',
+    label: 'Ficha técnica (opcional)',
+    type: 'text',
+    col: 1,
+    section: 'legal',
+  },
+  {
+    key: 'facebookPage',
+    label: 'Página FB (opcional)',
+    type: 'text',
+    col: 1,
+    section: 'legal',
+  },
+  { key: 'zone', label: 'Zona (opcional)', type: 'text', col: 1, section: 'legal' },
+  { key: 'zoneType', label: 'Tipo de zona (opcional)', type: 'text', col: 1, section: 'legal' },
+  {
+    key: 'commercialPrice1',
+    label: 'Precio comercial 1 (opcional)',
+    type: 'number',
+    col: 1,
+    section: 'valuacion',
+  },
+  {
+    key: 'commercialPrice1Date',
+    label: 'Fecha comercial 1 (opcional)',
+    type: 'date',
+    col: 1,
+    section: 'valuacion',
+  },
+  {
+    key: 'commercialPrice2',
+    label: 'Precio comercial 2 (opcional)',
+    type: 'number',
+    col: 1,
+    section: 'valuacion',
+  },
+  {
+    key: 'commercialPrice2Date',
+    label: 'Fecha comercial 2 (opcional)',
+    type: 'date',
+    col: 1,
+    section: 'valuacion',
+  },
+  { key: 'utility', label: 'Utilidad (opcional)', type: 'number', col: 1, section: 'valuacion' },
+  {
+    key: 'inventoryEntryDate',
+    label: 'Fecha de ingreso a inventario (opcional)',
+    type: 'date',
+    col: 1,
+    section: 'valuacion',
+  },
 ];
 
 const CITY_CODE_PREFIX = { juarez: 'JRCH-', chihuahua: 'CHCH-', queretaro: 'QRQR-' };
@@ -189,6 +269,22 @@ const emptyForm = {
   acquisitionStage: 'sin_proceso',
   code: CITY_CODE_PREFIX.juarez,
   noCode: false,
+  lot: '',
+  block: '',
+  portfolio: '',
+  legalProcessType: '',
+  template: '',
+  cadastralPlan: '',
+  technicalSheet: '',
+  facebookPage: '',
+  zone: '',
+  zoneType: '',
+  commercialPrice1: '',
+  commercialPrice1Date: '',
+  commercialPrice2: '',
+  commercialPrice2Date: '',
+  utility: '',
+  inventoryEntryDate: '',
 };
 
 const propertyToForm = (p) => ({
@@ -218,6 +314,28 @@ const propertyToForm = (p) => ({
   acquisitionStage: p.acquisitionStage || 'sin_proceso',
   code: p.code || '',
   noCode: !p.code,
+  lot: p.lot || '',
+  block: p.block || '',
+  portfolio: p.portfolio || '',
+  legalProcessType: p.legalProcessType || '',
+  template: p.template || '',
+  cadastralPlan: p.cadastralPlan || '',
+  technicalSheet: p.technicalSheet || '',
+  facebookPage: p.facebookPage || '',
+  zone: p.zone || '',
+  zoneType: p.zoneType || '',
+  commercialPrice1: p.commercialPrice1 ?? '',
+  commercialPrice1Date: p.commercialPrice1Date
+    ? new Date(p.commercialPrice1Date).toISOString().split('T')[0]
+    : '',
+  commercialPrice2: p.commercialPrice2 ?? '',
+  commercialPrice2Date: p.commercialPrice2Date
+    ? new Date(p.commercialPrice2Date).toISOString().split('T')[0]
+    : '',
+  utility: p.utility ?? '',
+  inventoryEntryDate: p.inventoryEntryDate
+    ? new Date(p.inventoryEntryDate).toISOString().split('T')[0]
+    : '',
 });
 
 const inputClass =

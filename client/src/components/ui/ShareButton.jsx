@@ -91,7 +91,7 @@ export default function ShareButton({ title, subtitle, url, propertyId }) {
         aria-haspopup="true"
         aria-expanded={open}
         aria-label="Compartir"
-        className="flex items-center justify-center gap-2 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 border border-gray-200 rounded-full sm:rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+        className="flex items-center justify-center gap-2 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 bg-white border border-gray-200 rounded-full sm:rounded-xl text-sm text-gray-600 hover:bg-primary-900 hover:text-white hover:border-primary-900 transition-colors"
       >
         <Share2 size={16} aria-hidden="true" /> <span className="hidden sm:inline">Compartir</span>
       </button>

@@ -275,6 +275,22 @@ const createProperty = async (req, res) => {
     isFeatured,
     internalNotes,
     code,
+    lot,
+    block,
+    portfolio,
+    legalProcessType,
+    template,
+    cadastralPlan,
+    technicalSheet,
+    facebookPage,
+    zone,
+    zoneType,
+    commercialPrice1,
+    commercialPrice1Date,
+    commercialPrice2,
+    commercialPrice2Date,
+    utility,
+    inventoryEntryDate,
   } = req.body;
 
   if (!title || !city || !type) {
@@ -317,6 +333,22 @@ const createProperty = async (req, res) => {
         isFeatured: isFeatured || false,
         internalNotes: internalNotes || null,
         code: nullIfEmpty(code),
+        lot: nullIfEmpty(lot),
+        block: nullIfEmpty(block),
+        portfolio: nullIfEmpty(portfolio),
+        legalProcessType: nullIfEmpty(legalProcessType),
+        template: nullIfEmpty(template),
+        cadastralPlan: nullIfEmpty(cadastralPlan),
+        technicalSheet: nullIfEmpty(technicalSheet),
+        facebookPage: nullIfEmpty(facebookPage),
+        zone: nullIfEmpty(zone),
+        zoneType: nullIfEmpty(zoneType),
+        commercialPrice1: nullIfEmpty(commercialPrice1),
+        commercialPrice1Date: commercialPrice1Date || null,
+        commercialPrice2: nullIfEmpty(commercialPrice2),
+        commercialPrice2Date: commercialPrice2Date || null,
+        utility: nullIfEmpty(utility),
+        inventoryEntryDate: inventoryEntryDate || null,
         slug,
       },
       { transaction }
@@ -386,6 +418,22 @@ const updateProperty = async (req, res) => {
     isFeatured,
     internalNotes,
     code,
+    lot,
+    block,
+    portfolio,
+    legalProcessType,
+    template,
+    cadastralPlan,
+    technicalSheet,
+    facebookPage,
+    zone,
+    zoneType,
+    commercialPrice1,
+    commercialPrice1Date,
+    commercialPrice2,
+    commercialPrice2Date,
+    utility,
+    inventoryEntryDate,
   } = req.body;
 
   if (title && title !== property.title) {
@@ -430,6 +478,26 @@ const updateProperty = async (req, res) => {
   if (isFeatured !== undefined) updates.isFeatured = isFeatured;
   if (internalNotes !== undefined) updates.internalNotes = internalNotes || null;
   if (code !== undefined) updates.code = nullIfEmpty(code);
+  if (lot !== undefined) updates.lot = nullIfEmpty(lot);
+  if (block !== undefined) updates.block = nullIfEmpty(block);
+  if (portfolio !== undefined) updates.portfolio = nullIfEmpty(portfolio);
+  if (legalProcessType !== undefined)
+    updates.legalProcessType = nullIfEmpty(legalProcessType);
+  if (template !== undefined) updates.template = nullIfEmpty(template);
+  if (cadastralPlan !== undefined) updates.cadastralPlan = nullIfEmpty(cadastralPlan);
+  if (technicalSheet !== undefined) updates.technicalSheet = nullIfEmpty(technicalSheet);
+  if (facebookPage !== undefined) updates.facebookPage = nullIfEmpty(facebookPage);
+  if (zone !== undefined) updates.zone = nullIfEmpty(zone);
+  if (zoneType !== undefined) updates.zoneType = nullIfEmpty(zoneType);
+  if (commercialPrice1 !== undefined) updates.commercialPrice1 = nullIfEmpty(commercialPrice1);
+  if (commercialPrice1Date !== undefined)
+    updates.commercialPrice1Date = commercialPrice1Date || null;
+  if (commercialPrice2 !== undefined) updates.commercialPrice2 = nullIfEmpty(commercialPrice2);
+  if (commercialPrice2Date !== undefined)
+    updates.commercialPrice2Date = commercialPrice2Date || null;
+  if (utility !== undefined) updates.utility = nullIfEmpty(utility);
+  if (inventoryEntryDate !== undefined)
+    updates.inventoryEntryDate = inventoryEntryDate || null;
   if (req.body.slug) updates.slug = req.body.slug;
 
   await property.update(updates);

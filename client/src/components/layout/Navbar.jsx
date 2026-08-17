@@ -62,7 +62,7 @@ export default function Navbar() {
                   to={to}
                   end={to === '/'}
                   className={({ isActive }) =>
-                    `text-sm font-medium whitespace-nowrap transition-colors hover:text-accent-400 ${isActive ? 'text-accent-400' : 'text-gray-200'}`
+                    `text-base font-bold whitespace-nowrap transition-colors hover:text-accent-400 ${isActive ? 'text-accent-400' : 'text-gray-200'}`
                   }
                 >
                   {label}
@@ -89,7 +89,7 @@ export default function Navbar() {
                     </span>
                   )}
                 </span>
-                <span className="text-sm font-medium text-gray-200">Favoritos</span>
+                <span className="text-base font-bold text-gray-200">Favoritos</span>
               </Link>
               <Link
                 to="/comparar"
@@ -104,7 +104,7 @@ export default function Navbar() {
                     </span>
                   )}
                 </span>
-                <span className="text-sm font-medium text-gray-200">Comparar</span>
+                <span className="text-base font-bold text-gray-200">Comparar</span>
               </Link>
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -115,7 +115,7 @@ export default function Navbar() {
               >
                 <Link
                   to="/admin/login"
-                  className="text-sm font-medium bg-accent-400 text-primary-900 px-4 py-1.5 rounded-lg hover:bg-accent-300 transition-colors whitespace-nowrap"
+                  className="text-base font-bold bg-accent-400 text-primary-900 px-4 py-1.5 rounded-lg hover:bg-accent-300 transition-colors whitespace-nowrap"
                 >
                   Acceso Admin
                 </Link>
@@ -137,7 +137,7 @@ export default function Navbar() {
                     </span>
                   )}
                 </span>
-                <span className="hidden sm:inline text-sm font-medium text-gray-200">
+                <span className="hidden sm:inline text-base font-bold text-gray-200">
                   Favoritos
                 </span>
               </Link>
@@ -154,7 +154,7 @@ export default function Navbar() {
                     </span>
                   )}
                 </span>
-                <span className="hidden sm:inline text-sm font-medium text-gray-200">
+                <span className="hidden sm:inline text-base font-bold text-gray-200">
                   Comparar
                 </span>
               </Link>
@@ -216,7 +216,7 @@ export default function Navbar() {
                     end={to === '/'}
                     onClick={() => setOpen(false)}
                     className={({ isActive }) =>
-                      `block py-2 text-sm font-medium border-b border-primary-700 ${isActive ? 'text-accent-400' : 'text-gray-200'}`
+                      `block py-2 text-base font-bold border-b border-primary-700 ${isActive ? 'text-accent-400' : 'text-gray-200'}`
                     }
                   >
                     {label}
@@ -231,7 +231,7 @@ export default function Navbar() {
                 <Link
                   to="/admin/login"
                   onClick={() => setOpen(false)}
-                  className="block py-2 text-sm font-medium text-accent-400 border-b border-primary-700"
+                  className="block py-2 text-base font-bold text-accent-400 border-b border-primary-700"
                 >
                   Acceso Admin
                 </Link>

@@ -91,13 +91,13 @@ export default function PropertyCard({ property }) {
           )}
           <FavoriteButton
             property={property}
-            size={17}
-            className="absolute bottom-3 right-3 w-9 h-9"
+            size={19}
+            className="absolute bottom-3 right-3 w-11 h-11"
           />
           <ComparatorButton
             property={property}
-            size={16}
-            className="absolute bottom-3 left-3 w-9 h-9"
+            size={18}
+            className="absolute bottom-3 left-3 w-11 h-11"
           />
         </div>
         <div className="p-5">
@@ -140,7 +140,8 @@ export default function PropertyCard({ property }) {
                 e.stopPropagation();
                 window.open(waHref, '_blank', 'noopener,noreferrer');
               }}
-              className="text-green-600 hover:text-green-700 flex-shrink-0 p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+              className="text-green-600 hover:text-green-700 flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+              aria-label="Consultar por WhatsApp"
               title="Consultar por WhatsApp"
             >
               <WhatsAppIcon />

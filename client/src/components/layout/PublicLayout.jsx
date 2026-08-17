@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import ComparatorBar from '../ui/ComparatorBar';
+import FloatingWhatsAppButton from '../ui/FloatingWhatsAppButton';
 
 export default function PublicLayout() {
   return (
@@ -12,6 +13,7 @@ export default function PublicLayout() {
       </main>
       <Footer />
       <ComparatorBar />
+      <FloatingWhatsAppButton />
     </div>
   );
 }

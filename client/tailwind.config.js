@@ -43,27 +43,18 @@ export default {
           muted: '#374060',
         },
       },
-      fontSize: {
-        xs: ['0.95rem', { lineHeight: '1.45rem' }],
-        sm: ['1.05rem', { lineHeight: '1.65rem' }],
-        base: ['1.2rem', { lineHeight: '1.85rem' }],
-        lg: ['1.35rem', { lineHeight: '2rem' }],
-        xl: ['1.5rem', { lineHeight: '2.1rem' }],
-        '2xl': ['1.85rem', { lineHeight: '2.3rem' }],
-        '3xl': ['2.35rem', { lineHeight: '2.7rem' }],
-        '4xl': ['2.85rem', { lineHeight: '3.2rem' }],
-        '5xl': ['3.6rem', { lineHeight: '1.05' }],
-        '6xl': ['4.4rem', { lineHeight: '1' }],
-      },
       spacing: {
         4.5: '1.125rem',
         5.5: '1.375rem',
       },
       screens: {
-        // El Navbar necesita bastante más ancho que el "lg" estándar (1024px) para
-        // mostrar el menú de 6 links totalmente distribuido sin salto de línea ni
-        // desborde — con el font-size global del sitio (18px) no cabe cómodamente
-        // hasta ~1700px. Por debajo de "dk" se usa el menú hamburguesa. Ver Navbar.jsx.
+        // El Navbar necesita más ancho que el "lg" estándar (1024px) para mostrar el
+        // menú de 6 links distribuido sin salto de línea ni desborde. Este valor se
+        // fijó en 1800px cuando el font-size global del sitio era 18px (ver auditoría
+        // móvil 2026-08-17); ahora que la escala tipográfica volvió a la base estándar
+        // de Tailwind, este breakpoint casi seguro puede bajar — queda pendiente de
+        // revisión en la fase de responsive (no se toca en esta corrección quirúrgica
+        // de tipografía). Por debajo de "dk" se usa el menú hamburguesa. Ver Navbar.jsx.
         dk: '1800px',
       },
     },

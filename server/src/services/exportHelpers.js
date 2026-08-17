@@ -11,6 +11,22 @@ const logger = require('../utils/logger');
 
 const dash = (val) => (val !== null && val !== undefined && val !== '' ? String(val) : '—');
 
+// Convierte un índice de columna (1-based) a su letra de Excel (1→A, 26→Z, 27→AA...).
+// buildExcelHeader antes calculaba esto con `String.fromCharCode(64 + n)`, que solo es
+// correcto hasta 26 columnas — con más (ver exportExcel de propiedades, que pasó a tener
+// 35 tras agregar los campos de seguimiento de inventario) devolvía un carácter minúsculo
+// fuera de rango en vez de "AI", rompiendo el merge/referencia de celda.
+const columnLetter = (n) => {
+  let s = '';
+  let num = n;
+  while (num > 0) {
+    const rem = (num - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    num = Math.floor((num - 1) / 26);
+  }
+  return s;
+};
+
 const getLogoPath = () => {
   const candidates = [
     path.join(__dirname, '../../../client/public/logo.png'),
@@ -47,7 +63,7 @@ const getWhiteLogoBuffer = async (logoPath) => {
 // encabezado de columnas. Solo el texto de título/subtítulo y las columnas cambian
 // entre reportes — el resto (colores, tamaños, alturas) es idéntico en los tres.
 const buildExcelHeader = async ({ workbook, sheet, headers, title, subtitle }) => {
-  const LAST_COL = String.fromCharCode(64 + headers.length);
+  const LAST_COL = columnLetter(headers.length);
 
   // Fila 1: fondo azul + logo blanco + título
   sheet.mergeCells(`A1:${LAST_COL}1`);
@@ -122,6 +138,30 @@ const getFilteredProperties = async (query) => {
       'views',
       'createdAt',
       'updatedAt',
+      // Campos de seguimiento de inventario — usados por exportExcel (ver
+      // exportController.js); se agregan aquí porque este query es compartido con exportPDF,
+      // que simplemente no los referencia en su propio mapeo de columnas.
+      'propertyNumber',
+      'colonia',
+      'postalCode',
+      'code',
+      'internalNotes',
+      'lot',
+      'block',
+      'portfolio',
+      'legalProcessType',
+      'template',
+      'cadastralPlan',
+      'technicalSheet',
+      'facebookPage',
+      'zone',
+      'zoneType',
+      'commercialPrice1',
+      'commercialPrice1Date',
+      'commercialPrice2',
+      'commercialPrice2Date',
+      'utility',
+      'inventoryEntryDate',
     ],
     include: [
       {

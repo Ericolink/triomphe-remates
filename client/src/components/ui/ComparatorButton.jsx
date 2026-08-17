@@ -26,6 +26,13 @@ export default function ComparatorButton({ property, size = 16, className = '', 
       whileTap={{ scale: 0.85 }}
       whileHover={{ scale: 1.06 }}
       onClick={handleClick}
+      aria-label={
+        active
+          ? 'Quitar del comparador'
+          : isFull
+            ? 'Comparador lleno (máx. 3)'
+            : 'Comparar propiedad'
+      }
       title={
         active
           ? 'Quitar del comparador'

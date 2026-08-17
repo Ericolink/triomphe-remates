@@ -98,6 +98,15 @@ export const CATEGORY_LABELS = {
   compra_venta: 'Compra-Venta',
 };
 
+// Tipo de proceso legal de adquisición (Property.legalProcessType) — campo de seguimiento de
+// inventario alineado con la hoja maestra de Excel del negocio (columna COFINAVIT/VIABILIDAD/
+// TIPO). Debe coincidir con LEGAL_PROCESS_TYPE_LABEL en server/src/utils/labels.js.
+export const LEGAL_PROCESS_TYPE_LABELS = {
+  cesion: 'Cesión',
+  dacion: 'Dación',
+  adjudicacion: 'Adjudicación',
+};
+
 // Mapeadas a las 5 variantes que soporta Badge, mismo criterio que STATUS_VARIANTS
 export const CATEGORY_VARIANTS = {
   remate: 'primary',

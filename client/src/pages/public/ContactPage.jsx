@@ -22,7 +22,7 @@ export default function ContactPage() {
       >
         <motion.h1
           variants={fadeInUp}
-          className="text-5xl font-bold text-primary-900 dark:text-white mb-3"
+          className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary-900 dark:text-white mb-3"
         >
           Contáctanos
         </motion.h1>

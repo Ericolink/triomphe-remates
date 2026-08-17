@@ -18,7 +18,7 @@ export default function ComparatorBar() {
         // animación de Framer Motion vivieran en el mismo elemento, el `transform`
         // que Framer Motion aplica para `y` pisaría el `-translate-x-1/2` de Tailwind
         // y la barra quedaría desplazada y cortada en pantallas angostas
-        <div className="fixed bottom-6 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
+        <div className="fixed bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

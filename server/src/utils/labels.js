@@ -53,10 +53,19 @@ const CITY_STATE_LABEL = {
   queretaro: 'Querétaro',
 };
 
+// Tipo de proceso legal de adquisición (Property.legalProcessType) — debe coincidir con
+// LEGAL_PROCESS_TYPE_LABELS en client/src/utils/constants.js. Usado por el export de Excel.
+const LEGAL_PROCESS_TYPE_LABEL = {
+  cesion: 'Cesión',
+  dacion: 'Dación',
+  adjudicacion: 'Adjudicación',
+};
+
 module.exports = {
   CITY_LABEL,
   PROPERTY_TYPE_LABEL,
   STATUS_LABEL,
   CITY_STATE_LABEL,
   LEAD_TYPE_LABEL,
+  LEGAL_PROCESS_TYPE_LABEL,
 };

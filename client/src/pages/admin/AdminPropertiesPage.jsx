@@ -30,6 +30,132 @@ import { downloadBlob } from '../../utils/download';
 import useAuthStore from '../../store/authStore';
 import { canManageInventory, canExportInventory, isAdmin } from '../../utils/permissions';
 
+// Versión mobile/tablet-angosto (<lg) de una fila de la tabla — mismos datos, reorganizados
+// verticalmente en vez de en 9 columnas que forzaban scroll horizontal. Recibe handlers ya
+// resueltos (en vez de mutations crudas) para no duplicar la lógica de negocio de
+// AdminPropertiesPage, solo la presentación.
+function AdminPropertyCardRow({
+  property,
+  canManage,
+  canDelete,
+  promotePending,
+  onStatusChange,
+  onPromote,
+  onView,
+  onEdit,
+  onDelete,
+}) {
+  return (
+    <motion.div variants={fadeInUp} className="p-4">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="min-w-0">
+          <p className="font-medium text-gray-800 dark:text-gray-100 truncate">
+            {property.title}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">
+            {property.type}
+            {property.code ? ` · ${property.code}` : ''}
+          </p>
+        </div>
+        <motion.button
+          type="button"
+          onClick={canManage ? onPromote : undefined}
+          disabled={!canManage || promotePending}
+          whileHover={canManage ? { scale: 1.2 } : undefined}
+          whileTap={canManage ? { scale: 0.85 } : undefined}
+          title={
+            canManage
+              ? property.isPromoted
+                ? 'Quitar promoción'
+                : 'Promover como estrella'
+              : undefined
+          }
+          className={`flex-shrink-0 p-1.5 -m-1.5 rounded-lg transition-colors ${canManage ? 'hover:bg-accent-50 dark:hover:bg-accent-900/20' : ''}`}
+        >
+          <Star
+            size={18}
+            className={
+              property.isPromoted ? 'text-accent-400 fill-accent-400' : 'text-gray-300 dark:text-gray-600'
+            }
+          />
+        </motion.button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 text-xs text-gray-500 dark:text-gray-400">
+        <Badge variant={BUSINESS_LINE_VARIANTS[property.businessLine]}>
+          {BUSINESS_LINE_LABELS[property.businessLine] || property.businessLine}
+        </Badge>
+        <span>{CITY_LABELS[property.city]}</span>
+        <span>· {property.views ?? 0} visitas</span>
+        <span title={`Alta: ${formatDate(property.createdAt)}`}>
+          · Act. {formatDate(property.updatedAt)}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <p
+          className={`font-semibold ${property.price ? 'text-primary-900 dark:text-accent-400' : 'text-yellow-500 dark:text-yellow-400'}`}
+        >
+          {formatPrice(property.price)}
+        </p>
+        {canManage ? (
+          <select
+            value={property.status}
+            onChange={(e) => onStatusChange(e.target.value)}
+            className={`text-xs border-0 rounded-lg px-2 py-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-accent-400 ${STATUS_SELECT_COLORS[property.status]}`}
+          >
+            {labelsToOptions(STATUS_LABELS).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span
+            className={`text-xs rounded-lg px-2 py-1.5 font-medium ${STATUS_SELECT_COLORS[property.status]}`}
+          >
+            {STATUS_LABELS[property.status]}
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-gray-50 dark:border-[#2e3650]">
+        <motion.button
+          onClick={onView}
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          title="Ver en el sitio público"
+          className="p-2 text-gray-400 rounded-lg transition-colors hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+        >
+          <Eye size={20} />
+        </motion.button>
+        {canManage && (
+          <motion.button
+            onClick={onEdit}
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            title="Editar"
+            className="p-2 text-gray-400 rounded-lg transition-colors hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2e3650]"
+          >
+            <Pencil size={20} />
+          </motion.button>
+        )}
+        {canDelete && (
+          <motion.button
+            onClick={onDelete}
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            title="Eliminar"
+            className="p-2 text-gray-400 rounded-lg transition-colors hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            <Trash2 size={20} />
+          </motion.button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 export default function AdminPropertiesPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -49,6 +175,28 @@ export default function AdminPropertiesPage() {
     queryKey: ['admin-properties', search, city, category, businessLine, page],
     queryFn: () => getProperties({ search, city, category, businessLine, page, limit: 15 }),
   });
+
+  // Selector combinado "Línea": línea de negocio (remate/infonavit) y categoría
+  // (remate/renta/compra_venta, subclasificación solo dentro de la línea remate — ver
+  // BUSINESS_LINE_LABELS/CATEGORY_LABELS en utils/constants.js) viven en dos campos
+  // distintos del modelo, pero antes se filtraban desde dos <select> separados. Se
+  // unificaron en uno solo (a pedido, para no ocupar dos filas en mobile); el prefijo
+  // bl:/cat: en el value de cada <option> es lo único que distingue a qué estado real
+  // escribir, ya que ambos comparten el valor "remate" con significados distintos.
+  const lineFilterValue = businessLine ? `bl:${businessLine}` : category ? `cat:${category}` : '';
+  const handleLineFilterChange = (raw) => {
+    if (raw.startsWith('bl:')) {
+      setBusinessLine(raw.slice(3));
+      setCategory('');
+    } else if (raw.startsWith('cat:')) {
+      setCategory(raw.slice(4));
+      setBusinessLine('');
+    } else {
+      setBusinessLine('');
+      setCategory('');
+    }
+    setPage(1);
+  };
 
   const deleteMutation = useMutation({
     mutationFn: deleteProperty,
@@ -190,15 +338,11 @@ export default function AdminPropertiesPage() {
         </div>
       </motion.div>
 
-      {/* Filtros */}
-      <motion.div
-        variants={fadeInUp}
-        initial="hidden"
-        animate="visible"
-        className="flex flex-wrap gap-3 mb-6"
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0 bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-xl px-3 py-2">
-          <Search size={16} className="text-gray-400 flex-shrink-0" />
+      {/* Filtros — buscador en su propia fila con más peso visual (es la acción principal
+          de esta sección), ciudad/línea en una fila compacta de 2 columnas debajo. */}
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-6">
+        <div className="flex items-center gap-2.5 bg-white dark:bg-[#242938] border-2 border-gray-200 dark:border-[#2e3650] focus-within:border-accent-400 dark:focus-within:border-accent-500 rounded-xl px-4 py-3 mb-3 shadow-sm transition-colors">
+          <Search size={20} className="text-gray-400 flex-shrink-0" />
           <input
             type="text"
             placeholder="Buscar por nombre o código..."
@@ -207,51 +351,50 @@ export default function AdminPropertiesPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="flex-1 min-w-0 text-sm focus:outline-none bg-transparent dark:text-gray-100 dark:placeholder-gray-500"
+            className="flex-1 min-w-0 text-base focus:outline-none bg-transparent dark:text-gray-100 dark:placeholder-gray-500"
           />
         </div>
-        {[
-          {
-            value: city,
-            onChange: setCity,
-            options: [
-              { value: '', label: 'Todas las ciudades' },
-              ...labelsToOptions(CITY_LABELS, ['otra']),
-            ],
-          },
-          {
-            value: category,
-            onChange: setCategory,
-            options: [
-              { value: '', label: 'Todas las categorías' },
-              ...labelsToOptions(CATEGORY_LABELS),
-            ],
-          },
-          {
-            value: businessLine,
-            onChange: setBusinessLine,
-            options: [
-              { value: '', label: 'Todas las líneas' },
-              ...labelsToOptions(BUSINESS_LINE_LABELS),
-            ],
-          },
-        ].map((sel, i) => (
+
+        <div className="grid grid-cols-2 gap-3">
           <select
-            key={i}
-            value={sel.value}
+            value={city}
             onChange={(e) => {
-              sel.onChange(e.target.value);
+              setCity(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
+            className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
           >
-            {sel.options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
+            {[{ value: '', label: 'Todas las ciudades' }, ...labelsToOptions(CITY_LABELS, ['otra'])].map(
+              (o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              )
+            )}
           </select>
-        ))}
+
+          <select
+            value={lineFilterValue}
+            onChange={(e) => handleLineFilterChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
+          >
+            <option value="">Todas las líneas</option>
+            <optgroup label="Línea de negocio">
+              {labelsToOptions(BUSINESS_LINE_LABELS).map((o) => (
+                <option key={`bl:${o.value}`} value={`bl:${o.value}`}>
+                  {o.label}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Categoría (dentro de Remates)">
+              {labelsToOptions(CATEGORY_LABELS).map((o) => (
+                <option key={`cat:${o.value}`} value={`cat:${o.value}`}>
+                  {o.label}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
       </motion.div>
 
       {/* Tabla */}
@@ -264,7 +407,12 @@ export default function AdminPropertiesPage() {
         {isLoading ? (
           <Spinner size="lg" className="py-16" />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Tabla — desde lg (1024px). Antes de eso, 9 columnas no caben sin scroll
+              horizontal (min-w-[900px] forzaba ese scroll incluso en tablet); en mobile
+              se usa la lista de tarjetas de abajo con la misma información reorganizada
+              verticalmente en vez de recortada en columnas. */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm min-w-[900px]">
               <thead className="bg-gray-50 dark:bg-[#1a1f2e] border-b border-gray-100 dark:border-[#2e3650]">
                 <tr>
@@ -319,13 +467,11 @@ export default function AdminPropertiesPage() {
                         {CITY_LABELS[property.city]}
                       </td>
                       <td
-                        className="px-4 py-3 font-semibold whitespace-nowrap"
-                        style={{ color: property.price ? undefined : '#f59e0b' }}
-                        className={
+                        className={`px-4 py-3 font-semibold whitespace-nowrap ${
                           property.price
                             ? 'text-primary-900 dark:text-accent-400'
                             : 'text-yellow-500 dark:text-yellow-400'
-                        }
+                        }`}
                       >
                         {formatPrice(property.price)}
                       </td>
@@ -439,47 +585,77 @@ export default function AdminPropertiesPage() {
                 </AnimatePresence>
               </motion.tbody>
             </table>
-            {data?.data?.length === 0 && (
-              <motion.div
-                variants={fadeIn}
-                initial="hidden"
-                animate="visible"
-                className="text-center py-16 text-gray-400 dark:text-gray-500"
-              >
-                {search || city || category || businessLine ? (
-                  <>
-                    <p>Ningún resultado coincide con los filtros actuales.</p>
+          </div>
+
+          {/* Tarjetas — hasta lg (1024px). Misma info que la tabla, reorganizada: título
+              arriba, línea/ciudad/visitas/actualizado en una fila secundaria compacta,
+              precio + estatus en su propia fila, acciones al final separadas por borde
+              (mismo patrón que PropertyCard.jsx en el sitio público). */}
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="lg:hidden divide-y divide-gray-50 dark:divide-[#2e3650]"
+          >
+            <AnimatePresence>
+              {data?.data?.map((property) => (
+                <AdminPropertyCardRow
+                  key={property.id}
+                  property={property}
+                  canManage={canManage}
+                  canDelete={canDelete}
+                  promotePending={promoteMutation.isPending}
+                  onStatusChange={(status) => handleStatusChange(property, status)}
+                  onPromote={() => promoteMutation.mutate(property.id)}
+                  onView={() => window.open(`/propiedades/${property.slug}`, '_blank')}
+                  onEdit={() => navigate(`/admin/propiedades/${property.id}/editar`)}
+                  onDelete={() => confirmDelete(property.id, property.title)}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+
+          {data?.data?.length === 0 && (
+            <motion.div
+              variants={fadeIn}
+              initial="hidden"
+              animate="visible"
+              className="text-center py-16 text-gray-400 dark:text-gray-500"
+            >
+              {search || city || category || businessLine ? (
+                <>
+                  <p>Ningún resultado coincide con los filtros actuales.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch('');
+                      setCity('');
+                      setCategory('');
+                      setBusinessLine('');
+                      setPage(1);
+                    }}
+                    className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
+                  >
+                    Quitar filtros
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p>Todavía no hay propiedades cargadas.</p>
+                  {canManage && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setSearch('');
-                        setCity('');
-                        setCategory('');
-                        setBusinessLine('');
-                        setPage(1);
-                      }}
+                      onClick={() => navigate('/admin/propiedades/nueva')}
                       className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
                     >
-                      Quitar filtros
+                      Crear la primera propiedad
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <p>Todavía no hay propiedades cargadas.</p>
-                    {canManage && (
-                      <button
-                        type="button"
-                        onClick={() => navigate('/admin/propiedades/nueva')}
-                        className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
-                      >
-                        Crear la primera propiedad
-                      </button>
-                    )}
-                  </>
-                )}
-              </motion.div>
-            )}
-          </div>
+                  )}
+                </>
+              )}
+            </motion.div>
+          )}
+          </>
         )}
         <Pagination
           pagination={data?.pagination}

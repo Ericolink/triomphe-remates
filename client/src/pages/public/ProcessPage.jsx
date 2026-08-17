@@ -99,7 +99,7 @@ export default function ProcessPage() {
           initial="hidden"
           animate="visible"
         >
-          <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-bold mb-4">
+          <motion.h1 variants={fadeInUp} className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
             Proceso de Adquisición
           </motion.h1>
           <motion.p

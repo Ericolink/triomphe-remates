@@ -10,7 +10,7 @@ export default function BatchActionBar({ count, onClear, onDelete, statusOptions
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 80, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-primary-900 text-white px-5 py-3 rounded-2xl shadow-2xl"
+        className="fixed bottom-[calc(1.5rem_+_env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-primary-900 text-white px-5 py-3 rounded-2xl shadow-2xl"
       >
         <span className="text-sm font-medium">
           {count} seleccionado{count !== 1 ? 's' : ''}

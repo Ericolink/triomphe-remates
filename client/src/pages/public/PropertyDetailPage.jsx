@@ -156,7 +156,7 @@ export default function PropertyDetailPage() {
     return (
       <div className="text-center py-40">
         <SEO title="Propiedad no encontrada" />
-        <p className="text-xl text-gray-500">Propiedad no encontrada</p>
+        <p className="text-xl text-gray-500 dark:text-gray-300">Propiedad no encontrada</p>
         <button
           onClick={() => navigate('/propiedades')}
           className="mt-4 text-primary-600 hover:underline"
@@ -195,8 +195,8 @@ export default function PropertyDetailPage() {
           <ChevronLeft size={18} /> Regresar
         </button>
         <div className="flex items-center gap-2">
-          <ComparatorButton property={property} size={18} showLabel className="h-10" />
-          <FavoriteButton property={property} size={18} className="w-10 h-10" />
+          <ComparatorButton property={property} size={18} showLabel className="h-11" />
+          <FavoriteButton property={property} size={19} className="w-11 h-11" />
           <ShareButton
             title={property.title}
             subtitle={`${formatPrice(property.price)} · ${CITY_LABELS[property.city]}`}
@@ -225,11 +225,24 @@ export default function PropertyDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2">
+      {/*
+        Desktop (lg:) mantiene exactamente el grid de 2 columnas original: los wrappers
+        de abajo vuelven a ser bloques normales (lg:block) y el orden es el del DOM.
+
+        Mobile usa `contents` en ambos wrappers: desaparecen como caja y sus hijos pasan
+        a ser items directos de este grid de 1 columna, donde cada bloque lleva su propio
+        `order-*` para reflejar la jerarquía de la ficha en mobile (precio y WhatsApp
+        suben justo después de ubicación, antes de características/descripción) sin
+        duplicar ningún componente. gap-0 en mobile porque cada bloque ya trae su propio
+        margen inferior (mb-*) o hereda el space-y-6 del wrapper de precio/CTA — sumar
+        además el gap del grid duplicaría esos espacios.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-10">
+        <div className="contents lg:block lg:col-span-2">
           {/* Galería con lightbox — role="button" en vez de <button>: contiene sus propios
               botones (anterior/siguiente). El guard target===currentTarget evita que
               Enter/Espacio en esos botones internos también abra el lightbox. */}
+          <div className="order-1">
           <div
             role="button"
             tabIndex={0}
@@ -312,8 +325,9 @@ export default function PropertyDetailPage() {
               ))}
             </div>
           )}
+          </div>
 
-          <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="order-2 flex flex-wrap items-center gap-3 mb-4">
             {property.businessLine === 'infonavit' ? (
               <Badge variant={BUSINESS_LINE_VARIANTS.infonavit}>
                 {BUSINESS_LINE_LABELS.infonavit}
@@ -334,12 +348,12 @@ export default function PropertyDetailPage() {
             )}
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-bold text-primary-900 dark:text-white mb-2">
+          <h1 className="order-3 text-2xl md:text-3xl font-bold text-primary-900 dark:text-white mb-2">
             {property.title}
           </h1>
 
           {(property.address || property.colonia) && (
-            <p className="flex items-center gap-1 text-gray-500 mb-4">
+            <p className="order-4 flex items-center gap-1 text-gray-500 dark:text-gray-300 mb-4">
               <MapPin size={16} />
               {[property.address, property.colonia, CITY_LABELS[property.city], property.state]
                 .filter(Boolean)
@@ -347,7 +361,7 @@ export default function PropertyDetailPage() {
             </p>
           )}
 
-          <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-4 bg-gray-50 dark:bg-[#242938] rounded-xl">
+          <div className="order-8 flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-6 bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl shadow-md">
             <span className="flex items-center gap-2">
               <Maximize2 size={18} className="text-primary-700 dark:text-primary-400" />
               <span>
@@ -375,16 +389,16 @@ export default function PropertyDetailPage() {
           </div>
 
           {property.description && (
-            <div className="mb-6">
+            <div className="order-9 mb-6">
               <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-2">
                 Descripción
               </h2>
-              <p className="text-gray-600 leading-relaxed">{property.description}</p>
+              <p className="text-gray-600 dark:text-white leading-relaxed">{property.description}</p>
             </div>
           )}
 
           {priceHistory.length > 1 && (
-            <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md mb-6">
+            <div className="order-10 bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md mb-6">
               <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-4">
                 Historial de precio
               </h2>
@@ -393,8 +407,14 @@ export default function PropertyDetailPage() {
           )}
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-primary-900 text-white rounded-2xl p-6">
+        {/* Ya no usa space-y-6: esa utilidad de Tailwind no solo agrega margin-top entre
+            hermanos, también fija margin-bottom:0 en cada uno con una selector de mayor
+            especificidad que un simple mb-6 (`.space-y-6 > :not([hidden]) ~ :not([hidden])`
+            le gana a `.mb-6` sin importar el orden en la hoja de estilos) — por eso el
+            mb-6 de abajo no se veía. Con margen explícito en cada bloque el resultado es
+            el mismo (1.5rem entre todos), pero determinista y sin pelear con esa regla. */}
+        <div className="contents lg:block lg:col-span-1">
+          <div className="order-5 mb-6 bg-primary-900 text-white rounded-2xl p-6">
             <p className="text-sm text-primary-200 mb-1">
               {(BUSINESS_LINE_CONTENT[property.businessLine] || BUSINESS_LINE_CONTENT.remate)
                 .priceLabel}
@@ -413,15 +433,25 @@ export default function PropertyDetailPage() {
             title={property.title}
             priceLabel={formatPrice(property.price)}
             url={`/propiedades/${property.slug}`}
+            className="order-6 mb-6"
           />
 
-          <DownloadQuoteButton propertyId={property.id} slug={property.slug} />
+          {/* w-full explícito en vez de confiar en el stretch por defecto del grid: un
+              <button> anidado un nivel más adentro de un div contenedor perdía el ancho
+              completo y se achicaba a su contenido. */}
+          <DownloadQuoteButton
+            propertyId={property.id}
+            slug={property.slug}
+            className="order-7 w-full mb-6"
+          />
 
           {property.acquisitionStage && property.acquisitionStage !== 'sin_proceso' && (
-            <AcquisitionProgress stage={property.acquisitionStage} />
+            <div className="order-7 w-full mb-6">
+              <AcquisitionProgress stage={property.acquisitionStage} />
+            </div>
           )}
 
-          <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
+          <div className="order-11 bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
             <h3 className="font-bold text-primary-900 dark:text-primary-300 mb-4 flex items-center gap-2">
               <Phone size={18} /> Contactar asesor
             </h3>
