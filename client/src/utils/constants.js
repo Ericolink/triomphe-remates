@@ -71,50 +71,57 @@ export const TYPE_LABELS_SHORT = {
 
 export const STATUS_LABELS = {
   disponible: 'Disponible',
+  en_revision: 'En revisión',
   apartado: 'Apartado',
   vendido: 'Vendido',
+  de_vuelta: 'De vuelta',
 };
 
+// Mapeadas a las 5 variantes que soporta Badge (default/success/warning/danger/primary) —
+// `apartado` pasó de warning a primary (dorado) cuando se agregó `en_revision`, que le
+// tomó el amarillo por ser el estado que efectivamente significa "en revisión".
 export const STATUS_VARIANTS = {
   disponible: 'success',
-  apartado: 'warning',
+  en_revision: 'warning',
+  apartado: 'primary',
   vendido: 'danger',
+  de_vuelta: 'default',
 };
 
 // Categoría comercial de la propiedad — distinta del `status` (disponible/apartado/vendido) y
-// de `businessLine` (ver más abajo). Las claves internas (compra_venta_credito/
-// compra_venta_contado) se conservan tal cual desde la migración 20260723000001; solo el texto
-// visible se actualiza acá. `compra_venta_contado` ya NO se llama "Infonavit" — esa semántica
-// vive ahora en el campo `businessLine` (migración 20260731000000), que separa por completo la
-// sección pública de remates de la de Infonavit; tener las dos palabras "Infonavit" con
-// significados distintos en la misma UI sería confuso.
+// de `businessLine` (ver más abajo). `compra_venta_credito`/`compra_venta_contado` (distinción
+// de forma de pago) se fusionaron en un solo valor `compra_venta` — ver migración
+// 20260813000006-consolidate-property-category.
 export const CATEGORY_LABELS = {
   remate: 'Remates',
   renta: 'Renta',
-  compra_venta_credito: 'Compra venta remates',
-  compra_venta_contado: 'Compra venta de contado',
+  compra_venta: 'Compra-Venta',
 };
 
 // Mapeadas a las 5 variantes que soporta Badge, mismo criterio que STATUS_VARIANTS
 export const CATEGORY_VARIANTS = {
   remate: 'primary',
   renta: 'warning',
-  compra_venta_credito: 'success',
-  compra_venta_contado: 'success',
+  compra_venta: 'success',
 };
 
-// Línea de negocio de la propiedad — el eje que separa por completo las dos secciones
+// Línea de negocio — para Property es el eje que separa por completo las dos secciones
 // públicas del sitio (remates bancarios para inversionistas vs. Infonavit para compradores
-// de vivienda). Independiente de `category` (que es una subclasificación dentro de la línea
-// de remates). Ver migración 20260731000000-add-businessline-to-properties.
+// de vivienda; independiente de `category`, que es una subclasificación dentro de remates.
+// Ver migración 20260731000000-add-businessline-to-properties). `inversion` es un 3er valor
+// que hoy SOLO aplica a `Lead.businessLine` (selector del CRM, embudo segmentado por línea)
+// — Property se queda en remate/infonavit nada más porque no hay sección pública para
+// "inversión" todavía (ver migración 20260813000003-add-businessline-to-leads-and-inversion).
 export const BUSINESS_LINE_LABELS = {
   remate: 'Remate Bancario',
   infonavit: 'Infonavit',
+  inversion: 'Inversión',
 };
 
 export const BUSINESS_LINE_VARIANTS = {
   remate: 'primary',
   infonavit: 'success',
+  inversion: 'warning',
 };
 
 // Fuente única de copy por línea de negocio. Ambas conviven en el mismo módulo
@@ -159,24 +166,30 @@ export const BUSINESS_LINE_CONTENT = {
 // que Badge para que se vea como el mismo estado en todas partes.
 export const STATUS_SELECT_COLORS = {
   disponible: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  apartado: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  en_revision: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  apartado: 'bg-accent-100 text-accent-600 dark:bg-accent-900/30 dark:text-accent-300',
   vendido: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  de_vuelta: 'bg-gray-100 text-gray-700 dark:bg-gray-700/40 dark:text-gray-300',
 };
 
 // Punto de color del historial de cambios de estatus (PropertyFormPage)
 export const STATUS_DOT_COLORS = {
   disponible: 'bg-green-500',
-  apartado: 'bg-yellow-500',
+  en_revision: 'bg-yellow-500',
+  apartado: 'bg-accent-500',
   vendido: 'bg-red-500',
+  de_vuelta: 'bg-gray-400',
 };
 
 // Tarjetas "Estatus del inventario" del Dashboard — mismo criterio que
 // PIPELINE_STAGE_BAR_COLORS: encoding visual distinto (tile vs. badge), por eso no comparte
-// clases con STATUS_VARIANTS, pero es una sola fuente para las 3 tarjetas.
+// clases con STATUS_VARIANTS, pero es una sola fuente para las 5 tarjetas.
 export const STATUS_STAT_COLORS = {
   disponible: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-300',
-  apartado: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-300',
+  en_revision: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-300',
+  apartado: 'text-accent-600 bg-accent-50 dark:bg-accent-900/20 dark:text-accent-300',
   vendido: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-300',
+  de_vuelta: 'text-gray-600 bg-gray-50 dark:bg-gray-700/20 dark:text-gray-300',
 };
 
 // Etapa del trámite legal de adquisición del inmueble — estaba duplicado entre
@@ -245,16 +258,19 @@ export const SOURCE_COLORS = {
   otro: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
 };
 
-// CRM Comercial — embudo de 8 etapas (reemplaza el status de 4 valores en la UI; el
+// CRM Comercial — embudo de 9 etapas (reemplaza el status de 4 valores en la UI; el
 // backend sigue escribiendo `status` en paralelo por compatibilidad, ver
-// server/src/utils/pipelineHelpers.js legacyStatusFor).
+// server/src/utils/pipelineHelpers.js legacyStatusFor). El orden de estas claves es la
+// única fuente del orden de despliegue en Kanban (KanbanBoard.jsx) y en el embudo de
+// ReportsSection — no hay nada más que reordenar aparte de este objeto.
 export const PIPELINE_STAGE_LABELS = {
   nuevo: 'Nuevo',
   contactado: 'Contactado',
   interesado: 'Interesado',
+  negociacion: 'Negociación/información',
   cita_agendada: 'Cita agendada',
   cita_realizada: 'Cita realizada',
-  negociacion: 'Negociación',
+  cita_con_seguimiento: 'Cita con seguimiento',
   venta_realizada: 'Venta realizada',
   no_interesado: 'No interesado',
 };
@@ -264,9 +280,10 @@ export const PIPELINE_STAGE_VARIANTS = {
   nuevo: 'primary',
   contactado: 'warning',
   interesado: 'warning',
+  negociacion: 'warning',
   cita_agendada: 'primary',
   cita_realizada: 'primary',
-  negociacion: 'warning',
+  cita_con_seguimiento: 'primary',
   venta_realizada: 'success',
   no_interesado: 'default',
 };
@@ -288,14 +305,17 @@ export const NON_TERMINAL_PIPELINE_STAGE_OPTIONS = Object.entries(PIPELINE_STAGE
 // arreglo (evita que los colores cambien si una fila se filtra por tener total 0). Orden
 // validado con el script de accesibilidad de la skill dataviz (separación ante daltonismo
 // y contraste normal) contra ambos fondos — solo el gris "sin datos" queda fuera del piso
-// de croma a propósito (siempre va acompañado de su etiqueta de texto visible).
+// de croma a propósito (siempre va acompañado de su etiqueta de texto visible). `cita_con_
+// seguimiento` (cyan) se agregó y revalidó contra las 8 anteriores con ese mismo script al
+// sumar la 9na etapa — no introduce fallas nuevas más allá de las ya aceptadas del gris.
 export const PIPELINE_STAGE_BAR_COLORS = {
   nuevo: 'bg-blue-600 dark:bg-blue-500',
   contactado: 'bg-teal-600 dark:bg-teal-400',
   interesado: 'bg-orange-600 dark:bg-orange-400',
+  negociacion: 'bg-violet-600 dark:bg-violet-400',
   cita_agendada: 'bg-pink-600 dark:bg-pink-400',
   cita_realizada: 'bg-amber-600 dark:bg-amber-400',
-  negociacion: 'bg-violet-600 dark:bg-violet-400',
+  cita_con_seguimiento: 'bg-cyan-600 dark:bg-cyan-400',
   venta_realizada: 'bg-green-600 dark:bg-green-400',
   no_interesado: 'bg-gray-400 dark:bg-gray-500',
 };

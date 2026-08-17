@@ -36,6 +36,7 @@ const ApplicationsPage = lazy(() => import('./pages/admin/ApplicationsPage'));
 const UsersPage = lazy(() => import('./pages/admin/UsersPage'));
 const BuzonAdminPage = lazy(() => import('./pages/admin/BuzonAdminPage'));
 const AlertsAdminPage = lazy(() => import('./pages/admin/AlertsAdminPage'));
+const WaitingListPage = lazy(() => import('./pages/admin/WaitingListPage'));
 const AuditPage = lazy(() => import('./pages/admin/AuditPage'));
 const TestimonialsAdminPage = lazy(() => import('./pages/admin/TestimonialsAdminPage'));
 
@@ -175,6 +176,14 @@ export default function App() {
               element={
                 <RoleRoute allow={hasBackofficeAccess}>
                   <AlertsAdminPage />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="lista-espera"
+              element={
+                <RoleRoute allow={hasBackofficeAccess}>
+                  <WaitingListPage />
                 </RoleRoute>
               }
             />

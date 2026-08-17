@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 import { getDashboard } from '../../services/analyticsService';
 import { getCrmDashboard } from '../../services/crmAnalyticsService';
 import { getFeedbacks } from '../../services/feedbackService';
-import { getProperties } from '../../services/propertyService';
 import { getTasks, completeTask } from '../../services/taskService';
 import Spinner from '../../components/ui/Spinner';
 import UrgentSection from '../../components/admin/dashboard/UrgentSection';
@@ -51,12 +50,6 @@ export default function DashboardPage() {
   });
   const newFeedback = newFeedbackData?.data ?? [];
 
-  const { data: recentPropertiesData } = useQuery({
-    queryKey: ['dashboard-recent-properties'],
-    queryFn: () => getProperties({ limit: 5 }),
-  });
-  const recentProperties = recentPropertiesData?.data ?? [];
-
   const completeMutation = useMutation({
     mutationFn: (id) => completeTask(id),
     onSuccess: () => {
@@ -98,7 +91,7 @@ export default function DashboardPage() {
       />
 
       <div className="space-y-6">
-        <AnalyticsSection d={d} recentProperties={recentProperties} />
+        <AnalyticsSection d={d} />
         <ReportsSection />
       </div>
     </div>

@@ -15,6 +15,7 @@ import {
   MessageSquareQuote,
   KeyRound,
   ChevronDown,
+  Clock,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
@@ -50,6 +51,7 @@ const backofficeGroups = [
     links: [
       { to: '/admin/buzon', icon: <MessageSquare size={18} />, label: 'Buzón de opiniones' },
       { to: '/admin/alertas', icon: <Bell size={18} />, label: 'Alertas de propiedad' },
+      { to: '/admin/lista-espera', icon: <Clock size={18} />, label: 'Lista de espera' },
     ],
   },
   {

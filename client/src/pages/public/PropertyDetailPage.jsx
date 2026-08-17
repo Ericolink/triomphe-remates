@@ -370,6 +370,7 @@ export default function PropertyDetailPage() {
             <span className="flex items-center gap-2">
               <Bath size={18} className="text-primary-700 dark:text-primary-400" />{' '}
               {formatMetric(property.bathrooms)} Baños
+              {property.halfBathrooms ? ` + ${property.halfBathrooms} medio${property.halfBathrooms > 1 ? 's' : ''}` : ''}
             </span>
           </div>
 

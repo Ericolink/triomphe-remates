@@ -32,7 +32,10 @@ const ROWS = [
   { label: 'Construcción', render: (p) => val(p.constructionMeters, ' m²') },
   { label: 'Terreno', render: (p) => val(p.terrainMeters, ' m²') },
   { label: 'Recámaras', render: (p) => val(p.bedrooms) },
-  { label: 'Baños', render: (p) => val(p.bathrooms) },
+  {
+    label: 'Baños',
+    render: (p) => val(p.bathrooms) + (p.halfBathrooms ? ` + ${p.halfBathrooms} medio` : ''),
+  },
   {
     label: 'Dirección',
     render: (p) =>

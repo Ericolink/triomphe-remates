@@ -82,6 +82,7 @@ import {
   ACTIVITY_TYPE_LABELS,
   ACTIVITY_TYPE_COLORS,
   PAYMENT_METHOD_LABELS,
+  BUSINESS_LINE_LABELS,
 } from '../../../utils/constants';
 
 const LEADS_LIST_PAGE_SIZE = 20;
@@ -520,6 +521,30 @@ function LeadDetailPanel({
               className={`${fieldControlClass} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {Object.entries(SOURCE_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor={`${formId}-businessLine`} className={fieldLabelClass}>
+              Línea de negocio
+            </label>
+            <select
+              id={`${formId}-businessLine`}
+              value={lead.businessLine || ''}
+              onChange={(e) =>
+                updateMutation.mutate({
+                  id: selected.id,
+                  data: { businessLine: e.target.value || null },
+                })
+              }
+              disabled={!canEdit}
+              className={`${fieldControlClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <option value="">Sin especificar</option>
+              {Object.entries(BUSINESS_LINE_LABELS).map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
                 </option>

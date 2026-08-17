@@ -74,7 +74,9 @@ const buildPropertySchema = (property, fullUrl, image, description) => {
     },
     address,
     ...(property.bedrooms ? { numberOfBedrooms: property.bedrooms } : {}),
-    ...(property.bathrooms ? { numberOfBathroomsTotal: property.bathrooms } : {}),
+    ...(property.bathrooms || property.halfBathrooms
+      ? { numberOfBathroomsTotal: (property.bathrooms || 0) + (property.halfBathrooms || 0) * 0.5 }
+      : {}),
     ...(floorSize ? { floorSize } : {}),
     ...(landSize ? { landSize } : {}),
     broker: { '@id': `${SITE_URL}/#organization` },

@@ -100,13 +100,26 @@ const FIELDS = [
   },
   { key: 'address', label: 'Dirección (opcional)', type: 'text', col: 2, section: 'ubicacion' },
   {
-    key: 'fraccionamiento',
-    label: 'Fraccionamiento (opcional)',
+    key: 'propertyNumber',
+    label: 'Número de propiedad (opcional)',
     type: 'text',
     col: 1,
     section: 'ubicacion',
   },
-  { key: 'colonia', label: 'Colonia (opcional)', type: 'text', col: 1, section: 'ubicacion' },
+  {
+    key: 'colonia',
+    label: 'Fraccionamiento/Colonia (opcional)',
+    type: 'text',
+    col: 1,
+    section: 'ubicacion',
+  },
+  {
+    key: 'postalCode',
+    label: 'Código postal (opcional)',
+    type: 'text',
+    col: 1,
+    section: 'ubicacion',
+  },
   {
     key: 'terrainMeters',
     label: 'M² Terreno (opcional)',
@@ -122,7 +135,20 @@ const FIELDS = [
     section: 'detalles',
   },
   { key: 'bedrooms', label: 'Recámaras (opcional)', type: 'number', col: 1, section: 'detalles' },
-  { key: 'bathrooms', label: 'Baños (opcional)', type: 'number', col: 1, section: 'detalles' },
+  {
+    key: 'bathrooms',
+    label: 'Baños completos (opcional)',
+    type: 'number',
+    col: 1,
+    section: 'detalles',
+  },
+  {
+    key: 'halfBathrooms',
+    label: 'Medios baños (opcional)',
+    type: 'number',
+    col: 1,
+    section: 'detalles',
+  },
   {
     key: 'status',
     label: 'Estatus',
@@ -151,9 +177,11 @@ const emptyForm = {
   constructionMeters: '',
   bedrooms: '',
   bathrooms: '',
+  halfBathrooms: '',
   address: '',
-  fraccionamiento: '',
+  propertyNumber: '',
   colonia: '',
+  postalCode: '',
   description: '',
   isFeatured: false,
   internalNotes: '',
@@ -178,9 +206,11 @@ const propertyToForm = (p) => ({
   constructionMeters: p.constructionMeters || '',
   bedrooms: p.bedrooms || '',
   bathrooms: p.bathrooms || '',
+  halfBathrooms: p.halfBathrooms || '',
   address: p.address || '',
-  fraccionamiento: p.fraccionamiento || '',
+  propertyNumber: p.propertyNumber || '',
   colonia: p.colonia || '',
+  postalCode: p.postalCode || '',
   description: p.description || '',
   isFeatured: p.isFeatured || false,
   internalNotes: p.internalNotes || '',
@@ -192,6 +222,16 @@ const propertyToForm = (p) => ({
 
 const inputClass =
   'w-full px-3 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100';
+
+// "300000" -> "300,000.00" — solo para mostrar mientras el campo de precio no tiene foco;
+// mientras se edita se muestra el número plano (ver uso más abajo) para no pelear con la
+// posición del cursor al tipear.
+const formatPriceInput = (value) =>
+  value === '' || value === null || value === undefined
+    ? ''
+    : new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+        value
+      );
 
 function ImageThumb({
   img,
@@ -321,6 +361,7 @@ export default function PropertyFormPage() {
   const [form, setForm] = useState(emptyForm);
   const [formLoaded, setFormLoaded] = useState(false);
   const [fieldErrors, setFieldErrors] = useState([]);
+  const [priceFocused, setPriceFocused] = useState(false);
   const codeFieldId = useId();
 
   if (serverForm && !formLoaded) {
@@ -507,17 +548,28 @@ export default function PropertyFormPage() {
                       {type === 'price' ? (
                         <div className="space-y-2">
                           <input
-                            type="number"
-                            min="0"
-                            placeholder="Ej: 1500000"
-                            value={form.pricePending ? '' : (form.price ?? '')}
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Ej: 1,500,000.00"
+                            value={
+                              form.pricePending
+                                ? ''
+                                : priceFocused
+                                  ? (form.price ?? '')
+                                  : formatPriceInput(form.price)
+                            }
                             disabled={form.pricePending}
-                            onChange={(e) =>
+                            onFocus={() => setPriceFocused(true)}
+                            onBlur={() => setPriceFocused(false)}
+                            onChange={(e) => {
+                              // Solo dígitos y un punto decimal — permite pegar un valor ya
+                              // formateado ("1,500,000.00") sin que las comas rompan el parseo.
+                              const raw = e.target.value.replace(/[^\d.]/g, '');
                               setForm((f) => ({
                                 ...f,
-                                price: e.target.value === '' ? '' : Number(e.target.value),
-                              }))
-                            }
+                                price: raw === '' ? '' : Number(raw),
+                              }));
+                            }}
                             className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
                           />
                           <label className="flex items-center gap-2 cursor-pointer select-none">

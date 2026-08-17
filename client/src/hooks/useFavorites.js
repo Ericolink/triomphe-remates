@@ -39,6 +39,7 @@ const useFavoritesStore = create((set, get) => ({
             terrainMeters: property.terrainMeters,
             bedrooms: property.bedrooms,
             bathrooms: property.bathrooms,
+            halfBathrooms: property.halfBathrooms,
             isFeatured: property.isFeatured,
           },
         ];

@@ -42,6 +42,7 @@ const useComparatorStore = create((set, get) => ({
           terrainMeters: property.terrainMeters,
           bedrooms: property.bedrooms,
           bathrooms: property.bathrooms,
+          halfBathrooms: property.halfBathrooms,
           address: property.address,
         },
       ];

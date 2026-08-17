@@ -1,7 +1,7 @@
 import { useId, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { SlidersHorizontal, X, Bell, ChevronDown, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, X, Bell, Download, ChevronDown, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
@@ -9,6 +9,7 @@ import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkelet
 import SEO from '../../components/ui/SEO';
 import TabBar from '../../components/ui/TabBar';
 import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
+import CatalogDownloadForm from '../../components/ui/CatalogDownloadForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import {
   CITY_LABELS,
@@ -55,6 +56,7 @@ export default function PropertiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [showAlertForm, setShowAlertForm] = useState(false);
+  const [showDownloadForm, setShowDownloadForm] = useState(false);
   const filtersFormId = useId();
   const [localFilters, setLocalFilters] = useState({
     city: '',
@@ -397,6 +399,50 @@ export default function PropertiesPage() {
                   búsqueda.
                 </p>
                 <AlertSubscriptionForm />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Descargar catálogo */}
+      <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
+        <motion.button
+          whileHover={buttonHover}
+          whileTap={buttonTap}
+          onClick={() => setShowDownloadForm((v) => !v)}
+          aria-expanded={showDownloadForm}
+          className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 sm:px-8 py-4 border-2 border-accent-400 dark:border-accent-500 text-accent-600 dark:text-accent-400 rounded-2xl text-base sm:text-lg font-bold hover:bg-accent-50 dark:hover:bg-accent-900/20 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-300 dark:focus-visible:ring-accent-900"
+        >
+          <Download size={22} className="flex-shrink-0" />
+          <span>Descargar catálogo de propiedades</span>
+          <ChevronDown
+            size={20}
+            className={`flex-shrink-0 transition-transform ${showDownloadForm ? 'rotate-180' : ''}`}
+          />
+        </motion.button>
+        <AnimatePresence>
+          {showDownloadForm && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden mt-4"
+            >
+              <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 shadow-sm max-w-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Déjanos tus datos y descarga el catálogo completo de propiedades disponibles
+                  en Excel o PDF.
+                </p>
+                <CatalogDownloadForm
+                  filters={{
+                    businessLine,
+                    city: filters.city || undefined,
+                    type: filters.type || undefined,
+                    category: filters.category || undefined,
+                  }}
+                />
               </div>
             </motion.div>
           )}

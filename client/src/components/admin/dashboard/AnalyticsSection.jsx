@@ -3,6 +3,8 @@
    status, source), nunca con datos de entrada de usuario. */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getProperties } from '../../../services/propertyService';
 import {
   Building2,
   Eye,
@@ -46,9 +48,18 @@ const TABS = [
 
 // Nivel 3 — analítica y tendencias. Colapsado por defecto y dividido en pestañas para no
 // mostrar las ~10 tarjetas de golpe (principio "no muro de gráficas" del rediseño).
-export default function AnalyticsSection({ d, recentProperties }) {
+export default function AnalyticsSection({ d }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('inventario');
+  // Click en un tile de "Estatus del inventario" filtra "Propiedades recientes" por ese
+  // estado; click de nuevo en el mismo tile lo limpia (toggle). La query vive acá (no en
+  // DashboardPage) porque el filtro es un detalle interno de esta sección.
+  const [statusFilter, setStatusFilter] = useState(null);
+  const { data: recentPropertiesData } = useQuery({
+    queryKey: ['dashboard-recent-properties', statusFilter],
+    queryFn: () => getProperties({ limit: 5, ...(statusFilter && { status: statusFilter }) }),
+  });
+  const recentProperties = recentPropertiesData?.data ?? [];
 
   return (
     <CollapsibleSection
@@ -178,6 +189,11 @@ export default function AnalyticsSection({ d, recentProperties }) {
               <h3 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                 <Building2 size={16} className="text-primary-700 dark:text-primary-400" /> Propiedades
                 recientes
+                {statusFilter && (
+                  <Badge variant={STATUS_VARIANTS[statusFilter]}>
+                    {STATUS_LABELS[statusFilter]}
+                  </Badge>
+                )}
               </h3>
               <button
                 onClick={() => navigate('/admin/propiedades')}
@@ -186,9 +202,11 @@ export default function AnalyticsSection({ d, recentProperties }) {
                 Ver todas
               </button>
             </div>
-            {(recentProperties ?? []).length === 0 ? (
+            {recentProperties.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-gray-500">
-                Todavía no hay propiedades cargadas.
+                {statusFilter
+                  ? 'Ninguna propiedad con este estatus.'
+                  : 'Todavía no hay propiedades cargadas.'}
               </p>
             ) : (
               <div className="space-y-2">
@@ -217,19 +235,27 @@ export default function AnalyticsSection({ d, recentProperties }) {
             <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">
               Estatus del inventario
             </h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
-                { key: 'disponible', label: 'Disponibles', value: d?.properties?.disponible },
-                { key: 'apartado', label: 'Apartadas', value: d?.properties?.apartado },
-                { key: 'vendido', label: 'Vendidas', value: d?.properties?.vendido },
-              ].map(({ key, label, value }) => (
-                <div
-                  key={label}
-                  className={`rounded-xl p-4 text-center ${STATUS_STAT_COLORS[key]}`}
+                { key: 'disponible', label: 'Disponibles' },
+                { key: 'en_revision', label: 'En revisión' },
+                { key: 'apartado', label: 'Apartadas' },
+                { key: 'vendido', label: 'Vendidas' },
+                { key: 'de_vuelta', label: 'De vuelta' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatusFilter((prev) => (prev === key ? null : key))}
+                  className={`rounded-xl p-4 text-center transition-all ${STATUS_STAT_COLORS[key]} ${
+                    statusFilter === key
+                      ? 'ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-[#1a1f2e]'
+                      : 'hover:opacity-80'
+                  }`}
                 >
-                  <p className="text-2xl font-bold">{value ?? 0}</p>
+                  <p className="text-2xl font-bold">{d?.properties?.[key] ?? 0}</p>
                   <p className="text-sm font-medium mt-1">{label}</p>
-                </div>
+                </button>
               ))}
             </div>
           </motion.div>

@@ -5,7 +5,7 @@ import { X } from 'lucide-react';
 import { buttonHover, buttonTap } from '../../utils/animations';
 import { getCampaigns } from '../../services/campaignService';
 import { getUsers } from '../../services/usersService';
-import { SOURCE_LABELS, PAYMENT_METHOD_LABELS } from '../../utils/constants';
+import { SOURCE_LABELS, PAYMENT_METHOD_LABELS, BUSINESS_LINE_LABELS } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
 import useModalA11y from '../../hooks/useModalA11y';
 import { isInvalidOptionalAmount } from '../../utils/validation';
@@ -17,6 +17,7 @@ const emptyForm = {
   name: '',
   phone: '',
   source: 'directo',
+  businessLine: '',
   firstContactDate: '',
   paymentMethod: '',
   budgetAmount: '',
@@ -72,6 +73,7 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
       name: form.name.trim() || undefined,
       phone: form.phone.trim() || undefined,
       source: form.source,
+      businessLine: form.businessLine || undefined,
       firstContactDate: form.firstContactDate || undefined,
       paymentMethod: form.paymentMethod || undefined,
       budgetNotSpecified: form.budgetNotSpecified,
@@ -177,6 +179,27 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                     ))}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label
+                  htmlFor={`${formId}-businessLine`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
+                  Línea de negocio (opcional)
+                </label>
+                <select
+                  id={`${formId}-businessLine`}
+                  value={form.businessLine}
+                  onChange={(e) => setForm((f) => ({ ...f, businessLine: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="">Sin especificar</option>
+                  {Object.entries(BUSINESS_LINE_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label
