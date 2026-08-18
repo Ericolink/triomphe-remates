@@ -291,6 +291,12 @@ const createProperty = async (req, res) => {
     commercialPrice2Date,
     utility,
     inventoryEntryDate,
+    showBasicInfo,
+    showLocationInfo,
+    showDetailsInfo,
+    showAuctionInfo,
+    showLegalInfo,
+    showValuationInfo,
   } = req.body;
 
   if (!title || !city || !type) {
@@ -349,6 +355,12 @@ const createProperty = async (req, res) => {
         commercialPrice2Date: commercialPrice2Date || null,
         utility: nullIfEmpty(utility),
         inventoryEntryDate: inventoryEntryDate || null,
+        showBasicInfo: showBasicInfo ?? true,
+        showLocationInfo: showLocationInfo ?? true,
+        showDetailsInfo: showDetailsInfo ?? true,
+        showAuctionInfo: showAuctionInfo ?? true,
+        showLegalInfo: showLegalInfo ?? true,
+        showValuationInfo: showValuationInfo ?? true,
         slug,
       },
       { transaction }
@@ -434,6 +446,12 @@ const updateProperty = async (req, res) => {
     commercialPrice2Date,
     utility,
     inventoryEntryDate,
+    showBasicInfo,
+    showLocationInfo,
+    showDetailsInfo,
+    showAuctionInfo,
+    showLegalInfo,
+    showValuationInfo,
   } = req.body;
 
   if (title && title !== property.title) {
@@ -498,6 +516,12 @@ const updateProperty = async (req, res) => {
   if (utility !== undefined) updates.utility = nullIfEmpty(utility);
   if (inventoryEntryDate !== undefined)
     updates.inventoryEntryDate = inventoryEntryDate || null;
+  if (showBasicInfo !== undefined) updates.showBasicInfo = showBasicInfo;
+  if (showLocationInfo !== undefined) updates.showLocationInfo = showLocationInfo;
+  if (showDetailsInfo !== undefined) updates.showDetailsInfo = showDetailsInfo;
+  if (showAuctionInfo !== undefined) updates.showAuctionInfo = showAuctionInfo;
+  if (showLegalInfo !== undefined) updates.showLegalInfo = showLegalInfo;
+  if (showValuationInfo !== undefined) updates.showValuationInfo = showValuationInfo;
   if (req.body.slug) updates.slug = req.body.slug;
 
   await property.update(updates);

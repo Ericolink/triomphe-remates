@@ -1,28 +1,17 @@
-import { useId, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Mail,
   Phone,
   Building2,
-  Calendar,
-  Trash2,
   FileSpreadsheet,
   LayoutList,
   Columns,
-  MessageCircle,
-  MessageSquare,
-  X,
-  PhoneCall,
-  ArrowRightLeft,
   Plus,
   Search,
   UserCheck,
   Wallet,
-  Activity,
-  FileText,
-  Flag,
-  AlertTriangle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -35,24 +24,15 @@ import {
   deleteLead,
   batchUpdateLeads,
   batchDeleteLeads,
-  getLeadNotes,
-  addLeadNote,
-  deleteLeadNote,
-  sendLeadWhatsApp,
   closeLeadAsWon,
   closeLeadAsLost,
   reopenLead,
-  addLeadProperty,
-  removeLeadProperty,
 } from '../../../services/leadService';
-import { getLeadActivities, createLeadActivity } from '../../../services/activityService';
-import { getLeadAppointments, createAppointment } from '../../../services/appointmentService';
-import { getTasks, completeTask } from '../../../services/taskService';
+import { getTasks } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
-import { canAssignLeads, canCreateLeads, canEditLead, isAdmin } from '../../../utils/permissions';
+import { canCreateLeads, isAdmin } from '../../../utils/permissions';
 import { downloadBlob } from '../../../utils/download';
-import { isInvalidOptionalAmount } from '../../../utils/validation';
 import Badge from '../../ui/Badge';
 import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
@@ -62,16 +42,9 @@ import ReopenLeadModal from '../ReopenLeadModal';
 import StageBottomSheet from '../StageBottomSheet';
 import CreateLeadModal from '../CreateLeadModal';
 import KanbanBoard, { NextActionLine } from '../KanbanBoard';
-import PropertyPicker from '../PropertyPicker';
-import useModalA11y from '../../../hooks/useModalA11y';
-import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../../utils/animations';
-import {
-  formatDate,
-  formatDateTime,
-  toWhatsAppLink,
-  formatBudget,
-  todayISODate,
-} from '../../../utils/formatters';
+import { DetailPanelSlot } from '../LeadDetailPanel';
+import { fadeIn, fadeInUp, staggerContainer } from '../../../utils/animations';
+import { formatDate, formatBudget } from '../../../utils/formatters';
 import {
   SOURCE_LABELS,
   LEAD_TYPE_LABELS as typeLabel,
@@ -79,890 +52,10 @@ import {
   PIPELINE_STAGE_VARIANTS,
   TERMINAL_STAGES,
   NON_TERMINAL_PIPELINE_STAGE_OPTIONS,
-  ACTIVITY_TYPE_LABELS,
-  ACTIVITY_TYPE_COLORS,
   PAYMENT_METHOD_LABELS,
-  BUSINESS_LINE_LABELS,
 } from '../../../utils/constants';
 
 const LEADS_LIST_PAGE_SIZE = 20;
-
-function LeadDetailPanel({
-  selected,
-  onDeselect,
-  onDelete,
-  updateMutation,
-  users,
-  openTask,
-  onAttemptStageChange,
-}) {
-  const queryClient = useQueryClient();
-  const formId = useId();
-  const currentUser = useAuthStore((s) => s.user);
-  const canAssign = canAssignLeads(currentUser);
-  const [noteText, setNoteText] = useState('');
-  const [activityType, setActivityType] = useState('llamada');
-  const [activityContent, setActivityContent] = useState('');
-  const [appointmentDate, setAppointmentDate] = useState('');
-  const [appointmentPropertyId, setAppointmentPropertyId] = useState('');
-  const [addPropertyId, setAddPropertyId] = useState('');
-  // Inicializados desde `selected` (no `lead`, que llega async vía detailData) — el panel
-  // se remonta con key={selected.id} en cada cambio de prospecto, así que basta un solo
-  // useState por selección.
-  const [budgetAmountInput, setBudgetAmountInput] = useState(
-    selected.budgetAmount != null ? String(selected.budgetAmount) : ''
-  );
-  const [firstContactInput, setFirstContactInput] = useState(
-    selected.firstContactDate ? selected.firstContactDate.slice(0, 10) : ''
-  );
-  const budgetAmountInvalid = isInvalidOptionalAmount(budgetAmountInput);
-
-  const { data: detailData } = useQuery({
-    queryKey: ['lead-detail', selected?.id],
-    queryFn: () => getLeadById(selected.id),
-    enabled: !!selected?.id,
-  });
-  const lead = detailData?.data || selected;
-  // Espejo de canEditLead del backend — gatea los mismos campos que el PUT genérico,
-  // agendar citas y agregar/quitar propiedades de interés. Notas/actividad/WhatsApp NO se
-  // incluyen: el backend solo exige `canViewLead` para esos (cualquiera con acceso de
-  // lectura puede seguir registrando avance aunque ya no pueda editar el lead).
-  const canEdit = canEditLead(currentUser, lead);
-
-  const { data: notesData, isLoading: notesLoading } = useQuery({
-    queryKey: ['lead-notes', selected?.id],
-    queryFn: () => getLeadNotes(selected.id),
-    enabled: !!selected?.id,
-  });
-  const notes = notesData?.data ?? [];
-
-  const { data: activitiesData } = useQuery({
-    queryKey: ['lead-activities', selected?.id],
-    queryFn: () => getLeadActivities(selected.id),
-    enabled: !!selected?.id,
-  });
-  const activities = activitiesData?.data ?? [];
-
-  const { data: appointmentsData } = useQuery({
-    queryKey: ['lead-appointments', selected?.id],
-    queryFn: () => getLeadAppointments(selected.id),
-    enabled: !!selected?.id,
-  });
-  const appointments = appointmentsData?.data ?? [];
-
-  const addNoteMutation = useMutation({
-    mutationFn: ({ id, content }) => addLeadNote(id, content),
-    onSuccess: () => {
-      setNoteText('');
-      queryClient.invalidateQueries(['lead-notes', selected.id]);
-    },
-    onError: () => toast.error('Error al guardar nota'),
-  });
-
-  const deleteNoteMutation = useMutation({
-    mutationFn: ({ leadId, noteId }) => deleteLeadNote(leadId, noteId),
-    onSuccess: () => queryClient.invalidateQueries(['lead-notes', selected.id]),
-  });
-
-  const addActivityMutation = useMutation({
-    mutationFn: ({ id, data }) => createLeadActivity(id, data),
-    onSuccess: () => {
-      setActivityContent('');
-      queryClient.invalidateQueries(['lead-activities', selected.id]);
-      toast.success('Actividad registrada');
-    },
-    onError: () => toast.error('Error al registrar actividad'),
-  });
-
-  const scheduleMutation = useMutation({
-    mutationFn: createAppointment,
-    onSuccess: () => {
-      setAppointmentDate('');
-      setAppointmentPropertyId('');
-      queryClient.invalidateQueries(['lead-appointments', selected.id]);
-      queryClient.invalidateQueries(['lead-activities', selected.id]);
-      queryClient.invalidateQueries(['leads']);
-      toast.success('Cita agendada');
-    },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Error al agendar cita'),
-  });
-
-  const addPropertyMutation = useMutation({
-    mutationFn: ({ leadId, propertyId }) => addLeadProperty(leadId, propertyId),
-    onSuccess: () => {
-      setAddPropertyId('');
-      queryClient.invalidateQueries(['lead-detail', selected.id]);
-    },
-    onError: () => toast.error('Error al agregar propiedad'),
-  });
-
-  const removePropertyMutation = useMutation({
-    mutationFn: ({ leadId, propertyId }) => removeLeadProperty(leadId, propertyId),
-    onSuccess: () => queryClient.invalidateQueries(['lead-detail', selected.id]),
-  });
-
-  const completeTaskMutation = useMutation({
-    mutationFn: (id) => completeTask(id),
-    onSuccess: () => {
-      toast.success('Tarea completada');
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['lead-activities', selected.id]);
-    },
-    onError: () => toast.error('Error al completar la tarea'),
-  });
-
-  const [whatsappMessage, setWhatsappMessage] = useState('');
-  const whatsappMutation = useMutation({
-    mutationFn: ({ id, message }) => sendLeadWhatsApp(id, message),
-    onSuccess: (data) => {
-      setWhatsappMessage('');
-      queryClient.invalidateQueries(['lead-notes', selected.id]);
-      if (data?.warning)
-        toast(data.warning, { icon: <AlertTriangle size={16} className="text-amber-500" /> });
-      else toast.success('Mensaje de WhatsApp enviado');
-    },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Error al enviar WhatsApp'),
-  });
-
-  const interestedProperties = lead.interestedProperties || [];
-  const excludePropertyIds = [
-    lead.propertyId,
-    ...interestedProperties.map((ip) => ip.id),
-  ].filter(Boolean);
-
-  // Reutilizados por todos los campos de solo-un-control ("Responsable", "Fuente",
-  // "Forma de pago") para que compartan tamaño de fuente, radio y foco.
-  const fieldLabelClass = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
-  const fieldControlClass =
-    'w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500';
-  // Compone una fila de "input + botón": min-w-0 + flex-1 hace que el control ceda ante
-  // el botón en vez de imponer su propio 100% de ancho (bug original: `w-full` dentro de
-  // un `flex` fuerza al hijo a pedir el ancho completo del contenedor y empuja al botón
-  // fuera de vista → scroll horizontal para llegar a escribir).
-  const rowControlClass =
-    'min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500';
-  const rowButtonClass =
-    'flex-shrink-0 px-2.5 py-2 bg-accent-400 text-primary-900 rounded-xl text-xs font-medium hover:bg-accent-300 disabled:opacity-40 transition-colors';
-  const sectionLabelClass =
-    'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5';
-  const cardClass = 'rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3';
-
-  return (
-    <motion.div
-      key={selected.id}
-      variants={fadeInRight}
-      initial="hidden"
-      animate="visible"
-      exit={{ opacity: 0, x: 20 }}
-      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-170px)]"
-    >
-      <div className="p-6">
-        {/* Identidad — el nombre del prospecto va en el encabezado (antes solo aparecía
-            varias secciones más abajo, en la lista plana de datos): es lo primero que hay
-            que poder confirmar al abrir el panel, sin desplazarse. */}
-        <div className="flex items-start justify-between gap-2 mb-4">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-              Detalle del prospecto
-            </p>
-            <h2 className="font-bold text-gray-800 dark:text-gray-100 truncate">{selected.name}</h2>
-            {(selected.phone || selected.property?.title) && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {selected.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone size={11} className="flex-shrink-0" />
-                    {selected.phone}
-                  </span>
-                )}
-                {selected.property?.title && (
-                  <span className="flex items-center gap-1 min-w-0">
-                    <Building2 size={11} className="flex-shrink-0" />
-                    <span className="truncate">{selected.property.title}</span>
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {selected.phone && (
-              <a
-                href={`tel:${selected.phone}`}
-                title="Llamar"
-                className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-              >
-                <PhoneCall size={18} />
-              </a>
-            )}
-            {selected.phone && (
-              <a
-                href={toWhatsAppLink(selected.phone)}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="WhatsApp"
-                className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-              >
-                <MessageCircle size={18} />
-              </a>
-            )}
-            {isAdmin(currentUser) && (
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={onDelete}
-                title="Eliminar prospecto"
-                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-              >
-                <Trash2 size={18} />
-              </motion.button>
-            )}
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onDeselect}
-              title="Cerrar detalle"
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-lg transition-colors"
-            >
-              <X size={20} />
-            </motion.button>
-          </div>
-        </div>
-
-        {selected.message && (
-          <div className={`mb-4 ${cardClass}`}>
-            <p className={sectionLabelClass}>
-              <MessageSquare size={13} /> Mensaje inicial
-            </p>
-            <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed">
-              {selected.message}
-            </p>
-          </div>
-        )}
-
-        {/* Próxima acción — siempre arriba, es lo más importante */}
-        <div className={`mb-4 ${cardClass}`}>
-          <p className={sectionLabelClass}>
-            <Flag size={13} /> Próxima acción
-          </p>
-          {openTask ? (
-            <div className="flex items-center justify-between gap-2">
-              <NextActionLine task={openTask} />
-              <button
-                onClick={() => completeTaskMutation.mutate(openTask.id)}
-                disabled={completeTaskMutation.isPending}
-                className="text-xs font-medium px-2.5 py-1 bg-accent-400 text-primary-900 rounded-lg hover:bg-accent-300 disabled:opacity-40 transition-colors flex-shrink-0"
-              >
-                Completar
-              </button>
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-              {lead.assignedToUserId
-                ? 'Sin próxima acción pendiente.'
-                : 'Asigna un responsable para generar la primera tarea.'}
-            </p>
-          )}
-        </div>
-
-        {/* Timeline de actividad — justo debajo de la próxima acción, antes que los
-            campos editables: es lo primero que se quiere leer al abrir un prospecto. */}
-        <div className="mb-4">
-          <p className={sectionLabelClass}>
-            <Activity size={13} /> Actividad
-          </p>
-          <div className="space-y-2 mb-3 max-h-48 overflow-y-auto pr-1">
-            {activities.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-                Sin actividad registrada.
-              </p>
-            ) : (
-              activities.map((a) => (
-                <div key={a.id} className="flex items-start gap-2 text-xs">
-                  <span
-                    className={`px-1.5 py-0.5 rounded-full flex-shrink-0 ${ACTIVITY_TYPE_COLORS[a.type]}`}
-                  >
-                    {ACTIVITY_TYPE_LABELS[a.type]}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-gray-700 dark:text-gray-300">{a.content}</p>
-                    <p className="text-gray-400 mt-0.5">
-                      {formatDateTime(a.occurredAt)}
-                      {a.user ? ` · ${a.user.name}` : ''}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          {/* Tipo y mensaje van en filas separadas (en vez de compartir una sola fila
-              angosta): así el campo de texto siempre tiene ancho completo para escribir
-              cómodo, sin importar qué tan angosto sea el panel. */}
-          <div className="space-y-2">
-            <select
-              value={activityType}
-              onChange={(e) => setActivityType(e.target.value)}
-              className="w-40 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500"
-            >
-              {['llamada', 'whatsapp', 'email', 'visita', 'nota'].map((t) => (
-                <option key={t} value={t}>
-                  {/* t viene del arreglo literal de arriba, no de entrada de usuario */}
-                  {/* eslint-disable-next-line security/detect-object-injection */}
-                  {ACTIVITY_TYPE_LABELS[t]}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <input
-                value={activityContent}
-                onChange={(e) => setActivityContent(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === 'Enter' &&
-                  activityContent.trim() &&
-                  addActivityMutation.mutate({
-                    id: selected.id,
-                    data: { type: activityType, content: activityContent.trim() },
-                  })
-                }
-                placeholder="Registrar interacción..."
-                className={rowControlClass}
-              />
-              <button
-                onClick={() =>
-                  activityContent.trim() &&
-                  addActivityMutation.mutate({
-                    id: selected.id,
-                    data: { type: activityType, content: activityContent.trim() },
-                  })
-                }
-                disabled={!activityContent.trim() || addActivityMutation.isPending}
-                title="Registrar interacción"
-                className={rowButtonClass}
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Seguimiento — los dos campos que más se tocan durante la jornada. */}
-        <div className={`space-y-3 mb-4 ${cardClass}`}>
-          <p className={sectionLabelClass}>
-            <ArrowRightLeft size={13} /> Seguimiento
-          </p>
-          <div>
-            <label htmlFor={`${formId}-stage`} className={fieldLabelClass}>
-              Etapa
-            </label>
-            <button
-              id={`${formId}-stage`}
-              onClick={() => onAttemptStageChange(lead)}
-              disabled={!canEdit}
-              className="w-full flex items-center justify-between px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-[#1a1f2e] transition-colors"
-            >
-              <span>{PIPELINE_STAGE_LABELS[lead.pipelineStage]}</span>
-              {canEdit && <ArrowRightLeft size={14} className="text-gray-400 flex-shrink-0" />}
-            </button>
-          </div>
-          <div>
-            <label htmlFor={`${formId}-assignedToUserId`} className={fieldLabelClass}>
-              Responsable
-            </label>
-            {canAssign ? (
-              <select
-                id={`${formId}-assignedToUserId`}
-                value={lead.assignedToUserId || ''}
-                onChange={(e) =>
-                  updateMutation.mutate({
-                    id: selected.id,
-                    data: { assignedToUserId: e.target.value ? Number(e.target.value) : null },
-                  })
-                }
-                className={fieldControlClass}
-              >
-                <option value="">Sin asignar</option>
-                {users
-                  .filter((u) => u.isActive)
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-              </select>
-            ) : (
-              <p className={`${fieldControlClass} bg-gray-50 dark:bg-[#1a1f2e]`}>
-                {users.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
-              </p>
-            )}
-          </div>
-          {(lead.createdByUser || lead.assignedAt) && (
-            <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5">
-              {lead.createdByUser && <p>Creado por: {lead.createdByUser.name}</p>}
-              {lead.assignedAt && <p>Asignado el: {formatDateTime(lead.assignedAt)}</p>}
-            </div>
-          )}
-        </div>
-
-        {/* Datos comerciales — información de perfil, se toca con menos frecuencia que
-            Seguimiento; separada en su propia tarjeta para no competir visualmente. */}
-        <div className={`space-y-3 mb-4 ${cardClass}`}>
-          <p className={sectionLabelClass}>
-            <Wallet size={13} /> Datos comerciales
-          </p>
-          <div>
-            <label htmlFor={`${formId}-source`} className={fieldLabelClass}>
-              Fuente
-            </label>
-            <select
-              id={`${formId}-source`}
-              value={selected.source || 'directo'}
-              onChange={(e) => {
-                updateMutation.mutate({ id: selected.id, data: { source: e.target.value } });
-              }}
-              disabled={!canEdit}
-              className={`${fieldControlClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {Object.entries(SOURCE_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor={`${formId}-businessLine`} className={fieldLabelClass}>
-              Línea de negocio
-            </label>
-            <select
-              id={`${formId}-businessLine`}
-              value={lead.businessLine || ''}
-              onChange={(e) =>
-                updateMutation.mutate({
-                  id: selected.id,
-                  data: { businessLine: e.target.value || null },
-                })
-              }
-              disabled={!canEdit}
-              className={`${fieldControlClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <option value="">Sin especificar</option>
-              {Object.entries(BUSINESS_LINE_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor={`${formId}-firstContactDate`} className={fieldLabelClass}>
-              Fecha de primer contacto
-            </label>
-            <div className="flex gap-2">
-              <input
-                id={`${formId}-firstContactDate`}
-                type="date"
-                max={todayISODate()}
-                value={firstContactInput}
-                onChange={(e) => setFirstContactInput(e.target.value)}
-                disabled={!canEdit}
-                className={`${rowControlClass} text-sm disabled:opacity-50 disabled:cursor-not-allowed`}
-              />
-              <button
-                onClick={() =>
-                  updateMutation.mutate({
-                    id: selected.id,
-                    data: { firstContactDate: firstContactInput || null },
-                  })
-                }
-                disabled={
-                  !canEdit ||
-                  firstContactInput ===
-                    (lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : '')
-                }
-                className={`${rowButtonClass} text-sm`}
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-          <div>
-            <label htmlFor={`${formId}-paymentMethod`} className={fieldLabelClass}>
-              Forma de pago
-            </label>
-            <select
-              id={`${formId}-paymentMethod`}
-              value={lead.paymentMethod || ''}
-              onChange={(e) =>
-                updateMutation.mutate({
-                  id: selected.id,
-                  data: { paymentMethod: e.target.value || null },
-                })
-              }
-              disabled={!canEdit}
-              className={`${fieldControlClass} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <option value="">Sin especificar</option>
-              {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label
-                htmlFor={`${formId}-budgetAmount`}
-                className="block text-xs font-medium text-gray-500 dark:text-gray-400"
-              >
-                Monto disponible
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!lead.budgetNotSpecified}
-                  onChange={(e) => {
-                    setBudgetAmountInput('');
-                    updateMutation.mutate({
-                      id: selected.id,
-                      data: {
-                        budgetNotSpecified: e.target.checked,
-                        budgetAmount: e.target.checked ? null : undefined,
-                      },
-                    });
-                  }}
-                  disabled={!canEdit}
-                  className="w-3.5 h-3.5 rounded accent-accent-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                No especificó
-              </label>
-            </div>
-            <div className="flex gap-2">
-              <input
-                id={`${formId}-budgetAmount`}
-                type="number"
-                min="0"
-                step="1000"
-                value={budgetAmountInput}
-                disabled={!canEdit || lead.budgetNotSpecified}
-                onChange={(e) => setBudgetAmountInput(e.target.value)}
-                placeholder="Ej. 1500000"
-                className={`${rowControlClass} text-sm disabled:opacity-50 disabled:cursor-not-allowed ${budgetAmountInvalid ? 'ring-2 ring-red-400' : ''}`}
-              />
-              <button
-                onClick={() =>
-                  updateMutation.mutate({
-                    id: selected.id,
-                    data: {
-                      budgetAmount:
-                        budgetAmountInput.trim() === '' ? null : Number(budgetAmountInput),
-                      budgetNotSpecified: false,
-                    },
-                  })
-                }
-                disabled={
-                  !canEdit ||
-                  lead.budgetNotSpecified ||
-                  budgetAmountInvalid ||
-                  (budgetAmountInput.trim() === ''
-                    ? lead.budgetAmount == null
-                    : Number(budgetAmountInput) === Number(lead.budgetAmount))
-                }
-                className={`${rowButtonClass} text-sm`}
-              >
-                Guardar
-              </button>
-            </div>
-            {budgetAmountInvalid && (
-              <p className="text-xs text-red-500 mt-1">Ingresa un monto válido</p>
-            )}
-            {!lead.budgetNotSpecified && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                {formatBudget(lead.budgetAmount, false)}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Propiedades de interés */}
-        <div className="mb-4">
-          <p className={sectionLabelClass}>
-            <Building2 size={13} /> Propiedades de interés
-          </p>
-          <div className="space-y-1.5 mb-2">
-            {interestedProperties.length === 0 && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">Ninguna todavía.</p>
-            )}
-            {interestedProperties.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-1.5 text-xs"
-              >
-                <span className="text-gray-700 dark:text-gray-300 truncate">{p.title}</span>
-                {canEdit && (
-                  <button
-                    onClick={() =>
-                      removePropertyMutation.mutate({ leadId: selected.id, propertyId: p.id })
-                    }
-                    className="text-gray-400 hover:text-red-500 flex-shrink-0"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          {canEdit && (
-            <div className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <PropertyPicker
-                  value={addPropertyId}
-                  onChange={setAddPropertyId}
-                  excludeIds={excludePropertyIds}
-                  placeholder="Agregar propiedad..."
-                  className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#1a1f2e]"
-                />
-              </div>
-              <button
-                onClick={() =>
-                  addPropertyId &&
-                  addPropertyMutation.mutate({
-                    leadId: selected.id,
-                    propertyId: Number(addPropertyId),
-                  })
-                }
-                disabled={!addPropertyId}
-                title="Agregar propiedad"
-                className={rowButtonClass}
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Citas */}
-        <div className="mb-4">
-          <p className={sectionLabelClass}>
-            <Calendar size={13} /> Citas
-          </p>
-          <div className="space-y-1.5 mb-2 max-h-32 overflow-y-auto pr-1">
-            {appointments.length === 0 && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-                Sin citas registradas.
-              </p>
-            )}
-            {appointments.map((a) => (
-              <div
-                key={a.id}
-                className="bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between"
-              >
-                <span className="text-gray-700 dark:text-gray-300">
-                  {formatDateTime(a.scheduledAt)}
-                </span>
-                <Badge
-                  variant={
-                    a.status === 'completada'
-                      ? 'success'
-                      : a.status === 'cancelada'
-                        ? 'default'
-                        : 'primary'
-                  }
-                >
-                  {a.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-          {canEdit && (
-            <div className="flex gap-2">
-              <input
-                type="datetime-local"
-                value={appointmentDate}
-                onChange={(e) => setAppointmentDate(e.target.value)}
-                className={rowControlClass}
-              />
-              <button
-                onClick={() =>
-                  appointmentDate &&
-                  scheduleMutation.mutate({
-                    leadId: selected.id,
-                    propertyId: appointmentPropertyId || undefined,
-                    scheduledAt: appointmentDate,
-                  })
-                }
-                disabled={!appointmentDate || scheduleMutation.isPending}
-                className={rowButtonClass}
-              >
-                Agendar
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Envío de WhatsApp */}
-        {selected.phone && (
-          <div className="mb-4">
-            <p className={sectionLabelClass}>
-              <MessageCircle size={13} className="text-green-500" /> Enviar WhatsApp
-            </p>
-            <div className="flex gap-2">
-              <textarea
-                value={whatsappMessage}
-                onChange={(e) => setWhatsappMessage(e.target.value)}
-                rows={2}
-                placeholder="Mensaje de seguimiento..."
-                className="min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
-              />
-              <button
-                onClick={() =>
-                  whatsappMessage.trim() &&
-                  whatsappMutation.mutate({ id: selected.id, message: whatsappMessage.trim() })
-                }
-                disabled={!whatsappMessage.trim() || whatsappMutation.isPending}
-                className="flex-shrink-0 px-3 py-2 bg-green-600 text-white rounded-xl text-xs font-medium hover:bg-green-700 disabled:opacity-40 transition-colors"
-              >
-                {whatsappMutation.isPending ? '...' : 'Enviar'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Notas rápidas */}
-        <div>
-          <p className={sectionLabelClass}>
-            <FileText size={13} /> Notas
-          </p>
-          <div className="space-y-2 mb-3 max-h-48 overflow-y-auto pr-1">
-            {notesLoading ? (
-              <Spinner size="sm" className="py-2" />
-            ) : notes.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-                Sin notas de seguimiento aún.
-              </p>
-            ) : (
-              notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="group bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-2 text-xs relative"
-                >
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{note.content}</p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-gray-400">{formatDateTime(note.createdAt)}</span>
-                    {/* Espejo de deleteLeadNote en el backend: puede borrar quien tiene
-                        canEditLead sobre el prospecto, o el autor de su propia nota. */}
-                    {(canEdit || note.userId === currentUser?.id) && (
-                      <button
-                        onClick={() =>
-                          deleteNoteMutation.mutate({ leadId: selected.id, noteId: note.id })
-                        }
-                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity"
-                      >
-                        <Trash2 size={11} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="flex gap-2">
-            <input
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              onKeyDown={(e) =>
-                e.key === 'Enter' &&
-                !e.shiftKey &&
-                noteText.trim() &&
-                addNoteMutation.mutate({ id: selected.id, content: noteText.trim() })
-              }
-              placeholder="Agregar nota..."
-              className={rowControlClass}
-            />
-            <button
-              onClick={() =>
-                noteText.trim() &&
-                addNoteMutation.mutate({ id: selected.id, content: noteText.trim() })
-              }
-              disabled={!noteText.trim() || addNoteMutation.isPending}
-              title="Agregar nota"
-              className={rowButtonClass}
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// En pantallas angostas (mobile/tablet) el detalle no cabe como tercera columna, así que
-// se muestra como overlay a pantalla completa (mismo patrón de slide-in que StageBottomSheet).
-// De xl en adelante vuelve a ser la columna lateral fija de siempre.
-function DetailPanelSlot({ selected, emptyText, onDeselect, ...panelProps }) {
-  const panelRef = useModalA11y(Boolean(selected), onDeselect);
-  return (
-    <>
-      <AnimatePresence>
-        {selected && (
-          <motion.div
-            key="detail-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onDeselect}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-end xl:hidden"
-          >
-            <motion.div
-              ref={panelRef}
-              role="dialog"
-              aria-modal="true"
-              aria-label={selected?.name || 'Detalle de prospecto'}
-              tabIndex={-1}
-              onClick={(e) => e.stopPropagation()}
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-              className="w-full max-w-md h-full overflow-y-auto bg-white dark:bg-[#242938]"
-            >
-              <LeadDetailPanel selected={selected} onDeselect={onDeselect} {...panelProps} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="hidden xl:block">
-        <AnimatePresence mode="wait">
-          {selected ? (
-            <LeadDetailPanel
-              key={selected.id}
-              selected={selected}
-              onDeselect={onDeselect}
-              {...panelProps}
-            />
-          ) : (
-            <motion.div
-              key="detail-empty"
-              variants={fadeIn}
-              initial="hidden"
-              animate="visible"
-              exit={{ opacity: 0 }}
-              className="bg-white dark:bg-[#242938] rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center text-gray-400 dark:text-gray-500"
-            >
-              <motion.div
-                animate={{ y: [0, -6, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Mail size={32} className="mx-auto mb-2 opacity-30" />
-              </motion.div>
-              <p className="text-sm">{emptyText}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </>
-  );
-}
 
 export default function ProspectosSection() {
   const queryClient = useQueryClient();
@@ -1051,10 +144,15 @@ export default function ProspectosSection() {
     enabled: !!closeTarget?.lead?.id,
   });
 
+  // Sin toast global de éxito: cada campo editado desde LeadDetailPanel confirma junto al
+  // propio campo (ver FieldStatus ahí), y un movimiento de etapa por drag/hoja ya es
+  // visible por sí mismo (la tarjeta cambia de columna / la etapa del encabezado cambia).
+  // El error sí necesita feedback explícito en ambos casos — cada punto de llamada de
+  // `.mutate()` pasa su propio onError (LeadDetailPanel usa el suyo por-campo; el drag/
+  // hoja de abajo usa un toast, porque ahí no hay un campo visible contra el cual mostrarlo).
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => updateLead(id, data),
     onSuccess: (res, { data: updated }) => {
-      toast.success('Prospecto actualizado');
       queryClient.invalidateQueries(['leads']);
       queryClient.invalidateQueries(['lead-detail']);
       // Este mutation se usa para cualquier campo editable del detalle (fuente, forma de
@@ -1073,7 +171,6 @@ export default function ProspectosSection() {
       if (updated.pipelineStage)
         setSelected((s) => (s ? { ...s, pipelineStage: updated.pipelineStage } : s));
     },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Error al actualizar'),
   });
 
   const closeWonMutation = useMutation({
@@ -1180,7 +277,10 @@ export default function ProspectosSection() {
       setReopenTarget({ lead, targetStage: newStage });
       setSheetLead(null);
     } else {
-      updateMutation.mutate({ id: lead.id, data: { pipelineStage: newStage } });
+      updateMutation.mutate(
+        { id: lead.id, data: { pipelineStage: newStage } },
+        { onError: (e) => toast.error(e?.response?.data?.error || 'Error al cambiar de etapa') }
+      );
       setSheetLead(null);
     }
   };
@@ -1313,7 +413,8 @@ export default function ProspectosSection() {
               updateMutation={updateMutation}
               users={users}
               openTask={selectedOpenTask}
-              onAttemptStageChange={(lead) => setSheetLead(lead)}
+              onOpenStagePicker={(lead) => setSheetLead(lead)}
+              onChangeStage={attemptStageChange}
               onDeselect={() => setSelected(null)}
               emptyText="Haz clic en un prospecto para ver el detalle"
               onDelete={() =>
@@ -1474,7 +575,8 @@ export default function ProspectosSection() {
               updateMutation={updateMutation}
               users={users}
               openTask={selectedOpenTask}
-              onAttemptStageChange={(lead) => setSheetLead(lead)}
+              onOpenStagePicker={(lead) => setSheetLead(lead)}
+              onChangeStage={attemptStageChange}
               onDeselect={() => setSelected(null)}
               emptyText="Selecciona un prospecto para ver el detalle"
               onDelete={() =>

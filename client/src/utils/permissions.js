@@ -41,10 +41,17 @@ export function canEditLead(user, lead) {
 export const canManageInventory = (user) =>
   ['admin', 'asistente_administrativo'].includes(user?.role);
 
-// Descargar el inventario a Excel/PDF — Coordinador de ventas lo tiene aunque no pueda
-// editar propiedades (es su único acceso: "ver y descargar inventario completo").
-export const canExportInventory = (user) =>
-  ['admin', 'coordinador_ventas', 'asistente_administrativo'].includes(user?.role);
+// Descargar el inventario — Excel trae datos internos/administrativos (observaciones,
+// clave de búsqueda, utilidad, etc.), así que se queda reservado a Admin/Asistente
+// administrativo. PDF es un documento de presentación más acotado, así que también lo
+// pueden descargar Coordinador y Asesor de ventas (espejo exacto de routes/export.js).
+export const canExportExcel = (user) =>
+  ['admin', 'asistente_administrativo'].includes(user?.role);
+
+export const canExportPdf = (user) =>
+  ['admin', 'asistente_administrativo', 'coordinador_ventas', 'asesor_ventas'].includes(
+    user?.role
+  );
 
 // --- Módulos de soporte (vacantes, testimonios, buzón, alertas, analytics, campañas) ---
 // Coordinador de ventas y Asesor de ventas no tienen acceso a ninguno de estos.

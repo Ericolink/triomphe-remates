@@ -22,21 +22,22 @@ const { exportLimiter, publicFormLimiter } = require('../middleware/rateLimitMid
  *   description: Exportación de inventario
  */
 
-// Exportación de inventario: Coordinador de ventas solo tiene este permiso (ver
-// exportarpropiedades) además de Admin y Asistente administrativo — Asesor de ventas
-// solo puede ver el inventario, no exportarlo.
+// Exportación de inventario — Excel y PDF tienen niveles de acceso distintos: Excel trae
+// datos internos/administrativos (observaciones, clave de búsqueda, utilidad, etc.) y se
+// queda reservado a Admin/Asistente administrativo; PDF es un documento de presentación
+// más acotado, así que también lo pueden descargar Coordinador y Asesor de ventas.
 router.get(
   '/excel',
   exportLimiter,
   authenticate,
-  authorize('admin', 'coordinador_ventas', 'asistente_administrativo'),
+  authorize('admin', 'asistente_administrativo'),
   exportExcel
 );
 router.get(
   '/pdf',
   exportLimiter,
   authenticate,
-  authorize('admin', 'coordinador_ventas', 'asistente_administrativo'),
+  authorize('admin', 'asistente_administrativo', 'coordinador_ventas', 'asesor_ventas'),
   exportPDF
 );
 router.get(

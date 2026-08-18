@@ -46,11 +46,20 @@ const {
   getWhiteLogoBuffer,
   buildExcelHeader,
   getFilteredProperties,
-  getFirstImagePath,
   getImageBuffer,
+  buildThumbnailUrl,
   stripUnsupported,
   handleExportError,
 } = require('../services/exportHelpers');
+
+// Buffer de la miniatura de portada de una propiedad, ya recortada a cuadrado y chica —
+// compartido por exportExcel y exportPDF (columna "Foto" en ambos). null si la propiedad
+// no tiene fotos o si la descarga falla (getImageBuffer ya atrapa sus propios errores).
+const getCoverThumbnailBuffer = (property, size = 80) => {
+  const cover = property.images?.find((i) => i.isCover) || property.images?.[0];
+  if (!cover?.url) return Promise.resolve(null);
+  return getImageBuffer(buildThumbnailUrl(cover.url, size));
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCEL
@@ -129,6 +138,7 @@ const exportExcel = async (req, res) => {
     // vuelve a reordenar `headers`.
     const PRICE_COL = headers.findIndex((h) => h.key === 'price') + 1;
     const STATUS_COL = headers.findIndex((h) => h.key === 'status') + 1;
+    const PHOTO_COL = headers.findIndex((h) => h.key === 'photo'); // 0-based, para addImage
 
     await buildExcelHeader({
       workbook,
@@ -138,6 +148,13 @@ const exportExcel = async (req, res) => {
         '                                         TRIOMPHE BIENES RAÍCES — Inventario de Remates Bancarios',
       subtitle: `Generado el ${generatedAt}   ·   Total: ${properties.length} propiedades`,
     });
+
+    // Miniaturas de portada — se descargan todas en paralelo antes de armar las filas
+    // (una por una adentro del forEach sería secuencial y volvería lento un export con
+    // muchas propiedades). DATA_START_ROW es la fila 0-based donde empieza la primera
+    // fila de datos (después de título/subtítulo/encabezado).
+    const DATA_START_ROW = 3;
+    const coverBuffers = await Promise.all(properties.map((p) => getCoverThumbnailBuffer(p)));
 
     // Datos
     properties.forEach((p, i) => {
@@ -160,7 +177,9 @@ const exportExcel = async (req, res) => {
         code: dash(p.code),
         cadastralPlan: dash(p.cadastralPlan),
         internalNotes: dash(p.internalNotes),
-        photo: p.images && p.images.length > 0 ? 'Sí' : 'No',
+        // La imagen (si existe) se dibuja aparte, encima de esta celda — texto vacío para
+        // no competir visualmente con ella; "—" solo cuando de verdad no hay foto.
+        photo: coverBuffers[i] ? '' : dash(null),
         facebookPage: dash(p.facebookPage),
         technicalSheet: dash(p.technicalSheet),
         zone: dash(p.zone),
@@ -180,7 +199,10 @@ const exportExcel = async (req, res) => {
         updatedAt: formatDate(p.updatedAt),
       });
 
-      row.height = 18;
+      // 30 en vez de 18: dejar la miniatura de portada (chica, pero necesita algo de alto
+      // real para verse como una foto y no como un punto) sin desproporcionar el resto de
+      // la fila — se aplica parejo a todas las filas para que la hoja se vea uniforme.
+      row.height = 30;
       row.eachCell((cell) => {
         cell.font = { size: 9, color: { argb: TEXT_ARGB } };
         cell.alignment = { vertical: 'middle' };
@@ -188,6 +210,17 @@ const exportExcel = async (req, res) => {
         if (isAlt)
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
       });
+
+      if (coverBuffers[i]) {
+        const imgId = workbook.addImage({ buffer: coverBuffers[i], extension: 'jpeg' });
+        // tl/br (en vez de tl+ext en píxeles) ancla la imagen a los bordes exactos de la
+        // celda — se ajusta sola al ancho/alto real de la columna/fila sin desbordarse,
+        // sin tener que convertir el ancho de columna de ExcelJS a píxeles a mano.
+        sheet.addImage(imgId, {
+          tl: { col: PHOTO_COL, row: DATA_START_ROW + i },
+          br: { col: PHOTO_COL + 1, row: DATA_START_ROW + i + 1 },
+        });
+      }
 
       row.getCell(STATUS_COL).font = {
         bold: true,
@@ -223,20 +256,36 @@ const exportExcel = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // PDF
 // ─────────────────────────────────────────────────────────────────────────────
+// Mismo set de campos que el Excel (ver exportExcel), salvo los que el negocio pidió
+// excluir del PDF explícitamente: Calle, Número, LT, MZ, Observaciones, Página FB, Ficha
+// técnica, Zona, Tipo de zona, Precio/Fecha comercial ×2, Utilidad, Ingreso a inventario —
+// con esos fuera, las 19 columnas restantes sí caben en una página A4 horizontal legible
+// (762pt de ancho útil = page.width 842pt − 40pt de margen a cada lado). `key` liga cada
+// columna a su campo real; `COL_IDX` (más abajo) resuelve la posición por key en vez de un
+// índice fijo, para no repetir el bug de columnas que cambiaban de significado al reordenar
+// (ver exportExcel/PRICE_COL/STATUS_COL).
 const PDF_COLS = [
-  { label: 'Título', width: 140 },
-  { label: 'Ciudad', width: 62 },
-  { label: 'Tipo', width: 56 },
-  { label: 'Estatus', width: 62 },
-  { label: 'Precio', width: 85 },
-  { label: 'M² Terreno', width: 56 },
-  { label: 'M² Constr.', width: 56 },
-  { label: 'Recámaras', width: 50 },
-  { label: 'Baños', width: 40 },
-  { label: 'Visitas', width: 38 },
-  { label: 'Alta', width: 52 },
-  { label: 'Modif.', width: 52 },
+  { key: 'title', label: 'Título', width: 78 },
+  { key: 'colonia', label: 'Colonia', width: 44 },
+  { key: 'postalCode', label: 'C.P.', width: 30 },
+  { key: 'terrainMeters', label: 'M² Terr.', width: 36 },
+  { key: 'constructionMeters', label: 'M² Constr.', width: 38 },
+  { key: 'portfolio', label: 'Portafolio', width: 36 },
+  { key: 'legalProcessType', label: 'Proceso legal', width: 46 },
+  { key: 'price', label: 'Precio venta', width: 58 },
+  { key: 'template', label: 'Plantilla', width: 34 },
+  { key: 'code', label: 'Clave búsq.', width: 42 },
+  { key: 'cadastralPlan', label: 'Plano catastral', width: 46 },
+  { key: 'photo', label: 'Foto', width: 34 },
+  { key: 'city', label: 'Ciudad', width: 42 },
+  { key: 'type', label: 'Tipo', width: 36 },
+  { key: 'status', label: 'Estatus', width: 42 },
+  { key: 'bedrooms', label: 'Recám.', width: 26 },
+  { key: 'bathrooms', label: 'Baños', width: 22 },
+  { key: 'createdAt', label: 'Alta', width: 36 },
+  { key: 'updatedAt', label: 'Modif.', width: 36 },
 ];
+const COL_IDX = Object.fromEntries(PDF_COLS.map((c, i) => [c.key, i]));
 
 const drawPDFHeader = async (doc, properties, generatedAt, logoPath) => {
   doc.rect(0, 0, doc.page.width, 72).fill(PRIMARY);
@@ -332,9 +381,14 @@ const exportPDF = async (req, res) => {
       acc += c.width;
     });
 
+    // Miniaturas de portada en paralelo — misma razón que en exportExcel: pedirlas una por
+    // una adentro del for de abajo sería secuencial y volvería lento un inventario grande.
+    const coverBuffers = await Promise.all(properties.map((p) => getCoverThumbnailBuffer(p)));
+
+    const ROW_H = 26; // antes 22 — la miniatura de portada necesita algo más de alto para leerse
+
     for (let i = 0; i < properties.length; i++) {
       const p = properties.at(i);
-      const ROW_H = 22;
 
       if (y + ROW_H > doc.page.height - 40) {
         drawPDFFooter(doc);
@@ -345,40 +399,56 @@ const exportPDF = async (req, res) => {
 
       doc.rect(40, y, doc.page.width - 80, ROW_H).fill(i % 2 === 0 ? BG_ALT : '#ffffff');
 
-      // Miniatura
-      const imgPath = getFirstImagePath(p);
-      let titleX = xPositions[0] + 3;
-      let titleW = PDF_COLS[0].width - 6;
-      if (imgPath) {
+      // Foto de portada — ya viene recortada a cuadrado desde Cloudinary (buildThumbnailUrl),
+      // así que solo hace falta centrarla dentro de su columna, sin distorsión ni desborde.
+      const photoBuf = coverBuffers[i];
+      if (photoBuf) {
         try {
-          const thumbSize = ROW_H - 3;
-          doc.image(imgPath, xPositions[0] + 2, y + 1.5, { width: thumbSize, height: thumbSize });
-          titleX = xPositions[0] + 2 + thumbSize + 2;
-          titleW = PDF_COLS[0].width - thumbSize - 8;
+          const colDef = PDF_COLS[COL_IDX.photo];
+          const thumbSize = ROW_H - 4;
+          const thumbX = xPositions[COL_IDX.photo] + (colDef.width - thumbSize) / 2;
+          doc.image(photoBuf, thumbX, y + 2, { width: thumbSize, height: thumbSize });
         } catch {
           /* ignorado */
         }
       }
 
       const rowData = [
-        { val: dash(p.title), col: 0, customX: titleX, customW: titleW },
-        { val: cityLabel[p.city] || p.city, col: 1 },
-        { val: typeLabel[p.type] || p.type, col: 2 },
-        { val: statusLabel[p.status] || p.status, col: 3, isStatus: true },
-        { val: formatPrice(p.price), col: 4, bold: true, color: PRIMARY },
-        { val: p.terrainMeters ? `${p.terrainMeters} m²` : '—', col: 5 },
-        { val: p.constructionMeters ? `${p.constructionMeters} m²` : '—', col: 6 },
-        { val: dash(p.bedrooms), col: 7 },
-        { val: dash(p.bathrooms), col: 8 },
-        { val: String(p.views ?? 0), col: 9 },
-        { val: formatDate(p.createdAt), col: 10 },
-        { val: formatDate(p.updatedAt), col: 11 },
+        { val: dash(p.title), col: COL_IDX.title },
+        { val: dash(p.colonia), col: COL_IDX.colonia },
+        { val: dash(p.postalCode), col: COL_IDX.postalCode },
+        {
+          val: p.terrainMeters ? `${p.terrainMeters} m²` : '—',
+          col: COL_IDX.terrainMeters,
+        },
+        {
+          val: p.constructionMeters ? `${p.constructionMeters} m²` : '—',
+          col: COL_IDX.constructionMeters,
+        },
+        { val: dash(p.portfolio), col: COL_IDX.portfolio },
+        {
+          val: legalProcessTypeLabel[p.legalProcessType] || dash(p.legalProcessType),
+          col: COL_IDX.legalProcessType,
+        },
+        { val: formatPrice(p.price), col: COL_IDX.price, bold: true, color: PRIMARY },
+        { val: dash(p.template), col: COL_IDX.template },
+        { val: dash(p.code), col: COL_IDX.code },
+        { val: dash(p.cadastralPlan), col: COL_IDX.cadastralPlan },
+        // Sin entrada para "photo": esa columna se llena dibujando la miniatura arriba,
+        // no como texto (si no hay foto, la celda simplemente queda vacía).
+        { val: cityLabel[p.city] || p.city, col: COL_IDX.city },
+        { val: typeLabel[p.type] || p.type, col: COL_IDX.type },
+        { val: statusLabel[p.status] || p.status, col: COL_IDX.status, isStatus: true },
+        { val: dash(p.bedrooms), col: COL_IDX.bedrooms },
+        { val: dash(p.bathrooms), col: COL_IDX.bathrooms },
+        { val: formatDate(p.createdAt), col: COL_IDX.createdAt },
+        { val: formatDate(p.updatedAt), col: COL_IDX.updatedAt },
       ];
 
-      rowData.forEach(({ val, col, isStatus, bold, color, customX, customW }) => {
+      rowData.forEach(({ val, col, isStatus, bold, color }) => {
         const colDef = PDF_COLS.at(col);
-        const xPos = customX !== undefined ? customX : xPositions.at(col) + 3;
-        const wid = customW !== undefined ? customW : colDef.width - 6;
+        const xPos = xPositions.at(col) + 3;
+        const wid = colDef.width - 6;
         let fillColor = TEXT;
         if (isStatus) fillColor = statusHex[p.status] || TEXT;
         else if (color) fillColor = color;

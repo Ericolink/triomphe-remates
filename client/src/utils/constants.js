@@ -234,6 +234,14 @@ export const LEAD_TYPE_LABELS = {
   propiedades_similares: 'Conocer propiedades similares',
 };
 
+// Motivos de contacto asignables al editar un prospecto — excluye 'informacion' y
+// 'propiedades_similares' (valores históricos, ver LEAD_TYPE_LABELS) para no ofrecer en el
+// selector opciones que el backend rechazaría (VALID_LEAD_TYPE en leadController.js).
+// Mismo patrón que NON_TERMINAL_PIPELINE_STAGE_OPTIONS más abajo.
+export const LEAD_TYPE_OPTIONS = Object.entries(LEAD_TYPE_LABELS)
+  .filter(([value]) => !['informacion', 'propiedades_similares'].includes(value))
+  .map(([value, label]) => ({ value, label }));
+
 // Mismos valores de `type` que LEAD_TYPE_LABELS (el backend solo acepta las claves de
 // VALID_LEAD_TYPE en leadController.js) pero con textos redactados en referencia a "esta
 // propiedad" — usados por ContactForm.jsx únicamente cuando el formulario vive dentro de

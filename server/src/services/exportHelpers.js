@@ -179,12 +179,15 @@ const getFilteredProperties = async (query) => {
   });
 };
 
-const getFirstImagePath = (property) => {
-  const img = property.images?.[0];
-  if (!img) return null;
-  const base = path.join(__dirname, '../../../');
-  const p = path.join(base, img.url);
-  return fs.existsSync(p) ? p : null;
+// Inserta una transformación Cloudinary de recorte cuadrado (mismo criterio que
+// buildImageUrl en client/src/utils/images.js, pero forzando f_jpg en vez de f_auto: tanto
+// ExcelJS (workbook.addImage) como PDFKit (doc.image) solo soportan JPEG/PNG — f_auto podría
+// resolver a WebP y romper el embed en ambos formatos de exportación). c_fill con w=h
+// devuelve ya recortado a cuadrado, así el thumbnail no sale distorsionado al forzar el
+// mismo width/height del lado de ExcelJS/PDFKit.
+const buildThumbnailUrl = (url, size = 80) => {
+  if (!url || !url.startsWith('http') || !url.includes('/upload/')) return url;
+  return url.replace('/upload/', `/upload/f_jpg,q_auto,c_fill,w_${size},h_${size}/`);
 };
 
 // Devuelve un buffer de imagen ya sea de una URL remota (Cloudinary) o un archivo local
@@ -258,8 +261,8 @@ module.exports = {
   getWhiteLogoBuffer,
   buildExcelHeader,
   getFilteredProperties,
-  getFirstImagePath,
   getImageBuffer,
+  buildThumbnailUrl,
   stripUnsupported,
   handleExportError,
 };

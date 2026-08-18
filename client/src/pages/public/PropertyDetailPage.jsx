@@ -352,7 +352,11 @@ export default function PropertyDetailPage() {
             {property.title}
           </h1>
 
-          {(property.address || property.colonia) && (
+          {/* showLocationInfo: casilla "Mostrar al público" del apartado Ubicación en el
+              formulario admin — el título y la ciudad siguen mostrándose siempre (son
+              estructurales: SEO, filtros del catálogo, breadcrumbs), solo se oculta esta
+              línea de dirección/colonia. */}
+          {property.showLocationInfo !== false && (property.address || property.colonia) && (
             <p className="order-4 flex items-center gap-1 text-gray-500 dark:text-gray-300 mb-4">
               <MapPin size={16} />
               {[property.address, property.colonia, CITY_LABELS[property.city], property.state]
@@ -361,34 +365,42 @@ export default function PropertyDetailPage() {
             </p>
           )}
 
-          <div className="order-8 flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-6 bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl shadow-md">
-            <span className="flex items-center gap-2">
-              <Maximize2 size={18} className="text-primary-700 dark:text-primary-400" />
-              <span>
-                <span className="font-medium">
-                  {formatMetric(property.constructionMeters ?? property.squareMeters)}
-                </span>{' '}
-                M² Construcción
+          {/* showDetailsInfo: casilla del apartado Detalles (m²/recámaras/baños). */}
+          {property.showDetailsInfo !== false && (
+            <div className="order-8 flex flex-wrap gap-6 text-gray-600 dark:text-gray-300 mb-6 p-6 bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl shadow-md">
+              <span className="flex items-center gap-2">
+                <Maximize2 size={18} className="text-primary-700 dark:text-primary-400" />
+                <span>
+                  <span className="font-medium">
+                    {formatMetric(property.constructionMeters ?? property.squareMeters)}
+                  </span>{' '}
+                  M² Construcción
+                </span>
               </span>
-            </span>
-            <span className="flex items-center gap-2">
-              <LandPlot size={18} className="text-primary-700 dark:text-primary-400" />
-              <span>
-                <span className="font-medium">{formatMetric(property.terrainMeters)}</span> M² Terreno
+              <span className="flex items-center gap-2">
+                <LandPlot size={18} className="text-primary-700 dark:text-primary-400" />
+                <span>
+                  <span className="font-medium">{formatMetric(property.terrainMeters)}</span> M²
+                  Terreno
+                </span>
               </span>
-            </span>
-            <span className="flex items-center gap-2">
-              <Bed size={18} className="text-primary-700 dark:text-primary-400" />{' '}
-              {formatMetric(property.bedrooms)} Recámaras
-            </span>
-            <span className="flex items-center gap-2">
-              <Bath size={18} className="text-primary-700 dark:text-primary-400" />{' '}
-              {formatMetric(property.bathrooms)} Baños
-              {property.halfBathrooms ? ` + ${property.halfBathrooms} medio${property.halfBathrooms > 1 ? 's' : ''}` : ''}
-            </span>
-          </div>
+              <span className="flex items-center gap-2">
+                <Bed size={18} className="text-primary-700 dark:text-primary-400" />{' '}
+                {formatMetric(property.bedrooms)} Recámaras
+              </span>
+              <span className="flex items-center gap-2">
+                <Bath size={18} className="text-primary-700 dark:text-primary-400" />{' '}
+                {formatMetric(property.bathrooms)} Baños
+                {property.halfBathrooms
+                  ? ` + ${property.halfBathrooms} medio${property.halfBathrooms > 1 ? 's' : ''}`
+                  : ''}
+              </span>
+            </div>
+          )}
 
-          {property.description && (
+          {/* showBasicInfo: casilla del apartado Datos básicos — el título es estructural
+              (H1 de la página) y siempre se muestra; solo se oculta la descripción. */}
+          {property.showBasicInfo !== false && property.description && (
             <div className="order-9 mb-6">
               <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-2">
                 Descripción
@@ -397,7 +409,9 @@ export default function PropertyDetailPage() {
             </div>
           )}
 
-          {priceHistory.length > 1 && (
+          {/* showAuctionInfo: casilla del apartado Remate y estatus — también controla el
+              historial de precio, ya que es información derivada del mismo precio. */}
+          {property.showAuctionInfo !== false && priceHistory.length > 1 && (
             <div className="order-10 bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md mb-6">
               <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-4">
                 Historial de precio
@@ -414,20 +428,25 @@ export default function PropertyDetailPage() {
             mb-6 de abajo no se veía. Con margen explícito en cada bloque el resultado es
             el mismo (1.5rem entre todos), pero determinista y sin pelear con esa regla. */}
         <div className="contents lg:block lg:col-span-1">
-          <div className="order-5 mb-6 bg-primary-900 text-white rounded-2xl p-6">
-            <p className="text-sm text-primary-200 mb-1">
-              {(BUSINESS_LINE_CONTENT[property.businessLine] || BUSINESS_LINE_CONTENT.remate)
-                .priceLabel}
-            </p>
-            <p
-              className={`text-3xl font-bold ${property.price ? 'text-accent-400' : 'text-accent-300'}`}
-            >
-              {formatPrice(property.price)}
-            </p>
-            <p className="text-xs text-primary-300 mt-1">
-              {[CITY_LABELS[property.city], property.state].filter(Boolean).join(', ')}
-            </p>
-          </div>
+          {/* showAuctionInfo: casilla del apartado Remate y estatus. Los botones de
+              WhatsApp/cotización de abajo NO se ocultan con este apartado — siguen
+              permitiendo contactar aunque el precio no se muestre. */}
+          {property.showAuctionInfo !== false && (
+            <div className="order-5 mb-6 bg-primary-900 text-white rounded-2xl p-6">
+              <p className="text-sm text-primary-200 mb-1">
+                {(BUSINESS_LINE_CONTENT[property.businessLine] || BUSINESS_LINE_CONTENT.remate)
+                  .priceLabel}
+              </p>
+              <p
+                className={`text-3xl font-bold ${property.price ? 'text-accent-400' : 'text-accent-300'}`}
+              >
+                {formatPrice(property.price)}
+              </p>
+              <p className="text-xs text-primary-300 mt-1">
+                {[CITY_LABELS[property.city], property.state].filter(Boolean).join(', ')}
+              </p>
+            </div>
+          )}
 
           <WhatsAppButton
             title={property.title}

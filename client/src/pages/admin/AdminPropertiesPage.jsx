@@ -28,7 +28,7 @@ import {
 } from '../../utils/constants';
 import { downloadBlob } from '../../utils/download';
 import useAuthStore from '../../store/authStore';
-import { canManageInventory, canExportInventory, isAdmin } from '../../utils/permissions';
+import { canManageInventory, canExportExcel, canExportPdf, isAdmin } from '../../utils/permissions';
 
 // Versión mobile/tablet-angosto (<lg) de una fila de la tabla — mismos datos, reorganizados
 // verticalmente en vez de en 9 columnas que forzaban scroll horizontal. Recibe handlers ya
@@ -86,71 +86,72 @@ function AdminPropertyCardRow({
           {BUSINESS_LINE_LABELS[property.businessLine] || property.businessLine}
         </Badge>
         <span>{CITY_LABELS[property.city]}</span>
-        <span>· {property.views ?? 0} visitas</span>
         <span title={`Alta: ${formatDate(property.createdAt)}`}>
           · Act. {formatDate(property.updatedAt)}
         </span>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      {canManage ? (
+        <select
+          value={property.status}
+          onChange={(e) => onStatusChange(e.target.value)}
+          className={`text-xs border-0 rounded-lg px-2 py-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-accent-400 ${STATUS_SELECT_COLORS[property.status]}`}
+        >
+          {labelsToOptions(STATUS_LABELS).map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <span
+          className={`inline-block text-xs rounded-lg px-2 py-1.5 font-medium ${STATUS_SELECT_COLORS[property.status]}`}
+        >
+          {STATUS_LABELS[property.status]}
+        </span>
+      )}
+
+      {/* Precio junto con las acciones — antes vivía junto al estatus arriba y dejaba esta
+          fila con solo los 3 iconos pegados a la derecha y un hueco vacío a la izquierda. */}
+      <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-gray-50 dark:border-[#2e3650]">
         <p
           className={`font-semibold ${property.price ? 'text-primary-900 dark:text-accent-400' : 'text-yellow-500 dark:text-yellow-400'}`}
         >
           {formatPrice(property.price)}
         </p>
-        {canManage ? (
-          <select
-            value={property.status}
-            onChange={(e) => onStatusChange(e.target.value)}
-            className={`text-xs border-0 rounded-lg px-2 py-1.5 font-medium focus:outline-none focus:ring-2 focus:ring-accent-400 ${STATUS_SELECT_COLORS[property.status]}`}
-          >
-            {labelsToOptions(STATUS_LABELS).map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span
-            className={`text-xs rounded-lg px-2 py-1.5 font-medium ${STATUS_SELECT_COLORS[property.status]}`}
-          >
-            {STATUS_LABELS[property.status]}
-          </span>
-        )}
-      </div>
-
-      <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-gray-50 dark:border-[#2e3650]">
-        <motion.button
-          onClick={onView}
-          whileHover={{ scale: 1.15 }}
-          whileTap={{ scale: 0.9 }}
-          title="Ver en el sitio público"
-          className="p-2 text-gray-400 rounded-lg transition-colors hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
-        >
-          <Eye size={20} />
-        </motion.button>
-        {canManage && (
+        <div className="flex items-center gap-1">
           <motion.button
-            onClick={onEdit}
+            onClick={onView}
             whileHover={{ scale: 1.15 }}
             whileTap={{ scale: 0.9 }}
-            title="Editar"
-            className="p-2 text-gray-400 rounded-lg transition-colors hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2e3650]"
+            title="Ver en el sitio público"
+            className="p-2 text-gray-400 rounded-lg transition-colors hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
           >
-            <Pencil size={20} />
+            <Eye size={20} />
           </motion.button>
-        )}
-        {canDelete && (
-          <motion.button
-            onClick={onDelete}
-            whileHover={{ scale: 1.15 }}
-            whileTap={{ scale: 0.9 }}
-            title="Eliminar"
-            className="p-2 text-gray-400 rounded-lg transition-colors hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-          >
-            <Trash2 size={20} />
-          </motion.button>
-        )}
+          {canManage && (
+            <motion.button
+              onClick={onEdit}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              title="Editar"
+              className="p-2 text-gray-400 rounded-lg transition-colors hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2e3650]"
+            >
+              <Pencil size={20} />
+            </motion.button>
+          )}
+          {canDelete && (
+            <motion.button
+              onClick={onDelete}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              title="Eliminar"
+              className="p-2 text-gray-400 rounded-lg transition-colors hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <Trash2 size={20} />
+            </motion.button>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -160,7 +161,8 @@ export default function AdminPropertiesPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const canManage = canManageInventory(user);
-  const canExport = canExportInventory(user);
+  const canDownloadExcel = canExportExcel(user);
+  const canDownloadPdf = canExportPdf(user);
   const canDelete = isAdmin(user);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -303,26 +305,30 @@ export default function AdminPropertiesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {canExport && (
+          {(canDownloadExcel || canDownloadPdf) && (
             <div className="flex gap-2 mr-2">
-              <motion.button
-                whileHover={buttonHover}
-                whileTap={buttonTap}
-                onClick={() => handleExport('excel')}
-                disabled={exporting === 'excel'}
-                className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
-              >
-                <FileSpreadsheet size={14} /> {exporting === 'excel' ? 'Generando...' : 'Excel'}
-              </motion.button>
-              <motion.button
-                whileHover={buttonHover}
-                whileTap={buttonTap}
-                onClick={() => handleExport('pdf')}
-                disabled={exporting === 'pdf'}
-                className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-              >
-                <FileText size={14} /> {exporting === 'pdf' ? 'Generando...' : 'PDF'}
-              </motion.button>
+              {canDownloadExcel && (
+                <motion.button
+                  whileHover={buttonHover}
+                  whileTap={buttonTap}
+                  onClick={() => handleExport('excel')}
+                  disabled={exporting === 'excel'}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
+                >
+                  <FileSpreadsheet size={14} /> {exporting === 'excel' ? 'Generando...' : 'Excel'}
+                </motion.button>
+              )}
+              {canDownloadPdf && (
+                <motion.button
+                  whileHover={buttonHover}
+                  whileTap={buttonTap}
+                  onClick={() => handleExport('pdf')}
+                  disabled={exporting === 'pdf'}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                >
+                  <FileText size={14} /> {exporting === 'pdf' ? 'Generando...' : 'PDF'}
+                </motion.button>
+              )}
             </div>
           )}
           {canManage && (
@@ -422,7 +428,6 @@ export default function AdminPropertiesPage() {
                     'Ciudad',
                     'Precio',
                     'Estatus',
-                    'Visitas',
                     'Actualizado',
                     'Destacada',
                     'Acciones',
@@ -495,9 +500,6 @@ export default function AdminPropertiesPage() {
                             {STATUS_LABELS[property.status]}
                           </span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
-                        {property.views ?? 0}
                       </td>
                       <td
                         className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs"
@@ -588,9 +590,9 @@ export default function AdminPropertiesPage() {
           </div>
 
           {/* Tarjetas — hasta lg (1024px). Misma info que la tabla, reorganizada: título
-              arriba, línea/ciudad/visitas/actualizado en una fila secundaria compacta,
-              precio + estatus en su propia fila, acciones al final separadas por borde
-              (mismo patrón que PropertyCard.jsx en el sitio público). */}
+              arriba, línea/ciudad/actualizado en una fila secundaria compacta, estatus en
+              su propia fila, precio + acciones al final juntos, separados por borde (mismo
+              patrón que PropertyCard.jsx en el sitio público). */}
           <motion.div
             variants={staggerContainer}
             initial="hidden"

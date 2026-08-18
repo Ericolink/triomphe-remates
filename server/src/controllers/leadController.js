@@ -461,8 +461,19 @@ const updateLead = async (req, res) => {
     throw new ApiError(403, 'No tienes acceso a este prospecto');
   }
 
-  const { status, notes, appointmentDate, source, pipelineStage, assignedToUserId, campaignId } =
-    req.body;
+  const {
+    status,
+    notes,
+    appointmentDate,
+    source,
+    pipelineStage,
+    assignedToUserId,
+    campaignId,
+    name,
+    email,
+    phone,
+    type,
+  } = req.body;
 
   // Asignar/reasignar responsable queda reservado a admin/asistente_administrativo — ver
   // utils/leadAccess.js. Un Asesor con permiso de edición sobre este lead puede seguir
@@ -475,6 +486,24 @@ const updateLead = async (req, res) => {
   }
   if (source !== undefined && !VALID_LEAD_SOURCE.includes(source)) {
     throw new ApiError(400, `Fuente inválida. Valores permitidos: ${VALID_LEAD_SOURCE.join(', ')}`);
+  }
+  // Edición de información básica de contacto — mismo patrón de validación que createLead
+  // (validateEmail/validatePhone, VALID_LEAD_TYPE), pero aquí cada campo es opcional en el
+  // body: solo se valida/actualiza lo que realmente vino en la petición.
+  if (name !== undefined && (!name || !name.trim())) {
+    throw new ApiError(400, 'El nombre es requerido');
+  }
+  if (email !== undefined && email && !validateEmail(email)) {
+    throw new ApiError(400, 'Email inválido');
+  }
+  if (phone !== undefined && !validatePhone(phone)) {
+    throw new ApiError(400, 'Teléfono inválido — usa 10 dígitos, con o sin +52');
+  }
+  if (type !== undefined && !VALID_LEAD_TYPE.includes(type)) {
+    throw new ApiError(
+      400,
+      `Motivo de contacto inválido. Valores permitidos: ${VALID_LEAD_TYPE.join(', ')}`
+    );
   }
   if (pipelineStage !== undefined) {
     if (!VALID_PIPELINE_STAGES.includes(pipelineStage)) {
@@ -522,6 +551,10 @@ const updateLead = async (req, res) => {
     if (appointmentDate !== undefined) updates.appointmentDate = appointmentDate;
     if (source !== undefined) updates.source = source;
     if (campaignId !== undefined) updates.campaignId = campaignId;
+    if (name !== undefined) updates.name = name.trim();
+    if (email !== undefined) updates.email = email ? email.trim() : null;
+    if (phone !== undefined) updates.phone = phone ? phone.trim() : null;
+    if (type !== undefined) updates.type = type;
     if (pipelineStage !== undefined) {
       updates.pipelineStage = pipelineStage;
       updates.status = legacyStatusFor(pipelineStage);

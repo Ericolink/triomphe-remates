@@ -58,13 +58,25 @@ const BUSINESS_LINE_TABS = [
 // Cada campo se agrupa por sección para que el formulario se lea como bloques
 // con propósito claro (Datos básicos, Ubicación, Detalles, Remate) en vez de una
 // grilla plana de 12 campos sin relación visual entre ellos.
+// `visibilityField` liga cada apartado a su casilla "Mostrar al público" (ver
+// showBasicInfo/etc. en el modelo Property) — se renderiza junto al título de la sección.
+// legal/valuacion no tienen efecto visible todavía (esos campos nunca se muestran en el
+// sitio público hoy), pero se dejan listas por si algún día se decide mostrar algo de ahí.
 const SECTIONS = [
-  { key: 'basicos', title: 'Datos básicos' },
-  { key: 'ubicacion', title: 'Ubicación y tipo' },
-  { key: 'detalles', title: 'Detalles (opcional)' },
-  { key: 'remate', title: 'Remate y estatus' },
-  { key: 'legal', title: 'Datos catastrales y legales (opcional)' },
-  { key: 'valuacion', title: 'Valuación comercial (opcional)' },
+  { key: 'basicos', title: 'Datos básicos', visibilityField: 'showBasicInfo' },
+  { key: 'ubicacion', title: 'Ubicación y tipo', visibilityField: 'showLocationInfo' },
+  { key: 'detalles', title: 'Detalles (opcional)', visibilityField: 'showDetailsInfo' },
+  { key: 'remate', title: 'Remate y estatus', visibilityField: 'showAuctionInfo' },
+  {
+    key: 'legal',
+    title: 'Datos catastrales y legales (opcional)',
+    visibilityField: 'showLegalInfo',
+  },
+  {
+    key: 'valuacion',
+    title: 'Valuación comercial (opcional)',
+    visibilityField: 'showValuationInfo',
+  },
 ];
 
 const FIELDS = [
@@ -164,8 +176,8 @@ const FIELDS = [
 
   // Campos de seguimiento de inventario, alineados con la hoja maestra de Excel del negocio
   // (ver export de propiedades) — todos opcionales, sin default fuerte de negocio.
-  { key: 'lot', label: 'Lote (opcional)', type: 'text', col: 1, section: 'legal' },
-  { key: 'block', label: 'Manzana (opcional)', type: 'text', col: 1, section: 'legal' },
+  { key: 'lot', label: 'LT (opcional)', type: 'text', col: 1, section: 'legal' },
+  { key: 'block', label: 'MZ (opcional)', type: 'text', col: 1, section: 'legal' },
   { key: 'portfolio', label: 'Portafolio (opcional)', type: 'text', col: 1, section: 'legal' },
   {
     key: 'legalProcessType',
@@ -285,6 +297,12 @@ const emptyForm = {
   commercialPrice2Date: '',
   utility: '',
   inventoryEntryDate: '',
+  showBasicInfo: true,
+  showLocationInfo: true,
+  showDetailsInfo: true,
+  showAuctionInfo: true,
+  showLegalInfo: true,
+  showValuationInfo: true,
 };
 
 const propertyToForm = (p) => ({
@@ -336,6 +354,12 @@ const propertyToForm = (p) => ({
   inventoryEntryDate: p.inventoryEntryDate
     ? new Date(p.inventoryEntryDate).toISOString().split('T')[0]
     : '',
+  showBasicInfo: p.showBasicInfo ?? true,
+  showLocationInfo: p.showLocationInfo ?? true,
+  showDetailsInfo: p.showDetailsInfo ?? true,
+  showAuctionInfo: p.showAuctionInfo ?? true,
+  showLegalInfo: p.showLegalInfo ?? true,
+  showValuationInfo: p.showValuationInfo ?? true,
 });
 
 const inputClass =
@@ -629,12 +653,31 @@ export default function PropertyFormPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {SECTIONS.map(({ key: sectionKey, title }) => (
+        {SECTIONS.map(({ key: sectionKey, title, visibilityField }) => (
           <div
             key={sectionKey}
             className="bg-white dark:bg-[#242938] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-[#2e3650]"
           >
-            <h2 className="font-semibold text-gray-700 dark:text-gray-300 mb-4">{title}</h2>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h2 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h2>
+              {/* Controla si este apartado se muestra en la página pública de la
+                  propiedad (ver showBasicInfo/etc. en el modelo) — no borra los datos
+                  capturados, solo decide si se publican. */}
+              <label
+                className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none flex-shrink-0"
+                title="Si se desmarca, este apartado deja de mostrarse en la página pública de la propiedad"
+              >
+                <input
+                  type="checkbox"
+                  checked={form[visibilityField]}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, [visibilityField]: e.target.checked }))
+                  }
+                  className="w-4 h-4 rounded accent-accent-400"
+                />
+                Mostrar al público
+              </label>
+            </div>
             {sectionKey === 'basicos' && (
               <div className="mb-4" role="group" aria-label="Línea de negocio">
                 <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">

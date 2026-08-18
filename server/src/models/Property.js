@@ -217,6 +217,47 @@ const Property = sequelize.define(
       allowNull: true,
       comment: 'Fecha en que la propiedad ingresó al inventario',
     },
+    // Control de visibilidad pública por apartado — uno por cada sección de SECTIONS en
+    // PropertyFormPage.jsx, ver migración 20260818000000-add-public-visibility-flags-to-
+    // properties. Todos default true (una propiedad nueva se ve completa hasta que alguien
+    // oculte un apartado a propósito). showLegalInfo/showValuationInfo se guardan pero hoy
+    // no tienen ningún efecto visible: esos 2 apartados nunca se renderizan al público.
+    showBasicInfo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Mostrar la descripción (Datos básicos) en la página pública',
+    },
+    showLocationInfo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Mostrar dirección/colonia (Ubicación y tipo) en la página pública',
+    },
+    showDetailsInfo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Mostrar m²/recámaras/baños (Detalles) en la página pública',
+    },
+    showAuctionInfo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Mostrar el panel de precio e historial (Remate y estatus) en la página pública',
+    },
+    showLegalInfo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Reservado — Datos catastrales y legales no se muestran hoy en ningún lado',
+    },
+    showValuationInfo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Reservado — Valuación comercial no se muestra hoy en ningún lado',
+    },
   },
   {
     tableName: 'properties',

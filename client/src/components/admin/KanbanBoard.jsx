@@ -4,10 +4,10 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Building2, MessageCircle, PhoneCall, AlertCircle, Pin } from 'lucide-react';
 import { getLeads } from '../../services/leadService';
 import { getTasks } from '../../services/taskService';
-import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
 import { canEditLead } from '../../utils/permissions';
 import { formatDate, toWhatsAppLink } from '../../utils/formatters';
+import useIsMobile from '../../hooks/useIsMobile';
 import {
   PIPELINE_STAGE_LABELS,
   TERMINAL_STAGES,
@@ -74,22 +74,6 @@ function sortByUrgency(leads, openTaskByLead) {
   });
 }
 
-// En celular solo se muestra una columna a la vez (la que el selector de etapa del
-// encabezado tenga activa); en pc se ven las 8 al mismo tiempo, sin scroll horizontal.
-function useIsMobile() {
-  const query = '(max-width: 767px)';
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia(query).matches
-  );
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const handler = (e) => setIsMobile(e.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
-  return isMobile;
-}
-
 function useColumnLeads(stageKey, filters) {
   return useInfiniteQuery({
     queryKey: ['leads-column', stageKey, filters.search, filters.assignedToUserId],
@@ -154,32 +138,42 @@ export function KanbanCard({
         </p>
       )}
       <NextActionLine task={openTask} />
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-1">
-          {lead.phone && (
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={(e) => e.stopPropagation()}
-              title="Llamar"
-              className="p-2 -m-1 text-gray-400 hover:text-primary-500"
-            >
-              <PhoneCall size={12} />
-            </a>
-          )}
-          {lead.phone && (
-            <a
-              href={toWhatsAppLink(lead.phone)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              title="WhatsApp"
-              className="p-2 -m-1 text-gray-400 hover:text-green-500"
-            >
-              <MessageCircle size={12} />
-            </a>
-          )}
-        </div>
-        <Badge variant="default">{typeLabel[lead.type]}</Badge>
+      {/* Motivo de contacto en su propia fila, no como Badge (inline-flex): son frases
+          largas ("Solicitar información de una propiedad"), no etiquetas cortas, y un
+          inline-flex no se encoge por debajo de su ancho natural de contenido aunque el
+          padre tenga overflow-hidden — se salía de la tarjeta. Un bloque con
+          width:fit-content + max-width:100% sí respeta el ancho disponible, así que
+          `truncate` corta con "…" donde corresponde. title conserva el texto completo al
+          pasar el cursor. */}
+      <span
+        title={typeLabel[lead.type]}
+        className="block w-fit max-w-full truncate mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700/40 dark:text-gray-300"
+      >
+        {typeLabel[lead.type]}
+      </span>
+      <div className="flex items-center gap-1 mt-1.5">
+        {lead.phone && (
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={(e) => e.stopPropagation()}
+            title="Llamar"
+            className="p-2 -m-1 text-gray-400 hover:text-primary-500"
+          >
+            <PhoneCall size={12} />
+          </a>
+        )}
+        {lead.phone && (
+          <a
+            href={toWhatsAppLink(lead.phone)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title="WhatsApp"
+            className="p-2 -m-1 text-gray-400 hover:text-green-500"
+          >
+            <MessageCircle size={12} />
+          </a>
+        )}
       </div>
     </div>
   );
