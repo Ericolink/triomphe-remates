@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const { resolveUserKey } = require('./src/middleware/rateLimitMiddleware');
 require('dotenv').config();
 
 const app = express();
@@ -13,6 +14,9 @@ const app = express();
 // req.ip resuelve siempre a la IP interna del proxy, lo que inutiliza el rate limiting por IP
 // y falsea los logs de auditoría.
 app.set('trust proxy', 1);
+
+// La redirección HTTP → HTTPS se hace a nivel IIS (panel de SmarterASP → Advanced
+// Features → Force HTTPS), no aquí — ocurre antes de que la petición llegue a Node.
 
 // Cabeceras de seguridad HTTP (helmet). El servidor sirve dos tipos de página muy distintos
 // bajo el mismo Express: la SPA de React (CSP estricta) y la documentación de Swagger en
@@ -74,13 +78,25 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting global
+// Rate limiting global — solo sobre /api. Antes cubría también los estáticos del build
+// de React y el fallback de index.html (abajo): App.jsx usa React.lazy() en casi cada
+// página, así que cada navegación del SPA descarga un chunk JS más, y cada uno contaba
+// contra este mismo cupo compartido por IP. Con varias personas probando desde la misma
+// red de oficina (misma IP/NAT), el cupo se agotaba con navegación normal — no era un
+// ataque. Los estáticos no necesitan este limiter: no ejecutan lógica de negocio ni tocan
+// la base de datos, así que no son un vector de DoS costoso como sí lo son las rutas /api.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'development' ? 2000 : 500,
+  max: process.env.NODE_ENV === 'development' ? 2000 : 1500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes, intenta más tarde.' },
+  // Este limiter corre antes que authenticate en cualquier ruta, así que aquí no hay
+  // req.user todavía — resolveUserKey decodifica el JWT (si viene uno válido) para que
+  // el tráfico logueado tenga su propio cupo por usuario en vez de compartirlo con quien
+  // sea que esté en la misma IP/NAT (ver rateLimitMiddleware.js). Solo el tráfico anónimo
+  // cae a IP.
+  //
   // IIS/httpPlatformHandler envía IP:puerto en X-Forwarded-For — quitar el puerto. El
   // regex viejo (`.replace(/:\d+$/, '')`) también mutilaba direcciones IPv6 crudas (ej.
   // "::1" → ":", colapsando clientes IPv6 distintos a la misma key) — express-rate-limit
@@ -89,6 +105,8 @@ const limiter = rateLimit({
   // formatos reales que puede mandar el proxy (IPv4:puerto o [IPv6]:puerto); cualquier
   // otra cosa se deja intacta y siempre se normaliza con ipKeyGenerator.
   keyGenerator: (req) => {
+    const userKey = resolveUserKey(req);
+    if (userKey) return userKey;
     const raw = req.ip || req.socket.remoteAddress || '';
     const bracketedIpv6 = raw.match(/^\[(.+)\]:\d+$/);
     const ipv4WithPort = raw.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+$/);
@@ -96,7 +114,7 @@ const limiter = rateLimit({
     return ipKeyGenerator(ip);
   },
 });
-app.use(limiter);
+app.use(['/api', '/sitemap.xml'], limiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

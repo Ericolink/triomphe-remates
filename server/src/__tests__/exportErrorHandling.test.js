@@ -1,6 +1,6 @@
 // Cubre la matriz de handleExportError (services/exportHelpers.js) — la utilidad compartida
-// por los 5 endpoints de exportación (exportExcel, exportPDF, exportFeedbackExcel,
-// exportLeadsExcel, exportPropertyQuotePDF) para decidir cómo responder un error según si el
+// por los endpoints de exportación (exportExcel, exportPDF, exportFeedbackExcel,
+// exportLeadsExcel) para decidir cómo responder un error según si el
 // streaming del archivo ya arrancó o no. Usa apps Express reales (no un `res` simulado a mano)
 // para que res.headersSent refleje el comportamiento real de Node — ver
 // exportStreamFailure.integration.test.js para la reproducción end-to-end contra un endpoint

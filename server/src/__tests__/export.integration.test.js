@@ -332,42 +332,4 @@ describe('exportController', () => {
       expect(res.body.length).toBeGreaterThan(0);
     });
   });
-
-  describe('GET /api/export/property/:id/pdf — ficha individual (ruta pública)', () => {
-    test('genera la ficha con precio y ciudad de la propiedad', async () => {
-      const property = await createProperty({
-        title: 'Ficha de prueba',
-        price: 500000,
-        city: 'chihuahua',
-      });
-
-      const res = await binary(request(app).get(`/api/export/property/${property.id}/pdf`));
-      expect(res.status).toBe(200);
-
-      const { text } = await readPdfText(res.body);
-      expect(text).toContain('Ficha de prueba');
-      expect(text).toContain(formatPrice(500000));
-    });
-
-    test('propiedad inexistente devuelve 404 en vez de un PDF vacío', async () => {
-      const res = await request(app).get('/api/export/property/999999/pdf');
-      expect(res.status).toBe(404);
-    });
-
-    test('regresión: emoji en título/descripción no truena la generación (stripUnsupported)', async () => {
-      const property = await createProperty({
-        title: 'Casa increíble 🏡✨',
-        description: 'Ubicación única 🌟 cerca de todo 🚗💨',
-      });
-
-      const res = await binary(request(app).get(`/api/export/property/${property.id}/pdf`));
-      expect(res.status).toBe(200);
-
-      const { text } = await readPdfText(res.body);
-      // El emoji se elimina, pero el texto alrededor debe sobrevivir intacto.
-      expect(text).toContain('Casa increíble');
-      expect(text).toContain('Ubicación única');
-      expect(text).not.toMatch(/🏡|✨|🌟|🚗|💨/);
-    });
-  });
 });

@@ -43,16 +43,6 @@ const LEAD_TYPE_LABEL = {
   propiedades_similares: 'Conocer propiedades similares',
 };
 
-// Estado de la República al que pertenece cada ciudad — usado por la ficha técnica PDF
-// para el bloque de ubicación (Estado → Ciudad → Fraccionamiento → Colonia → Calle).
-// Property.city no tiene 'otra' en su ENUM real (ver models/Property.js), así que no
-// hace falta un valor por defecto.
-const CITY_STATE_LABEL = {
-  juarez: 'Chihuahua',
-  chihuahua: 'Chihuahua',
-  queretaro: 'Querétaro',
-};
-
 // Tipo de proceso legal de adquisición (Property.legalProcessType) — debe coincidir con
 // LEGAL_PROCESS_TYPE_LABELS en client/src/utils/constants.js. Usado por el export de Excel.
 const LEGAL_PROCESS_TYPE_LABEL = {
@@ -65,7 +55,6 @@ module.exports = {
   CITY_LABEL,
   PROPERTY_TYPE_LABEL,
   STATUS_LABEL,
-  CITY_STATE_LABEL,
   LEAD_TYPE_LABEL,
   LEGAL_PROCESS_TYPE_LABEL,
 };

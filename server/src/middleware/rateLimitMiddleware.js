@@ -1,6 +1,26 @@
 const jwt = require('jsonwebtoken');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
+// Varias personas (staff distinto) probando desde la misma red de oficina comparten IP/NAT,
+// así que un limiter puramente por IP les hace compartir un solo cupo. Cuando la petición
+// trae un JWT válido, usamos el id del usuario como key en su lugar — cada quien tiene su
+// propio presupuesto independientemente de la red desde la que se conecte. Se exporta por
+// separado (sin fallback a IP) para que app.js pueda combinarla con su propia normalización
+// de IP (necesita quitar el puerto que IIS agrega en X-Forwarded-For).
+const resolveUserKey = (req) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace('Bearer ', '').trim();
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    if (decoded?.id) return `user:${decoded.id}`;
+  } catch {
+    // token ausente/inválido — el caller cae a IP, igual que un anónimo
+  }
+  return null;
+};
+
+const resolveUserOrIpKey = (req, res) => resolveUserKey(req) || ipKeyGenerator(req, res);
+
 // Limita intentos de suscripción por email (además del límite por IP) para evitar
 // que se use el formulario para enviar correos de confirmación en cadena a una misma dirección
 const alertSubscribeLimiter = rateLimit({
@@ -47,6 +67,10 @@ const apiLimiter = rateLimit({
   message: { error: 'Demasiadas peticiones. Intenta de nuevo en 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
+  // La mayoría de las rutas que usan apiLimiter van detrás de authenticate, así que casi
+  // todo su tráfico trae JWT — key por usuario evita que varios miembros del staff en la
+  // misma red compartan un solo cupo de 500 (ver resolveUserOrIpKey arriba).
+  keyGenerator: resolveUserOrIpKey,
 });
 
 // Independiente de authLimiter: change-password ya requiere un JWT válido, así que el
@@ -62,25 +86,19 @@ const changePasswordLimiter = rateLimit({
   message: { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req, res) => {
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.replace('Bearer ', '').trim();
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-      if (decoded?.id) return `user:${decoded.id}`;
-    } catch {
-      // token ausente/inválido — authenticate lo rechazará después; aquí solo cae a IP
-    }
-    return ipKeyGenerator(req, res);
-  },
+  keyGenerator: resolveUserOrIpKey,
 });
 
+// uploadLimiter/exportLimiter también van siempre detrás de authenticate — key por usuario
+// para que, ej., dos asesores subiendo fotos de propiedades a la vez desde la misma oficina
+// no compartan el mismo cupo de 50/hora.
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
   max: 50,
   message: { error: 'Límite de subidas alcanzado. Intenta de nuevo en 1 hora.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: resolveUserOrIpKey,
 });
 
 const exportLimiter = rateLimit({
@@ -89,6 +107,7 @@ const exportLimiter = rateLimit({
   message: { error: 'Límite de exportaciones alcanzado. Intenta de nuevo en 1 hora.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: resolveUserOrIpKey,
 });
 
 module.exports = {
@@ -99,4 +118,5 @@ module.exports = {
   uploadLimiter,
   exportLimiter,
   alertSubscribeLimiter,
+  resolveUserKey,
 };

@@ -1,5 +1,4 @@
 import api from './api';
-import { downloadBlob } from '../utils/download';
 
 export const getProperties = async (params = {}) => {
   const { data } = await api.get('/properties', { params });
@@ -94,9 +93,4 @@ export const trackView = async (id) => {
 
 export const trackShare = async (id) => {
   await api.post(`/properties/${id}/share`);
-};
-
-export const downloadPropertyQuotePDF = async (id, filename) => {
-  const response = await api.get(`/export/property/${id}/pdf`, { responseType: 'blob' });
-  downloadBlob(response.data, filename);
 };

@@ -4,7 +4,6 @@ const {
   exportPDF,
   exportFeedbackExcel,
   exportLeadsExcel,
-  exportPropertyQuotePDF,
   exportWaitingListExcel,
   exportWaitingListPDF,
   exportCatalogExcel,
@@ -48,7 +47,6 @@ router.get(
   exportFeedbackExcel
 );
 router.get('/leads/excel', exportLimiter, authenticate, requireCrmAccess, exportLeadsExcel);
-router.get('/property/:id/pdf', exportLimiter, exportPropertyQuotePDF);
 router.get(
   '/waiting-list/excel',
   exportLimiter,

@@ -218,8 +218,8 @@ const stripUnsupported = (str) => {
     .trim();
 };
 
-// Manejo de error unificado para los 5 endpoints de exportación (exportExcel, exportPDF,
-// exportFeedbackExcel, exportLeadsExcel, exportPropertyQuotePDF). Todos generan el archivo
+// Manejo de error unificado para los endpoints de exportación (exportExcel, exportPDF,
+// exportFeedbackExcel, exportLeadsExcel, entre otros). Todos generan el archivo
 // escribiendo directo a `res` en streaming (ExcelJS vía workbook.xlsx.write(res), pdfkit vía
 // doc.pipe(res)) — una vez que salió el primer chunk, res.headersSent queda en true y Node
 // revienta con ERR_HTTP_HEADERS_SENT en cuanto algo (p.ej. res.json()) intenta volver a

@@ -458,11 +458,7 @@ export default function PropertyDetailPage() {
           {/* w-full explícito en vez de confiar en el stretch por defecto del grid: un
               <button> anidado un nivel más adentro de un div contenedor perdía el ancho
               completo y se achicaba a su contenido. */}
-          <DownloadQuoteButton
-            propertyId={property.id}
-            slug={property.slug}
-            className="order-7 w-full mb-6"
-          />
+          <DownloadQuoteButton property={property} className="order-7 w-full mb-6" />
 
           {property.acquisitionStage && property.acquisitionStage !== 'sin_proceso' && (
             <div className="order-7 w-full mb-6">
