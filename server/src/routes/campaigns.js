@@ -25,6 +25,6 @@ router.post('/', apiLimiter, authenticate, authorize('admin', 'asistente_adminis
 router.get('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getCampaigns);
 router.get('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getCampaignById);
 router.put('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), updateCampaign);
-router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteCampaign);
+router.delete('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deleteCampaign);
 
 module.exports = router;

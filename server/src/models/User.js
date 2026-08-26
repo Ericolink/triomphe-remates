@@ -32,10 +32,10 @@ const User = sequelize.define(
     //    acceso total a leads; no confundir con ese comportamiento previo).
     //  - asesor_ventas: ve/edita únicamente los prospectos que tiene asignados; inventario
     //    de solo lectura (sin exportar).
-    //  - asistente_administrativo: acceso total al CRM de leads (ver/editar/asignar/crear
-    //    todos los prospectos), inventario (crear/editar, sin eliminar), campañas, y el
-    //    resto de módulos operativos (vacantes, testimonios, buzón, alertas, analytics) —
-    //    salvo gestión de usuarios/auditoría, exclusiva de admin.
+    //  - asistente_administrativo: mismo acceso que admin en todo el sistema (CRM de leads,
+    //    inventario —incluyendo eliminar—, campañas, y el resto de módulos operativos:
+    //    vacantes, testimonios, buzón, alertas, analytics) — salvo gestión de
+    //    usuarios/auditoría, exclusiva de admin.
     role: {
       type: DataTypes.ENUM(
         'admin',

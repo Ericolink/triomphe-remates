@@ -46,11 +46,22 @@ router.post('/', publicFormLimiter, attachUserIfPresent, createLead);
 router.get('/stream', apiLimiter, authenticateSSE, requireCrmAccess, streamLeads);
 router.get('/', apiLimiter, authenticate, requireCrmAccess, getLeads);
 router.patch('/batch', apiLimiter, authenticate, requireCrmAccess, batchUpdateLeads);
-// Eliminar sigue siendo exclusivo de admin — ningún rol de CRM nuevo obtiene este permiso.
-router.delete('/batch', apiLimiter, authenticate, authorize('admin'), batchDeleteLeads);
+router.delete(
+  '/batch',
+  apiLimiter,
+  authenticate,
+  authorize('admin', 'asistente_administrativo'),
+  batchDeleteLeads
+);
 router.get('/:id', apiLimiter, authenticate, requireCrmAccess, getLeadById);
 router.put('/:id', apiLimiter, authenticate, requireCrmAccess, updateLead);
-router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteLead);
+router.delete(
+  '/:id',
+  apiLimiter,
+  authenticate,
+  authorize('admin', 'asistente_administrativo'),
+  deleteLead
+);
 router.put('/:id/close-won', apiLimiter, authenticate, requireCrmAccess, closeLeadAsWon);
 router.put('/:id/close-lost', apiLimiter, authenticate, requireCrmAccess, closeLeadAsLost);
 router.put('/:id/reopen', apiLimiter, authenticate, requireCrmAccess, reopenLead);

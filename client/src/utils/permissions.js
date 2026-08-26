@@ -17,9 +17,11 @@ export function crmAccessLevel(user) {
 
 export const hasCrmAccess = (user) => crmAccessLevel(user) !== null;
 
-// Eliminar leads (individual o en lote) siempre fue exclusivo de `role==='admin'` en el
-// backend (ver routes/leads.js) — ningún otro rol lo obtiene.
 export const canAssignLeads = (user) =>
+  ['admin', 'asistente_administrativo'].includes(user?.role);
+
+// Eliminar leads (individual o en lote) — espejo exacto de routes/leads.js.
+export const canDeleteLeads = (user) =>
   ['admin', 'asistente_administrativo'].includes(user?.role);
 
 // Un Asesor de Ventas solo trabaja los leads que ya se le asignaron, no crea nuevos.
@@ -39,6 +41,10 @@ export function canEditLead(user, lead) {
 // Crear/editar/eliminar-imagen/promover propiedades — Coordinador de ventas y Asesor de
 // ventas solo pueden VER el inventario (ver canExportInventory / lectura sin gate).
 export const canManageInventory = (user) =>
+  ['admin', 'asistente_administrativo'].includes(user?.role);
+
+// Eliminar propiedades — espejo exacto de routes/properties.js.
+export const canDeleteProperties = (user) =>
   ['admin', 'asistente_administrativo'].includes(user?.role);
 
 // Descargar el inventario — Excel trae datos internos/administrativos (observaciones,

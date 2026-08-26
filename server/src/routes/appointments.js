@@ -22,6 +22,6 @@ router.get('/', apiLimiter, authenticate, requireCrmAccess, getAppointments);
 router.post('/', apiLimiter, authenticate, requireCrmAccess, createAppointment);
 router.patch('/:id', apiLimiter, authenticate, requireCrmAccess, updateAppointmentStatus);
 router.post('/:id/reschedule', apiLimiter, authenticate, requireCrmAccess, rescheduleAppointment);
-router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteAppointment);
+router.delete('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deleteAppointment);
 
 module.exports = router;

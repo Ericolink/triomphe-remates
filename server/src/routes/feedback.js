@@ -14,8 +14,8 @@ const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddle
 router.post('/', publicFormLimiter, createFeedback);
 router.get('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getFeedbacks);
 router.patch('/batch', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), batchUpdateFeedback);
-router.delete('/batch', apiLimiter, authenticate, authorize('admin'), batchDeleteFeedback);
+router.delete('/batch', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), batchDeleteFeedback);
 router.put('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), updateFeedback);
-router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteFeedback);
+router.delete('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deleteFeedback);
 
 module.exports = router;

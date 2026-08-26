@@ -38,7 +38,7 @@ router.post('/:id/apply', publicFormLimiter, applyToPosition);
 // Rutas admin
 router.post('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), createPosition);
 router.put('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), updatePosition);
-router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deletePosition);
+router.delete('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deletePosition);
 router.put(
   '/applications/:id',
   apiLimiter,
@@ -46,6 +46,6 @@ router.put(
   authorize('admin', 'asistente_administrativo'),
   updateApplication
 );
-router.delete('/applications/:id', apiLimiter, authenticate, authorize('admin'), deleteApplication);
+router.delete('/applications/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deleteApplication);
 
 module.exports = router;

@@ -28,7 +28,12 @@ import {
 } from '../../utils/constants';
 import { downloadBlob } from '../../utils/download';
 import useAuthStore from '../../store/authStore';
-import { canManageInventory, canExportExcel, canExportPdf, isAdmin } from '../../utils/permissions';
+import {
+  canManageInventory,
+  canExportExcel,
+  canExportPdf,
+  canDeleteProperties,
+} from '../../utils/permissions';
 
 // Versión mobile/tablet-angosto (<lg) de una fila de la tabla — mismos datos, reorganizados
 // verticalmente en vez de en 9 columnas que forzaban scroll horizontal. Recibe handlers ya
@@ -163,7 +168,7 @@ export default function AdminPropertiesPage() {
   const canManage = canManageInventory(user);
   const canDownloadExcel = canExportExcel(user);
   const canDownloadPdf = canExportPdf(user);
-  const canDelete = isAdmin(user);
+  const canDelete = canDeleteProperties(user);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');

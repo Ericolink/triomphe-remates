@@ -31,7 +31,7 @@ import {
 import { getTasks } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
-import { canCreateLeads, isAdmin } from '../../../utils/permissions';
+import { canCreateLeads, canDeleteLeads } from '../../../utils/permissions';
 import { downloadBlob } from '../../../utils/download';
 import Badge from '../../ui/Badge';
 import Spinner from '../../ui/Spinner';
@@ -637,11 +637,10 @@ export default function ProspectosSection() {
           onClear={() => setChecked([])}
           statusOptions={NON_TERMINAL_PIPELINE_STAGE_OPTIONS}
           onStatus={(s) => batchStatusMutation.mutate({ ids: checked, stage: s })}
-          // DELETE /leads/batch es admin-exclusivo en el backend (routes/leads.js) — sin
-          // onDelete, BatchActionBar oculta el botón en vez de ofrecer una acción que
-          // siempre devolverá 403.
+          // Sin onDelete, BatchActionBar oculta el botón en vez de ofrecer una acción que
+          // el backend rechazaría con 403 (ver canDeleteLeads / routes/leads.js).
           onDelete={
-            isAdmin(currentUser)
+            canDeleteLeads(currentUser)
               ? () =>
                   setConfirm({
                     title: `¿Eliminar ${checked.length} prospecto(s)?`,

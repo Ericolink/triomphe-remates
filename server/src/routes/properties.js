@@ -40,7 +40,7 @@ router.get('/:id', apiLimiter, attachUserIfPresent, getPropertyById);
 
 router.post('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), createProperty);
 router.put('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), updateProperty);
-router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteProperty);
+router.delete('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deleteProperty);
 
 router.put('/:id/promote', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), promoteProperty);
 router.get(

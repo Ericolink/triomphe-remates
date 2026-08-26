@@ -43,6 +43,6 @@ router.put(
   testimonialImages,
   updateTestimonial
 );
-router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deleteTestimonial);
+router.delete('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deleteTestimonial);
 
 module.exports = router;

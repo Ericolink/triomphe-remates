@@ -36,7 +36,7 @@ import {
 import { getLeadActivities, createLeadActivity } from '../../services/activityService';
 import { getLeadAppointments, createAppointment } from '../../services/appointmentService';
 import useAuthStore from '../../store/authStore';
-import { canAssignLeads, canEditLead, isAdmin } from '../../utils/permissions';
+import { canAssignLeads, canEditLead, canDeleteLeads } from '../../utils/permissions';
 import { isInvalidOptionalAmount } from '../../utils/validation';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 import Badge from '../ui/Badge';
@@ -1146,9 +1146,9 @@ function LeadDetailPanel({
         </Collapsible>
 
         {/* Zona de peligro — separada del resto por espacio, borde y color; nunca en la
-            misma fila que Llamar/WhatsApp/Cerrar/Marcar venta. Solo Admin la ve, mismo
-            gate y mismo diálogo de confirmación de siempre (ver ProspectosSection). */}
-        {isAdmin(currentUser) && (
+            misma fila que Llamar/WhatsApp/Cerrar/Marcar venta. Mismo gate y mismo diálogo
+            de confirmación de siempre (ver ProspectosSection). */}
+        {canDeleteLeads(currentUser) && (
           <div className="mt-2 pt-4 border-t border-red-100 dark:border-red-900/30">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wide mb-2">
               <ShieldAlert size={13} /> Zona de peligro
