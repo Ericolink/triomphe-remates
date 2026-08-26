@@ -78,11 +78,13 @@ const Lead = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    // Se elige manualmente al crear/editar el prospecto — a diferencia de Property, un lead
-    // no siempre tiene una propiedad asociada (contacto general, WhatsApp) de la que
-    // derivarlo. null = sin línea de negocio asignada (leads previos a este campo).
+    // createLead la infiere de Property.businessLine/category cuando el lead trae propertyId
+    // (ver inferBusinessLineFromProperty en leadController.js) — igual editable a mano en el
+    // CRM después, y sigue siendo opcional para leads sin propiedad (contacto general,
+    // WhatsApp). null = sin línea de negocio asignada (leads previos a este campo, o
+    // propiedades de categoría 'renta', que no tiene línea de negocio equivalente).
     businessLine: {
-      type: DataTypes.ENUM('remate', 'infonavit', 'inversion'),
+      type: DataTypes.ENUM('remate', 'infonavit', 'inversion', 'compra_venta'),
       allowNull: true,
     },
     assignedToUserId: {

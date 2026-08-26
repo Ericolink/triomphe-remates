@@ -2,8 +2,15 @@ import { useId, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { Landmark, Banknote } from 'lucide-react';
 import { createLead } from '../../services/leadService';
-import { LEAD_TYPE_LABELS, PROPERTY_LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
+import {
+  LEAD_TYPE_LABELS,
+  PROPERTY_LEAD_TYPE_LABELS,
+  PAYMENT_METHOD_LABELS,
+  BUDGET_RANGE_OPTIONS,
+  labelsToOptions,
+} from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 
@@ -31,6 +38,8 @@ const emptyForm = {
   type: 'contacto',
   appointmentDate: '',
   appointmentTime: '',
+  paymentMethod: '',
+  budgetAmount: '',
 };
 
 export default function ContactForm({ propertyId, propertyTitle, defaultSource }) {
@@ -55,6 +64,8 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name || !form.phone) return toast.error('Nombre y teléfono son requeridos');
+    if (!form.paymentMethod) return toast.error('Elige cómo planeas pagar');
+    if (!form.budgetAmount) return toast.error('Elige tu presupuesto aproximado');
 
     let appointmentDate;
     if (isCita) {
@@ -67,7 +78,14 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
       }
     }
 
-    mutate({ ...form, appointmentDate, propertyId, source });
+    mutate({
+      ...form,
+      appointmentDate,
+      propertyId,
+      source,
+      budgetAmount: Number(form.budgetAmount),
+      budgetNotSpecified: false,
+    });
   };
 
   const inputClass =
@@ -113,6 +131,46 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
         {typeOptions.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
+          </option>
+        ))}
+      </select>
+      <div>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+          ¿Cómo planeas pagar? *
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => {
+            const Icon = value === 'credito_hipotecario' ? Landmark : Banknote;
+            const active = form.paymentMethod === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, paymentMethod: value }))}
+                className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                  active
+                    ? 'bg-accent-400 border-accent-400 text-primary-900'
+                    : 'bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
+                }`}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <select
+        value={form.budgetAmount}
+        onChange={(e) => setForm((f) => ({ ...f, budgetAmount: e.target.value }))}
+        className={inputClass}
+      >
+        <option value="" disabled>
+          Presupuesto aproximado *
+        </option>
+        {BUDGET_RANGE_OPTIONS.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {label}
           </option>
         ))}
       </select>

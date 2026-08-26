@@ -604,6 +604,7 @@ export default function ProspectosSection() {
       />
 
       <CloseLeadModal
+        key={closeTarget ? `${closeTarget.lead.id}:${closeTarget.targetStage}` : 'close-empty'}
         open={!!closeTarget}
         lead={closeLeadForModal}
         targetStage={closeTarget?.targetStage}

@@ -117,20 +117,28 @@ export const CATEGORY_VARIANTS = {
 // Línea de negocio — para Property es el eje que separa por completo las dos secciones
 // públicas del sitio (remates bancarios para inversionistas vs. Infonavit para compradores
 // de vivienda; independiente de `category`, que es una subclasificación dentro de remates.
-// Ver migración 20260731000000-add-businessline-to-properties). `inversion` es un 3er valor
-// que hoy SOLO aplica a `Lead.businessLine` (selector del CRM, embudo segmentado por línea)
-// — Property se queda en remate/infonavit nada más porque no hay sección pública para
-// "inversión" todavía (ver migración 20260813000003-add-businessline-to-leads-and-inversion).
+// Ver migración 20260731000000-add-businessline-to-properties). `inversion`/`compra_venta`
+// son valores que hoy SOLO aplican a `Lead.businessLine` (selector del CRM, embudo segmentado
+// por línea) — Property se queda en remate/infonavit nada más porque no hay sección pública
+// separada para "inversión"/"compra-venta" todavía (ver migraciones
+// 20260813000003-add-businessline-to-leads-and-inversion y
+// 20260826000000-add-compra-venta-to-lead-businessline). `compra_venta` se infiere en
+// createLead de Property.category cuando el lead trae propertyId — ver
+// inferBusinessLineFromProperty en leadController.js. Usado también por PropertyAlert
+// (lista de espera, WaitingListPage) — ese modelo se queda en los 3 valores originales, así
+// que sus selects excluyen 'compra_venta' explícitamente con labelsToOptions.
 export const BUSINESS_LINE_LABELS = {
   remate: 'Remate Bancario',
   infonavit: 'Infonavit',
   inversion: 'Inversión',
+  compra_venta: 'Compra-Venta',
 };
 
 export const BUSINESS_LINE_VARIANTS = {
   remate: 'primary',
   infonavit: 'success',
   inversion: 'warning',
+  compra_venta: 'default',
 };
 
 // Fuente única de copy por línea de negocio. Ambas conviven en el mismo módulo
@@ -419,9 +427,21 @@ export const TASK_TYPE_LABELS = {
 };
 
 export const PAYMENT_METHOD_LABELS = {
-  credito_hipotecario: 'Crédito hipotecario',
+  credito_hipotecario: 'Crédito',
   contado: 'Contado',
 };
+
+// Rangos de presupuesto para el formulario público "Contactar asesor" (ver ContactForm) —
+// el prospecto elige un rango en vez de teclear un monto exacto, que casi nadie conoce de
+// memoria en el primer contacto. El value que viaja a Lead.budgetAmount es el punto medio de
+// cada rango (el límite superior en el último, abierto); sigue siendo editable a un monto
+// exacto después desde el CRM si el asesor obtiene el dato preciso en una llamada.
+export const BUDGET_RANGE_OPTIONS = [
+  { value: 400000, label: 'Menos de $500,000' },
+  { value: 750000, label: '$500,000 - $1,000,000' },
+  { value: 1500000, label: '$1,000,000 - $2,000,000' },
+  { value: 2500000, label: 'Más de $2,000,000' },
+];
 
 export const FEEDBACK_CATEGORY_LABELS = {
   queja: 'Queja',

@@ -598,7 +598,7 @@ const leadStatusArgb = {
   cerrado: ST_GREEN_ARGB,
   descartado: 'FF9CA3AF',
 };
-const paymentMethodLabel = { credito_hipotecario: 'Crédito hipotecario', contado: 'Contado' };
+const paymentMethodLabel = { credito_hipotecario: 'Crédito', contado: 'Contado' };
 
 const exportLeadsExcel = async (req, res) => {
   try {

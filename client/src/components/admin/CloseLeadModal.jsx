@@ -19,8 +19,21 @@ export default function CloseLeadModal({
   onConfirmLost,
   isPending,
 }) {
-  const [propertyId, setPropertyId] = useState('');
-  const [amount, setAmount] = useState('');
+  // El caller (ProspectosSection) monta esta modal con key={`${lead.id}:${targetStage}`},
+  // así que cada apertura es un componente nuevo — estos initializers corren una sola vez
+  // por prospecto, ya con `lead` resuelto. Preselecciona la propiedad con la que el
+  // prospecto ya llegó (lead.property) para no volver a preguntarla; si no hay origen pero
+  // sí una única propiedad de interés, esa. El campo sigue siendo editable por si al cerrar
+  // la venta terminó siendo otra propiedad.
+  const propertyOptions = [lead?.property, ...(lead?.interestedProperties || [])]
+    .filter(Boolean)
+    .filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
+  const defaultProperty = lead?.property || (propertyOptions.length === 1 ? propertyOptions[0] : null);
+
+  const [propertyId, setPropertyId] = useState(() => (defaultProperty ? String(defaultProperty.id) : ''));
+  const [amount, setAmount] = useState(() =>
+    defaultProperty?.price != null ? String(Number(defaultProperty.price)) : ''
+  );
   const [closeReason, setCloseReason] = useState('');
   const [closeReasonDetail, setCloseReasonDetail] = useState('');
   const titleId = useId();
@@ -40,9 +53,6 @@ export default function CloseLeadModal({
 
   if (!lead) return null;
 
-  const propertyOptions = [lead.property, ...(lead.interestedProperties || [])]
-    .filter(Boolean)
-    .filter((p, i, arr) => arr.findIndex((x) => x.id === p.id) === i);
   const selectedProperty = propertyOptions.find((p) => String(p.id) === propertyId);
 
   const isWon = targetStage === 'venta_realizada';

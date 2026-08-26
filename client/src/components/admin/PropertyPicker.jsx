@@ -23,10 +23,14 @@ export default function PropertyPicker({
   excludeIds = [],
   placeholder = 'Buscar propiedad por título...',
   className = defaultInputClass,
+  // Para cuando `value` ya llega con una propiedad vinculada al montar (ej. editar la
+  // propiedad de origen de un lead existente) — sin esto el combobox se ve vacío hasta que
+  // el usuario vuelve a elegir algo, aunque `value` ya sea válido.
+  initialLabel = '',
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState('');
+  const [selectedLabel, setSelectedLabel] = useState(initialLabel);
   const debouncedQuery = useDebouncedValue(query, 300);
   const { panelRef } = usePopoverA11y(open, () => setOpen(false));
 

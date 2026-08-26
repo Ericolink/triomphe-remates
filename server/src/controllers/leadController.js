@@ -39,7 +39,19 @@ const VALID_CLOSE_REASONS = [
 const VALID_PAYMENT_METHODS = ['credito_hipotecario', 'contado'];
 // Se elige manualmente al crear/editar el prospecto — a diferencia de Property, un lead no
 // siempre tiene una propiedad asociada de la que derivarlo (ver Lead.js businessLine).
-const VALID_BUSINESS_LINES = ['remate', 'infonavit', 'inversion'];
+const VALID_BUSINESS_LINES = ['remate', 'infonavit', 'inversion', 'compra_venta'];
+
+// Línea de negocio del lead inferida de la propiedad de origen — Property.businessLine solo
+// distingue infonavit de "no infonavit" (siempre 'remate' por default, sin importar la
+// categoría real), así que para el resto se usa Property.category. 'renta' no tiene línea de
+// negocio equivalente en el CRM todavía, se deja sin asignar (editable a mano después).
+function inferBusinessLineFromProperty(property) {
+  if (!property) return null;
+  if (property.businessLine === 'infonavit') return 'infonavit';
+  if (property.category === 'compra_venta') return 'compra_venta';
+  if (property.category === 'remate') return 'remate';
+  return null;
+}
 // Motivos de contacto seleccionables para leads nuevos. 'informacion' y
 // 'propiedades_similares' siguen existiendo en el ENUM de la base (leads históricos ya
 // los tienen guardados) pero se excluyen aquí a propósito para que ya no puedan asignarse
@@ -260,6 +272,12 @@ const createLead = async (req, res) => {
     property = await Property.findByPk(propertyId);
     if (!property) throw new ApiError(404, 'Propiedad no encontrada');
   }
+  // Si no vino explícita en el body, se infiere de la propiedad de origen — así el
+  // formulario público no tiene que preguntarla y el asesor la ve lista en el CRM.
+  const resolvedBusinessLine =
+    commercialFields.businessLine !== undefined
+      ? commercialFields.businessLine
+      : inferBusinessLineFromProperty(property);
 
   if (campaignId) {
     const campaign = await Campaign.findByPk(campaignId);
@@ -287,6 +305,7 @@ const createLead = async (req, res) => {
         assignedAt: assignedToUserId ? new Date() : null,
         createdByUserId: req.user?.id ?? null,
         ...commercialFields,
+        businessLine: resolvedBusinessLine,
       },
       { transaction }
     );
@@ -473,6 +492,7 @@ const updateLead = async (req, res) => {
     email,
     phone,
     type,
+    propertyId,
   } = req.body;
 
   // Asignar/reasignar responsable queda reservado a admin/asistente_administrativo — ver
@@ -541,8 +561,17 @@ const updateLead = async (req, res) => {
     if (!assignedUser) throw new ApiError(404, 'Usuario asignado no encontrado');
   }
 
+  // La propiedad de origen (con la que llegó el prospecto) es editable después de creado —
+  // a veces el interés real se aclara/cambia en una llamada posterior. `null` la desvincula.
+  let newProperty = null;
+  if (propertyId !== undefined && propertyId !== null) {
+    newProperty = await Property.findByPk(propertyId);
+    if (!newProperty) throw new ApiError(404, 'Propiedad no encontrada');
+  }
+
   const previousStage = lead.pipelineStage;
   const previousAssignee = lead.assignedToUserId;
+  const previousPropertyId = lead.propertyId;
 
   const updates = {};
   await sequelize.transaction(async (transaction) => {
@@ -555,6 +584,7 @@ const updateLead = async (req, res) => {
     if (email !== undefined) updates.email = email ? email.trim() : null;
     if (phone !== undefined) updates.phone = phone ? phone.trim() : null;
     if (type !== undefined) updates.type = type;
+    if (propertyId !== undefined) updates.propertyId = newProperty ? newProperty.id : null;
     if (pipelineStage !== undefined) {
       updates.pipelineStage = pipelineStage;
       updates.status = legacyStatusFor(pipelineStage);
@@ -572,6 +602,21 @@ const updateLead = async (req, res) => {
         leadId: lead.id,
         type: 'sistema',
         content: `Etapa actualizada: ${previousStage} → ${pipelineStage}`,
+        userId: req.user?.id ?? null,
+        transaction,
+      });
+    }
+
+    if (propertyId !== undefined && newProperty?.id !== previousPropertyId) {
+      const previousProperty = previousPropertyId
+        ? await Property.findByPk(previousPropertyId, { attributes: ['title'], transaction })
+        : null;
+      const from = previousProperty?.title || 'ninguna propiedad';
+      const to = newProperty?.title || 'ninguna propiedad';
+      await logActivity({
+        leadId: lead.id,
+        type: 'sistema',
+        content: `Propiedad de interés actualizada: ${from} → ${to}`,
         userId: req.user?.id ?? null,
         transaction,
       });

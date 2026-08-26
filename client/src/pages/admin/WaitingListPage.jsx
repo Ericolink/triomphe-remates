@@ -280,7 +280,9 @@ export default function WaitingListPage() {
           className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
         >
           <option value="">Todas las líneas</option>
-          {labelsToOptions(BUSINESS_LINE_LABELS).map((o) => (
+          {/* 'compra_venta' excluido: BUSINESS_LINE_LABELS es compartido con Lead.businessLine,
+              pero PropertyAlert.businessLine se quedó en los 3 valores originales. */}
+          {labelsToOptions(BUSINESS_LINE_LABELS, ['compra_venta']).map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
@@ -511,7 +513,7 @@ export default function WaitingListPage() {
                   className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
                 >
                   <option value="">Cualquiera</option>
-                  {labelsToOptions(BUSINESS_LINE_LABELS).map((o) => (
+                  {labelsToOptions(BUSINESS_LINE_LABELS, ['compra_venta']).map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
