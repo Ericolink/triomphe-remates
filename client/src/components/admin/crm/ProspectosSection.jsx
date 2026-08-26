@@ -128,16 +128,6 @@ export default function ProspectosSection() {
     return map;
   }, [openTasksData]);
 
-  // El panel de detalle se abre tanto desde Lista como desde Kanban; en Kanban el
-  // prospecto seleccionado puede no estar en el lote de arriba, así que resuelve su
-  // próxima acción con una consulta puntual en vez de depender de openTaskByLead.
-  const { data: selectedTaskData } = useQuery({
-    queryKey: ['open-task-selected', selected?.id],
-    queryFn: () => getTasks({ leadIds: String(selected.id), done: false }),
-    enabled: !!selected?.id,
-  });
-  const selectedOpenTask = selectedTaskData?.data?.[0];
-
   const { data: closeLeadDetail } = useQuery({
     queryKey: ['lead-detail-for-close', closeTarget?.lead?.id],
     queryFn: () => getLeadById(closeTarget.lead.id),
@@ -166,7 +156,6 @@ export default function ProspectosSection() {
       if (affectsTasks) {
         queryClient.invalidateQueries(['open-tasks']);
         queryClient.invalidateQueries(['open-tasks-column']);
-        queryClient.invalidateQueries(['open-task-selected']);
       }
       if (updated.pipelineStage)
         setSelected((s) => (s ? { ...s, pipelineStage: updated.pipelineStage } : s));
@@ -412,7 +401,6 @@ export default function ProspectosSection() {
               selected={selected}
               updateMutation={updateMutation}
               users={users}
-              openTask={selectedOpenTask}
               onOpenStagePicker={(lead) => setSheetLead(lead)}
               onChangeStage={attemptStageChange}
               onDeselect={() => setSelected(null)}
@@ -574,7 +562,6 @@ export default function ProspectosSection() {
               selected={selected}
               updateMutation={updateMutation}
               users={users}
-              openTask={selectedOpenTask}
               onOpenStagePicker={(lead) => setSheetLead(lead)}
               onChangeStage={attemptStageChange}
               onDeselect={() => setSelected(null)}

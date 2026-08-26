@@ -31,6 +31,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
@@ -41,13 +42,13 @@ jobs:
           category: /language:javascript-typescript
           upload: never
           upload-database: false
-          output: ../results
+          output: results
 
       - name: Publicar resumen de hallazgos
         if: always()
         run: |
           shopt -s nullglob
-          sarif_files=(../results/*.sarif)
+          sarif_files=(results/*.sarif)
           if [ ${#sarif_files[@]} -eq 0 ]; then
             echo "No se generó ningún archivo SARIF." >> "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -86,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif
-          path: ../results/*.sarif
+          path: results/*.sarif
           retention-days: 30
 
       - name: Fallar si hay hallazgos

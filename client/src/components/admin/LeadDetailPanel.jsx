@@ -12,7 +12,6 @@ import {
   Plus,
   Activity,
   FileText,
-  Flag,
   AlertTriangle,
   Check,
   ChevronDown,
@@ -22,7 +21,6 @@ import {
   Target,
   Settings2,
   ShieldAlert,
-  CalendarClock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -37,14 +35,12 @@ import {
 } from '../../services/leadService';
 import { getLeadActivities, createLeadActivity } from '../../services/activityService';
 import { getLeadAppointments, createAppointment } from '../../services/appointmentService';
-import { completeTask } from '../../services/taskService';
 import useAuthStore from '../../store/authStore';
 import { canAssignLeads, canEditLead, isAdmin } from '../../utils/permissions';
 import { isInvalidOptionalAmount } from '../../utils/validation';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
-import { NextActionLine } from './KanbanBoard';
 import PropertyPicker from './PropertyPicker';
 import useModalA11y from '../../hooks/useModalA11y';
 import useIsMobile from '../../hooks/useIsMobile';
@@ -100,6 +96,15 @@ const WhatsAppIcon = ({ size = 16, className = '' }) => (
     <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.85L.057 23.25l5.565-1.453A11.943 11.943 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.007-1.371l-.36-.214-3.305.863.88-3.217-.235-.371A9.818 9.818 0 1112 21.818z" />
   </svg>
 );
+
+// "750000" -> "750,000" — solo para mostrar mientras el campo de presupuesto no tiene foco
+// (lead.budgetAmount llega del API como string DECIMAL, ej. "750000.00"); mientras se edita
+// se muestra el número plano para no pelear con la posición del cursor al tipear. Mismo
+// patrón que formatPriceInput en PropertyFormPage.jsx.
+const formatBudgetInput = (value) =>
+  value === '' || value === null || value === undefined
+    ? ''
+    : new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
 
 // Etapas no terminales, en el mismo orden que PIPELINE_STAGE_LABELS — usado para dibujar
 // la barra de progreso de <StageProgress>. Las terminales (venta/no interesado) tienen su
@@ -251,7 +256,6 @@ function LeadDetailPanel({
   onDelete,
   updateMutation,
   users,
-  openTask,
   onOpenStagePicker,
   onChangeStage,
 }) {
@@ -267,6 +271,7 @@ function LeadDetailPanel({
   const [budgetAmountInput, setBudgetAmountInput] = useState(
     selected.budgetAmount != null ? String(selected.budgetAmount) : ''
   );
+  const [budgetAmountFocused, setBudgetAmountFocused] = useState(false);
   const [addPropertyId, setAddPropertyId] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentPropertyId, setAppointmentPropertyId] = useState('');
@@ -312,22 +317,6 @@ function LeadDetailPanel({
     enabled: !!selected?.id,
   });
   const appointments = appointmentsData?.data ?? [];
-
-  // Próxima cita: la más próxima que aún no pasó y no está cancelada/completada/no-show.
-  // Se deriva en el cliente (mismo dato que ya trae "Citas") en vez de pedir un endpoint
-  // nuevo — "Qué hacer ahora" es la única sección que la necesita.
-  const nextAppointment = useMemo(() => {
-    const list = appointmentsData?.data ?? [];
-    const upcoming = list.filter(
-      (a) =>
-        new Date(a.scheduledAt) >= new Date() &&
-        !['completada', 'cancelada', 'no_show'].includes(a.status)
-    );
-    if (upcoming.length === 0) return null;
-    return upcoming.reduce((soonest, a) =>
-      new Date(a.scheduledAt) < new Date(soonest.scheduledAt) ? a : soonest
-    );
-  }, [appointmentsData]);
 
   // Línea de tiempo unificada — LeadNote y LeadActivity siguen siendo dos entidades
   // distintas en el backend (ver leadService/activityService); esto solo las combina para
@@ -487,16 +476,6 @@ function LeadDetailPanel({
   const removePropertyMutation = useMutation({
     mutationFn: ({ leadId, propertyId }) => removeLeadProperty(leadId, propertyId),
     onSuccess: () => queryClient.invalidateQueries(['lead-detail', selected.id]),
-  });
-
-  const completeTaskMutation = useMutation({
-    mutationFn: (id) => completeTask(id),
-    onSuccess: () => {
-      toast.success('Tarea completada');
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['lead-activities', selected.id]);
-    },
-    onError: () => toast.error('Error al completar la tarea'),
   });
 
   const whatsappMutation = useMutation({
@@ -661,43 +640,6 @@ function LeadDetailPanel({
           </div>
         )}
 
-        {/* ⚡ Qué hacer ahora — no se colapsa nunca, es la sección más importante después
-            del encabezado. Próxima acción + próxima cita (si existe) viven juntas aquí:
-            ambas responden la misma pregunta, no ameritan secciones separadas. */}
-        <div className={`mb-4 ${CARD_CLASS}`}>
-          <p className={`${SECTION_LABEL_CLASS} mb-2`}>
-            <Flag size={13} /> Qué hacer ahora
-          </p>
-          {openTask && (
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <NextActionLine task={openTask} />
-              <button
-                onClick={() => completeTaskMutation.mutate(openTask.id)}
-                disabled={completeTaskMutation.isPending}
-                className="text-xs font-medium px-2.5 py-1 bg-accent-400 text-primary-900 rounded-lg hover:bg-accent-300 disabled:opacity-40 transition-colors flex-shrink-0"
-              >
-                Completar
-              </button>
-            </div>
-          )}
-          {nextAppointment && (
-            <div className="flex items-center gap-2 text-xs bg-white dark:bg-[#242938] rounded-lg px-2.5 py-2 border border-accent-200 dark:border-accent-900/40">
-              <CalendarClock size={13} className="text-accent-500 flex-shrink-0" />
-              <span className="flex-1 min-w-0 text-gray-700 dark:text-gray-300">
-                Cita: {formatDateTime(nextAppointment.scheduledAt)}
-                {nextAppointment.property?.title ? ` · ${nextAppointment.property.title}` : ''}
-              </span>
-            </div>
-          )}
-          {!openTask && !nextAppointment && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-              {lead.assignedToUserId
-                ? 'Sin próxima acción pendiente.'
-                : 'Asigna un responsable para generar la primera tarea.'}
-            </p>
-          )}
-        </div>
-
         {/* 🏠 ¿Qué busca? — motivo, línea de negocio, propiedades de interés, forma de
             pago y presupuesto agrupados: todo lo que describe la necesidad del
             prospecto en un solo lugar, tampoco se colapsa (es información esencial). */}
@@ -810,13 +752,16 @@ function LeadDetailPanel({
               <span className="text-sm text-gray-400 dark:text-gray-500">$</span>
               <input
                 id={`${formId}-budgetAmount`}
-                type="number"
-                min="0"
-                step="1000"
-                value={budgetAmountInput}
+                type="text"
+                inputMode="numeric"
+                value={budgetAmountFocused ? budgetAmountInput : formatBudgetInput(budgetAmountInput)}
                 disabled={!canEdit || lead.budgetNotSpecified}
-                onChange={(e) => setBudgetAmountInput(e.target.value)}
-                onBlur={commitBudget}
+                onFocus={() => setBudgetAmountFocused(true)}
+                onChange={(e) => setBudgetAmountInput(e.target.value.replace(/\D/g, ''))}
+                onBlur={() => {
+                  setBudgetAmountFocused(false);
+                  commitBudget();
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                 placeholder="1,500,000"
                 className={`${ROW_CONTROL_CLASS} text-sm disabled:opacity-50 disabled:cursor-not-allowed ${budgetAmountInvalid ? 'ring-2 ring-red-400' : ''}`}

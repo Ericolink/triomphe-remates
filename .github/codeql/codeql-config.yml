@@ -1,0 +1,21 @@
+name: "Triomphe CodeQL config"
+
+# Excluye únicamente reglas revisadas y confirmadas como falso positivo en este repo — el
+# resto del suite por defecto de javascript-typescript se mantiene activo sin cambios. Si el
+# código relevante cambia de forma que alguna de estas ya no aplique, quita la exclusión
+# correspondiente.
+query-filters:
+  # server/app.js: la llamada global a helmet() desactiva contentSecurityPolicy a propósito
+  # — la CSP real se aplica justo después vía dos middlewares dedicados (publicCsp/docsCsp,
+  # ver comentario ahí) despachados según la ruta, porque /api/docs (Swagger UI) necesita una
+  # política más permisiva que el resto del sitio. CodeQL no razona entre middlewares
+  # consecutivos, así que marca la llamada aislada como si no hubiera CSP en absoluto.
+  - exclude:
+      id: js/insecure-helmet-configuration
+  # server/server.js: el console.error del catch de validateEnvironment() solo registra
+  # nombres de variables de entorno ausentes o datos derivados (ej. secret.length) — nunca el
+  # valor real de un secreto (revisado línea por línea en server/src/config/validateEnv.js).
+  # CodeQL marca el log como alcanzable desde process.env.JWT_SECRET (se lee para validar su
+  # fortaleza) sin distinguir que ese valor nunca sobrevive hasta el mensaje logueado.
+  - exclude:
+      id: js/clear-text-logging
