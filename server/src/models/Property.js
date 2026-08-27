@@ -41,10 +41,10 @@ const Property = sequelize.define(
       comment: 'Categoría comercial de la propiedad',
     },
     businessLine: {
-      type: DataTypes.ENUM('remate', 'infonavit'),
+      type: DataTypes.ENUM('remate', 'credito', 'renta', 'contado', 'inversion'),
       allowNull: false,
       defaultValue: 'remate',
-      comment: 'Línea de negocio: remate bancario o Infonavit',
+      comment: 'Línea de negocio comercial de la propiedad (5 secciones públicas de /propiedades)',
     },
     status: {
       type: DataTypes.ENUM('disponible', 'en_revision', 'apartado', 'vendido', 'de_vuelta'),

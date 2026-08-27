@@ -38,19 +38,14 @@ const VALID_CLOSE_REASONS = [
 ];
 const VALID_PAYMENT_METHODS = ['credito_hipotecario', 'contado'];
 // Se elige manualmente al crear/editar el prospecto — a diferencia de Property, un lead no
-// siempre tiene una propiedad asociada de la que derivarlo (ver Lead.js businessLine).
-const VALID_BUSINESS_LINES = ['remate', 'infonavit', 'inversion', 'compra_venta'];
+// siempre tiene una propiedad asociada de la que derivarlo (ver Lead.js businessLine). Mismos
+// 5 valores que Property.businessLine.
+const VALID_BUSINESS_LINES = ['remate', 'credito', 'renta', 'contado', 'inversion'];
 
-// Línea de negocio del lead inferida de la propiedad de origen — Property.businessLine solo
-// distingue infonavit de "no infonavit" (siempre 'remate' por default, sin importar la
-// categoría real), así que para el resto se usa Property.category. 'renta' no tiene línea de
-// negocio equivalente en el CRM todavía, se deja sin asignar (editable a mano después).
+// Línea de negocio del lead inferida de la propiedad de origen — Property.businessLine ya es
+// directamente una de las 5 líneas, así que se copia tal cual.
 function inferBusinessLineFromProperty(property) {
-  if (!property) return null;
-  if (property.businessLine === 'infonavit') return 'infonavit';
-  if (property.category === 'compra_venta') return 'compra_venta';
-  if (property.category === 'remate') return 'remate';
-  return null;
+  return property?.businessLine ?? null;
 }
 // Motivos de contacto seleccionables para leads nuevos. 'informacion' y
 // 'propiedades_similares' siguen existiendo en el ENUM de la base (leads históricos ya

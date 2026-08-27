@@ -51,7 +51,7 @@ const PropertyAlert = sequelize.define(
       defaultValue: 'public',
     },
     businessLine: {
-      type: DataTypes.ENUM('remate', 'infonavit', 'inversion'),
+      type: DataTypes.ENUM('remate', 'credito', 'renta', 'contado', 'inversion'),
       allowNull: true,
       comment: 'null = cualquier línea de negocio',
     },

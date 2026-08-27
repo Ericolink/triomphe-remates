@@ -163,7 +163,7 @@ export default function ReportsSection() {
                 <div className="space-y-2">
                   {d.porAsesor.map((a) => {
                     // Solo se listan las líneas con al menos 1 prospecto — evita ruido
-                    // ("0 remates · 0 infonavit · 0 inversión") en la mayoría de los casos.
+                    // ("0 remates · 0 crédito · 0 inversión") en la mayoría de los casos.
                     const lineParts = Object.entries(a.byLine || {})
                       .filter(([, count]) => count > 0)
                       .map(

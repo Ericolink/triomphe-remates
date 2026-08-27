@@ -183,8 +183,8 @@ export default function AdminPropertiesPage() {
     queryFn: () => getProperties({ search, city, category, businessLine, page, limit: 15 }),
   });
 
-  // Selector combinado "Línea": línea de negocio (remate/infonavit) y categoría
-  // (remate/renta/compra_venta, subclasificación solo dentro de la línea remate — ver
+  // Selector combinado "Línea": línea de negocio (remate/credito/renta/contado/inversion) y
+  // categoría (remate/renta/compra_venta, subclasificación solo dentro de la línea remate — ver
   // BUSINESS_LINE_LABELS/CATEGORY_LABELS en utils/constants.js) viven en dos campos
   // distintos del modelo, pero antes se filtraban desde dos <select> separados. Se
   // unificaron en uno solo (a pedido, para no ocupar dos filas en mobile); el prefijo

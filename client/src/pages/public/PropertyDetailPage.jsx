@@ -328,15 +328,15 @@ export default function PropertyDetailPage() {
           </div>
 
           <div className="order-2 flex flex-wrap items-center gap-3 mb-4">
-            {property.businessLine === 'infonavit' ? (
-              <Badge variant={BUSINESS_LINE_VARIANTS.infonavit}>
-                {BUSINESS_LINE_LABELS.infonavit}
-              </Badge>
-            ) : (
+            {property.businessLine === 'remate' ? (
               <Badge variant={CATEGORY_VARIANTS[property.category]}>
                 {property.category === 'remate'
                   ? 'Remate bancario (Cesión de Derechos)'
                   : CATEGORY_LABELS[property.category] || property.category}
+              </Badge>
+            ) : (
+              <Badge variant={BUSINESS_LINE_VARIANTS[property.businessLine]}>
+                {BUSINESS_LINE_LABELS[property.businessLine]}
               </Badge>
             )}
             {property.isFeatured && <Badge variant="primary">Destacado</Badge>}

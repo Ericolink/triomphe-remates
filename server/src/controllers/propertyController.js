@@ -182,8 +182,8 @@ const getPropertiesSync = async (req, res) => {
 
 // GET /api/properties/stats — usado solo por páginas públicas (HomePage, AboutPage); cuenta
 // únicamente inventario disponible, igual que getProperties para clientes no-staff.
-// `businessLine` es opcional: HomePage/InfonavitHomePage lo pasan para que su tarjeta de stats
-// solo cuente su propia línea; AboutPage lo omite a propósito para mostrar el total combinado.
+// `businessLine` es opcional: HomePage lo pasa para que su tarjeta de stats solo cuente su
+// propia línea (remate); AboutPage lo omite a propósito para mostrar el total combinado.
 const getPropertyStats = async (req, res) => {
   const { businessLine } = req.query;
   const where = { status: 'disponible' };
@@ -722,8 +722,8 @@ const reorderImages = async (req, res) => {
 };
 
 // GET /api/properties/promoted — `businessLine` opcional para que la propiedad estrella de
-// cada home solo pueda salir de esa línea (una propiedad de remate promovida no debe aparecer
-// como estrella en la sección Infonavit y viceversa).
+// cada línea solo pueda salir de esa misma línea (una propiedad de remate promovida no debe
+// aparecer como estrella en otra línea y viceversa).
 const getPromotedProperty = async (req, res) => {
   const { businessLine } = req.query;
   const where = { isPromoted: true, status: 'disponible' };

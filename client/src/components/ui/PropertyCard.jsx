@@ -69,13 +69,13 @@ export default function PropertyCard({ property }) {
             </div>
           )}
           <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
-            {property.businessLine === 'infonavit' ? (
-              <Badge variant={BUSINESS_LINE_VARIANTS.infonavit}>
-                {BUSINESS_LINE_LABELS.infonavit}
-              </Badge>
-            ) : (
+            {property.businessLine === 'remate' ? (
               <Badge variant={CATEGORY_VARIANTS[property.category]}>
                 {CATEGORY_LABELS[property.category] || property.category}
+              </Badge>
+            ) : (
+              <Badge variant={BUSINESS_LINE_VARIANTS[property.businessLine]}>
+                {BUSINESS_LINE_LABELS[property.businessLine]}
               </Badge>
             )}
             {showCountdown && (

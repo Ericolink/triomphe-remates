@@ -19,9 +19,9 @@ import { buildImageUrl } from '../../utils/images';
 import { CITY_LABELS, BUSINESS_LINE_CONTENT } from '../../utils/constants';
 
 // La página principal se mantiene enfocada en remates bancarios (la propuesta de valor
-// principal del negocio) — Infonavit se navega desde /propiedades, ver TabBar ahí. `content`
-// sigue leyendo de BUSINESS_LINE_CONTENT (no hardcodeado inline) para no duplicar copy si en
-// el futuro el home necesita variar por algún otro criterio.
+// principal del negocio) — el resto de las líneas se navegan desde /propiedades, ver TabBar
+// ahí. `content` sigue leyendo de BUSINESS_LINE_CONTENT (no hardcodeado inline) para no
+// duplicar copy si en el futuro el home necesita variar por algún otro criterio.
 const businessLine = 'remate';
 
 export default function HomePage() {

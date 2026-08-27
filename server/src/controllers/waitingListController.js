@@ -10,7 +10,7 @@ const { ApiError } = require('../middleware/errorHandler');
 // (ver migración 20260813000004). Todas las rutas de acá fuerzan `source: 'staff'`.
 const VALID_CITIES = ['juarez', 'chihuahua', 'queretaro'];
 const VALID_TYPES = ['casa', 'departamento', 'terreno', 'local', 'bodega'];
-const VALID_BUSINESS_LINES = ['remate', 'infonavit', 'inversion'];
+const VALID_BUSINESS_LINES = ['remate', 'credito', 'renta', 'contado', 'inversion'];
 
 function validateEntryFields(body) {
   const { name, phone, email, city, type, businessLine, minPrice, maxPrice } = body;

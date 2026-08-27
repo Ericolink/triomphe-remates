@@ -44,15 +44,18 @@ import {
 import TabBar from '../../components/ui/TabBar';
 
 // `category` (remate/renta/compra-venta) es un concepto propio de la línea de remates — no
-// aplica a Infonavit y se oculta del formulario cuando se elige esa línea (queda con su valor
-// por defecto internamente, ver emptyForm/propertyToForm).
-const HIDDEN_FOR_INFONAVIT = ['category'];
+// aplica al resto de las líneas y se oculta del formulario cuando se elige otra (queda con su
+// valor por defecto internamente, ver emptyForm/propertyToForm).
+const HIDDEN_FOR_NON_REMATE = ['category'];
 
 // Mismas claves/labels que PROPERTY_LINE_TABS en pages/public/PropertiesPage.jsx — el
 // selector de línea de negocio del panel admin debe leerse igual que el tab público.
 const BUSINESS_LINE_TABS = [
   { key: 'remate', label: 'Remates Bancarios' },
-  { key: 'infonavit', label: 'Casas Infonavit' },
+  { key: 'credito', label: 'Con Crédito' },
+  { key: 'renta', label: 'En Renta' },
+  { key: 'contado', label: 'De Contado' },
+  { key: 'inversion', label: 'Inversiones' },
 ];
 
 // Cada campo se agrupa por sección para que el formulario se lea como bloques
@@ -711,7 +714,7 @@ export default function PropertyFormPage() {
               {FIELDS.filter(
                 (f) =>
                   f.section === sectionKey &&
-                  !(form.businessLine === 'infonavit' && HIDDEN_FOR_INFONAVIT.includes(f.key))
+                  !(form.businessLine !== 'remate' && HIDDEN_FOR_NON_REMATE.includes(f.key))
               ).map(
                 ({ key, label, type, col, options }) => {
                   const hasError = fieldErrors.includes(key);

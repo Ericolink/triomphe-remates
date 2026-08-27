@@ -35,7 +35,7 @@ const CLOSE_REASONS = [
   'otro',
 ];
 const APPOINTMENT_STATUSES = ['programada', 'confirmada', 'completada', 'no_show', 'cancelada'];
-const VALID_BUSINESS_LINES = ['remate', 'infonavit', 'inversion', 'compra_venta'];
+const VALID_BUSINESS_LINES = ['remate', 'credito', 'renta', 'contado', 'inversion'];
 
 // `month` viene como "YYYY-MM" del selector del Dashboard — se traduce al rango
 // [primer día, último día] en hora local para filtrar por `createdAt`/`scheduledAt`.
@@ -183,7 +183,7 @@ const getCrmDashboard = async (req, res) => {
   });
 };
 
-// GET /api/crm/reports?businessLine=remate|infonavit|inversion|compra_venta&month=YYYY-MM
+// GET /api/crm/reports?businessLine=remate|credito|renta|contado|inversion&month=YYYY-MM
 const getCrmReports = async (req, res) => {
   const { businessLine, month } = req.query;
   const validBusinessLine = VALID_BUSINESS_LINES.includes(businessLine) ? businessLine : null;
@@ -281,7 +281,7 @@ const getCrmReports = async (req, res) => {
     const entry = porAsesorMap.get(row.assignedToUserId) || {
       userId: row.assignedToUserId,
       leadCount: 0,
-      byLine: { remate: 0, infonavit: 0, inversion: 0, compra_venta: 0, sin_especificar: 0 },
+      byLine: { remate: 0, credito: 0, renta: 0, contado: 0, inversion: 0, sin_especificar: 0 },
     };
     entry.leadCount += leadCount;
     entry.byLine[row.businessLine || 'sin_especificar'] += leadCount;

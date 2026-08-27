@@ -19,12 +19,16 @@ import {
   labelsToOptions,
 } from '../../utils/constants';
 
-// Selector de inventario dentro del mismo módulo de propiedades — Remates Bancarios (línea
-// principal del negocio) y Casas Infonavit conviven en /propiedades sin landing separada; el
-// cambio de tab solo actualiza qué `businessLine` se consulta, no navega a otra ruta.
+// Selector de inventario dentro del mismo módulo de propiedades — las 5 líneas de negocio
+// conviven en /propiedades sin landing separada; el cambio de tab solo actualiza qué
+// `businessLine` se consulta, no navega a otra ruta. Mismas claves/labels que
+// BUSINESS_LINE_TABS en pages/admin/PropertyFormPage.jsx.
 const PROPERTY_LINE_TABS = [
   { key: 'remate', label: 'Remates Bancarios' },
-  { key: 'infonavit', label: 'Casas Infonavit' },
+  { key: 'credito', label: 'Con Crédito' },
+  { key: 'renta', label: 'En Renta' },
+  { key: 'contado', label: 'De Contado' },
+  { key: 'inversion', label: 'Inversiones' },
 ];
 
 const CITIES = [
@@ -116,7 +120,7 @@ export default function PropertiesPage() {
 
   // Al cambiar de inventario se conservan el resto de filtros (ciudad, tipo, precio...) —
   // solo se limpia `category`, que es una subclasificación exclusiva de la línea de remates
-  // y no tiene sentido (ni opción visible) dentro de Casas Infonavit.
+  // y no tiene sentido (ni opción visible) en el resto de las líneas.
   const handleBusinessLineChange = (nextLine) => {
     setBusinessLine(nextLine);
     if (nextLine !== 'remate') setFilter('category', '');

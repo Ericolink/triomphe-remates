@@ -8,6 +8,7 @@ const {
   STATUS_LABEL: statusLabel,
   LEAD_TYPE_LABEL: leadTypeLabel,
   LEGAL_PROCESS_TYPE_LABEL: legalProcessTypeLabel,
+  BUSINESS_LINE_LABEL: businessLineLabel,
 } = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
 const { getLeadVisibilityWhere } = require('../utils/leadAccess');
@@ -721,7 +722,6 @@ const exportLeadsExcel = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCEL/PDF — Lista de espera
 // ─────────────────────────────────────────────────────────────────────────────
-const businessLineLabel = { remate: 'Remate Bancario', infonavit: 'Infonavit', inversion: 'Inversión' };
 
 // Mismo criterio de filtros que waitingListController.getWaitingList (city/state/amount/
 // name/phone/businessLine) — se reimplementa acá en vez de importarse porque ese controller

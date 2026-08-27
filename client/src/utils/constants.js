@@ -114,41 +114,37 @@ export const CATEGORY_VARIANTS = {
   compra_venta: 'success',
 };
 
-// Línea de negocio — para Property es el eje que separa por completo las dos secciones
-// públicas del sitio (remates bancarios para inversionistas vs. Infonavit para compradores
-// de vivienda; independiente de `category`, que es una subclasificación dentro de remates.
-// Ver migración 20260731000000-add-businessline-to-properties). `inversion`/`compra_venta`
-// son valores que hoy SOLO aplican a `Lead.businessLine` (selector del CRM, embudo segmentado
-// por línea) — Property se queda en remate/infonavit nada más porque no hay sección pública
-// separada para "inversión"/"compra-venta" todavía (ver migraciones
-// 20260813000003-add-businessline-to-leads-and-inversion y
-// 20260826000000-add-compra-venta-to-lead-businessline). `compra_venta` se infiere en
-// createLead de Property.category cuando el lead trae propertyId — ver
-// inferBusinessLineFromProperty en leadController.js. Usado también por PropertyAlert
-// (lista de espera, WaitingListPage) — ese modelo se queda en los 3 valores originales, así
-// que sus selects excluyen 'compra_venta' explícitamente con labelsToOptions.
+// Línea de negocio — para Property es el eje que separa por completo las secciones públicas
+// del sitio (5 pestañas, ver PROPERTY_LINE_TABS en PropertiesPage.jsx); independiente de
+// `category`, que sigue siendo una subclasificación interna solo dentro de la línea `remate`
+// (ver PropertyCard/PropertyDetailPage). Mismos 5 valores en Property/Lead/PropertyAlert.
+// Ver migración 20260827000000-expand-property-businessline.js (y las hermanas de Lead/
+// PropertyAlert) — 'infonavit' se renombró a 'credito' y se agregaron 'renta'/'contado'/
+// 'inversion'. Agregar una línea nueva en el futuro es sumar una entrada acá + el valor al
+// ENUM `businessLine` de los 3 modelos.
 export const BUSINESS_LINE_LABELS = {
-  remate: 'Remate Bancario',
-  infonavit: 'Infonavit',
-  inversion: 'Inversión',
-  compra_venta: 'Compra-Venta',
+  remate: 'Remates Bancarios',
+  credito: 'Con Crédito',
+  renta: 'En Renta',
+  contado: 'De Contado',
+  inversion: 'Inversiones',
 };
 
 export const BUSINESS_LINE_VARIANTS = {
   remate: 'primary',
-  infonavit: 'success',
-  inversion: 'warning',
-  compra_venta: 'default',
+  credito: 'success',
+  renta: 'warning',
+  contado: 'default',
+  inversion: 'danger',
 };
 
-// Fuente única de copy por línea de negocio. Ambas conviven en el mismo módulo
-// /propiedades (selector de tabs, ver TabBar en PropertiesPage) — no hay landing ni ruta
-// separada por línea, así que solo `remate` usa los campos de hero/CTA/SEO (el home sigue
-// enfocado exclusivamente en remates). El resto de los campos (listingTitle/listingDescription/
-// priceLabel/keywordsPrefix/descriptionSuffix) los leen ambas líneas: PropertiesPage para el
+// Fuente única de copy por línea de negocio. Todas conviven en el mismo módulo /propiedades
+// (selector de tabs, ver TabBar en PropertiesPage) — no hay landing ni ruta separada por línea,
+// así que solo `remate` usa los campos de hero/CTA/SEO (el home sigue enfocado exclusivamente
+// en remates, ver HomePage.jsx). El resto de los campos (listingTitle/listingDescription/
+// priceLabel/keywordsPrefix/descriptionSuffix) los leen todas las líneas: PropertiesPage para el
 // H1/SEO que cambia al alternar de tab, y PropertyDetailPage/SEO/PropertyCard para mostrar la
-// propiedad correctamente sin importar desde qué tab se llegó. Agregar una tercera línea en el
-// futuro (renta, preventa...) es sumar una entrada acá + el valor al ENUM `businessLine`.
+// propiedad correctamente sin importar desde qué tab se llegó.
 export const BUSINESS_LINE_CONTENT = {
   remate: {
     heroBadge: 'Precios del 30% al 70% por debajo del mercado.',
@@ -168,13 +164,38 @@ export const BUSINESS_LINE_CONTENT = {
     keywordsPrefix: 'remate bancario',
     descriptionSuffix: 'en remate bancario',
   },
-  infonavit: {
+  credito: {
     listingPath: '/propiedades',
-    listingTitle: 'Casas Infonavit',
-    listingDescription: 'Encuentra tu próxima vivienda con crédito Infonavit o hipotecario.',
+    listingTitle: 'Propiedades con Crédito',
+    listingDescription: 'Encuentra tu próxima vivienda con crédito Infonavit, Fovissste o hipotecario.',
     priceLabel: 'Precio',
-    keywordsPrefix: 'infonavit, crédito hipotecario',
-    descriptionSuffix: 'con crédito Infonavit',
+    keywordsPrefix: 'crédito infonavit, crédito hipotecario, fovissste',
+    descriptionSuffix: 'con crédito',
+  },
+  renta: {
+    listingPath: '/propiedades',
+    listingTitle: 'Propiedades en Renta',
+    listingDescription:
+      'Encuentra casas, departamentos y locales en renta en Chihuahua, Ciudad Juárez y Querétaro.',
+    priceLabel: 'Renta mensual',
+    keywordsPrefix: 'casas en renta, departamentos en renta',
+    descriptionSuffix: 'en renta',
+  },
+  contado: {
+    listingPath: '/propiedades',
+    listingTitle: 'Propiedades de Contado',
+    listingDescription: 'Compra tu propiedad de contado, sin trámites de crédito.',
+    priceLabel: 'Precio de contado',
+    keywordsPrefix: 'compra de contado, venta de contado',
+    descriptionSuffix: 'de contado',
+  },
+  inversion: {
+    listingPath: '/propiedades',
+    listingTitle: 'Propiedades de Inversión',
+    listingDescription: 'Propiedades ideales para inversión con alto potencial de retorno.',
+    priceLabel: 'Precio de inversión',
+    keywordsPrefix: 'inversión inmobiliaria, propiedades de inversión',
+    descriptionSuffix: 'para inversión',
   },
 };
 

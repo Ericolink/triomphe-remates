@@ -51,10 +51,22 @@ const LEGAL_PROCESS_TYPE_LABEL = {
   adjudicacion: 'Adjudicación',
 };
 
+// Línea de negocio (Property/Lead/PropertyAlert.businessLine) — debe coincidir con
+// BUSINESS_LINE_LABELS en client/src/utils/constants.js. Usado por el export de Excel/PDF de
+// la lista de espera (exportController.js).
+const BUSINESS_LINE_LABEL = {
+  remate: 'Remates Bancarios',
+  credito: 'Con Crédito',
+  renta: 'En Renta',
+  contado: 'De Contado',
+  inversion: 'Inversiones',
+};
+
 module.exports = {
   CITY_LABEL,
   PROPERTY_TYPE_LABEL,
   STATUS_LABEL,
   LEAD_TYPE_LABEL,
   LEGAL_PROCESS_TYPE_LABEL,
+  BUSINESS_LINE_LABEL,
 };
