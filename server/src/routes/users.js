@@ -54,7 +54,7 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *                 hasNext: { type: boolean }
  *                 hasPrevious: { type: boolean }
  *       401: { description: No autenticado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
- *       403: { description: No autorizado (solo admin), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+ *       403: { description: No autorizado (admin o asistente_administrativo), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  *   post:
  *     summary: Crear usuario (endpoint usado por el panel admin)
  *     description: >
@@ -228,8 +228,12 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *       404: { description: Usuario no encontrado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 
-// Todas las rutas requieren admin
-router.get('/', apiLimiter, authenticate, authorize('admin'), getUsers);
+// Listar queda abierto también a asistente_administrativo — sin esto, el selector de
+// "responsable" del CRM (CreateLeadModal/LeadDetailPanel/ProspectosSection, ver comentario
+// en usersController.getUsers) le llegaba vacío, aunque canAssignLeads() ya lo autorizaba a
+// asignar/reasignar prospectos (ver leadAccess.js). Alta/edición/baja de cuentas se queda
+// admin-only.
+router.get('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getUsers);
 router.post('/', apiLimiter, authenticate, authorize('admin'), createUser);
 router.put(
   '/:id',

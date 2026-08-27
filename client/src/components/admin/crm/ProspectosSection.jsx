@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -76,6 +76,21 @@ export default function ProspectosSection() {
   const [search, setSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(false);
   const assignedToUserId = onlyMine ? currentUserId : '';
+
+  // Deep link desde el calendario ("Ver prospecto" en AppointmentDetailModal, que navega a
+  // ?tab=prospectos&leadId=X) — se lee una sola vez al montar porque este componente se
+  // remonta limpio en cada cambio de tab (ver comentario "montaje condicional" en
+  // CrmPage.jsx), así que no hace falta sincronizar en cada cambio de searchParams.
+  useEffect(() => {
+    const leadId = searchParams.get('leadId');
+    if (!leadId) return;
+    getLeadById(leadId)
+      .then((res) => setSelected(res.data))
+      .catch(() => {
+        /* prospecto no encontrado o sin acceso — se ignora, el panel simplemente no abre */
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Búsqueda y "Mis prospectos" son compartidos entre Lista y Kanban — barra persistente
   // por encima de ambas vistas, tal como pide CRM_UX_DESIGN.md §2g.

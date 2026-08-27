@@ -969,17 +969,39 @@ const exportWaitingListPDF = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXCEL/PDF — Catálogo público (sitio principal, sin auth, gateado por datos de contacto)
 // ─────────────────────────────────────────────────────────────────────────────
+// `weight` es el ancho relativo de cada columna, no puntos absolutos — se escalan en
+// catalogPdfCols(doc) para sumar exacto el ancho disponible de la página (doc.page.width -
+// 80). Antes eran puntos fijos que sumaban más que el ancho real en A4 horizontal, por lo
+// que la última columna (Baños) quedaba parcialmente fuera de la página.
 const CATALOG_PDF_COLS = [
-  { label: 'Título', width: 180, key: 'title' },
-  { label: 'Ciudad', width: 90, key: 'city' },
-  { label: 'Tipo', width: 80, key: 'type' },
-  { label: 'Categoría', width: 90, key: 'category' },
-  { label: 'Precio', width: 100, key: 'price' },
-  { label: 'M² Terreno', width: 70, key: 'terrainMeters' },
-  { label: 'M² Constr.', width: 70, key: 'constructionMeters' },
-  { label: 'Recámaras', width: 65, key: 'bedrooms' },
-  { label: 'Baños', width: 65, key: 'bathrooms' },
+  { label: 'Título', weight: 180, key: 'title' },
+  { label: 'Ciudad', weight: 90, key: 'city' },
+  { label: 'Tipo', weight: 80, key: 'type' },
+  { label: 'Categoría', weight: 90, key: 'category' },
+  { label: 'Precio', weight: 100, key: 'price' },
+  { label: 'M² Terreno', weight: 70, key: 'terrainMeters' },
+  { label: 'M² Constr.', weight: 70, key: 'constructionMeters' },
+  { label: 'Recámaras', weight: 65, key: 'bedrooms' },
+  { label: 'Baños', weight: 65, key: 'bathrooms' },
 ];
+
+// Convierte los pesos relativos de CATALOG_PDF_COLS en anchos absolutos que suman exacto el
+// ancho disponible de la página (`doc.page.width - 80`, mismo cálculo que ya usaba
+// drawCatalogPDFTableHeader para el fondo del encabezado) — así la tabla siempre llena el
+// espacio real de la página sin desbordar, sea cual sea el tamaño/orientación del doc.
+const catalogPdfCols = (doc) => {
+  const pw = doc.page.width - 80;
+  const totalWeight = CATALOG_PDF_COLS.reduce((sum, c) => sum + c.weight, 0);
+  const cols = CATALOG_PDF_COLS.map((c) => ({
+    ...c,
+    width: Math.floor((c.weight / totalWeight) * pw),
+  }));
+  // El redondeo hacia abajo deja sobrantes de hasta unos pocos puntos — se le suman a la
+  // primera columna (Título) para que el total cuadre exacto con `pw`.
+  const usedWidth = cols.reduce((sum, c) => sum + c.width, 0);
+  cols[0].width += pw - usedWidth;
+  return cols;
+};
 
 // Solo inventario público (`status: 'disponible'`, sin `internalNotes` ni columnas de uso
 // interno como visitas/fechas de alta) — a diferencia de `getFilteredProperties`
@@ -1016,108 +1038,41 @@ const getPublicCatalogProperties = async (query) => {
 
 const categoryLabelPublic = { remate: 'Remates', renta: 'Renta', compra_venta: 'Compra-Venta' };
 
+// Mismo set que VALID_LEAD_TYPE en leadController.js (sin 'informacion'/'propiedades_similares'
+// — valores históricos, ya no seleccionables en formularios nuevos).
+const VALID_INTEREST_TYPES = [
+  'comprar_propiedad',
+  'rentar_propiedad',
+  'vender_propiedad',
+  'invertir_remates',
+  'contacto',
+  'cita',
+  'asesoria_financiera',
+  'otro',
+];
+
 // Crea el Lead que registra quién descargó el catálogo — mismas reglas de validación que
 // el formulario público "Contactar asesor" (leadController.createLead): nombre y teléfono
-// requeridos, email opcional.
-const createCatalogDownloadLead = async ({ name, phone, email }, format) => {
+// requeridos, email opcional. `interest` (Interés) es obligatorio acá — a diferencia de
+// ContactForm, que trae un default ('contacto'), este formulario no preselecciona nada. Se
+// llama `interest` en el body (no `type`) porque ese nombre ya lo usa el filtro de tipo de
+// propiedad (casa/depto/...) que viaja en el mismo POST — ver CatalogDownloadForm.jsx.
+const createCatalogDownloadLead = async ({ name, phone, email, interest }) => {
   if (!name || !name.trim()) throw new ApiError(400, 'Nombre es requerido');
   if (!phone || !validatePhone(phone))
     throw new ApiError(400, 'Teléfono inválido — usa 10 dígitos, con o sin +52');
   if (email && !validateEmail(email)) throw new ApiError(400, 'Email inválido');
+  if (!interest || !VALID_INTEREST_TYPES.includes(interest))
+    throw new ApiError(400, 'Interés es requerido');
 
   await Lead.create({
     name: name.trim(),
     phone: phone.trim(),
     email: email ? email.trim() : null,
-    type: 'contacto',
+    type: interest,
     source: 'directo',
-    message: `Descargó el catálogo de propiedades (${format === 'excel' ? 'Excel' : 'PDF'})`,
+    message: 'Descargó el catálogo de propiedades (PDF)',
   });
-};
-
-// POST /api/export/catalog/excel — público, sin auth
-const exportCatalogExcel = async (req, res) => {
-  try {
-    await createCatalogDownloadLead(req.body, 'excel');
-    const properties = await getPublicCatalogProperties(req.body);
-    const generatedAt = formatLongDateTime();
-
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Triomphe Bienes Raíces';
-    workbook.created = new Date();
-
-    const sheet = workbook.addWorksheet('Catálogo', {
-      pageSetup: { paperSize: 9, orientation: 'landscape' },
-    });
-
-    const headers = [
-      { header: '#', key: 'num', width: 5 },
-      { header: 'Título', key: 'title', width: 34 },
-      { header: 'Ciudad', key: 'city', width: 13 },
-      { header: 'Tipo', key: 'type', width: 13 },
-      { header: 'Categoría', key: 'category', width: 15 },
-      { header: 'Precio', key: 'price', width: 17 },
-      { header: 'M² Terreno', key: 'terrainMeters', width: 12 },
-      { header: 'M² Construcción', key: 'constructionMeters', width: 16 },
-      { header: 'Recámaras', key: 'bedrooms', width: 11 },
-      { header: 'Baños', key: 'bathrooms', width: 9 },
-    ];
-    sheet.columns = headers;
-
-    await buildExcelHeader({
-      workbook,
-      sheet,
-      headers,
-      title: '                                         TRIOMPHE BIENES RAÍCES — Catálogo de Propiedades',
-      subtitle: `Generado el ${generatedAt}   ·   Total: ${properties.length} propiedades`,
-    });
-
-    properties.forEach((p, i) => {
-      const isAlt = i % 2 === 0;
-      const bathsLabel = p.halfBathrooms
-        ? `${dash(p.bathrooms)} + ${p.halfBathrooms} medio`
-        : dash(p.bathrooms);
-      const row = sheet.addRow({
-        num: i + 1,
-        title: dash(p.title),
-        city: cityLabel[p.city] || p.city,
-        type: typeLabel[p.type] || p.type,
-        category: categoryLabelPublic[p.category] || p.category,
-        price: formatPrice(p.price),
-        terrainMeters: p.terrainMeters ? `${p.terrainMeters} m²` : '—',
-        constructionMeters: p.constructionMeters ? `${p.constructionMeters} m²` : '—',
-        bedrooms: dash(p.bedrooms),
-        bathrooms: bathsLabel,
-      });
-      row.height = 18;
-      row.eachCell((cell) => {
-        cell.font = { size: 9, color: { argb: TEXT_ARGB } };
-        cell.alignment = { vertical: 'middle', wrapText: false };
-        cell.border = { bottom: { style: 'hair', color: { argb: 'FFe5e7eb' } } };
-        if (isAlt) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
-      });
-    });
-
-    const totalRow = sheet.addRow({ num: '', title: `TOTAL: ${properties.length} propiedades` });
-    totalRow.height = 20;
-    totalRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
-    });
-    totalRow.getCell(2).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
-
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=triomphe-catalogo-${Date.now()}.xlsx`
-    );
-    await workbook.xlsx.write(res);
-    res.end();
-  } catch (error) {
-    handleExportError(req, res, error, 'Error al generar el catálogo en Excel');
-  }
 };
 
 const drawCatalogPDFHeader = async (doc, properties, generatedAt, logoPath) => {
@@ -1145,11 +1100,11 @@ const drawCatalogPDFHeader = async (doc, properties, generatedAt, logoPath) => {
     });
 };
 
-const drawCatalogPDFTableHeader = (doc, y) => {
+const drawCatalogPDFTableHeader = (doc, y, cols) => {
   const pw = doc.page.width - 80;
   doc.rect(40, y, pw, 20).fill(PRIMARY);
   let x = 40;
-  CATALOG_PDF_COLS.forEach((col) => {
+  cols.forEach((col) => {
     doc
       .fillColor('white')
       .fontSize(7)
@@ -1163,7 +1118,7 @@ const drawCatalogPDFTableHeader = (doc, y) => {
 // POST /api/export/catalog/pdf — público, sin auth
 const exportCatalogPDF = async (req, res) => {
   try {
-    await createCatalogDownloadLead(req.body, 'pdf');
+    await createCatalogDownloadLead(req.body);
     const properties = await getPublicCatalogProperties(req.body);
     const generatedAt = formatLongDateTime();
 
@@ -1173,12 +1128,13 @@ const exportCatalogPDF = async (req, res) => {
     doc.pipe(res);
 
     const logoPath = getLogoPath();
+    const cols = catalogPdfCols(doc);
     await drawCatalogPDFHeader(doc, properties, generatedAt, logoPath);
-    let y = drawCatalogPDFTableHeader(doc, 80);
+    let y = drawCatalogPDFTableHeader(doc, 80, cols);
 
     const xPositions = [];
     let acc = 40;
-    CATALOG_PDF_COLS.forEach((c) => {
+    cols.forEach((c) => {
       xPositions.push(acc);
       acc += c.width;
     });
@@ -1190,7 +1146,7 @@ const exportCatalogPDF = async (req, res) => {
         drawPDFFooter(doc);
         doc.addPage({ layout: 'landscape' });
         await drawCatalogPDFHeader(doc, properties, generatedAt, logoPath);
-        y = drawCatalogPDFTableHeader(doc, 80);
+        y = drawCatalogPDFTableHeader(doc, 80, cols);
       }
 
       doc.rect(40, y, doc.page.width - 80, ROW_H).fill(i % 2 === 0 ? BG_ALT : '#ffffff');
@@ -1210,7 +1166,7 @@ const exportCatalogPDF = async (req, res) => {
         bathsLabel,
       ];
       rowValues.forEach((val, colIdx) => {
-        const colDef = CATALOG_PDF_COLS[colIdx];
+        const colDef = cols[colIdx];
         doc
           .fillColor(TEXT)
           .fontSize(7)
@@ -1246,6 +1202,5 @@ module.exports = {
   exportLeadsExcel,
   exportWaitingListExcel,
   exportWaitingListPDF,
-  exportCatalogExcel,
   exportCatalogPDF,
 };

@@ -118,25 +118,30 @@ export default function PropertyCard({ property }) {
             {/* showDetailsInfo: casilla "Mostrar al público" del apartado Detalles en el
                 formulario admin — oculta m²/recámaras/baños de esta tarjeta. El botón de
                 WhatsApp usa ml-auto (no justify-between en el padre) para seguir pegado a
-                la derecha aunque este bloque no se renderice. */}
+                la derecha aunque este bloque no se renderice. 2 filas: terreno/construcción
+                arriba, recámaras/baños abajo. */}
             {property.showDetailsInfo !== false && (
-              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                <span className="flex items-center gap-1" title="Metros de construcción">
-                  <Maximize2 size={14} />
-                  {formatMetric(property.constructionMeters ?? property.squareMeters, ' m²c')}
-                </span>
-                <span className="flex items-center gap-1" title="Metros de terreno">
-                  <LandPlot size={14} />
-                  {formatMetric(property.terrainMeters, ' m²t')}
-                </span>
-                <span className="flex items-center gap-1" title="Recámaras">
-                  <Bed size={14} />
-                  {formatMetric(property.bedrooms)}
-                </span>
-                <span className="flex items-center gap-1" title="Baños">
-                  <Bath size={14} />
-                  {formatMetric(property.bathrooms)}
-                </span>
+              <div className="flex flex-col gap-2 text-base text-gray-600 dark:text-gray-300">
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="flex items-center gap-1.5" title="Metros de terreno">
+                    <LandPlot size={18} />
+                    {formatMetric(property.terrainMeters, ' m²t')}
+                  </span>
+                  <span className="flex items-center gap-1.5" title="Metros de construcción">
+                    <Maximize2 size={18} />
+                    {formatMetric(property.constructionMeters ?? property.squareMeters, ' m²c')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="flex items-center gap-1.5" title="Recámaras">
+                    <Bed size={18} />
+                    {formatMetric(property.bedrooms)}
+                  </span>
+                  <span className="flex items-center gap-1.5" title="Baños">
+                    <Bath size={18} />
+                    {formatMetric(property.bathrooms)}
+                  </span>
+                </div>
               </div>
             )}
             <button

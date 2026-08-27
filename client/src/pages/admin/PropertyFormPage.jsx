@@ -13,6 +13,11 @@ import {
   Share2,
   ChevronLeft,
   ChevronRight,
+  Gavel,
+  CreditCard,
+  KeyRound,
+  Banknote,
+  TrendingUp,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -51,11 +56,11 @@ const HIDDEN_FOR_NON_REMATE = ['category'];
 // Mismas claves/labels que PROPERTY_LINE_TABS en pages/public/PropertiesPage.jsx — el
 // selector de línea de negocio del panel admin debe leerse igual que el tab público.
 const BUSINESS_LINE_TABS = [
-  { key: 'remate', label: 'Remates Bancarios' },
-  { key: 'credito', label: 'Con Crédito' },
-  { key: 'renta', label: 'En Renta' },
-  { key: 'contado', label: 'De Contado' },
-  { key: 'inversion', label: 'Inversiones' },
+  { key: 'remate', label: 'Remates Bancarios', icon: <Gavel size={16} /> },
+  { key: 'credito', label: 'Con Crédito', icon: <CreditCard size={16} /> },
+  { key: 'renta', label: 'En Renta', icon: <KeyRound size={16} /> },
+  { key: 'contado', label: 'De Contado', icon: <Banknote size={16} /> },
+  { key: 'inversion', label: 'Inversiones', icon: <TrendingUp size={16} /> },
 ];
 
 // Cada campo se agrupa por sección para que el formulario se lea como bloques

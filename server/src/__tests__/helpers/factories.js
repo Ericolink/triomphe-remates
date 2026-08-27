@@ -10,6 +10,13 @@ const nextId = () => ++counter;
 // antes de que su afterAll pudiera limpiar), ya que `email` es la única columna con
 // constraint único entre las factories.
 const RUN_TAG = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+// Mismo problema para `phone`: leadController ahora rechaza teléfonos duplicados entre
+// prospectos (ver findDuplicatePhoneLead), y Jest corre archivos de test en paralelo contra
+// la misma DB de test — si todos los leads de prueba usaran el mismo '656...' fijo, un
+// archivo podía chocar con un lead que otro archivo dejó vivo momentáneamente. 10 dígitos
+// exactos (formato que exige validatePhone): '6' + 6 dígitos del timestamp (varían por
+// proceso/momento) + 3 de `n` (varían por llamada dentro del mismo proceso).
+const uniquePhone = (n) => `6${Date.now().toString().slice(-6)}${String(n).slice(-3).padStart(3, '0')}`;
 
 async function createUser(overrides = {}) {
   const n = nextId();
@@ -44,7 +51,7 @@ async function createLead(overrides = {}) {
   const n = nextId();
   return Lead.create({
     name: overrides.name ?? `Prospecto de prueba ${n}`,
-    phone: overrides.phone ?? '6561234567',
+    phone: overrides.phone ?? uniquePhone(n),
     ...overrides,
   });
 }

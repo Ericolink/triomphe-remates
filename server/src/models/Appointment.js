@@ -37,6 +37,13 @@ const Appointment = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    // Quién agendó esta cita en particular — distinto de Lead.createdByUserId (quién creó el
+    // prospecto, que puede ser otra persona y mucho antes). Nullable: sin backfill para citas
+    // históricas anteriores a este campo, ver migración 20260827000003.
+    createdByUserId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     tableName: 'appointments',

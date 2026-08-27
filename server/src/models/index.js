@@ -91,6 +91,7 @@ Property.hasMany(Appointment, { foreignKey: 'propertyId', as: 'appointments' });
 Appointment.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 Appointment.belongsTo(Appointment, { foreignKey: 'rescheduledFromId', as: 'rescheduledFrom' });
 Appointment.hasOne(Appointment, { foreignKey: 'rescheduledFromId', as: 'rescheduledTo' });
+Appointment.belongsTo(User, { foreignKey: 'createdByUserId', as: 'createdByUser' });
 
 Lead.hasMany(Task, { foreignKey: 'leadId', as: 'tasks', onDelete: 'CASCADE' });
 Task.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });

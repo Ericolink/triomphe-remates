@@ -1,36 +1,52 @@
 import { useId, useState } from 'react';
-import { FileSpreadsheet, FileText, CheckCircle } from 'lucide-react';
+import { FileText, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { downloadCatalogExcel, downloadCatalogPDF } from '../../services/catalogService';
+import { downloadCatalogPDF } from '../../services/catalogService';
 import { fadeInUp } from '../../utils/animations';
 import { downloadBlob } from '../../utils/download';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
+import { LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
 
-const INIT = { name: '', phone: '', email: '' };
+// Mismo criterio que LEAD_TYPE_OPTIONS en ContactForm.jsx: excluye 'informacion'/
+// 'propiedades_similares' (valores históricos, ya no seleccionables en formularios nuevos).
+const INTEREST_OPTIONS = labelsToOptions(LEAD_TYPE_LABELS, [
+  'informacion',
+  'propiedades_similares',
+]);
+
+const INIT = { name: '', phone: '', email: '', interest: '' };
 
 // Descarga del catálogo gateada por datos de contacto — pedido del dueño del negocio: un
-// visitante puede bajar el inventario en Excel/PDF, pero primero deja nombre/teléfono
-// (email opcional), igual que cualquier otro formulario público de captura de leads. Cada
-// descarga crea un Lead en el backend (ver exportController.exportCatalogExcel/PDF).
+// visitante puede bajar el inventario en PDF, pero primero deja nombre/teléfono (email
+// opcional) y su interés (obligatorio), igual que cualquier otro formulario público de
+// captura de leads. Cada descarga crea un Lead en el backend (ver
+// exportController.exportCatalogPDF), con `type` = el interés elegido. El campo se llama
+// `interest` (no `type`) a propósito: `filters` (spread junto con `form` al descargar) ya
+// trae su propio `type` — el tipo de propiedad (casa/depto/...) — y compartir el nombre
+// pisaría uno de los dos valores. Solo PDF — la opción de Excel se quitó a pedido del dueño
+// del negocio.
 export default function CatalogDownloadForm({ filters }) {
   const [form, setForm] = useState(INIT);
-  const [downloading, setDownloading] = useState(null); // null | 'excel' | 'pdf'
+  const [downloading, setDownloading] = useState(false);
   const [sent, setSent] = useState(false);
   const formId = useId();
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const handleDownload = async (format) => {
+  const handleDownload = async () => {
     if (!form.name.trim() || !form.phone.trim()) {
       toast.error('Nombre y teléfono son requeridos');
       return;
     }
+    if (!form.interest) {
+      toast.error('Selecciona tu interés');
+      return;
+    }
     try {
-      setDownloading(format);
-      const data = { ...form, ...filters };
-      const blob = format === 'excel' ? await downloadCatalogExcel(data) : await downloadCatalogPDF(data);
-      downloadBlob(blob, `triomphe-catalogo-${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`);
+      setDownloading(true);
+      const blob = await downloadCatalogPDF({ ...form, ...filters });
+      downloadBlob(blob, `triomphe-catalogo-${Date.now()}.pdf`);
       setSent(true);
     } catch (e) {
       let msg = 'Error al descargar. Verifica tu conexión e intenta de nuevo.';
@@ -44,7 +60,7 @@ export default function CatalogDownloadForm({ filters }) {
       }
       toast.error(msg);
     } finally {
-      setDownloading(null);
+      setDownloading(false);
     }
   };
 
@@ -61,27 +77,14 @@ export default function CatalogDownloadForm({ filters }) {
       >
         <CheckCircle size={36} className="text-green-500" />
         <p className="font-semibold text-gray-800 dark:text-gray-100">¡Catálogo descargado!</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          ¿Quieres descargarlo en el otro formato?
-        </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => handleDownload('excel')}
-            disabled={downloading === 'excel'}
-            className="flex items-center gap-1.5 px-3 py-2 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 rounded-xl text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
-          >
-            <FileSpreadsheet size={14} /> Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDownload('pdf')}
-            disabled={downloading === 'pdf'}
-            className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-          >
-            <FileText size={14} /> PDF
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={downloading}
+          className="flex items-center gap-1.5 px-3 py-2 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+        >
+          <FileText size={14} /> Descargar de nuevo
+        </button>
       </motion.div>
     );
 
@@ -144,32 +147,43 @@ export default function CatalogDownloadForm({ filters }) {
           className={inputCls}
         />
       </div>
-      <div className="flex gap-2 pt-1">
+      <div>
+        <label
+          htmlFor={`${formId}-interest`}
+          className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+        >
+          Interés *
+        </label>
+        <select
+          id={`${formId}-interest`}
+          name="interest"
+          value={form.interest}
+          onChange={handleChange}
+          className={inputCls}
+        >
+          <option value="" disabled>
+            Selecciona una opción
+          </option>
+          {INTEREST_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="pt-1">
         <button
           type="button"
-          onClick={() => handleDownload('excel')}
-          disabled={downloading !== null}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors disabled:opacity-60"
+          onClick={handleDownload}
+          disabled={downloading}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors disabled:opacity-60"
         >
-          {downloading === 'excel' ? (
-            <span className="w-4 h-4 border-2 border-primary-900/30 border-t-primary-900 rounded-full animate-spin" />
-          ) : (
-            <FileSpreadsheet size={15} />
-          )}
-          {downloading === 'excel' ? 'Generando...' : 'Descargar Excel'}
-        </button>
-        <button
-          type="button"
-          onClick={() => handleDownload('pdf')}
-          disabled={downloading !== null}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-accent-400 text-primary-900 rounded-xl text-sm font-medium hover:bg-accent-300 transition-colors disabled:opacity-60"
-        >
-          {downloading === 'pdf' ? (
+          {downloading ? (
             <span className="w-4 h-4 border-2 border-primary-900/30 border-t-primary-900 rounded-full animate-spin" />
           ) : (
             <FileText size={15} />
           )}
-          {downloading === 'pdf' ? 'Generando...' : 'Descargar PDF'}
+          {downloading ? 'Generando...' : 'Descargar PDF'}
         </button>
       </div>
     </div>

@@ -6,7 +6,6 @@ const {
   exportLeadsExcel,
   exportWaitingListExcel,
   exportWaitingListPDF,
-  exportCatalogExcel,
   exportCatalogPDF,
 } = require('../controllers/exportController');
 const { authenticate } = require('../middleware/authMiddleware');
@@ -63,9 +62,9 @@ router.get(
 );
 
 // Catálogo público (sitio principal, sin auth) — gateado por datos de contacto: cada
-// descarga primero registra un Lead (ver exportCatalogExcel/PDF) antes de generar el
-// archivo. POST (no GET) porque manda datos de contacto en el body.
-router.post('/catalog/excel', exportLimiter, publicFormLimiter, exportCatalogExcel);
+// descarga primero registra un Lead (ver exportCatalogPDF) antes de generar el archivo.
+// POST (no GET) porque manda datos de contacto en el body. Solo PDF — a pedido del dueño
+// del negocio, el catálogo público ya no se ofrece en Excel.
 router.post('/catalog/pdf', exportLimiter, publicFormLimiter, exportCatalogPDF);
 
 module.exports = router;

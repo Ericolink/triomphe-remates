@@ -23,6 +23,20 @@ const validatePhone = (phone) => {
   return /^\d{10}$/.test(local);
 };
 
+// Reduce un teléfono ya validado (validatePhone) a sus 10 dígitos locales, sin espacios/
+// guiones/paréntesis ni prefijo 52/+52 — así "656-123-4567", "+526561234567" y "6561234567"
+// comparan igual. Usado por leadController para detectar teléfonos duplicados entre
+// prospectos que se capturaron con distinto formato. Devuelve null si no es un teléfono
+// mexicano válido de 10 dígitos.
+const normalizePhone = (phone) => {
+  if (!phone || typeof phone !== 'string') return null;
+  const digits = phone.replace(/[\s\-()]/g, '');
+  let local = digits;
+  if (local.startsWith('+52')) local = local.slice(3);
+  else if (local.startsWith('52') && local.length > 10) local = local.slice(2);
+  return /^\d{10}$/.test(local) ? local : null;
+};
+
 const validatePassword = (password) => {
   return typeof password === 'string' && password.length >= 8;
 };
@@ -52,4 +66,4 @@ const validateLogin = (data) => {
   return errors;
 };
 
-module.exports = { validateEmail, validatePhone, validateRegister, validateLogin };
+module.exports = { validateEmail, validatePhone, normalizePhone, validateRegister, validateLogin };

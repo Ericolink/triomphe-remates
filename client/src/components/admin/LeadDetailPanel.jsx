@@ -63,6 +63,8 @@ import {
   ACTIVITY_TYPE_COLORS,
   PAYMENT_METHOD_LABELS,
   BUSINESS_LINE_LABELS,
+  APPOINTMENT_STATUS_LABELS,
+  APPOINTMENT_STATUS_VARIANTS,
 } from '../../utils/constants';
 
 // Estilos compartidos por todos los campos del panel — se sacan del cuerpo del componente
@@ -1104,16 +1106,8 @@ function LeadDetailPanel({
                   <span className="text-gray-700 dark:text-gray-300">
                     {formatDateTime(a.scheduledAt)}
                   </span>
-                  <Badge
-                    variant={
-                      a.status === 'completada'
-                        ? 'success'
-                        : a.status === 'cancelada'
-                          ? 'default'
-                          : 'primary'
-                    }
-                  >
-                    {a.status}
+                  <Badge variant={APPOINTMENT_STATUS_VARIANTS[a.status]}>
+                    {APPOINTMENT_STATUS_LABELS[a.status]}
                   </Badge>
                 </div>
               ))}

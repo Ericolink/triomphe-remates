@@ -1,7 +1,19 @@
 import { useId, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { SlidersHorizontal, X, Bell, Download, ChevronDown, Loader2 } from 'lucide-react';
+import {
+  SlidersHorizontal,
+  X,
+  Bell,
+  Download,
+  ChevronDown,
+  Loader2,
+  Gavel,
+  CreditCard,
+  KeyRound,
+  Banknote,
+  TrendingUp,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
@@ -24,11 +36,11 @@ import {
 // `businessLine` se consulta, no navega a otra ruta. Mismas claves/labels que
 // BUSINESS_LINE_TABS en pages/admin/PropertyFormPage.jsx.
 const PROPERTY_LINE_TABS = [
-  { key: 'remate', label: 'Remates Bancarios' },
-  { key: 'credito', label: 'Con Crédito' },
-  { key: 'renta', label: 'En Renta' },
-  { key: 'contado', label: 'De Contado' },
-  { key: 'inversion', label: 'Inversiones' },
+  { key: 'remate', label: 'Remates Bancarios', icon: <Gavel size={16} /> },
+  { key: 'credito', label: 'Con Crédito', icon: <CreditCard size={16} /> },
+  { key: 'renta', label: 'En Renta', icon: <KeyRound size={16} /> },
+  { key: 'contado', label: 'De Contado', icon: <Banknote size={16} /> },
+  { key: 'inversion', label: 'Inversiones', icon: <TrendingUp size={16} /> },
 ];
 
 const CITIES = [
@@ -66,6 +78,7 @@ export default function PropertiesPage() {
     city: '',
     type: '',
     category: '',
+    minPrice: '',
     maxPrice: '',
     search: '',
     minBedrooms: '',
@@ -81,6 +94,7 @@ export default function PropertiesPage() {
     city: searchParams.get('city') || localFilters.city,
     type: searchParams.get('type') || localFilters.type,
     category: searchParams.get('category') || localFilters.category,
+    minPrice: localFilters.minPrice,
     maxPrice: localFilters.maxPrice,
     search: searchParams.get('search') || localFilters.search,
     minBedrooms: localFilters.minBedrooms,
@@ -140,6 +154,7 @@ export default function PropertiesPage() {
       city: '',
       type: '',
       category: '',
+      minPrice: '',
       maxPrice: '',
       search: '',
       minBedrooms: '',
@@ -156,6 +171,7 @@ export default function PropertiesPage() {
     filters.city ||
     filters.type ||
     filters.category ||
+    filters.minPrice ||
     filters.maxPrice ||
     filters.search ||
     filters.minBedrooms ||
@@ -274,27 +290,51 @@ export default function PropertiesPage() {
                   </select>
                 </div>
               ))}
-              <div>
-                <label
-                  htmlFor={`${filtersFormId}-maxPrice`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
-                  Precio máx.
-                </label>
-                <input
-                  id={`${filtersFormId}-maxPrice`}
-                  type="text"
-                  placeholder="Ej: 1,000,000"
-                  value={filters.maxPrice ? Number(filters.maxPrice).toLocaleString('es-MX') : ''}
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/[^0-9]/g, '');
-                    setFilter('maxPrice', raw);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                />
-                {filters.maxPrice && (
+              <div className="col-span-2 md:col-span-1">
+                <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Precio
+                </span>
+                <div className="flex gap-2">
+                  <div className="w-1/2">
+                    <label htmlFor={`${filtersFormId}-minPrice`} className="sr-only">
+                      Precio mínimo
+                    </label>
+                    <input
+                      id={`${filtersFormId}-minPrice`}
+                      type="text"
+                      placeholder="Mín."
+                      value={filters.minPrice ? Number(filters.minPrice).toLocaleString('es-MX') : ''}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, '');
+                        setFilter('minPrice', raw);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
+                    />
+                  </div>
+                  <div className="w-1/2">
+                    <label htmlFor={`${filtersFormId}-maxPrice`} className="sr-only">
+                      Precio máximo
+                    </label>
+                    <input
+                      id={`${filtersFormId}-maxPrice`}
+                      type="text"
+                      placeholder="Máx."
+                      value={filters.maxPrice ? Number(filters.maxPrice).toLocaleString('es-MX') : ''}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, '');
+                        setFilter('maxPrice', raw);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
+                    />
+                  </div>
+                </div>
+                {(filters.minPrice || filters.maxPrice) && (
                   <p className="text-xs text-primary-600 mt-1">
-                    $ {Number(filters.maxPrice).toLocaleString('es-MX')} MXN
+                    {filters.minPrice ? `$${Number(filters.minPrice).toLocaleString('es-MX')}` : '$0'}
+                    {' – '}
+                    {filters.maxPrice
+                      ? `$${Number(filters.maxPrice).toLocaleString('es-MX')} MXN`
+                      : 'sin máximo'}
                   </p>
                 )}
               </div>
@@ -437,7 +477,7 @@ export default function PropertiesPage() {
               <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 shadow-sm max-w-lg">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                   Déjanos tus datos y descarga el catálogo completo de propiedades disponibles
-                  en Excel o PDF.
+                  en PDF.
                 </p>
                 <CatalogDownloadForm
                   filters={{

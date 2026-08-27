@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { sequelize, Lead, Property, Appointment } = require('../models/index');
+const { sequelize, Lead, Property, Appointment, User } = require('../models/index');
 const { logActivity, ensureOpenTask } = require('../utils/pipelineHelpers');
 const { logAudit } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
@@ -14,14 +14,37 @@ const VALID_APPOINTMENT_STATUS = ['programada', 'confirmada', 'completada', 'no_
 // silencio. `maxLimit: 500` conserva el mismo techo práctico pero ahora es honesto sobre
 // si se truncó (pagination.hasNext), en vez de simplemente no decir nada.
 const getAppointments = async (req, res) => {
-  const { from, to, status, leadId, page, limit = 500 } = req.query;
+  const {
+    from,
+    to,
+    status,
+    leadId,
+    assignedToUserId,
+    createdByUserId,
+    search,
+    page,
+    limit = 500,
+  } = req.query;
   const where = {};
   if (status) where.status = status;
   if (leadId) where.leadId = leadId;
+  if (createdByUserId) where.createdByUserId = createdByUserId;
+  // Filtra por el asesor responsable del lead (no de la cita) — "Atiende" en el calendario.
+  if (assignedToUserId) where['$lead.assignedToUserId$'] = assignedToUserId;
   if (from || to) {
     where.scheduledAt = {};
     if (from) where.scheduledAt[Op.gte] = new Date(from);
     if (to) where.scheduledAt[Op.lte] = new Date(to);
+  }
+  // Búsqueda del calendario (rediseño CRM) — mismo criterio Op.or/Op.like que
+  // leadController.getLeads, extendido al nombre del asesor asignado.
+  if (search) {
+    where[Op.or] = [
+      { '$lead.name$': { [Op.like]: `%${search}%` } },
+      { '$lead.phone$': { [Op.like]: `%${search}%` } },
+      { '$lead.email$': { [Op.like]: `%${search}%` } },
+      { '$lead.assignedUser.name$': { [Op.like]: `%${search}%` } },
+    ];
   }
   // CRM de Leads: cierra la fuga de "ver todos los leads vía Calendario" — mismo
   // filtrado por fila que getLeads, pero contra el lead incluido ($lead.col$).
@@ -36,9 +59,27 @@ const getAppointments = async (req, res) => {
       {
         model: Lead,
         as: 'lead',
-        attributes: ['id', 'name', 'phone', 'email', 'assignedToUserId', 'createdByUserId'],
+        attributes: [
+          'id',
+          'name',
+          'phone',
+          'email',
+          'pipelineStage',
+          'businessLine',
+          'notes',
+          'type',
+          'assignedToUserId',
+          'createdByUserId',
+        ],
+        include: [{ model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false }],
       },
-      { model: Property, as: 'property', attributes: ['id', 'title'], required: false },
+      {
+        model: Property,
+        as: 'property',
+        attributes: ['id', 'title', 'city', 'type'],
+        required: false,
+      },
+      { model: User, as: 'createdByUser', attributes: ['id', 'name'], required: false },
     ],
     order: [['scheduledAt', 'ASC']],
   });
@@ -56,7 +97,15 @@ const getLeadAppointments = async (req, res) => {
 
   const appointments = await Appointment.findAll({
     where: { leadId: req.params.id },
-    include: [{ model: Property, as: 'property', attributes: ['id', 'title'], required: false }],
+    include: [
+      {
+        model: Property,
+        as: 'property',
+        attributes: ['id', 'title', 'city', 'type'],
+        required: false,
+      },
+      { model: User, as: 'createdByUser', attributes: ['id', 'name'], required: false },
+    ],
     order: [['scheduledAt', 'DESC']],
   });
 
@@ -85,6 +134,7 @@ const createAppointment = async (req, res) => {
         leadId,
         propertyId: propertyId || null,
         scheduledAt,
+        createdByUserId: req.user?.id ?? null,
       },
       { transaction }
     );

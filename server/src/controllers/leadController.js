@@ -165,7 +165,7 @@ function parseCommercialFields(body) {
 
   return { values };
 }
-const { validateEmail, validatePhone } = require('../utils/validators');
+const { validateEmail, validatePhone, normalizePhone } = require('../utils/validators');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 const {
   sendLeadFollowUpWhatsApp,
@@ -196,6 +196,26 @@ const { ApiError } = require('../middleware/errorHandler');
 // Etapas a las que un prospecto cerrado puede volver al reabrirse — cualquier etapa no
 // terminal es un destino válido para PUT /:id/reopen.
 const REOPEN_STAGES = VALID_PIPELINE_STAGES.filter((s) => !TERMINAL_STAGES.includes(s));
+
+// Pedido del dueño del negocio: un mismo teléfono no puede repetirse entre prospectos. La
+// comparación es por valor normalizado (normalizePhone), no por string exacto — el teléfono
+// se guarda tal cual lo capturó quien lo creó (con o sin +52, con o sin separadores, ver
+// CreateLeadModal.jsx que no fuerza formato), así que "656-123-4567" y "6561234567" deben
+// detectarse como el mismo número aunque el texto guardado sea distinto. Trae solo
+// id/name/phone de toda la tabla en vez de un WHERE — no hay forma barata de normalizar en
+// SQL las variantes de formato que puede tener `phone` hoy.
+async function findDuplicatePhoneLead(phone, excludeId) {
+  const target = normalizePhone(phone);
+  if (!target) return null;
+
+  const candidates = await Lead.findAll({
+    attributes: ['id', 'name', 'phone'],
+    where: { phone: { [Op.ne]: null } },
+  });
+  return (
+    candidates.find((l) => l.id !== excludeId && normalizePhone(l.phone) === target) || null
+  );
+}
 
 // POST /api/leads
 const createLead = async (req, res) => {
@@ -231,6 +251,13 @@ const createLead = async (req, res) => {
 
   if (!validatePhone(phone)) {
     throw new ApiError(400, 'Teléfono inválido — usa 10 dígitos, con o sin +52');
+  }
+
+  if (phone) {
+    const duplicate = await findDuplicatePhoneLead(phone);
+    if (duplicate) {
+      throw new ApiError(409, `Ya existe un prospecto con este teléfono: ${duplicate.name}`);
+    }
   }
 
   // CRM de Leads: un Asesor de Ventas no puede crear prospectos manualmente (solo
@@ -322,6 +349,7 @@ const createLead = async (req, res) => {
           leadId: created.id,
           propertyId: propertyId || null,
           scheduledAt: appointmentDate,
+          createdByUserId: req.user?.id ?? null,
         },
         { transaction }
       );
@@ -409,6 +437,18 @@ const getLeads = async (req, res) => {
 
   Object.assign(where, getLeadVisibilityWhere(req.user) || {});
 
+  // Pedido del dueño del negocio: en la vista "Todas las etapas" (sin filtro explícito de
+  // pipelineStage) los prospectos "No interesado" quedaban mezclados por fecha con los
+  // activos, enterrando lo accionable. Se mandan al final en vez de ocultarse (siguen
+  // apareciendo si se filtra explícitamente a esa etapa) — orden por SQL, no en el cliente,
+  // para que la página siga siendo correcta con la paginación.
+  const order = pipelineStage
+    ? [['createdAt', 'DESC']]
+    : [
+        [sequelize.literal("(pipelineStage = 'no_interesado')"), 'ASC'],
+        ['createdAt', 'DESC'],
+      ];
+
   const result = await paginate(Lead, {
     page,
     limit,
@@ -428,7 +468,7 @@ const getLeads = async (req, res) => {
       },
       { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
     ],
-    order: [['createdAt', 'DESC']],
+    order,
   });
 
   return res.json(result);
@@ -513,6 +553,12 @@ const updateLead = async (req, res) => {
   }
   if (phone !== undefined && !validatePhone(phone)) {
     throw new ApiError(400, 'Teléfono inválido — usa 10 dígitos, con o sin +52');
+  }
+  if (phone) {
+    const duplicate = await findDuplicatePhoneLead(phone, lead.id);
+    if (duplicate) {
+      throw new ApiError(409, `Ya existe un prospecto con este teléfono: ${duplicate.name}`);
+    }
   }
   if (type !== undefined && !VALID_LEAD_TYPE.includes(type)) {
     throw new ApiError(
