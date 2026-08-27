@@ -83,7 +83,7 @@ export default function PromotedPropertyBanner({ property }) {
               </h3>
 
               {property.description && (
-                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6 line-clamp-3">
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6 line-clamp-3 whitespace-pre-wrap">
                   {property.description}
                 </p>
               )}

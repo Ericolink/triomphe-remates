@@ -116,7 +116,7 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
         {property.description && (
           <div>
             <p className="text-primary-900 font-bold text-lg mb-2">Descripción</p>
-            <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">
+            <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
               {property.description}
             </p>
           </div>

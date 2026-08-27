@@ -27,7 +27,7 @@ export default function Navbar() {
       transition={{ duration: 0.4, ease: 'easeOut' }}
       className="bg-primary-900 text-white sticky top-0 z-50 shadow-lg"
     >
-      <div className="max-w-[1920px] mx-auto px-6 sm:px-8 lg:px-12 xl:px-16">
+      <div className="max-w-[1920px] mx-auto px-6 sm:px-8 dk:px-16">
         {/* grid en vez de flex+justify-between: así el menú queda centrado en el
             espacio disponible entre logo y acciones sin importar que ambos extremos
             tengan anchos distintos (justify-between solo reparte el hueco sobrante,
@@ -47,10 +47,13 @@ export default function Navbar() {
               logo y acciones. minmax(0,1fr) arriba + min-w-0 aquí evitan que el
               ancho mínimo de los links (whitespace-nowrap) fuerce el desborde del
               grid o aplaste la columna del logo — gotcha clásico de CSS Grid.
-              "dk" (1800px, ver tailwind.config.js) en vez de "lg": con el font-size
-              global del sitio, 6 links sin salto de línea no caben cómodos antes de
-              eso — por debajo se usa el menú hamburguesa. */}
-          <div className="hidden dk:flex items-center justify-center gap-10 dk:gap-12 min-w-0">
+              "xl" (1280px, estándar de Tailwind) es el corte real laptop/celular:
+              por debajo de eso se usa el menú hamburguesa. Entre 1280-1799px el
+              texto y los gaps van compactos para que los 6 links quepan sin salto
+              de línea; a partir de "dk" (1800px, ver tailwind.config.js) hay de
+              sobra y se agrandan (texto, gaps, ver también el logo y los botones
+              de Favoritos/Comparar más abajo). */}
+          <div className="hidden xl:flex items-center justify-center gap-4 dk:gap-12 min-w-0">
             {links.map(({ to, label }, i) => (
               <motion.div
                 key={to}
@@ -62,7 +65,7 @@ export default function Navbar() {
                   to={to}
                   end={to === '/'}
                   className={({ isActive }) =>
-                    `text-base font-bold whitespace-nowrap transition-colors hover:text-accent-400 ${isActive ? 'text-accent-400' : 'text-gray-200'}`
+                    `text-base dk:text-lg font-bold whitespace-nowrap transition-colors hover:text-accent-400 ${isActive ? 'text-accent-400' : 'text-gray-200'}`
                   }
                 >
                   {label}
@@ -74,7 +77,7 @@ export default function Navbar() {
           {/* col-start-3 explícito: si el menú central no se renderiza (mobile,
               hidden), evita que este bloque caiga en la columna 1fr del centro */}
           <div className="col-start-3 flex items-center gap-2">
-            <div className="hidden dk:flex items-center gap-2">
+            <div className="hidden xl:flex items-center gap-2">
               <ThemeToggle className="hover:bg-primary-800" moonClassName="text-gray-200" />
               <Link
                 to="/favoritos"
@@ -89,7 +92,9 @@ export default function Navbar() {
                     </span>
                   )}
                 </span>
-                <span className="text-base font-bold text-gray-200">Favoritos</span>
+                <span className="hidden dk:inline text-base font-bold text-gray-200">
+                  Favoritos
+                </span>
               </Link>
               <Link
                 to="/comparar"
@@ -104,7 +109,9 @@ export default function Navbar() {
                     </span>
                   )}
                 </span>
-                <span className="text-base font-bold text-gray-200">Comparar</span>
+                <span className="hidden dk:inline text-base font-bold text-gray-200">
+                  Comparar
+                </span>
               </Link>
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -122,7 +129,7 @@ export default function Navbar() {
               </motion.div>
             </div>
 
-            <div className="flex items-center gap-2 dk:hidden">
+            <div className="flex items-center gap-2 xl:hidden">
               <ThemeToggle className="hover:bg-primary-800" moonClassName="text-gray-200" />
               <Link
                 to="/favoritos"
@@ -201,7 +208,7 @@ export default function Navbar() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="dk:hidden bg-primary-800 overflow-hidden"
+            className="xl:hidden bg-primary-800 overflow-hidden"
           >
             <div className="px-4 pb-4 flex flex-col gap-3">
               {links.map(({ to, label }, i) => (

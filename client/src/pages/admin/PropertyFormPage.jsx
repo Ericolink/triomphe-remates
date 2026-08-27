@@ -652,7 +652,24 @@ export default function PropertyFormPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions --
+          onKeyDown captura el Enter que ya burbujeó desde cualquier input/select enfocado
+          adentro (patrón estándar para bloquear el submit implícito de un <form>), no
+          agrega interacción propia al elemento ni afecta su accesibilidad. */}
+      <form
+        onSubmit={handleSubmit}
+        // Enter dentro de un input/select no debe enviar el formulario — con tantos campos,
+        // un Enter accidental (ej. al pasar de un campo a otro con el teclado) publicaba la
+        // propiedad a medias. Solo se guarda con el botón "Guardar propiedad" (clic o Enter
+        // ya enfocado en él); Enter en un <textarea> se deja intacto para insertar salto de
+        // línea.
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'BUTTON') {
+            e.preventDefault();
+          }
+        }}
+        className="space-y-6"
+      >
         {SECTIONS.map(({ key: sectionKey, title, visibilityField }) => (
           <div
             key={sectionKey}

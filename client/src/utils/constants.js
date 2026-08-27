@@ -155,7 +155,7 @@ export const BUSINESS_LINE_CONTENT = {
     heroTitle: 'Remates Bancarios',
     heroTitleAccent: 'en México',
     heroSlogan:
-      'Has llegado al lugar correcto para hacer crecer tus inversiones, con más de 28 años de experiencia a nivel nacional.',
+      'Has llegado al lugar correcto para hacer crecer tus inversiones, con más de 28 años de experiencia.',
     ctaText: '¿Te interesa alguna propiedad o inversión?',
     listingPath: '/propiedades',
     listingTitle: 'Propiedades en Remate',

@@ -405,7 +405,9 @@ export default function PropertyDetailPage() {
               <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-2">
                 Descripción
               </h2>
-              <p className="text-gray-600 dark:text-white leading-relaxed">{property.description}</p>
+              <p className="text-gray-600 dark:text-white leading-relaxed whitespace-pre-wrap">
+                {property.description}
+              </p>
             </div>
           )}
 
