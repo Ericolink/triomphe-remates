@@ -252,7 +252,10 @@ function Collapsible({ title, subtitle, icon, defaultOpen, children }) {
   );
 }
 
-function LeadDetailPanel({
+// Exportado además como default (no solo vía DetailPanelSlot) para que otras pantallas
+// puedan mostrar la misma tarjeta con su propio contenedor/overlay — ver
+// crm/LeadDetailWithActions.jsx (usado por CalendarioSection).
+export default function LeadDetailPanel({
   selected,
   onDeselect,
   onDelete,

@@ -1,5 +1,4 @@
 import { useId, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, Phone, Mail, Home, RotateCcw, Trash2, ExternalLink } from 'lucide-react';
 import Badge from '../../ui/Badge';
@@ -34,13 +33,13 @@ export default function AppointmentDetailModal({
   onStatusChange,
   onReschedule,
   onDelete,
+  onViewLead,
   isPending,
 }) {
   const [rescheduling, setRescheduling] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const titleId = useId();
-  const navigate = useNavigate();
 
   const handleClose = () => {
     setRescheduling(false);
@@ -55,9 +54,13 @@ export default function AppointmentDetailModal({
   const canEdit = canEditLead(currentUser, lead);
   const canDelete = canAssignLeads(currentUser); // mismo criterio de rol que admin/asistente en routes/appointments.js
 
+  // La tarjeta reusada de Prospectos necesita el registro completo del lead (presupuesto,
+  // campaña, propiedades de interés, etc.) — mucho más de lo que trae `appointment.lead`
+  // (recortado a lo que necesita esta ficha). CalendarioSection es quien pide ese registro
+  // completo (getLeadById). Esta ficha de la cita se queda abierta detrás (no se cierra) —
+  // el panel del prospecto se abre encima, así el recuadro de la cita no desaparece.
   const handleViewLead = () => {
-    handleClose();
-    navigate(`/admin/crm?tab=prospectos&leadId=${lead.id}`);
+    onViewLead(lead.id);
   };
 
   const rowClass = 'flex items-start gap-2.5 text-sm';
@@ -71,7 +74,7 @@ export default function AppointmentDetailModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50"
             onClick={handleClose}
           >
             <motion.div
@@ -245,22 +248,13 @@ export default function AppointmentDetailModal({
                 )}
                 {canEdit && (
                   <>
-                    {appointment.status !== 'confirmada' && (
-                      <button
-                        disabled={isPending}
-                        onClick={() => onStatusChange(appointment.id, 'confirmada')}
-                        className="px-3 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors disabled:opacity-40"
-                      >
-                        Confirmar
-                      </button>
-                    )}
                     {appointment.status !== 'completada' && (
                       <button
                         disabled={isPending}
                         onClick={() => onStatusChange(appointment.id, 'completada')}
                         className="px-3 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors disabled:opacity-40"
                       >
-                        Completada
+                        Asistió
                       </button>
                     )}
                     {appointment.status !== 'no_show' && (
@@ -285,7 +279,7 @@ export default function AppointmentDetailModal({
                         onClick={() => onStatusChange(appointment.id, 'cancelada')}
                         className="px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
                       >
-                        Cancelar
+                        Canceló
                       </button>
                     )}
                   </>

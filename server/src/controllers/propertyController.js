@@ -279,12 +279,11 @@ const createProperty = async (req, res) => {
     block,
     portfolio,
     legalProcessType,
-    template,
-    cadastralPlan,
-    technicalSheet,
-    facebookPage,
     zone,
-    zoneType,
+    waterDebt,
+    electricityDebt,
+    propertyTaxDebt,
+    debtsUpdateDate,
     commercialPrice1,
     commercialPrice1Date,
     commercialPrice2,
@@ -343,12 +342,11 @@ const createProperty = async (req, res) => {
         block: nullIfEmpty(block),
         portfolio: nullIfEmpty(portfolio),
         legalProcessType: nullIfEmpty(legalProcessType),
-        template: nullIfEmpty(template),
-        cadastralPlan: nullIfEmpty(cadastralPlan),
-        technicalSheet: nullIfEmpty(technicalSheet),
-        facebookPage: nullIfEmpty(facebookPage),
         zone: nullIfEmpty(zone),
-        zoneType: nullIfEmpty(zoneType),
+        waterDebt: nullIfEmpty(waterDebt),
+        electricityDebt: nullIfEmpty(electricityDebt),
+        propertyTaxDebt: nullIfEmpty(propertyTaxDebt),
+        debtsUpdateDate: debtsUpdateDate || null,
         commercialPrice1: nullIfEmpty(commercialPrice1),
         commercialPrice1Date: commercialPrice1Date || null,
         commercialPrice2: nullIfEmpty(commercialPrice2),
@@ -434,12 +432,11 @@ const updateProperty = async (req, res) => {
     block,
     portfolio,
     legalProcessType,
-    template,
-    cadastralPlan,
-    technicalSheet,
-    facebookPage,
     zone,
-    zoneType,
+    waterDebt,
+    electricityDebt,
+    propertyTaxDebt,
+    debtsUpdateDate,
     commercialPrice1,
     commercialPrice1Date,
     commercialPrice2,
@@ -501,12 +498,11 @@ const updateProperty = async (req, res) => {
   if (portfolio !== undefined) updates.portfolio = nullIfEmpty(portfolio);
   if (legalProcessType !== undefined)
     updates.legalProcessType = nullIfEmpty(legalProcessType);
-  if (template !== undefined) updates.template = nullIfEmpty(template);
-  if (cadastralPlan !== undefined) updates.cadastralPlan = nullIfEmpty(cadastralPlan);
-  if (technicalSheet !== undefined) updates.technicalSheet = nullIfEmpty(technicalSheet);
-  if (facebookPage !== undefined) updates.facebookPage = nullIfEmpty(facebookPage);
   if (zone !== undefined) updates.zone = nullIfEmpty(zone);
-  if (zoneType !== undefined) updates.zoneType = nullIfEmpty(zoneType);
+  if (waterDebt !== undefined) updates.waterDebt = nullIfEmpty(waterDebt);
+  if (electricityDebt !== undefined) updates.electricityDebt = nullIfEmpty(electricityDebt);
+  if (propertyTaxDebt !== undefined) updates.propertyTaxDebt = nullIfEmpty(propertyTaxDebt);
+  if (debtsUpdateDate !== undefined) updates.debtsUpdateDate = debtsUpdateDate || null;
   if (commercialPrice1 !== undefined) updates.commercialPrice1 = nullIfEmpty(commercialPrice1);
   if (commercialPrice1Date !== undefined)
     updates.commercialPrice1Date = commercialPrice1Date || null;

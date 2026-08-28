@@ -105,15 +105,14 @@ const exportExcel = async (req, res) => {
       { header: 'PORTAFOLIO', key: 'portfolio', width: 11 },
       { header: 'COFINAVIT/VIABILIDAD/TIPO', key: 'legalProcessType', width: 20 },
       { header: 'PRECIO VENTA', key: 'price', width: 16 },
-      { header: 'PLANTILLA', key: 'template', width: 12 },
       { header: 'CLAVE DE BUSQUEDA', key: 'code', width: 14 },
-      { header: 'PLANO CATASTRAL', key: 'cadastralPlan', width: 14 },
       { header: 'OBSERVACIONES', key: 'internalNotes', width: 30 },
       { header: 'FOTO', key: 'photo', width: 8 },
-      { header: 'PAGINA FB', key: 'facebookPage', width: 20 },
-      { header: 'FICHA TECNICA', key: 'technicalSheet', width: 14 },
       { header: 'ZONA', key: 'zone', width: 12 },
-      { header: 'TIPO DE ZONA', key: 'zoneType', width: 14 },
+      { header: 'ADEUDO AGUA', key: 'waterDebt', width: 14 },
+      { header: 'ADEUDO LUZ', key: 'electricityDebt', width: 14 },
+      { header: 'ADEUDO PREDIAL', key: 'propertyTaxDebt', width: 14 },
+      { header: 'ADEUDOS ACTUALIZADO', key: 'debtsUpdateDate', width: 16 },
       { header: 'Precio comercial 1', key: 'commercialPrice1', width: 16 },
       { header: 'Fecha comercial 1', key: 'commercialPrice1Date', width: 14 },
       { header: 'Precio comercial 2', key: 'commercialPrice2', width: 16 },
@@ -168,17 +167,16 @@ const exportExcel = async (req, res) => {
         portfolio: dash(p.portfolio),
         legalProcessType: legalProcessTypeLabel[p.legalProcessType] || dash(p.legalProcessType),
         price: formatPrice(p.price),
-        template: dash(p.template),
         code: dash(p.code),
-        cadastralPlan: dash(p.cadastralPlan),
         internalNotes: dash(p.internalNotes),
         // La imagen (si existe) se dibuja aparte, encima de esta celda — texto vacío para
         // no competir visualmente con ella; "—" solo cuando de verdad no hay foto.
         photo: coverBuffers[i] ? '' : dash(null),
-        facebookPage: dash(p.facebookPage),
-        technicalSheet: dash(p.technicalSheet),
         zone: dash(p.zone),
-        zoneType: dash(p.zoneType),
+        waterDebt: dash(p.waterDebt),
+        electricityDebt: dash(p.electricityDebt),
+        propertyTaxDebt: dash(p.propertyTaxDebt),
+        debtsUpdateDate: formatDate(p.debtsUpdateDate),
         commercialPrice1: p.commercialPrice1 != null ? formatPrice(p.commercialPrice1) : '—',
         commercialPrice1Date: formatDate(p.commercialPrice1Date),
         commercialPrice2: p.commercialPrice2 != null ? formatPrice(p.commercialPrice2) : '—',
@@ -252,13 +250,13 @@ const exportExcel = async (req, res) => {
 // PDF
 // ─────────────────────────────────────────────────────────────────────────────
 // Mismo set de campos que el Excel (ver exportExcel), salvo los que el negocio pidió
-// excluir del PDF explícitamente: Calle, Número, LT, MZ, Observaciones, Página FB, Ficha
-// técnica, Zona, Tipo de zona, Precio/Fecha comercial ×2, Utilidad, Ingreso a inventario —
-// con esos fuera, las 19 columnas restantes sí caben en una página A4 horizontal legible
-// (762pt de ancho útil = page.width 842pt − 40pt de margen a cada lado). `key` liga cada
-// columna a su campo real; `COL_IDX` (más abajo) resuelve la posición por key en vez de un
-// índice fijo, para no repetir el bug de columnas que cambiaban de significado al reordenar
-// (ver exportExcel/PRICE_COL/STATUS_COL).
+// excluir del PDF explícitamente: Calle, Número, LT, MZ, Observaciones, Zona, adeudos
+// (agua/luz/predial/fecha), Precio/Fecha comercial ×2, Utilidad, Ingreso a inventario — con
+// esos fuera, las 17 columnas restantes sí caben en una página A4 horizontal legible (762pt
+// de ancho útil = page.width 842pt − 40pt de margen a cada lado). `key` liga cada columna a
+// su campo real; `COL_IDX` (más abajo) resuelve la posición por key en vez de un índice
+// fijo, para no repetir el bug de columnas que cambiaban de significado al reordenar (ver
+// exportExcel/PRICE_COL/STATUS_COL).
 const PDF_COLS = [
   { key: 'title', label: 'Título', width: 78 },
   { key: 'colonia', label: 'Colonia', width: 44 },
@@ -268,9 +266,7 @@ const PDF_COLS = [
   { key: 'portfolio', label: 'Portafolio', width: 36 },
   { key: 'legalProcessType', label: 'Proceso legal', width: 46 },
   { key: 'price', label: 'Precio venta', width: 58 },
-  { key: 'template', label: 'Plantilla', width: 34 },
   { key: 'code', label: 'Clave búsq.', width: 42 },
-  { key: 'cadastralPlan', label: 'Plano catastral', width: 46 },
   { key: 'photo', label: 'Foto', width: 34 },
   { key: 'city', label: 'Ciudad', width: 42 },
   { key: 'type', label: 'Tipo', width: 36 },
@@ -426,9 +422,7 @@ const exportPDF = async (req, res) => {
           col: COL_IDX.legalProcessType,
         },
         { val: formatPrice(p.price), col: COL_IDX.price, bold: true, color: PRIMARY },
-        { val: dash(p.template), col: COL_IDX.template },
         { val: dash(p.code), col: COL_IDX.code },
-        { val: dash(p.cadastralPlan), col: COL_IDX.cadastralPlan },
         // Sin entrada para "photo": esa columna se llena dibujando la miniatura arriba,
         // no como texto (si no hay foto, la celda simplemente queda vacía).
         { val: cityLabel[p.city] || p.city, col: COL_IDX.city },

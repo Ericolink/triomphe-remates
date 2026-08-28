@@ -16,12 +16,14 @@ import {
   rescheduleAppointment,
   deleteAppointment,
 } from '../../../services/appointmentService';
+import { getLeadById } from '../../../services/leadService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
 import { crmAccessLevel } from '../../../utils/permissions';
 import Spinner from '../../ui/Spinner';
 import Badge from '../../ui/Badge';
 import AppointmentDetailModal from './AppointmentDetailModal';
+import LeadDetailWithActions from './LeadDetailWithActions';
 import { fadeIn, fadeInUp, staggerContainer } from '../../../utils/animations';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_VARIANTS } from '../../../utils/constants';
 
@@ -164,6 +166,10 @@ export default function CalendarioSection() {
   const [current, setCurrent] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [selectedDay, setSelectedDay] = useState(null);
   const [openAppointment, setOpenAppointment] = useState(null);
+  // Prospecto abierto desde "Ver prospecto" de una cita — misma tarjeta reutilizada de
+  // Prospectos (ver LeadDetailWithActions), para revisar toda la información sin salir del
+  // calendario ni cambiar de pestaña.
+  const [selectedLead, setSelectedLead] = useState(null);
   const [dateRangeMode, setDateRangeMode] = useState('week');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -182,6 +188,15 @@ export default function CalendarioSection() {
     enabled: canFilterByUser,
   });
   const users = usersData?.data ?? [];
+
+  // "Ver prospecto" desde una cita — trae el registro completo del lead (el que viene con
+  // la cita está recortado a lo que necesita ese modal) y abre la misma tarjeta de detalle
+  // que usa Prospectos, sin salir de esta pestaña.
+  const handleViewLead = (leadId) => {
+    getLeadById(leadId)
+      .then((res) => setSelectedLead(res.data))
+      .catch(() => toast.error('No se pudo abrir el prospecto'));
+  };
 
   // Indicadores — siempre "hoy real" y "próximos 7 días reales", sin importar el mes que
   // se esté navegando ni los filtros activos (dan una foto general, no una del filtro).
@@ -672,7 +687,10 @@ export default function CalendarioSection() {
         onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
         onReschedule={(id, scheduledAt) => rescheduleMutation.mutate({ id, scheduledAt })}
         onDelete={(id) => deleteMutation.mutate(id)}
+        onViewLead={handleViewLead}
       />
+
+      <LeadDetailWithActions selected={selectedLead} setSelected={setSelectedLead} users={users} />
     </motion.div>
   );
 }

@@ -1,0 +1,24 @@
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+const TOKEN = fs.readFileSync('admin_token2.txt', 'utf8').trim();
+const USER = JSON.stringify({ id: 7, name: 'Admin Triomphe', role: 'admin', tokenVersion: 0 });
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
+const consoleErrors = [];
+page.on('pageerror', (err) => consoleErrors.push(String(err)));
+await page.goto('http://localhost:5173/admin/login', { waitUntil: 'domcontentloaded' });
+await page.evaluate(([t, u]) => {
+  localStorage.setItem('token', t);
+  localStorage.setItem('user', u);
+}, [TOKEN, USER]);
+await page.goto('http://localhost:5173/admin/crm?tab=calendario', { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('text=Citas de hoy', { timeout: 15000 });
+await page.waitForTimeout(1000);
+await page.click('text=Recuadro');
+await page.waitForTimeout(500);
+await page.screenshot({ path: 'box_before.png', fullPage: true });
+await page.click('text=Ver prospecto');
+await page.waitForTimeout(800);
+await page.screenshot({ path: 'box_after_view_lead.png', fullPage: true });
+console.log('CONSOLE_ERRORS:', JSON.stringify(consoleErrors));
+await browser.close();

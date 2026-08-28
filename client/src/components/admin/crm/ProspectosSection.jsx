@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,18 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
-import {
-  createLead,
-  getLeads,
-  getLeadById,
-  updateLead,
-  deleteLead,
-  batchUpdateLeads,
-  batchDeleteLeads,
-  closeLeadAsWon,
-  closeLeadAsLost,
-  reopenLead,
-} from '../../../services/leadService';
+import { createLead, getLeads, batchUpdateLeads, batchDeleteLeads } from '../../../services/leadService';
 import { getTasks } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
@@ -37,12 +26,11 @@ import Badge from '../../ui/Badge';
 import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import BatchActionBar from '../../ui/BatchActionBar';
-import CloseLeadModal from '../CloseLeadModal';
-import ReopenLeadModal from '../ReopenLeadModal';
-import StageBottomSheet from '../StageBottomSheet';
 import CreateLeadModal from '../CreateLeadModal';
 import KanbanBoard, { NextActionLine } from '../KanbanBoard';
 import { DetailPanelSlot } from '../LeadDetailPanel';
+import useLeadDetailActions from './useLeadDetailActions';
+import LeadDetailModals from './LeadDetailModals';
 import { fadeIn, fadeInUp, staggerContainer } from '../../../utils/animations';
 import { formatDate, formatBudget } from '../../../utils/formatters';
 import {
@@ -50,7 +38,6 @@ import {
   LEAD_TYPE_LABELS as typeLabel,
   PIPELINE_STAGE_LABELS,
   PIPELINE_STAGE_VARIANTS,
-  TERMINAL_STAGES,
   NON_TERMINAL_PIPELINE_STAGE_OPTIONS,
   PAYMENT_METHOD_LABELS,
 } from '../../../utils/constants';
@@ -66,31 +53,19 @@ export default function ProspectosSection() {
   // vía ?stage= en la URL en vez de location.state — así sobrevive un refresh.
   const [stage, setStage] = useState(searchParams.get('stage') || '');
   const [selected, setSelected] = useState(null);
-  const [confirm, setConfirm] = useState(null);
+  // Separado del `confirm` interno de useLeadDetailActions (que es para eliminar UN
+  // prospecto desde su detalle) — este es específicamente para el borrado en lote de
+  // BatchActionBar, que no pasa por ahí.
+  const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(null);
   const [checked, setChecked] = useState([]);
   const [view, setView] = useState('list');
-  const [closeTarget, setCloseTarget] = useState(null); // { lead, targetStage }
-  const [reopenTarget, setReopenTarget] = useState(null); // { lead, targetStage }
-  const [sheetLead, setSheetLead] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(false);
   const assignedToUserId = onlyMine ? currentUserId : '';
 
-  // Deep link desde el calendario ("Ver prospecto" en AppointmentDetailModal, que navega a
-  // ?tab=prospectos&leadId=X) — se lee una sola vez al montar porque este componente se
-  // remonta limpio en cada cambio de tab (ver comentario "montaje condicional" en
-  // CrmPage.jsx), así que no hace falta sincronizar en cada cambio de searchParams.
-  useEffect(() => {
-    const leadId = searchParams.get('leadId');
-    if (!leadId) return;
-    getLeadById(leadId)
-      .then((res) => setSelected(res.data))
-      .catch(() => {
-        /* prospecto no encontrado o sin acceso — se ignora, el panel simplemente no abre */
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const leadActions = useLeadDetailActions({ selected, setSelected });
+  const { attemptStageChange, setSheetLead } = leadActions;
 
   // Búsqueda y "Mis prospectos" son compartidos entre Lista y Kanban — barra persistente
   // por encima de ambas vistas, tal como pide CRM_UX_DESIGN.md §2g.
@@ -143,96 +118,6 @@ export default function ProspectosSection() {
     return map;
   }, [openTasksData]);
 
-  const { data: closeLeadDetail } = useQuery({
-    queryKey: ['lead-detail-for-close', closeTarget?.lead?.id],
-    queryFn: () => getLeadById(closeTarget.lead.id),
-    enabled: !!closeTarget?.lead?.id,
-  });
-
-  // Sin toast global de éxito: cada campo editado desde LeadDetailPanel confirma junto al
-  // propio campo (ver FieldStatus ahí), y un movimiento de etapa por drag/hoja ya es
-  // visible por sí mismo (la tarjeta cambia de columna / la etapa del encabezado cambia).
-  // El error sí necesita feedback explícito en ambos casos — cada punto de llamada de
-  // `.mutate()` pasa su propio onError (LeadDetailPanel usa el suyo por-campo; el drag/
-  // hoja de abajo usa un toast, porque ahí no hay un campo visible contra el cual mostrarlo).
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => updateLead(id, data),
-    onSuccess: (res, { data: updated }) => {
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['lead-detail']);
-      // Este mutation se usa para cualquier campo editable del detalle (fuente, forma de
-      // pago, monto, fecha de primer contacto, etc.), pero las 8 columnas del Kanban y sus
-      // tareas abiertas solo cambian si se movió de etapa o se (re)asignó responsable —
-      // invalidar siempre esas ~16 queries en cada edición menor agotaba el rate limit
-      // (ver AUDIT: 429 en /api/leads tras editar un campo cualquiera del detalle).
-      const affectsColumns = updated.pipelineStage !== undefined;
-      const affectsTasks = affectsColumns || updated.assignedToUserId !== undefined;
-      if (affectsColumns) queryClient.invalidateQueries(['leads-column']);
-      if (affectsTasks) {
-        queryClient.invalidateQueries(['open-tasks']);
-        queryClient.invalidateQueries(['open-tasks-column']);
-      }
-      if (updated.pipelineStage)
-        setSelected((s) => (s ? { ...s, pipelineStage: updated.pipelineStage } : s));
-    },
-  });
-
-  const closeWonMutation = useMutation({
-    mutationFn: ({ id, data }) => closeLeadAsWon(id, data),
-    onSuccess: () => {
-      toast.success('Venta registrada exitosamente');
-      setCloseTarget(null);
-      setSelected(null);
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['leads-column']);
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['open-tasks-column']);
-    },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Error al registrar la venta'),
-  });
-
-  const closeLostMutation = useMutation({
-    mutationFn: ({ id, data }) => closeLeadAsLost(id, data),
-    onSuccess: () => {
-      toast.success('Prospecto cerrado');
-      setCloseTarget(null);
-      setSelected(null);
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['leads-column']);
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['open-tasks-column']);
-    },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Error al cerrar el prospecto'),
-  });
-
-  const reopenMutation = useMutation({
-    mutationFn: ({ id, pipelineStage }) => reopenLead(id, { pipelineStage }),
-    onSuccess: (res) => {
-      toast.success('Prospecto reabierto');
-      setReopenTarget(null);
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['leads-column']);
-      queryClient.invalidateQueries(['lead-detail']);
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['open-tasks-column']);
-      // A diferencia de close-won/close-lost (que deseleccionan al cerrar), aquí conviene
-      // dejar el panel abierto: reabrir es el punto de partida para seguir trabajando el
-      // prospecto (asignar responsable, etc.), no el final de su ciclo de vida.
-      setSelected((s) => (s ? { ...s, pipelineStage: res.data.pipelineStage } : s));
-    },
-    onError: (e) => toast.error(e?.response?.data?.error || 'Error al reabrir el prospecto'),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteLead,
-    onSuccess: () => {
-      toast.success('Prospecto eliminado');
-      setSelected(null);
-      queryClient.invalidateQueries(['leads']);
-      queryClient.invalidateQueries(['leads-column']);
-    },
-  });
-
   const createMutation = useMutation({
     mutationFn: createLead,
     onSuccess: () => {
@@ -267,28 +152,6 @@ export default function ProspectosSection() {
     },
   });
 
-  // Único punto de entrada para cambiar de etapa (drag, bottom sheet o botón del
-  // detalle): las etapas terminales siempre pasan por el modal de cierre, y sacar un
-  // prospecto YA cerrado de su etapa terminal siempre pasa por el modal de reapertura —
-  // el PUT genérico (updateMutation) rechaza ese caso en el backend (ver updateLead), así
-  // que nunca debe intentarse directamente desde aquí.
-  const attemptStageChange = (lead, newStage) => {
-    if (newStage === lead.pipelineStage) return;
-    if (TERMINAL_STAGES.includes(newStage)) {
-      setCloseTarget({ lead, targetStage: newStage });
-      setSheetLead(null);
-    } else if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
-      setReopenTarget({ lead, targetStage: newStage });
-      setSheetLead(null);
-    } else {
-      updateMutation.mutate(
-        { id: lead.id, data: { pipelineStage: newStage } },
-        { onError: (e) => toast.error(e?.response?.data?.error || 'Error al cambiar de etapa') }
-      );
-      setSheetLead(null);
-    }
-  };
-
   const toggleCheck = (e, id) => {
     e.stopPropagation();
     setChecked((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -311,7 +174,6 @@ export default function ProspectosSection() {
   };
 
   const allChecked = leads.length > 0 && checked.length === leads.length;
-  const closeLeadForModal = closeLeadDetail?.data || closeTarget?.lead;
 
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
@@ -414,22 +276,13 @@ export default function ProspectosSection() {
           >
             <DetailPanelSlot
               selected={selected}
-              updateMutation={updateMutation}
+              updateMutation={leadActions.updateMutation}
               users={users}
               onOpenStagePicker={(lead) => setSheetLead(lead)}
               onChangeStage={attemptStageChange}
               onDeselect={() => setSelected(null)}
               emptyText="Haz clic en un prospecto para ver el detalle"
-              onDelete={() =>
-                setConfirm({
-                  title: '¿Eliminar este prospecto?',
-                  message: `Se eliminará el contacto de ${selected.name} permanentemente.`,
-                  onConfirm: () => {
-                    deleteMutation.mutate(selected.id);
-                    setConfirm(null);
-                  },
-                })
-              }
+              onDelete={leadActions.handleDelete}
             />
           </div>
         </div>
@@ -575,68 +428,27 @@ export default function ProspectosSection() {
           <div className="xl:col-span-1">
             <DetailPanelSlot
               selected={selected}
-              updateMutation={updateMutation}
+              updateMutation={leadActions.updateMutation}
               users={users}
               onOpenStagePicker={(lead) => setSheetLead(lead)}
               onChangeStage={attemptStageChange}
               onDeselect={() => setSelected(null)}
               emptyText="Selecciona un prospecto para ver el detalle"
-              onDelete={() =>
-                setConfirm({
-                  title: '¿Eliminar este prospecto?',
-                  message: `Se eliminará el contacto de ${selected.name} permanentemente.`,
-                  onConfirm: () => {
-                    deleteMutation.mutate(selected.id);
-                    setConfirm(null);
-                  },
-                })
-              }
+              onDelete={leadActions.handleDelete}
             />
           </div>
         </div>
       )}
 
+      <LeadDetailModals actions={leadActions} />
+
       <ConfirmDialog
-        open={!!confirm}
-        title={confirm?.title}
-        message={confirm?.message}
+        open={!!batchDeleteConfirm}
+        title={batchDeleteConfirm?.title}
+        message={batchDeleteConfirm?.message}
         confirmLabel="Eliminar"
-        onConfirm={confirm?.onConfirm}
-        onCancel={() => setConfirm(null)}
-      />
-
-      <CloseLeadModal
-        key={closeTarget ? `${closeTarget.lead.id}:${closeTarget.targetStage}` : 'close-empty'}
-        open={!!closeTarget}
-        lead={closeLeadForModal}
-        targetStage={closeTarget?.targetStage}
-        isPending={closeWonMutation.isPending || closeLostMutation.isPending}
-        onClose={() => setCloseTarget(null)}
-        onConfirmWon={(payload) =>
-          closeWonMutation.mutate({ id: closeTarget.lead.id, data: payload })
-        }
-        onConfirmLost={(payload) =>
-          closeLostMutation.mutate({ id: closeTarget.lead.id, data: payload })
-        }
-      />
-
-      <ReopenLeadModal
-        key={reopenTarget ? `${reopenTarget.lead.id}:${reopenTarget.targetStage}` : 'reopen-empty'}
-        open={!!reopenTarget}
-        lead={reopenTarget?.lead}
-        targetStage={reopenTarget?.targetStage}
-        isPending={reopenMutation.isPending}
-        onClose={() => setReopenTarget(null)}
-        onConfirm={(pipelineStage) =>
-          reopenMutation.mutate({ id: reopenTarget.lead.id, pipelineStage })
-        }
-      />
-
-      <StageBottomSheet
-        open={!!sheetLead}
-        lead={sheetLead}
-        onClose={() => setSheetLead(null)}
-        onSelectStage={(newStage) => attemptStageChange(sheetLead, newStage)}
+        onConfirm={batchDeleteConfirm?.onConfirm}
+        onCancel={() => setBatchDeleteConfirm(null)}
       />
 
       <CreateLeadModal
@@ -657,12 +469,12 @@ export default function ProspectosSection() {
           onDelete={
             canDeleteLeads(currentUser)
               ? () =>
-                  setConfirm({
+                  setBatchDeleteConfirm({
                     title: `¿Eliminar ${checked.length} prospecto(s)?`,
                     message: 'Esta acción no se puede deshacer.',
                     onConfirm: () => {
                       batchDeleteMutation.mutate(checked);
-                      setConfirm(null);
+                      setBatchDeleteConfirm(null);
                     },
                   })
               : undefined

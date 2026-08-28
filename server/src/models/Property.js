@@ -165,29 +165,33 @@ const Property = sequelize.define(
       allowNull: true,
       comment: 'Tipo de proceso legal de adquisición (columna COFINAVIT/VIABILIDAD/TIPO)',
     },
-    template: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-    cadastralPlan: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-    technicalSheet: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-    facebookPage: {
-      type: DataTypes.STRING(150),
-      allowNull: true,
-    },
     zone: {
       type: DataTypes.STRING(50),
       allowNull: true,
     },
-    zoneType: {
+    // Adeudos de la propiedad — texto libre (no DECIMAL) porque en la práctica llegan con
+    // notas tipo "AL CORRIENTE" o un monto con año, no siempre un número puro. Los 3 comparten
+    // una sola fecha de actualización (debtsUpdateDate) en vez de una por adeudo porque se
+    // capturan/revisan juntos.
+    waterDebt: {
       type: DataTypes.STRING(50),
       allowNull: true,
+      comment: 'Adeudo de agua',
+    },
+    electricityDebt: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Adeudo de luz',
+    },
+    propertyTaxDebt: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Adeudo predial',
+    },
+    debtsUpdateDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Fecha de actualización de los 3 adeudos (agua/luz/predial)',
     },
     commercialPrice1: {
       type: DataTypes.DECIMAL(12, 2),
