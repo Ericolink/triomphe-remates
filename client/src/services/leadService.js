@@ -71,6 +71,17 @@ export const reopenLead = async (id, { pipelineStage } = {}) => {
   return data;
 };
 
+export const sendLeadToWaitingList = async (id, { city, type, minPrice, maxPrice, state } = {}) => {
+  const { data } = await api.put(`/leads/${id}/send-to-waiting-list`, {
+    city,
+    type,
+    minPrice,
+    maxPrice,
+    state,
+  });
+  return data;
+};
+
 export const addLeadProperty = async (leadId, propertyId) => {
   const { data } = await api.post(`/leads/${leadId}/properties`, { propertyId });
   return data;

@@ -14,6 +14,7 @@ const {
   sendLeadWhatsApp,
   closeLeadAsWon,
   closeLeadAsLost,
+  sendLeadToWaitingList,
   reopenLead,
 } = require('../controllers/leadController');
 const { addLeadProperty, removeLeadProperty } = require('../controllers/leadPropertyController');
@@ -64,6 +65,13 @@ router.delete(
 );
 router.put('/:id/close-won', apiLimiter, authenticate, requireCrmAccess, closeLeadAsWon);
 router.put('/:id/close-lost', apiLimiter, authenticate, requireCrmAccess, closeLeadAsLost);
+router.put(
+  '/:id/send-to-waiting-list',
+  apiLimiter,
+  authenticate,
+  requireCrmAccess,
+  sendLeadToWaitingList
+);
 router.put('/:id/reopen', apiLimiter, authenticate, requireCrmAccess, reopenLead);
 router.get('/:id/notes', apiLimiter, authenticate, requireCrmAccess, getLeadNotes);
 router.post('/:id/notes', apiLimiter, authenticate, requireCrmAccess, addLeadNote);

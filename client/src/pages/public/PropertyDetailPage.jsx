@@ -352,18 +352,31 @@ export default function PropertyDetailPage() {
             {property.title}
           </h1>
 
-          {/* showLocationInfo: casilla "Mostrar al público" del apartado Ubicación en el
-              formulario admin — el título y la ciudad siguen mostrándose siempre (son
-              estructurales: SEO, filtros del catálogo, breadcrumbs), solo se oculta esta
-              línea de dirección/colonia. */}
-          {property.showLocationInfo !== false && (property.address || property.colonia) && (
-            <p className="order-4 flex items-center gap-1 text-gray-500 dark:text-gray-300 mb-4">
+          {/* Ciudad/estado/fraccionamiento-colonia son estructurales (SEO, filtros del
+              catálogo, breadcrumbs) — siempre se muestran, sin importar la casilla "Mostrar
+              al público" del apartado Ubicación. Esa casilla (showLocationInfo) solo sigue
+              controlando la línea de abajo (dirección exacta/número/C.P.), que sí es
+              razonable ocultar por privacidad. */}
+          {(property.colonia || property.city || property.state) && (
+            <p className="order-4 flex items-center gap-1 text-gray-500 dark:text-gray-300 mb-1">
               <MapPin size={16} />
-              {[property.address, property.colonia, CITY_LABELS[property.city], property.state]
+              {[property.colonia, CITY_LABELS[property.city], property.state]
                 .filter(Boolean)
                 .join(', ')}
             </p>
           )}
+          {property.showLocationInfo !== false &&
+            (property.address || property.propertyNumber || property.postalCode) && (
+              <p className="order-4 text-sm text-gray-400 dark:text-gray-400 mb-4 ml-6">
+                {[
+                  property.address,
+                  property.propertyNumber ? `#${property.propertyNumber}` : null,
+                  property.postalCode ? `C.P. ${property.postalCode}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(', ')}
+              </p>
+            )}
 
           {/* showDetailsInfo: casilla del apartado Detalles (m²/recámaras/baños). */}
           {property.showDetailsInfo !== false && (

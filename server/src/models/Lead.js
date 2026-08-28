@@ -69,7 +69,8 @@ const Lead = sequelize.define(
         'cita_con_seguimiento',
         'negociacion',
         'venta_realizada',
-        'no_interesado'
+        'no_interesado',
+        'lista_espera'
       ),
       defaultValue: 'nuevo',
       allowNull: false,

@@ -1,9 +1,10 @@
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import CloseLeadModal from '../CloseLeadModal';
 import ReopenLeadModal from '../ReopenLeadModal';
+import SendToWaitingListModal from '../SendToWaitingListModal';
 import StageBottomSheet from '../StageBottomSheet';
 
-// Los 4 modales/hojas que acompañan a la tarjeta de detalle de un prospecto — puramente
+// Los modales/hojas que acompañan a la tarjeta de detalle de un prospecto — puramente
 // presentacional, toma el estado/mutaciones de useLeadDetailActions. Compartido entre
 // ProspectosSection y LeadDetailWithActions (Calendario) para no duplicar este marcado.
 export default function LeadDetailModals({ actions }) {
@@ -14,10 +15,13 @@ export default function LeadDetailModals({ actions }) {
     setCloseTarget,
     reopenTarget,
     setReopenTarget,
+    waitingListTarget,
+    setWaitingListTarget,
     sheetLead,
     setSheetLead,
     closeWonMutation,
     closeLostMutation,
+    sendToWaitingListMutation,
     reopenMutation,
     attemptStageChange,
     closeLeadForModal,
@@ -58,6 +62,17 @@ export default function LeadDetailModals({ actions }) {
         onClose={() => setReopenTarget(null)}
         onConfirm={(pipelineStage) =>
           reopenMutation.mutate({ id: reopenTarget.lead.id, pipelineStage })
+        }
+      />
+
+      <SendToWaitingListModal
+        key={waitingListTarget ? waitingListTarget.id : 'waiting-list-empty'}
+        open={!!waitingListTarget}
+        lead={waitingListTarget}
+        isPending={sendToWaitingListMutation.isPending}
+        onClose={() => setWaitingListTarget(null)}
+        onConfirm={(payload) =>
+          sendToWaitingListMutation.mutate({ id: waitingListTarget.id, data: payload })
         }
       />
 

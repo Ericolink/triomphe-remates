@@ -319,6 +319,7 @@ export const PIPELINE_STAGE_LABELS = {
   cita_con_seguimiento: 'Cita con seguimiento',
   venta_realizada: 'Venta realizada',
   no_interesado: 'No interesado',
+  lista_espera: 'Lista de espera',
 };
 
 // Mapeadas a las 5 variantes que soporta Badge (default/success/warning/danger/primary)
@@ -332,9 +333,10 @@ export const PIPELINE_STAGE_VARIANTS = {
   cita_con_seguimiento: 'primary',
   venta_realizada: 'success',
   no_interesado: 'default',
+  lista_espera: 'default',
 };
 
-export const TERMINAL_STAGES = ['venta_realizada', 'no_interesado'];
+export const TERMINAL_STAGES = ['venta_realizada', 'no_interesado', 'lista_espera'];
 
 // Etapas activas del embudo — usado dondequiera que solo se pueda elegir un destino no
 // terminal (batch actions, modal de reapertura): las terminales siempre pasan por su propio
@@ -364,6 +366,7 @@ export const PIPELINE_STAGE_BAR_COLORS = {
   cita_con_seguimiento: 'bg-cyan-600 dark:bg-cyan-400',
   venta_realizada: 'bg-green-600 dark:bg-green-400',
   no_interesado: 'bg-gray-400 dark:bg-gray-500',
+  lista_espera: 'bg-slate-600 dark:bg-slate-300',
 };
 
 export const CLOSE_REASON_LABELS = {

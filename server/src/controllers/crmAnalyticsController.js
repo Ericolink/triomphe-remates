@@ -24,6 +24,7 @@ const PIPELINE_STAGES = [
   'cita_con_seguimiento',
   'venta_realizada',
   'no_interesado',
+  'lista_espera',
 ];
 const CLOSE_REASONS = [
   'compro',

@@ -9,7 +9,12 @@ const {
   User,
   Deal,
   Appointment,
+  PropertyAlert,
 } = require('../models/index');
+const {
+  VALID_CITIES: VALID_ALERT_CITIES,
+  VALID_TYPES: VALID_ALERT_TYPES,
+} = require('../utils/propertyAlertValidation');
 
 // AUDIT-024: valores permitidos explícitos en vez de confiar solo en el ENUM de MySQL —
 // falla con un 400 claro en vez de un error 500 genérico de Sequelize si llega un valor inválido.
@@ -26,6 +31,7 @@ const VALID_PIPELINE_STAGES = [
   'cita_con_seguimiento',
   'venta_realizada',
   'no_interesado',
+  'lista_espera',
 ];
 const VALID_CLOSE_REASONS = [
   'compro',
@@ -437,6 +443,14 @@ const getLeads = async (req, res) => {
 
   Object.assign(where, getLeadVisibilityWhere(req.user) || {});
 
+  // Los prospectos enviados a lista de espera desaparecen de "Todas las etapas" — siguen
+  // accesibles filtrando explícitamente por esa etapa, en Kanban o en WaitingListPage.
+  // No_interesado NO se toca (decisión explícita: solo se ordena al final, sigue visible,
+  // ver comentario de abajo).
+  if (!pipelineStage) {
+    where.pipelineStage = { [Op.ne]: 'lista_espera' };
+  }
+
   // Pedido del dueño del negocio: en la vista "Todas las etapas" (sin filtro explícito de
   // pipelineStage) los prospectos "No interesado" quedaban mezclados por fecha con los
   // activos, enterrando lo accionable. Se mandan al final en vez de ocultarse (siguen
@@ -578,7 +592,7 @@ const updateLead = async (req, res) => {
     if (TERMINAL_STAGES.includes(pipelineStage)) {
       throw new ApiError(
         400,
-        'Para cerrar un prospecto usa PUT /:id/close-won o PUT /:id/close-lost'
+        'Para cerrar un prospecto o mandarlo a lista de espera usa PUT /:id/close-won, PUT /:id/close-lost o PUT /:id/send-to-waiting-list'
       );
     }
     // AUDIT: simétrico al bloqueo de arriba — un lead ya cerrado tampoco puede salir de
@@ -825,6 +839,89 @@ const closeLeadAsLost = async (req, res) => {
   }
 };
 
+// PUT /api/leads/:id/send-to-waiting-list — manda el prospecto a la lista de espera del panel
+// admin (crea una fila en PropertyAlert con source:'staff', mismo modelo que WaitingListPage).
+// name/phone/email/businessLine se toman siempre del lead, nunca del body, para que no puedan
+// divergir del prospecto original.
+const sendLeadToWaitingList = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const lead = await Lead.findByPk(req.params.id, { transaction });
+    if (!lead) throw new ApiError(404, 'Lead no encontrado');
+    if (!canEditLead(req.user, lead)) {
+      throw new ApiError(403, 'No tienes acceso a este prospecto');
+    }
+    if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
+      throw new ApiError(
+        400,
+        'Este prospecto ya está cerrado — usa PUT /:id/reopen para reactivarlo'
+      );
+    }
+
+    const { city, type, minPrice, maxPrice, state } = req.body;
+    if (city && !VALID_ALERT_CITIES.includes(city)) {
+      throw new ApiError(400, `Ciudad inválida. Valores permitidos: ${VALID_ALERT_CITIES.join(', ')}`);
+    }
+    if (type && !VALID_ALERT_TYPES.includes(type)) {
+      throw new ApiError(400, `Tipo inválido. Valores permitidos: ${VALID_ALERT_TYPES.join(', ')}`);
+    }
+    if (minPrice !== undefined && minPrice !== null && minPrice !== '') {
+      if (!Number.isFinite(Number(minPrice)) || Number(minPrice) < 0) {
+        throw new ApiError(400, 'Monto mínimo inválido');
+      }
+    }
+    if (maxPrice !== undefined && maxPrice !== null && maxPrice !== '') {
+      if (!Number.isFinite(Number(maxPrice)) || Number(maxPrice) < 0) {
+        throw new ApiError(400, 'Monto máximo inválido');
+      }
+    }
+
+    const alert = await PropertyAlert.create(
+      {
+        name: lead.name,
+        phone: lead.phone,
+        email: lead.email,
+        businessLine: lead.businessLine,
+        city: city || null,
+        type: type || null,
+        minPrice: minPrice !== undefined && minPrice !== null && minPrice !== '' ? Number(minPrice) : null,
+        maxPrice: maxPrice !== undefined && maxPrice !== null && maxPrice !== '' ? Number(maxPrice) : null,
+        state: state ? state.trim() : null,
+        source: 'staff',
+      },
+      { transaction }
+    );
+
+    await lead.update(
+      {
+        pipelineStage: 'lista_espera',
+        status: legacyStatusFor('lista_espera'),
+      },
+      { transaction }
+    );
+
+    await logActivity({
+      leadId: lead.id,
+      type: 'sistema',
+      content: 'Prospecto enviado a lista de espera',
+      userId: req.user?.id ?? null,
+      transaction,
+    });
+
+    // Etapa terminal — no se crea una tarea siguiente.
+    await closeOpenTask({ leadId: lead.id, transaction });
+
+    await transaction.commit();
+
+    logAudit(req, 'update', 'lead', lead.id, { sentToWaitingList: true, propertyAlertId: alert.id });
+
+    return res.json({ message: 'Prospecto enviado a lista de espera', data: { lead, alert } });
+  } catch (error) {
+    if (!transaction.finished) await transaction.rollback();
+    throw error;
+  }
+};
+
 // PUT /api/leads/:id/reopen — única vía para sacar un prospecto de una etapa terminal.
 // Reabrir no es "cambiar un campo": si venía de venta_realizada implica que la venta
 // registrada ya no es válida (mismo criterio que closeLeadAsLost usa al corregir un cierre
@@ -933,7 +1030,7 @@ const batchUpdateLeads = async (req, res) => {
   if (TERMINAL_STAGES.includes(pipelineStage)) {
     throw new ApiError(
       400,
-      'Para cerrar prospectos usa los endpoints de cierre individuales (/close-won, /close-lost)'
+      'Para cerrar prospectos o mandarlos a lista de espera usa los endpoints individuales (/close-won, /close-lost, /send-to-waiting-list)'
     );
   }
 
@@ -1128,5 +1225,6 @@ module.exports = {
   sendLeadWhatsApp,
   closeLeadAsWon,
   closeLeadAsLost,
+  sendLeadToWaitingList,
   reopenLead,
 };

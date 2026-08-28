@@ -70,6 +70,10 @@ const BUSINESS_LINE_TABS = [
 // showBasicInfo/etc. en el modelo Property) — se renderiza junto al título de la sección.
 // legal/valuacion no tienen efecto visible todavía (esos campos nunca se muestran en el
 // sitio público hoy), pero se dejan listas por si algún día se decide mostrar algo de ahí.
+// showLocationInfo ya no controla la sección "ubicacion" completa: ciudad/estado/tipo/
+// categoría/fraccionamiento-colonia son estructurales y siempre se muestran en el sitio
+// público sin importar esta casilla; solo sigue ocultando dirección exacta/número/C.P. (ver
+// PropertyDetailPage.jsx).
 const SECTIONS = [
   { key: 'basicos', title: 'Datos básicos', visibilityField: 'showBasicInfo' },
   { key: 'ubicacion', title: 'Ubicación y tipo', visibilityField: 'showLocationInfo' },

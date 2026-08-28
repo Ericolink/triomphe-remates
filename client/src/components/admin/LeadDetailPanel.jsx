@@ -617,18 +617,24 @@ export default function LeadDetailPanel({
         <div className="mt-3 mb-4">
           <StageProgress lead={lead} canEdit={canEdit} onOpen={() => onOpenStagePicker(lead)} />
           {canEdit && !isTerminal && (
-            <div className="flex gap-2 mt-2">
+            <div className="flex flex-wrap gap-2 mt-2">
               <button
                 onClick={() => onChangeStage(lead, 'venta_realizada')}
-                className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors"
+                className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors"
               >
                 Marcar venta
               </button>
               <button
                 onClick={() => onChangeStage(lead, 'no_interesado')}
-                className="flex-1 py-2.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+                className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
               >
                 No interesado
+              </button>
+              <button
+                onClick={() => onChangeStage(lead, 'lista_espera')}
+                className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+              >
+                Lista de espera
               </button>
             </div>
           )}

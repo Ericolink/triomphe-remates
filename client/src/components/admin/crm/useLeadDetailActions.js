@@ -7,6 +7,7 @@ import {
   deleteLead,
   closeLeadAsWon,
   closeLeadAsLost,
+  sendLeadToWaitingList,
   reopenLead,
 } from '../../../services/leadService';
 import { TERMINAL_STAGES } from '../../../utils/constants';
@@ -21,6 +22,7 @@ export default function useLeadDetailActions({ selected, setSelected }) {
   const [confirm, setConfirm] = useState(null);
   const [closeTarget, setCloseTarget] = useState(null); // { lead, targetStage }
   const [reopenTarget, setReopenTarget] = useState(null); // { lead, targetStage }
+  const [waitingListTarget, setWaitingListTarget] = useState(null); // lead
   const [sheetLead, setSheetLead] = useState(null);
 
   const { data: closeLeadDetail } = useQuery({
@@ -79,6 +81,20 @@ export default function useLeadDetailActions({ selected, setSelected }) {
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al cerrar el prospecto'),
   });
 
+  const sendToWaitingListMutation = useMutation({
+    mutationFn: ({ id, data }) => sendLeadToWaitingList(id, data),
+    onSuccess: () => {
+      toast.success('Prospecto enviado a lista de espera');
+      setWaitingListTarget(null);
+      setSelected(null);
+      queryClient.invalidateQueries(['leads']);
+      queryClient.invalidateQueries(['leads-column']);
+      queryClient.invalidateQueries(['open-tasks']);
+      queryClient.invalidateQueries(['open-tasks-column']);
+    },
+    onError: (e) => toast.error(e?.response?.data?.error || 'Error al enviar a lista de espera'),
+  });
+
   const reopenMutation = useMutation({
     mutationFn: ({ id, pipelineStage }) => reopenLead(id, { pipelineStage }),
     onSuccess: (res) => {
@@ -113,7 +129,10 @@ export default function useLeadDetailActions({ selected, setSelected }) {
   // (updateMutation) rechaza ese caso en el backend, así que nunca debe intentarse directo.
   const attemptStageChange = (lead, newStage) => {
     if (newStage === lead.pipelineStage) return;
-    if (TERMINAL_STAGES.includes(newStage)) {
+    if (newStage === 'lista_espera') {
+      setWaitingListTarget(lead);
+      setSheetLead(null);
+    } else if (TERMINAL_STAGES.includes(newStage)) {
       setCloseTarget({ lead, targetStage: newStage });
       setSheetLead(null);
     } else if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
@@ -145,11 +164,14 @@ export default function useLeadDetailActions({ selected, setSelected }) {
     setCloseTarget,
     reopenTarget,
     setReopenTarget,
+    waitingListTarget,
+    setWaitingListTarget,
     sheetLead,
     setSheetLead,
     updateMutation,
     closeWonMutation,
     closeLostMutation,
+    sendToWaitingListMutation,
     reopenMutation,
     deleteMutation,
     attemptStageChange,

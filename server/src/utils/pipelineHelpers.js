@@ -4,7 +4,7 @@ const { Activity, Task } = require('../models/index');
 // taskController. A diferencia de los VALID_X arrays (que cada controller repite inline
 // por convención del proyecto), esto es lógica de negocio transversal y sí se centraliza.
 
-const TERMINAL_STAGES = ['venta_realizada', 'no_interesado'];
+const TERMINAL_STAGES = ['venta_realizada', 'no_interesado', 'lista_espera'];
 
 async function logActivity({ leadId, type, content, userId = null, transaction, ...extra }) {
   return Activity.create(
@@ -96,6 +96,7 @@ const LEGACY_STATUS_MAP = {
   negociacion: 'contactado',
   venta_realizada: 'cerrado',
   no_interesado: 'descartado',
+  lista_espera: 'descartado',
 };
 
 function legacyStatusFor(pipelineStage) {
