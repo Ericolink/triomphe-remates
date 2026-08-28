@@ -32,7 +32,7 @@ const Feedback = sequelize.define(
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM('nuevo', 'leido', 'archivado'),
+      type: DataTypes.ENUM('nuevo', 'leido'),
       defaultValue: 'nuevo',
     },
     notes: {

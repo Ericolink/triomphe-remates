@@ -6,7 +6,6 @@ import {
   AlertCircle,
   Lightbulb,
   FileSpreadsheet,
-  Archive,
   Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,7 +19,7 @@ import {
   batchDeleteFeedback,
 } from '../../services/feedbackService';
 import BatchActionBar from '../../components/ui/BatchActionBar';
-import Badge from '../../components/ui/Badge';
+import GradientListCard from '../../components/ui/GradientListCard';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
@@ -29,8 +28,7 @@ import { formatDate } from '../../utils/formatters';
 import { downloadBlob } from '../../utils/download';
 import {
   FEEDBACK_CATEGORY_LABELS,
-  FEEDBACK_CATEGORY_VARIANTS,
-  FEEDBACK_CATEGORY_GRADIENT,
+  FEEDBACK_CATEGORY_COLORS,
   FEEDBACK_STATUS_LABELS,
 } from '../../utils/constants';
 
@@ -111,10 +109,9 @@ export default function BuzonAdminPage() {
 
   const items = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
   const total = data?.pages?.[0]?.pagination?.total ?? 0;
-  // Conteos sobre lo ya cargado (no sobre el total real) — igual que antes, solo que
+  // Conteo sobre lo ya cargado (no sobre el total real) — igual que antes, solo que
   // ahora "lo cargado" crece con "Cargar más" en vez de estar topado en 50 para siempre.
   const newCount = items.filter((i) => i.status === 'nuevo').length;
-  const archivedCount = items.filter((i) => i.status === 'archivado').length;
 
   const toggleCheck = (e, id) => {
     e.stopPropagation();
@@ -123,10 +120,6 @@ export default function BuzonAdminPage() {
   const toggleAll = () => {
     const ids = items.map((i) => i.id);
     setChecked(checked.length === ids.length ? [] : ids);
-  };
-  const handleArchive = (e, item) => {
-    e.stopPropagation();
-    updateMutation.mutate({ id: item.id, data: { status: 'archivado' } });
   };
   const handleQuickDelete = (e, item) => {
     e.stopPropagation();
@@ -176,11 +169,6 @@ export default function BuzonAdminPage() {
                   {newCount} nuevo{newCount !== 1 ? 's' : ''}
                 </span>
               )}
-              {archivedCount > 0 && (
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-[#1a1f2e] text-gray-500 dark:text-gray-400">
-                  {archivedCount} archivado{archivedCount !== 1 ? 's' : ''}
-                </span>
-              )}
             </div>
           </div>
           <button
@@ -219,7 +207,6 @@ export default function BuzonAdminPage() {
             <option value="">Todos los estados</option>
             <option value="nuevo">Nuevos</option>
             <option value="leido">Leídos</option>
-            <option value="archivado">Archivados</option>
           </select>
         </div>
       </motion.div>
@@ -253,102 +240,53 @@ export default function BuzonAdminPage() {
               <AnimatePresence>
                 {items.map((item) => {
                   const isUnread = item.status === 'nuevo';
-                  const isArchived = item.status === 'archivado';
+                  const colors = FEEDBACK_CATEGORY_COLORS[item.category];
                   return (
-                    <motion.div
+                    <GradientListCard
                       key={item.id}
-                      variants={fadeInUp}
-                      layout
+                      checked={checked.includes(item.id)}
+                      onCheckToggle={(e) => toggleCheck(e, item.id)}
+                      checkLabel={`Seleccionar mensaje de ${item.name}`}
                       onClick={() => handleSelect(item)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleSelect(item);
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      whileHover={{ x: 4, transition: { duration: 0.15 } }}
-                      className={`group relative overflow-hidden rounded-2xl p-5 shadow-sm border cursor-pointer transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 ${
-                        isArchived ? 'opacity-60' : ''
-                      } ${
-                        isUnread
-                          ? 'bg-primary-50/50 dark:bg-primary-900/10'
-                          : 'bg-white dark:bg-[#242938]'
-                      } ${
-                        selected?.id === item.id
-                          ? 'border-accent-500 dark:border-accent-400 ring-1 ring-accent-500'
-                          : 'border-gray-100 dark:border-[#2e3650]'
-                      }`}
+                      selected={selected?.id === item.id}
+                      unread={isUnread}
+                      gradientClass={colors.gradient}
+                      actions={[
+                        {
+                          key: 'delete',
+                          icon: <Trash2 size={15} />,
+                          label: `Eliminar mensaje de ${item.name}`,
+                          onClick: (e) => handleQuickDelete(e, item),
+                          hoverClass: 'hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30',
+                        },
+                      ]}
                     >
-                      <div
-                        aria-hidden="true"
-                        className={`pointer-events-none absolute inset-y-0 right-0 w-1/3 sm:w-2/5 bg-gradient-to-l ${FEEDBACK_CATEGORY_GRADIENT[item.category]} to-transparent`}
-                      />
-                      <div className="relative z-10 flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={checked.includes(item.id)}
-                          onChange={(e) => toggleCheck(e, item.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label={`Seleccionar mensaje de ${item.name}`}
-                          className="mt-1 w-4 h-4 rounded accent-accent-400 flex-shrink-0 cursor-pointer"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1 min-w-0 mr-3">
-                              <p className="flex items-center gap-2 truncate">
-                                {isUnread && (
-                                  <span className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" />
-                                )}
-                                <span
-                                  className={`truncate ${isUnread ? 'font-bold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}
-                                >
-                                  {item.subject}
-                                </span>
-                              </p>
-                              <p className="text-xs text-gray-400 dark:text-gray-500">
-                                {item.name} · {formatDate(item.createdAt)}
-                                {isArchived && (
-                                  <span className="ml-1 italic">
-                                    · {FEEDBACK_STATUS_LABELS.archivado}
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <Badge variant={FEEDBACK_CATEGORY_VARIANTS[item.category]}>
-                              <span className="flex items-center gap-1">
-                                {categoryIcon[item.category]}{' '}
-                                {FEEDBACK_CATEGORY_LABELS[item.category]}
-                              </span>
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2 pr-12">
-                            {item.message}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0 mr-3">
+                          <p className="flex items-center gap-2 truncate">
+                            {isUnread && (
+                              <span className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" />
+                            )}
+                            <span
+                              className={`truncate ${isUnread ? 'font-bold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}
+                            >
+                              {item.subject}
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">
+                            {item.name} · {formatDate(item.createdAt)}
                           </p>
                         </div>
-                      </div>
-                      <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        {!isArchived && (
-                          <button
-                            onClick={(e) => handleArchive(e, item)}
-                            title="Archivar"
-                            aria-label={`Archivar mensaje de ${item.name}`}
-                            className="p-1.5 bg-white/90 dark:bg-[#1a1f2e]/90 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors shadow-sm"
-                          >
-                            <Archive size={15} />
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => handleQuickDelete(e, item)}
-                          title="Eliminar"
-                          aria-label={`Eliminar mensaje de ${item.name}`}
-                          className="p-1.5 bg-white/90 dark:bg-[#1a1f2e]/90 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors shadow-sm"
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}
                         >
-                          <Trash2 size={15} />
-                        </button>
+                          {categoryIcon[item.category]} {FEEDBACK_CATEGORY_LABELS[item.category]}
+                        </span>
                       </div>
-                    </motion.div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 line-clamp-2 pr-12">
+                        {item.message}
+                      </p>
+                    </GradientListCard>
                   );
                 })}
               </AnimatePresence>
@@ -427,12 +365,12 @@ export default function BuzonAdminPage() {
                   ))}
                   <div>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Categoría</p>
-                    <Badge variant={FEEDBACK_CATEGORY_VARIANTS[selected.category]}>
-                      <span className="flex items-center gap-1">
-                        {categoryIcon[selected.category]}{' '}
-                        {FEEDBACK_CATEGORY_LABELS[selected.category]}
-                      </span>
-                    </Badge>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${FEEDBACK_CATEGORY_COLORS[selected.category].badge}`}
+                    >
+                      {categoryIcon[selected.category]}{' '}
+                      {FEEDBACK_CATEGORY_LABELS[selected.category]}
+                    </span>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400 dark:text-gray-500">Mensaje</p>
@@ -521,10 +459,7 @@ export default function BuzonAdminPage() {
       <BatchActionBar
         count={checked.length}
         onClear={() => setChecked([])}
-        statusOptions={[
-          { value: 'leido', label: 'Leído' },
-          { value: 'archivado', label: 'Archivado' },
-        ]}
+        statusOptions={[{ value: 'leido', label: 'Leído' }]}
         onStatus={(s) => batchStatusMutation.mutate({ ids: checked, status: s })}
         onDelete={() =>
           setConfirm({

@@ -469,7 +469,7 @@ const exportPDF = async (req, res) => {
 // EXCEL — Buzón de feedback
 // ─────────────────────────────────────────────────────────────────────────────
 const categoryLabel = { queja: 'Queja', comentario: 'Comentario', sugerencia: 'Sugerencia' };
-const feedbackStatusLabel = { nuevo: 'Nuevo', leido: 'Leído', archivado: 'Archivado' };
+const feedbackStatusLabel = { nuevo: 'Nuevo', leido: 'Leído' };
 
 const exportFeedbackExcel = async (req, res) => {
   try {
@@ -521,7 +521,7 @@ const exportFeedbackExcel = async (req, res) => {
     });
 
     const categoryArgb = { queja: 'FFEF4444', comentario: 'FF3B82F6', sugerencia: 'FF10B981' };
-    const statusArgbFeedback = { nuevo: 'FF3B82F6', leido: ST_YELLOW_ARGB, archivado: 'FF9CA3AF' };
+    const statusArgbFeedback = { nuevo: 'FF3B82F6', leido: ST_YELLOW_ARGB };
 
     items.forEach((item, i) => {
       const isAlt = i % 2 === 0;

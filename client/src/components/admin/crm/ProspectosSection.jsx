@@ -22,10 +22,10 @@ import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
 import { canCreateLeads, canDeleteLeads } from '../../../utils/permissions';
 import { downloadBlob } from '../../../utils/download';
-import Badge from '../../ui/Badge';
 import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import BatchActionBar from '../../ui/BatchActionBar';
+import GradientListCard from '../../ui/GradientListCard';
 import CreateLeadModal from '../CreateLeadModal';
 import KanbanBoard, { NextActionLine } from '../KanbanBoard';
 import { DetailPanelSlot } from '../LeadDetailPanel';
@@ -37,7 +37,7 @@ import {
   SOURCE_LABELS,
   LEAD_TYPE_LABELS as typeLabel,
   PIPELINE_STAGE_LABELS,
-  PIPELINE_STAGE_VARIANTS,
+  PIPELINE_STAGE_CARD_COLORS,
   NON_TERMINAL_PIPELINE_STAGE_OPTIONS,
   PAYMENT_METHOD_LABELS,
 } from '../../../utils/constants';
@@ -332,83 +332,74 @@ export default function ProspectosSection() {
                 className="space-y-3"
               >
                 <AnimatePresence>
-                  {leads.map((lead) => (
-                    <motion.div
-                      key={lead.id}
-                      variants={fadeInUp}
-                      layout
-                      onClick={() => setSelected(lead)}
-                      whileHover={{ x: 4, transition: { duration: 0.15 } }}
-                      className={`bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border cursor-pointer transition-all ${
-                        selected?.id === lead.id
-                          ? 'border-accent-500 dark:border-accent-400 ring-1 ring-accent-500'
-                          : 'border-gray-100 dark:border-[#2e3650]'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={checked.includes(lead.id)}
-                          onChange={(e) => toggleCheck(e, lead.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mt-1 w-4 h-4 rounded accent-accent-400 flex-shrink-0 cursor-pointer"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <p className="font-semibold text-gray-800 dark:text-gray-100">
-                                {lead.name}
-                              </p>
-                              <p className="text-xs text-gray-400 dark:text-gray-500">
-                                {formatDate(lead.createdAt)} · {typeLabel[lead.type]}
-                                {lead.source && lead.source !== 'directo'
-                                  ? ` · ${SOURCE_LABELS[lead.source]}`
-                                  : ''}
-                              </p>
-                            </div>
-                            <Badge variant={PIPELINE_STAGE_VARIANTS[lead.pipelineStage]}>
-                              {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
-                            {lead.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail size={12} /> {lead.email}
-                              </span>
-                            )}
-                            {lead.phone && (
-                              <span className="flex items-center gap-1">
-                                <Phone size={12} /> {lead.phone}
-                              </span>
-                            )}
-                            {lead.property && (
-                              <span className="flex items-center gap-1">
-                                <Building2 size={12} /> {lead.property.title}
-                              </span>
-                            )}
-                            {lead.paymentMethod && (
-                              <span className="flex items-center gap-1">
-                                <Wallet size={12} /> {PAYMENT_METHOD_LABELS[lead.paymentMethod]} ·{' '}
-                                {formatBudget(lead.budgetAmount, lead.budgetNotSpecified)}
-                              </span>
-                            )}
-                          </div>
-                          <NextActionLine task={openTaskByLead[lead.id]} />
-                          {staleDays && lead.lastTouchedAt && (
-                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                              Sin actividad hace {daysSince(lead.lastTouchedAt)} día
-                              {daysSince(lead.lastTouchedAt) !== 1 ? 's' : ''}
+                  {leads.map((lead) => {
+                    const colors = PIPELINE_STAGE_CARD_COLORS[lead.pipelineStage];
+                    return (
+                      <GradientListCard
+                        key={lead.id}
+                        checked={checked.includes(lead.id)}
+                        onCheckToggle={(e) => toggleCheck(e, lead.id)}
+                        checkLabel={`Seleccionar prospecto ${lead.name}`}
+                        onClick={() => setSelected(lead)}
+                        selected={selected?.id === lead.id}
+                        gradientClass={colors.gradient}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-semibold text-gray-800 dark:text-gray-100">
+                              {lead.name}
                             </p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
+                              {formatDate(lead.createdAt)} · {typeLabel[lead.type]}
+                              {lead.source && lead.source !== 'directo'
+                                ? ` · ${SOURCE_LABELS[lead.source]}`
+                                : ''}
+                            </p>
+                          </div>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}
+                          >
+                            {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+                          {lead.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail size={12} /> {lead.email}
+                            </span>
                           )}
-                          {lead.message && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 line-clamp-2">
-                              {lead.message}
-                            </p>
+                          {lead.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone size={12} /> {lead.phone}
+                            </span>
+                          )}
+                          {lead.property && (
+                            <span className="flex items-center gap-1">
+                              <Building2 size={12} /> {lead.property.title}
+                            </span>
+                          )}
+                          {lead.paymentMethod && (
+                            <span className="flex items-center gap-1">
+                              <Wallet size={12} /> {PAYMENT_METHOD_LABELS[lead.paymentMethod]} ·{' '}
+                              {formatBudget(lead.budgetAmount, lead.budgetNotSpecified)}
+                            </span>
                           )}
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                        <NextActionLine task={openTaskByLead[lead.id]} />
+                        {staleDays && lead.lastTouchedAt && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            Sin actividad hace {daysSince(lead.lastTouchedAt)} día
+                            {daysSince(lead.lastTouchedAt) !== 1 ? 's' : ''}
+                          </p>
+                        )}
+                        {lead.message && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 line-clamp-2">
+                            {lead.message}
+                          </p>
+                        )}
+                      </GradientListCard>
+                    );
+                  })}
                 </AnimatePresence>
               </motion.div>
             )}

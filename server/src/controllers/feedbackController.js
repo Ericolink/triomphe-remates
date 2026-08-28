@@ -7,7 +7,7 @@ const { logAudit } = require('../utils/audit');
 const { validateBatchIds } = require('../utils/batchValidation');
 const { ApiError } = require('../middleware/errorHandler');
 
-const VALID_FEEDBACK_STATUS = ['nuevo', 'leido', 'archivado'];
+const VALID_FEEDBACK_STATUS = ['nuevo', 'leido'];
 
 // POST /api/feedback
 const createFeedback = async (req, res) => {

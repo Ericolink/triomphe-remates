@@ -4,22 +4,15 @@ import { Mail, Phone, MapPin, Briefcase, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { getApplications, updateApplication, deleteApplication } from '../../services/jobService';
-import Badge from '../../components/ui/Badge';
+import GradientListCard from '../../components/ui/GradientListCard';
 import Spinner from '../../components/ui/Spinner';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
-import { CITY_LABELS } from '../../utils/constants';
+import { CITY_LABELS, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '../../utils/constants';
 
 const APPLICATIONS_PAGE_SIZE = 15;
 
-const statusVariant = {
-  nueva: 'primary',
-  en_revision: 'warning',
-  entrevista: 'default',
-  aceptada: 'success',
-  rechazada: 'danger',
-};
 const expLabel = {
   sin_experiencia: 'Sin experiencia',
   menos_1_año: '< 1 año',
@@ -82,11 +75,11 @@ export default function ApplicationsPage() {
           className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
         >
           <option value="">Todas</option>
-          <option value="nueva">Nuevas</option>
-          <option value="en_revision">En revisión</option>
-          <option value="entrevista">Entrevista</option>
-          <option value="aceptada">Aceptadas</option>
-          <option value="rechazada">Rechazadas</option>
+          {Object.entries(APPLICATION_STATUS_LABELS).map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
         </select>
       </motion.div>
 
@@ -102,48 +95,49 @@ export default function ApplicationsPage() {
               className="space-y-3"
             >
               <AnimatePresence>
-                {applications.map((app) => (
-                  <motion.div
-                    key={app.id}
-                    variants={fadeInUp}
-                    layout
-                    onClick={() => setSelected(app)}
-                    whileHover={{ x: 4, transition: { duration: 0.15 } }}
-                    className={`bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border cursor-pointer transition-all ${
-                      selected?.id === app.id
-                        ? 'border-accent-500 dark:border-accent-400 ring-1 ring-accent-500'
-                        : 'border-gray-100 dark:border-[#2e3650]'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-semibold text-gray-800 dark:text-gray-100">{app.name}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
-                          {formatDate(app.createdAt)}
-                        </p>
-                      </div>
-                      <Badge variant={statusVariant[app.status]}>
-                        {app.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <Mail size={12} /> {app.email}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Phone size={12} /> {app.phone}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} /> {CITY_LABELS[app.city]}
-                      </span>
-                      {app.position && (
-                        <span className="flex items-center gap-1">
-                          <Briefcase size={12} /> {app.position.title}
+                {applications.map((app) => {
+                  const colors = APPLICATION_STATUS_COLORS[app.status];
+                  return (
+                    <GradientListCard
+                      key={app.id}
+                      onClick={() => setSelected(app)}
+                      selected={selected?.id === app.id}
+                      gradientClass={colors.gradient}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-gray-800 dark:text-gray-100">
+                            {app.name}
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">
+                            {formatDate(app.createdAt)}
+                          </p>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}
+                        >
+                          {APPLICATION_STATUS_LABELS[app.status]}
                         </span>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center gap-1">
+                          <Mail size={12} /> {app.email}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Phone size={12} /> {app.phone}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin size={12} /> {CITY_LABELS[app.city]}
+                        </span>
+                        {app.position && (
+                          <span className="flex items-center gap-1">
+                            <Briefcase size={12} /> {app.position.title}
+                          </span>
+                        )}
+                      </div>
+                    </GradientListCard>
+                  );
+                })}
               </AnimatePresence>
             </motion.div>
           )}
@@ -254,11 +248,11 @@ export default function ApplicationsPage() {
                       }}
                       className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none"
                     >
-                      <option value="nueva">Nueva</option>
-                      <option value="en_revision">En revisión</option>
-                      <option value="entrevista">Entrevista</option>
-                      <option value="aceptada">Aceptada</option>
-                      <option value="rechazada">Rechazada</option>
+                      {Object.entries(APPLICATION_STATUS_LABELS).map(([v, l]) => (
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>

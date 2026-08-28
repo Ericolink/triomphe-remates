@@ -369,6 +369,52 @@ export const PIPELINE_STAGE_BAR_COLORS = {
   lista_espera: 'bg-slate-600 dark:bg-slate-300',
 };
 
+// Mismo tono por etapa que PIPELINE_STAGE_BAR_COLORS (Embudo comercial), pero como par
+// badge/degradado claro para GradientListCard en ProspectosSection — badge y degradado
+// definidos juntos en la misma entrada (ver comentario de FEEDBACK_CATEGORY_COLORS arriba).
+export const PIPELINE_STAGE_CARD_COLORS = {
+  nuevo: {
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    gradient: 'from-blue-400/50 dark:from-blue-500/25',
+  },
+  contactado: {
+    badge: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+    gradient: 'from-teal-400/50 dark:from-teal-500/25',
+  },
+  interesado: {
+    badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+    gradient: 'from-orange-400/50 dark:from-orange-500/25',
+  },
+  negociacion: {
+    badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+    gradient: 'from-violet-400/50 dark:from-violet-500/25',
+  },
+  cita_agendada: {
+    badge: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
+    gradient: 'from-pink-400/50 dark:from-pink-500/25',
+  },
+  cita_realizada: {
+    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    gradient: 'from-amber-400/50 dark:from-amber-500/25',
+  },
+  cita_con_seguimiento: {
+    badge: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
+    gradient: 'from-cyan-400/50 dark:from-cyan-500/25',
+  },
+  venta_realizada: {
+    badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    gradient: 'from-green-400/50 dark:from-green-500/25',
+  },
+  no_interesado: {
+    badge: 'bg-gray-100 text-gray-600 dark:bg-gray-700/40 dark:text-gray-300',
+    gradient: 'from-gray-400/50 dark:from-gray-500/25',
+  },
+  lista_espera: {
+    badge: 'bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300',
+    gradient: 'from-slate-400/50 dark:from-slate-500/25',
+  },
+};
+
 export const CLOSE_REASON_LABELS = {
   compro: 'Compró',
   no_respondio: 'No respondió',
@@ -473,23 +519,28 @@ export const FEEDBACK_CATEGORY_LABELS = {
   sugerencia: 'Sugerencia',
 };
 
-// Mapeadas a las 5 variantes que soporta Badge, mismo criterio que PIPELINE_STAGE_VARIANTS
-export const FEEDBACK_CATEGORY_VARIANTS = {
-  queja: 'danger',
-  comentario: 'primary',
-  sugerencia: 'success',
+// Badge y degradado del mismo dominio SIEMPRE se definen juntos, en la misma entrada — antes
+// vivían en dos mapas separados (FEEDBACK_CATEGORY_VARIANTS con las 5 variantes genéricas de
+// Badge + FEEDBACK_CATEGORY_GRADIENT con clases Tailwind literales) que solo coincidían por
+// casualidad en 2 de 3 categorías: "Comentario" usaba la variante `primary` (dorado/accent de
+// marca) para el badge mientras su degradado era azul — nunca fueron el mismo color. Usado por
+// GradientListCard (BuzonAdminPage, ProspectosSection, ApplicationsPage).
+export const FEEDBACK_CATEGORY_COLORS = {
+  queja: {
+    badge: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    gradient: 'from-red-400/50 dark:from-red-500/25',
+  },
+  comentario: {
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    gradient: 'from-blue-400/50 dark:from-blue-500/25',
+  },
+  sugerencia: {
+    badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    gradient: 'from-green-400/50 dark:from-green-500/25',
+  },
 };
 
-// Franja de degradado del lado derecho de la tarjeta (BuzonAdminPage) — opacidad baja para
-// que el contenido siga siendo legible encima; el Badge de categoría es opaco así que no
-// se ve afectado por estar sobre la franja.
-export const FEEDBACK_CATEGORY_GRADIENT = {
-  queja: 'from-red-400/50 dark:from-red-500/25',
-  comentario: 'from-blue-400/50 dark:from-blue-500/25',
-  sugerencia: 'from-green-400/50 dark:from-green-500/25',
-};
-
-export const FEEDBACK_STATUS_LABELS = { nuevo: 'Nuevo', leido: 'Leído', archivado: 'Archivado' };
+export const FEEDBACK_STATUS_LABELS = { nuevo: 'Nuevo', leido: 'Leído' };
 
 // AUDIT: estaba duplicado idénticamente en JobsAdminPage.jsx y JobsPage.jsx
 export const JOB_TYPE_LABELS = {
@@ -502,6 +553,39 @@ export const JOB_STATUS_LABELS = {
   activa: 'Activa',
   pausada: 'Pausada',
   cerrada: 'Cerrada',
+};
+
+// Postulaciones (ApplicationsPage) — antes vivían inline como `statusVariant` sin degradado;
+// badge y degradado definidos juntos en la misma entrada (ver comentario de
+// FEEDBACK_CATEGORY_COLORS arriba) para GradientListCard.
+export const APPLICATION_STATUS_LABELS = {
+  nueva: 'Nueva',
+  en_revision: 'En revisión',
+  entrevista: 'Entrevista',
+  aceptada: 'Aceptada',
+  rechazada: 'Rechazada',
+};
+export const APPLICATION_STATUS_COLORS = {
+  nueva: {
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    gradient: 'from-blue-400/50 dark:from-blue-500/25',
+  },
+  en_revision: {
+    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    gradient: 'from-amber-400/50 dark:from-amber-500/25',
+  },
+  entrevista: {
+    badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+    gradient: 'from-violet-400/50 dark:from-violet-500/25',
+  },
+  aceptada: {
+    badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    gradient: 'from-green-400/50 dark:from-green-500/25',
+  },
+  rechazada: {
+    badge: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    gradient: 'from-red-400/50 dark:from-red-500/25',
+  },
 };
 
 // Raw classes en vez de variantes de Badge: el pill de JobsAdminPage combina este color con
