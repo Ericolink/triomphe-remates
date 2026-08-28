@@ -93,7 +93,7 @@ const validateEnvironment = () => {
 
   // key recorre REQUIRED, un arreglo literal fijo definido arriba — no hay entrada de usuario
   // involucrada, así que el acceso dinámico a process.env es seguro.
-  const missing = REQUIRED.filter((key) => !process.env[key]); // eslint-disable-line security/detect-object-injection
+  const missing = REQUIRED.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     errors.push(`Variables de entorno requeridas ausentes: ${missing.join(', ')}`);
   }
@@ -110,7 +110,7 @@ const validateEnvironment = () => {
   }
 
   // Mismo caso: key recorre RECOMMENDED, un arreglo literal fijo.
-  const missingRecommended = RECOMMENDED.filter((key) => !process.env[key]); // eslint-disable-line security/detect-object-injection
+  const missingRecommended = RECOMMENDED.filter((key) => !process.env[key]);
   if (missingRecommended.length > 0) {
     console.warn(
       `⚠️  Variables de entorno recomendadas ausentes (features degradadas): ${missingRecommended.join(', ')}`

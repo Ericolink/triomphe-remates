@@ -28,6 +28,12 @@ module.exports = [
     rules: {
       'no-console': 'off',
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      // Ruidoso casi al 100% en este código: se dispara con cualquier acceso por corchete
+      // (array[i] de un índice numérico de loop, mapa[clave] con clave fija del propio
+      // código), no solo con clave verdaderamente controlada por el usuario. El resto del
+      // plugin de seguridad se queda activo (regex inseguro, rutas de archivo no literales,
+      // etc. sí detectan riesgos reales).
+      'security/detect-object-injection': 'off',
     },
   },
   {

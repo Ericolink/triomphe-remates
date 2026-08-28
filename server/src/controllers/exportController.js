@@ -1,7 +1,7 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { Op } = require('sequelize');
-const { Property, Image, Feedback, Lead, PropertyAlert } = require('../models/index');
+const { Property, Feedback, Lead, PropertyAlert } = require('../models/index');
 const {
   CITY_LABEL: cityLabel,
   PROPERTY_TYPE_LABEL: typeLabel,
@@ -32,7 +32,7 @@ const {
   statusArgb,
   statusHex,
 } = require('../services/exportBranding');
-const { formatLongDate, formatLongDateTime } = require('../utils/formatters');
+const { formatLongDateTime } = require('../utils/formatters');
 const {
   formatPrice,
   formatDate,

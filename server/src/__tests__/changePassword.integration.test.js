@@ -4,15 +4,13 @@ const { sequelize, User } = require('../models/index');
 const { hashPassword } = require('../utils/helpers');
 
 describe('PUT /api/auth/change-password', () => {
-  let user;
-
   beforeAll(async () => {
     await sequelize.sync({ alter: false });
   });
 
   beforeEach(async () => {
     await User.destroy({ where: {}, force: true });
-    user = await User.create({
+    await User.create({
       name: 'Editor de prueba',
       email: 'change-password-test@triomphe.test',
       password: await hashPassword('OldPassword123'),

@@ -640,6 +640,60 @@ export default function LeadDetailPanel({
           )}
         </div>
 
+        {/* Citas — antes vivía dentro de "Información adicional" (colapsada por defecto),
+            lo que la hacía fácil de pasar por alto y arriesgaba que una cita agendada se
+            perdiera de vista. Ahora es su propia sección, siempre visible, justo debajo de
+            la etapa (la otra decisión de alta frecuencia del panel). */}
+        <div className={`mb-4 ${CARD_CLASS}`}>
+          <p className={SECTION_LABEL_CLASS}>
+            <Calendar size={13} /> Citas
+          </p>
+          <div className="space-y-1.5 mt-2 mb-2 max-h-32 overflow-y-auto pr-1">
+            {appointments.length === 0 && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+                Sin citas registradas.
+              </p>
+            )}
+            {appointments.map((a) => (
+              <div
+                key={a.id}
+                className="bg-white dark:bg-[#242938] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between"
+              >
+                <span className="text-gray-700 dark:text-gray-300">
+                  {formatDateTime(a.scheduledAt)}
+                </span>
+                <Badge variant={APPOINTMENT_STATUS_VARIANTS[a.status]}>
+                  {APPOINTMENT_STATUS_LABELS[a.status]}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          {canEdit && (
+            <div className="flex gap-2">
+              <input
+                type="datetime-local"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+                className={ROW_CONTROL_CLASS}
+              />
+              <button
+                onClick={() =>
+                  appointmentDate &&
+                  scheduleMutation.mutate({
+                    leadId: selected.id,
+                    propertyId: appointmentPropertyId || undefined,
+                    scheduledAt: appointmentDate,
+                  })
+                }
+                disabled={!appointmentDate || scheduleMutation.isPending}
+                className={ROW_BUTTON_CLASS}
+              >
+                Agendar
+              </button>
+            </div>
+          )}
+        </div>
+
         {selected.message && (
           <div className={`mb-4 ${CARD_CLASS}`}>
             <p className={SECTION_LABEL_CLASS}>
@@ -1025,9 +1079,10 @@ export default function LeadDetailPanel({
           </div>
         </Collapsible>
 
-        {/* Información adicional — colapsada siempre por defecto: fuente, email,
-            campaña, fecha de primer contacto, quién lo creó/asignó, e historial de
-            citas. Nada se pierde, solo se saca de la vista principal. */}
+        {/* Información adicional — colapsada siempre por defecto: fuente, email, campaña,
+            fecha de primer contacto y quién lo creó/asignó. Nada se pierde, solo se saca de
+            la vista principal (a diferencia de Citas, que se movió fuera de aquí — ver
+            arriba — precisamente porque sí necesitaba estar siempre visible). */}
         <Collapsible
           title="Información adicional"
           subtitle="Datos que normalmente no necesitas modificar."
@@ -1093,56 +1148,6 @@ export default function LeadDetailPanel({
                 {lead.campaign && <p>Campaña: {lead.campaign.name}</p>}
                 {lead.createdByUser && <p>Creado por: {lead.createdByUser.name}</p>}
                 {lead.assignedAt && <p>Asignado el: {formatDateTime(lead.assignedAt)}</p>}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-3">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1.5">
-              <Calendar size={12} /> Citas
-            </p>
-            <div className="space-y-1.5 mb-2 max-h-32 overflow-y-auto pr-1">
-              {appointments.length === 0 && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-                  Sin citas registradas.
-                </p>
-              )}
-              {appointments.map((a) => (
-                <div
-                  key={a.id}
-                  className="bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between"
-                >
-                  <span className="text-gray-700 dark:text-gray-300">
-                    {formatDateTime(a.scheduledAt)}
-                  </span>
-                  <Badge variant={APPOINTMENT_STATUS_VARIANTS[a.status]}>
-                    {APPOINTMENT_STATUS_LABELS[a.status]}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-            {canEdit && (
-              <div className="flex gap-2">
-                <input
-                  type="datetime-local"
-                  value={appointmentDate}
-                  onChange={(e) => setAppointmentDate(e.target.value)}
-                  className={ROW_CONTROL_CLASS}
-                />
-                <button
-                  onClick={() =>
-                    appointmentDate &&
-                    scheduleMutation.mutate({
-                      leadId: selected.id,
-                      propertyId: appointmentPropertyId || undefined,
-                      scheduledAt: appointmentDate,
-                    })
-                  }
-                  disabled={!appointmentDate || scheduleMutation.isPending}
-                  className={ROW_BUTTON_CLASS}
-                >
-                  Agendar
-                </button>
               </div>
             )}
           </div>
