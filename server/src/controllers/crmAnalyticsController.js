@@ -1,5 +1,6 @@
 const { Op, fn, col } = require('sequelize');
 const {
+  sequelize,
   Lead,
   Task,
   Appointment,
@@ -9,6 +10,8 @@ const {
   Property,
   User,
 } = require('../models/index');
+const { TERMINAL_STAGES, staleSinceExpr } = require('../utils/pipelineHelpers');
+const { getLeadVisibilityWhere } = require('../utils/leadAccess');
 
 // Separado de analyticsController.js: ese archivo es específico del funnel de marketing de
 // propiedades (vistas/leads por status legacy); mezclar ahí la agregación de
@@ -61,13 +64,15 @@ const getCrmDashboard = async (req, res) => {
   startOfWeek.setDate(now.getDate() - now.getDay() + 1);
   startOfWeek.setHours(0, 0, 0, 0);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const staleCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // Las primeras 8 consultas no dependen entre sí — se lanzan en paralelo. campaigns/
+  // Las primeras 9 consultas no dependen entre sí — se lanzan en paralelo. campaigns/
   // dealCounts sí dependen de campaignIds (derivado de campaignLeadCounts), así que esos
   // se quedan en un segundo paso, pero entre ellos dos tampoco hay dependencia mutua.
   const [
     prospectosNuevos,
     prospectosPendientes,
+    prospectosEstancados,
     seguimientosVencidos,
     citasHoy,
     [ventasSemanaRaw],
@@ -77,6 +82,19 @@ const getCrmDashboard = async (req, res) => {
   ] = await Promise.all([
     Lead.count({ where: { pipelineStage: 'nuevo' } }),
     Lead.count({ where: { pipelineStage: { [Op.in]: ['nuevo', 'contactado'] } } }),
+    // AUDIT pendiente (fuera de alcance de este cambio): a diferencia de este count, los
+    // demás counts de este Promise.all (prospectosNuevos, prospectosPendientes,
+    // seguimientosVencidos...) NO aplican getLeadVisibilityWhere — son globales sin
+    // importar el rol de quien llama, aunque asesor_ventas también puede llegar a esta
+    // ruta (ver requireCrmAccess en routes/crm.js). No se corrige aquí para no mezclar
+    // ese fix con este cambio; este count nuevo sí queda correctamente scoped.
+    Lead.count({
+      where: {
+        pipelineStage: { [Op.notIn]: TERMINAL_STAGES },
+        [Op.and]: [sequelize.where(sequelize.literal(staleSinceExpr()), Op.lt, staleCutoff)],
+        ...(getLeadVisibilityWhere(req.user) || {}),
+      },
+    }),
     Task.count({ where: { done: false, dueDate: { [Op.lt]: now } } }),
     Appointment.findAll({
       where: {
@@ -168,6 +186,7 @@ const getCrmDashboard = async (req, res) => {
     data: {
       prospectosNuevos,
       prospectosPendientes,
+      prospectosEstancados,
       seguimientosVencidos,
       citasHoy,
       ventasSemana: {

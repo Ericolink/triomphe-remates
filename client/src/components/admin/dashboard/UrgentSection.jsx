@@ -13,6 +13,7 @@ export default function UrgentSection({
   onCompleteTask,
   prospectosNuevos,
   prospectosPendientes,
+  prospectosEstancados,
   newFeedbackCount,
   citasHoy,
 }) {
@@ -34,6 +35,15 @@ export default function UrgentSection({
             key: 'pendientes',
             text: `${prospectosPendientes} prospecto${prospectosPendientes !== 1 ? 's' : ''} pendiente${prospectosPendientes !== 1 ? 's' : ''} de responder`,
             onClick: () => navigate('/admin/crm?tab=prospectos&stage=contactado'),
+          },
+        ]
+      : []),
+    ...(prospectosEstancados > 0
+      ? [
+          {
+            key: 'estancados',
+            text: `${prospectosEstancados} prospecto${prospectosEstancados !== 1 ? 's' : ''} sin actividad hace más de 7 días`,
+            onClick: () => navigate('/admin/crm?tab=prospectos&staleDays=7'),
           },
         ]
       : []),

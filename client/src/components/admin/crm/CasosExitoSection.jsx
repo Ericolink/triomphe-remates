@@ -1,15 +1,29 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Search, X, Building2, Wallet, Activity, FileText, Calendar } from 'lucide-react';
+import {
+  Trophy,
+  Search,
+  X,
+  Building2,
+  Wallet,
+  Activity,
+  FileText,
+  Calendar,
+  Trash2,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 import { getDeals } from '../../../services/dealService';
 import { getLeadActivities } from '../../../services/activityService';
-import { getLeadNotes } from '../../../services/leadService';
+import { getLeadNotes, reopenLead } from '../../../services/leadService';
 import { getLeadAppointments } from '../../../services/appointmentService';
 import { getUsers } from '../../../services/usersService';
 import useDebouncedValue from '../../../hooks/useDebouncedValue';
+import useAuthStore from '../../../store/authStore';
+import { canEditLead } from '../../../utils/permissions';
 import Spinner from '../../ui/Spinner';
 import Badge from '../../ui/Badge';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../../utils/animations';
 import { formatPrice, formatDate, formatDateTime } from '../../../utils/formatters';
 import { CITY_LABELS, ACTIVITY_TYPE_LABELS, ACTIVITY_TYPE_COLORS } from '../../../utils/constants';
@@ -66,11 +80,11 @@ function DealCard({ deal, isSelected, onSelect }) {
   );
 }
 
-// Panel de solo lectura: el caso ya está cerrado, así que a diferencia de LeadDetailPanel
-// no hay controles para editar ni registrar nueva actividad — reutiliza los mismos
-// endpoints de actividades/notas/citas del prospecto (un Deal siempre tiene un Lead)
-// en vez de duplicar esos datos en el backend de /deals.
-function DealDetailPanel({ deal, users, onDeselect }) {
+// El caso ya está cerrado, así que a diferencia de LeadDetailPanel no hay controles para
+// editar ni registrar nueva actividad — reutiliza los mismos endpoints de actividades/
+// notas/citas del prospecto (un Deal siempre tiene un Lead) en vez de duplicar esos datos
+// en el backend de /deals. Único control: eliminar el caso (ver onDelete).
+function DealDetailPanel({ deal, users, currentUser, onDeselect, onDelete, isDeleting }) {
   const leadId = deal.leadId;
 
   const { data: activitiesData } = useQuery({
@@ -122,13 +136,25 @@ function DealDetailPanel({ deal, users, onDeselect }) {
               <span className="truncate">{deal.property?.title}</span>
             </p>
           </div>
-          <button
-            onClick={onDeselect}
-            title="Cerrar detalle"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-lg transition-colors flex-shrink-0"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {canEditLead(currentUser, deal.lead) && (
+              <button
+                onClick={() => onDelete(deal)}
+                disabled={isDeleting}
+                title="Eliminar caso de éxito"
+                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+            <button
+              onClick={onDeselect}
+              title="Cerrar detalle"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-lg transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className={`space-y-2.5 mb-4 ${cardClass}`}>
@@ -241,7 +267,7 @@ function DealDetailPanel({ deal, users, onDeselect }) {
 
 // Mismo patrón responsive que DetailPanelSlot en ProspectosSection.jsx: overlay a pantalla
 // completa en mobile/tablet, columna lateral fija de xl en adelante.
-function DealDetailSlot({ selected, users, onDeselect }) {
+function DealDetailSlot({ selected, users, currentUser, onDeselect, onDelete, isDeleting }) {
   const panelRef = useModalA11y(Boolean(selected), onDeselect);
   return (
     <>
@@ -268,7 +294,14 @@ function DealDetailSlot({ selected, users, onDeselect }) {
               transition={{ type: 'spring', stiffness: 320, damping: 32 }}
               className="w-full max-w-md h-full overflow-y-auto bg-white dark:bg-[#242938]"
             >
-              <DealDetailPanel deal={selected} users={users} onDeselect={onDeselect} />
+              <DealDetailPanel
+                deal={selected}
+                users={users}
+                currentUser={currentUser}
+                onDeselect={onDeselect}
+                onDelete={onDelete}
+                isDeleting={isDeleting}
+              />
             </motion.div>
           </motion.div>
         )}
@@ -281,7 +314,10 @@ function DealDetailSlot({ selected, users, onDeselect }) {
               key={selected.id}
               deal={selected}
               users={users}
+              currentUser={currentUser}
               onDeselect={onDeselect}
+              onDelete={onDelete}
+              isDeleting={isDeleting}
             />
           ) : (
             <motion.div
@@ -314,9 +350,12 @@ const DEALS_PAGE_SIZE = 12;
 // así el conteo y el monto total mostrados reflejan siempre TODO el historial que
 // coincide con la búsqueda, no solo lo que ya se cargó.
 export default function CasosExitoSection() {
+  const queryClient = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
   const [searchInput, setSearchInput] = useState('');
   const search = useDebouncedValue(searchInput, 300);
   const [selected, setSelected] = useState(null);
+  const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['deals', search],
@@ -332,6 +371,33 @@ export default function CasosExitoSection() {
 
   const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: getUsers });
   const users = usersData?.data ?? [];
+
+  // No hay DELETE /api/deals — un Deal solo se destruye desde leadController (closeLeadAsLost/
+  // reopenLead) para nunca dejarlo inconsistente con Lead.pipelineStage. Eliminar un caso de
+  // éxito reutiliza PUT /leads/:id/reopen (mismo flujo de "corregir un cierre equivocado" que
+  // ya usa CloseLeadModal/ReopenLeadModal), en vez de un endpoint nuevo que duplicaría esa
+  // lógica de transacción ya probada.
+  const deleteDealMutation = useMutation({
+    mutationFn: (leadId) => reopenLead(leadId),
+    onSuccess: () => {
+      toast.success('Caso de éxito eliminado — el prospecto volvió a la etapa "Contactado"');
+      queryClient.invalidateQueries(['deals']);
+      setSelected(null);
+    },
+    onError: (e) => toast.error(e?.response?.data?.error || 'Error al eliminar el caso de éxito'),
+  });
+
+  const confirmDeleteDeal = (deal) => {
+    setConfirm({
+      title: `¿Eliminar el caso de éxito de "${deal.lead?.name}"?`,
+      message:
+        'Esta acción borra el registro de venta y regresa el prospecto a la etapa "Contactado" para poder seguir dándole seguimiento. No se puede deshacer.',
+      onConfirm: () => {
+        deleteDealMutation.mutate(deal.leadId);
+        setConfirm(null);
+      },
+    });
+  };
 
   return (
     <motion.div variants={fadeIn} initial="hidden" animate="visible">
@@ -414,11 +480,24 @@ export default function CasosExitoSection() {
             <DealDetailSlot
               selected={selected}
               users={users}
+              currentUser={currentUser}
               onDeselect={() => setSelected(null)}
+              onDelete={confirmDeleteDeal}
+              isDeleting={deleteDealMutation.isPending}
             />
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title}
+        message={confirm?.message}
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={confirm?.onConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </motion.div>
   );
 }

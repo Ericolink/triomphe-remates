@@ -32,7 +32,7 @@ import { DetailPanelSlot } from '../LeadDetailPanel';
 import useLeadDetailActions from './useLeadDetailActions';
 import LeadDetailModals from './LeadDetailModals';
 import { fadeIn, fadeInUp, staggerContainer } from '../../../utils/animations';
-import { formatDate, formatBudget } from '../../../utils/formatters';
+import { formatDate, formatBudget, daysSince } from '../../../utils/formatters';
 import {
   SOURCE_LABELS,
   LEAD_TYPE_LABELS as typeLabel,
@@ -52,6 +52,9 @@ export default function ProspectosSection() {
   // Permite llegar aquí ya filtrado desde el dashboard (ej. tarjeta "Prospectos nuevos"),
   // vía ?stage= en la URL en vez de location.state — así sobrevive un refresh.
   const [stage, setStage] = useState(searchParams.get('stage') || '');
+  // Igual que `stage`: solo lee la URL una vez al montar, no se vuelve a sincronizar
+  // después — sobrevive un refresh y un deep link desde el Dashboard (?staleDays=7).
+  const [staleDays, setStaleDays] = useState(searchParams.get('staleDays') || '');
   const [selected, setSelected] = useState(null);
   // Separado del `confirm` interno de useLeadDetailActions (que es para eliminar UN
   // prospecto desde su detalle) — este es específicamente para el borrado en lote de
@@ -80,10 +83,11 @@ export default function ProspectosSection() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['leads', stage, search, assignedToUserId],
+    queryKey: ['leads', stage, staleDays, search, assignedToUserId],
     queryFn: ({ pageParam = 1 }) =>
       getLeads({
         pipelineStage: stage,
+        staleDays: staleDays || undefined,
         page: pageParam,
         limit: LEADS_LIST_PAGE_SIZE,
         search: search || undefined,
@@ -252,6 +256,20 @@ export default function ProspectosSection() {
               </option>
             ))}
           </select>
+          <select
+            value={staleDays}
+            onChange={(e) => {
+              setStaleDays(e.target.value);
+              setChecked([]);
+            }}
+            className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
+          >
+            <option value="">Actividad: todas</option>
+            <option value="5">Sin actividad 5+ días</option>
+            <option value="10">Sin actividad 10+ días</option>
+            <option value="15">Sin actividad 15+ días</option>
+            <option value="30">Sin actividad 30+ días</option>
+          </select>
         </div>
       </motion.div>
 
@@ -376,6 +394,12 @@ export default function ProspectosSection() {
                             )}
                           </div>
                           <NextActionLine task={openTaskByLead[lead.id]} />
+                          {staleDays && lead.lastTouchedAt && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                              Sin actividad hace {daysSince(lead.lastTouchedAt)} día
+                              {daysSince(lead.lastTouchedAt) !== 1 ? 's' : ''}
+                            </p>
+                          )}
                           {lead.message && (
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 line-clamp-2">
                               {lead.message}

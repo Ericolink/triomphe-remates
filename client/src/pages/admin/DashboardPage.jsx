@@ -77,6 +77,7 @@ export default function DashboardPage() {
         onCompleteTask={(id) => completeMutation.mutate(id)}
         prospectosNuevos={crm?.prospectosNuevos ?? 0}
         prospectosPendientes={crm?.prospectosPendientes ?? 0}
+        prospectosEstancados={crm?.prospectosEstancados ?? 0}
         newFeedbackCount={newFeedback.length}
         citasHoy={crm?.citasHoy ?? []}
       />

@@ -58,3 +58,10 @@ export const todayISODate = () => new Date().toISOString().split('T')[0];
 // para que la estructura visual de habitaciones/baños/m² sea siempre consistente.
 export const formatMetric = (value, suffix = '') =>
   value === null || value === undefined || value === '' ? '--' : `${value}${suffix}`;
+
+// Días completos transcurridos desde `date` — usado por el indicador de "sin actividad"
+// en el filtro de prospectos estancados (ver staleDays en ProspectosSection.jsx).
+export const daysSince = (date) => {
+  if (!date) return null;
+  return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
+};

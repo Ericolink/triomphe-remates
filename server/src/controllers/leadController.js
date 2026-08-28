@@ -190,6 +190,7 @@ const {
   closeOpenTask,
   syncOpenTaskAssignee,
   legacyStatusFor,
+  staleSinceExpr,
 } = require('../utils/pipelineHelpers');
 const {
   crmAccessLevel,
@@ -422,6 +423,7 @@ const getLeads = async (req, res) => {
     campaignId,
     assignedToUserId,
     search,
+    staleDays,
   } = req.query;
   const where = {};
 
@@ -441,6 +443,18 @@ const getLeads = async (req, res) => {
     ];
   }
 
+  // staleDays: prospectos sin actividad hace N+ días — ver staleSinceExpr() en
+  // pipelineHelpers.js. Entero positivo requerido; no restringido a los 4 valores del
+  // <select> del CRM (5/10/15/30) porque el deep link del Dashboard usa 7.
+  let staleCutoff = null;
+  if (staleDays !== undefined) {
+    const staleDaysNum = Number(staleDays);
+    if (!Number.isInteger(staleDaysNum) || staleDaysNum <= 0) {
+      throw new ApiError(400, 'staleDays debe ser un entero positivo');
+    }
+    staleCutoff = new Date(Date.now() - staleDaysNum * 24 * 60 * 60 * 1000);
+  }
+
   Object.assign(where, getLeadVisibilityWhere(req.user) || {});
 
   // Los prospectos enviados a lista de espera desaparecen de "Todas las etapas" — siguen
@@ -449,6 +463,19 @@ const getLeads = async (req, res) => {
   // ver comentario de abajo).
   if (!pipelineStage) {
     where.pipelineStage = { [Op.ne]: 'lista_espera' };
+  }
+
+  // Un lead en etapa terminal no puede estar "estancado" (un cierre no atendido no es un
+  // problema). Se compone como Op.and (no se sobrescribe where.pipelineStage) para que
+  // conviva con un ?pipelineStage= explícito — si se combina "Negociación" + "10+ días", el
+  // resultado sigue siendo prospectos en Negociación con 10+ días sin tocar; si se combina
+  // una etapa terminal explícita + staleDays, el resultado correcto es 0 filas.
+  if (staleCutoff) {
+    where[Op.and] = [
+      ...(where[Op.and] || []),
+      { pipelineStage: { [Op.notIn]: TERMINAL_STAGES } },
+      sequelize.where(sequelize.literal(staleSinceExpr()), Op.lt, staleCutoff),
+    ];
   }
 
   // Pedido del dueño del negocio: en la vista "Todas las etapas" (sin filtro explícito de
@@ -483,6 +510,9 @@ const getLeads = async (req, res) => {
       { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
     ],
     order,
+    ...(staleCutoff && {
+      attributes: { include: [[sequelize.literal(staleSinceExpr()), 'lastTouchedAt']] },
+    }),
   });
 
   return res.json(result);

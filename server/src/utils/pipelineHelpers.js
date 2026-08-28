@@ -103,6 +103,26 @@ function legacyStatusFor(pipelineStage) {
   return LEGACY_STATUS_MAP[pipelineStage] || 'nuevo';
 }
 
+// Última vez que un lead recibió atención humana — Lead.updatedAt no alcanza: no cambia al
+// agregar una LeadNote (addLeadNote solo hace LeadNote.create) ni al registrar una Activity
+// (logActivity solo hace Activity.create), y esos dos casos cubren llamadas, WhatsApp, citas
+// agendadas, tareas completadas, etc. La señal real es el máximo entre Lead.updatedAt, la
+// última Activity.occurredAt y la última LeadNote.createdAt de ese lead, con Lead.createdAt
+// como piso cuando todavía no tiene ni actividades ni notas. MySQL GREATEST() devuelve NULL
+// si cualquier argumento es NULL, por eso cada rama va envuelta en COALESCE antes de entrar
+// al GREATEST. Devuelve el fragmento SQL crudo (usar con sequelize.literal); el caller define
+// su propio cutoff (Date) por separado — getLeads usa un ?staleDays= arbitrario,
+// getCrmDashboard usa un umbral fijo. Depende de que Sequelize alias siempre la tabla
+// principal como `Lead` (nombre del modelo, no el tableName `leads`) — verificado contra la
+// BD tanto en count() como en findAndCountAll() con includes.
+function staleSinceExpr() {
+  return `GREATEST(
+    COALESCE(Lead.updatedAt, Lead.createdAt),
+    COALESCE((SELECT MAX(a.occurredAt) FROM activities a WHERE a.leadId = Lead.id), Lead.createdAt),
+    COALESCE((SELECT MAX(n.createdAt) FROM lead_notes n WHERE n.leadId = Lead.id), Lead.createdAt)
+  )`;
+}
+
 module.exports = {
   TERMINAL_STAGES,
   logActivity,
@@ -110,4 +130,5 @@ module.exports = {
   closeOpenTask,
   syncOpenTaskAssignee,
   legacyStatusFor,
+  staleSinceExpr,
 };
