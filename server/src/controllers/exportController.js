@@ -9,6 +9,7 @@ const {
   LEAD_TYPE_LABEL: leadTypeLabel,
   LEGAL_PROCESS_TYPE_LABEL: legalProcessTypeLabel,
   BUSINESS_LINE_LABEL: businessLineLabel,
+  LEAD_URGENCY_LABEL: leadUrgencyLabel,
 } = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
 const { getLeadVisibilityWhere } = require('../utils/leadAccess');
@@ -640,6 +641,13 @@ const exportLeadsExcel = async (req, res) => {
       { header: 'Fecha de cita', key: 'appointmentDate', width: 16 },
       { header: 'Mensaje', key: 'message', width: 40 },
       { header: 'Notas', key: 'notes', width: 30 },
+      // Rediseño CRM — criterios de búsqueda estructurados. Van después de "Notas" (columna
+      // 13), no antes de la columna 7 ("Estatus"), que tiene un color hardcodeado por índice
+      // (ver row.getCell(7) más abajo).
+      { header: 'Ciudad buscada', key: 'searchCity', width: 16 },
+      { header: 'Zona buscada', key: 'searchZone', width: 20 },
+      { header: 'Tipo buscado', key: 'desiredType', width: 16 },
+      { header: 'Urgencia', key: 'urgency', width: 14 },
       { header: 'Fecha', key: 'createdAt', width: 16 },
     ];
     sheet.columns = headers;
@@ -674,6 +682,10 @@ const exportLeadsExcel = async (req, res) => {
         appointmentDate: lead.appointmentDate ? formatDate(lead.appointmentDate) : '—',
         message: lead.message ? lead.message.slice(0, 200) : '—',
         notes: dash(lead.notes),
+        searchCity: lead.searchCity ? cityLabel[lead.searchCity] || lead.searchCity : '—',
+        searchZone: dash(lead.searchZone),
+        desiredType: lead.desiredType ? typeLabel[lead.desiredType] || lead.desiredType : '—',
+        urgency: lead.urgency ? leadUrgencyLabel[lead.urgency] || lead.urgency : '—',
         createdAt: formatDate(lead.createdAt),
       });
 

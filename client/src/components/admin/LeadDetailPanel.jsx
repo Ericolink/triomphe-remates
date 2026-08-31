@@ -11,16 +11,32 @@ import {
   PhoneCall,
   Plus,
   Activity,
-  FileText,
   AlertTriangle,
   Check,
-  ChevronDown,
   Loader2,
   Landmark,
   Banknote,
   Target,
   Settings2,
   ShieldAlert,
+  LayoutGrid,
+  Pin,
+  Radio,
+  CalendarClock,
+  HelpCircle,
+  Briefcase,
+  Wallet,
+  CircleDollarSign,
+  MapPin,
+  Home,
+  Navigation,
+  BedDouble,
+  Bath,
+  ListChecks,
+  Zap,
+  Layers,
+  UserCheck,
+  MessageCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -29,21 +45,22 @@ import {
   getLeadNotes,
   addLeadNote,
   deleteLeadNote,
-  sendLeadWhatsApp,
   addLeadProperty,
   removeLeadProperty,
 } from '../../services/leadService';
-import { getLeadActivities, createLeadActivity } from '../../services/activityService';
+import { getLeadActivities } from '../../services/activityService';
 import { getLeadAppointments, createAppointment } from '../../services/appointmentService';
+import { getLeadTasks } from '../../services/taskService';
 import useAuthStore from '../../store/authStore';
 import { canAssignLeads, canEditLead, canDeleteLeads } from '../../utils/permissions';
 import { isInvalidOptionalAmount } from '../../utils/validation';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
+import TabBar from '../ui/TabBar';
 import PropertyPicker from './PropertyPicker';
+import { NextActionLine } from './KanbanBoard';
 import useModalA11y from '../../hooks/useModalA11y';
-import useIsMobile from '../../hooks/useIsMobile';
 import { fadeIn, fadeInRight } from '../../utils/animations';
 import {
   formatDateTime,
@@ -65,12 +82,16 @@ import {
   BUSINESS_LINE_LABELS,
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_VARIANTS,
+  CITY_LABELS,
+  TYPE_LABELS,
+  LEAD_SEARCH_CITY_OPTIONS,
+  LEAD_SEARCH_TYPE_OPTIONS,
+  LEAD_URGENCY_LABELS,
 } from '../../utils/constants';
 
-// Estilos compartidos por todos los campos del panel — se sacan del cuerpo del componente
-// porque son strings estáticos (no dependen de props/estado) y así los puede usar también
-// el <Collapsible> de más abajo sin tener que pasarlos por props.
-const FIELD_LABEL_CLASS = 'block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
+// Estilos compartidos por todos los campos del panel.
+const FIELD_LABEL_CLASS =
+  'flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
 const FIELD_CONTROL_CLASS =
   'w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500';
 // Compone una fila de "input + botón": min-w-0 + flex-1 hace que el control ceda ante el
@@ -81,6 +102,8 @@ const ROW_BUTTON_CLASS =
   'flex-shrink-0 px-2.5 py-2 bg-accent-400 text-primary-900 rounded-xl text-xs font-medium hover:bg-accent-300 disabled:opacity-40 transition-colors';
 const SECTION_LABEL_CLASS =
   'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5';
+const SUBSECTION_LABEL_CLASS =
+  'text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 mt-4 first:mt-0';
 const CARD_CLASS = 'rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3';
 
 // PHONE_PATTERN es un string estático propio (utils/phone.js, ya usado como atributo
@@ -115,16 +138,20 @@ const ACTIVE_STAGES = Object.keys(PIPELINE_STAGE_LABELS).filter(
   (s) => !TERMINAL_STAGES.includes(s)
 );
 
-// Tipos con los que se puede registrar una entrada en "Seguimiento" — únicamente los que
-// ya soporta el backend (ACTIVITY_TYPE_LABELS + LeadNote). "whatsapp" es distinto a los
-// demás: no solo registra un texto, dispara el envío real (sendLeadWhatsApp) — es la forma
-// en que "envío de WhatsApp" queda fusionado en la misma experiencia en vez de vivir aparte.
-const COMPOSER_TYPES = [
-  { key: 'nota', label: 'Nota', icon: FileText },
-  { key: 'llamada', label: 'Llamada', icon: PhoneCall },
-  { key: 'whatsapp', label: 'WhatsApp', icon: WhatsAppIcon },
-  { key: 'email', label: 'Email', icon: Mail },
-  { key: 'visita', label: 'Visita', icon: Building2 },
+// Pestañas del panel de detalle (rediseño CRM, ago-2026) — antes era una sola columna con
+// scroll y dos secciones colapsables ("Seguimiento"/"Información adicional"). Se separó en
+// pestañas explícitas para que un asesor pueda ir directo a lo que necesita ("Búsqueda" para
+// saber qué le interesa al prospecto, "Seguimiento" para registrar avance) sin desplazarse
+// por todo lo demás. "Resumen" es la pestaña por defecto: responde en pocos segundos quién
+// es, qué busca, en qué etapa está y qué sigue — sin poder editarse ahí (los campos
+// editables viven en su pestaña correspondiente, para no duplicar la misma UI en dos
+// lugares).
+const TABS = [
+  { key: 'resumen', label: 'Resumen', icon: <LayoutGrid size={14} /> },
+  { key: 'datos', label: 'Datos', icon: <Settings2 size={14} /> },
+  { key: 'busqueda', label: 'Búsqueda', icon: <Target size={14} /> },
+  { key: 'seguimiento', label: 'Seguimiento', icon: <Activity size={14} /> },
+  { key: 'citas', label: 'Citas', icon: <Calendar size={14} /> },
 ];
 
 // Confirmación contextual junto al campo que acaba de cambiar — reemplaza el toast
@@ -151,6 +178,20 @@ function FieldStatus({ status }) {
     <span className="inline-flex items-center gap-1 text-[11px] text-red-600 dark:text-red-400">
       <AlertTriangle size={11} /> {status.message || 'No se pudo guardar'}
     </span>
+  );
+}
+
+// Subtítulo de un campo con ícono — un vistazo a la pestaña debe bastar para ubicar cada
+// input sin leer todos los textos (pedido explícito del usuario). `htmlFor` decide si se
+// renderiza como <label> (campos con control propio) o <p> (campos sin un único control,
+// ej. "Forma de pago" que son 2 botones).
+function FieldLabel({ icon: Icon, htmlFor, children }) {
+  const Tag = htmlFor ? 'label' : 'p';
+  return (
+    <Tag htmlFor={htmlFor} className={FIELD_LABEL_CLASS}>
+      <Icon size={12} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
+      {children}
+    </Tag>
   );
 }
 
@@ -219,39 +260,6 @@ function StageProgress({ lead, canEdit, onOpen }) {
   );
 }
 
-// Progressive disclosure liviano para "Seguimiento" e "Información adicional" — mismo
-// mecanismo (botón + chevron que rota) que CollapsibleSection.jsx, pero sin la tarjeta con
-// sombra/borde propia: aquí vive dentro del panel de detalle, que ya es una tarjeta.
-function Collapsible({ title, subtitle, icon, defaultOpen, children }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="mb-4">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="w-full flex items-start justify-between gap-2 py-1 text-left"
-      >
-        <span>
-          <span className={SECTION_LABEL_CLASS}>
-            {icon} {title}
-          </span>
-          {subtitle && (
-            <span className="block normal-case font-normal text-[11px] text-gray-400 dark:text-gray-500 tracking-normal mt-0.5">
-              {subtitle}
-            </span>
-          )}
-        </span>
-        <ChevronDown
-          size={15}
-          className={`text-gray-400 flex-shrink-0 mt-0.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-      {open && <div className="mt-2">{children}</div>}
-    </div>
-  );
-}
-
 // Exportado además como default (no solo vía DetailPanelSlot) para que otras pantallas
 // puedan mostrar la misma tarjeta con su propio contenedor/overlay — ver
 // crm/LeadDetailWithActions.jsx (usado por CalendarioSection).
@@ -264,12 +272,12 @@ export default function LeadDetailPanel({
   onOpenStagePicker,
   onChangeStage,
 }) {
-  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const formId = useId();
   const currentUser = useAuthStore((s) => s.user);
   const canAssign = canAssignLeads(currentUser);
 
+  const [activeTab, setActiveTab] = useState('resumen');
   const [nameInput, setNameInput] = useState(selected.name || '');
   const [phoneInput, setPhoneInput] = useState(selected.phone || '');
   const [emailInput, setEmailInput] = useState(selected.email || '');
@@ -277,10 +285,19 @@ export default function LeadDetailPanel({
     selected.budgetAmount != null ? String(selected.budgetAmount) : ''
   );
   const [budgetAmountFocused, setBudgetAmountFocused] = useState(false);
+  const [searchZoneInput, setSearchZoneInput] = useState(selected.searchZone || '');
+  const [minBedroomsInput, setMinBedroomsInput] = useState(
+    selected.minBedrooms != null ? String(selected.minBedrooms) : ''
+  );
+  const [minBathroomsInput, setMinBathroomsInput] = useState(
+    selected.minBathrooms != null ? String(selected.minBathrooms) : ''
+  );
+  const [desiredFeaturesInput, setDesiredFeaturesInput] = useState(
+    selected.desiredFeatures || ''
+  );
   const [addPropertyId, setAddPropertyId] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentPropertyId, setAppointmentPropertyId] = useState('');
-  const [composerType, setComposerType] = useState('nota');
   const [composerText, setComposerText] = useState('');
 
   // Confirmación por campo (ver FieldStatus) — una entrada por clave de campo, se limpia
@@ -323,6 +340,17 @@ export default function LeadDetailPanel({
   });
   const appointments = appointmentsData?.data ?? [];
 
+  // Próxima acción (pestaña Resumen) — reutiliza exactamente la misma tarea abierta y el
+  // mismo componente <NextActionLine> que ya usan Kanban/Lista (ver KanbanBoard.jsx), en vez
+  // de reimplementar el cálculo de vencida/por vencer. GET /leads/:id/tasks trae el
+  // historial completo; la invariante de negocio garantiza a lo más una sin `done`.
+  const { data: leadTasksData } = useQuery({
+    queryKey: ['lead-tasks', selected?.id],
+    queryFn: () => getLeadTasks(selected.id),
+    enabled: !!selected?.id,
+  });
+  const openTask = (leadTasksData?.data ?? []).find((t) => !t.done) || null;
+
   // Línea de tiempo unificada — LeadNote y LeadActivity siguen siendo dos entidades
   // distintas en el backend (ver leadService/activityService); esto solo las combina para
   // que el usuario vea "lo que ha pasado con el prospecto" como una sola lista, sin tener
@@ -351,6 +379,26 @@ export default function LeadDetailPanel({
       (a, b) => new Date(b.date) - new Date(a.date)
     );
   }, [notesData, activitiesData]);
+
+  // Resumen de búsqueda en una sola línea (pestaña Resumen, solo lectura) — se arma a
+  // partir de los mismos campos editables en la pestaña "Búsqueda", para que el asesor no
+  // tenga que cambiar de pestaña solo para saber qué busca el prospecto.
+  const searchSummary = useMemo(() => {
+    const parts = [];
+    if (lead.desiredType) parts.push(TYPE_LABELS[lead.desiredType] || lead.desiredType);
+    const zoneBits = [
+      lead.searchCity ? CITY_LABELS[lead.searchCity] : null,
+      lead.searchZone,
+    ].filter(Boolean);
+    if (zoneBits.length) parts.push(`en ${zoneBits.join(' — ')}`);
+    if (lead.minBedrooms) parts.push(`${lead.minBedrooms}+ recámaras`);
+    if (lead.minBathrooms) parts.push(`${lead.minBathrooms}+ baños`);
+    if (!lead.budgetNotSpecified && lead.budgetAmount != null) {
+      parts.push(`hasta ${formatBudget(lead.budgetAmount, false)}`);
+    }
+    if (lead.urgency) parts.push((LEAD_URGENCY_LABELS[lead.urgency] || '').toLowerCase());
+    return parts.length ? parts.join(' · ') : null;
+  }, [lead]);
 
   // Guarda un campo vía el PUT genérico y refleja el resultado junto al campo (ver
   // FieldStatus) en vez del toast global que usaba todo el panel antes. `updateMutation`
@@ -420,6 +468,50 @@ export default function LeadDetailPanel({
     saveField('budgetAmount', { budgetAmount: amount, budgetNotSpecified: false });
   };
 
+  const commitSearchZone = () => {
+    const trimmed = searchZoneInput.trim();
+    if (trimmed === (lead.searchZone || '')) return;
+    saveField('searchZone', { searchZone: trimmed || null });
+  };
+
+  const commitMinCount = (field, input, setError) => {
+    const trimmed = input.trim();
+    if (trimmed === '') {
+      if ((lead[field] ?? null) === null) return;
+      saveField(field, { [field]: null });
+      return;
+    }
+    const value = Number(trimmed);
+    if (!Number.isInteger(value) || value < 0) {
+      setError();
+      return;
+    }
+    if (value === (lead[field] ?? null)) return;
+    saveField(field, { [field]: value });
+  };
+
+  const commitMinBedrooms = () =>
+    commitMinCount('minBedrooms', minBedroomsInput, () =>
+      setFieldStatus((s) => ({
+        ...s,
+        minBedrooms: { state: 'error', message: 'Valor inválido' },
+      }))
+    );
+
+  const commitMinBathrooms = () =>
+    commitMinCount('minBathrooms', minBathroomsInput, () =>
+      setFieldStatus((s) => ({
+        ...s,
+        minBathrooms: { state: 'error', message: 'Valor inválido' },
+      }))
+    );
+
+  const commitDesiredFeatures = () => {
+    const trimmed = desiredFeaturesInput.trim();
+    if (trimmed === (lead.desiredFeatures || '')) return;
+    saveField('desiredFeatures', { desiredFeatures: trimmed || null });
+  };
+
   const addNoteMutation = useMutation({
     mutationFn: ({ id, content }) => addLeadNote(id, content),
     onSuccess: () => {
@@ -437,23 +529,6 @@ export default function LeadDetailPanel({
   const deleteNoteMutation = useMutation({
     mutationFn: ({ leadId, noteId }) => deleteLeadNote(leadId, noteId),
     onSuccess: () => queryClient.invalidateQueries(['lead-notes', selected.id]),
-  });
-
-  const addActivityMutation = useMutation({
-    mutationFn: ({ id, data }) => createLeadActivity(id, data),
-    onSuccess: () => {
-      setComposerText('');
-      setFieldStatus((s) => ({ ...s, composer: undefined }));
-      queryClient.invalidateQueries(['lead-activities', selected.id]);
-    },
-    onError: (e) =>
-      setFieldStatus((s) => ({
-        ...s,
-        composer: {
-          state: 'error',
-          message: e?.response?.data?.error || 'No se pudo registrar la interacción',
-        },
-      })),
   });
 
   const scheduleMutation = useMutation({
@@ -483,36 +558,20 @@ export default function LeadDetailPanel({
     onSuccess: () => queryClient.invalidateQueries(['lead-detail', selected.id]),
   });
 
-  const whatsappMutation = useMutation({
-    mutationFn: ({ id, message }) => sendLeadWhatsApp(id, message),
-    onSuccess: (data) => {
-      setComposerText('');
-      setFieldStatus((s) => ({ ...s, composer: undefined }));
-      queryClient.invalidateQueries(['lead-notes', selected.id]);
-      if (data?.warning)
-        toast(data.warning, { icon: <AlertTriangle size={16} className="text-amber-500" /> });
-      else toast.success('Mensaje de WhatsApp enviado');
-    },
-    onError: (e) =>
-      setFieldStatus((s) => ({
-        ...s,
-        composer: { state: 'error', message: e?.response?.data?.error || 'No se pudo enviar el WhatsApp' },
-      })),
-  });
+  const composerPending = addNoteMutation.isPending;
 
-  const composerPending =
-    addNoteMutation.isPending || addActivityMutation.isPending || whatsappMutation.isPending;
-
+  // Composer simplificado a solo texto (pedido explícito del usuario) — cada entrada se
+  // guarda siempre como Nota. Antes se podía elegir tipo (llamada/whatsapp/email/visita)
+  // vía una fila de botones; "whatsapp" además disparaba un envío real por
+  // sendLeadWhatsApp, que quedó sin punto de entrada en la UI al quitar esa fila (decisión
+  // confirmada con el usuario). El ícono de WhatsApp del encabezado sigue abriendo
+  // wa.me para escribir manualmente. Los tipos llamada/email/visita/reasignación/sistema
+  // siguen existiendo y mostrándose en la línea de tiempo — solo ya no se pueden crear
+  // manualmente desde aquí.
   const handleComposerSubmit = () => {
     const text = composerText.trim();
     if (!text) return;
-    if (composerType === 'nota') {
-      addNoteMutation.mutate({ id: selected.id, content: text });
-    } else if (composerType === 'whatsapp') {
-      whatsappMutation.mutate({ id: selected.id, message: text });
-    } else {
-      addActivityMutation.mutate({ id: selected.id, data: { type: composerType, content: text } });
-    }
+    addNoteMutation.mutate({ id: selected.id, content: text });
   };
 
   const interestedProperties = lead.interestedProperties || [];
@@ -534,10 +593,9 @@ export default function LeadDetailPanel({
       className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-170px)]"
     >
       <div className="p-6">
-        {/* ── Encabezado: siempre visible, nunca se colapsa. Nombre y teléfono ya son
-            editables (antes solo se podían capturar al crear el prospecto) — inputs sin
-            borde visible hasta que reciben foco, para no romper el look de "título" que
-            tenían como texto plano. "Eliminar" ya NO vive aquí (ver Zona de peligro). */}
+        {/* ── Encabezado: siempre visible, nunca se colapsa ni depende de la pestaña
+            activa. Nombre y teléfono ya son editables, y "Llamar"/"WhatsApp"/"Cerrar" son
+            acciones de alta frecuencia sin importar en qué pestaña esté el asesor. */}
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
@@ -611,489 +669,102 @@ export default function LeadDetailPanel({
           </div>
         </div>
 
-        {/* Etapa como progreso visual + acciones de cierre directas — la decisión más
-            frecuente después de "qué hacer ahora", así que va justo debajo de la
-            identidad, no escondida entre los demás campos. */}
-        <div className="mt-3 mb-4">
-          <StageProgress lead={lead} canEdit={canEdit} onOpen={() => onOpenStagePicker(lead)} />
-          {canEdit && !isTerminal && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              <button
-                onClick={() => onChangeStage(lead, 'venta_realizada')}
-                className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors"
-              >
-                Marcar venta
-              </button>
-              <button
-                onClick={() => onChangeStage(lead, 'no_interesado')}
-                className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
-              >
-                No interesado
-              </button>
-              <button
-                onClick={() => onChangeStage(lead, 'lista_espera')}
-                className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
-              >
-                Lista de espera
-              </button>
-            </div>
-          )}
+        <div className="mt-4">
+          <TabBar tabs={TABS} active={activeTab} onChange={setActiveTab} />
         </div>
 
-        {/* Citas — antes vivía dentro de "Información adicional" (colapsada por defecto),
-            lo que la hacía fácil de pasar por alto y arriesgaba que una cita agendada se
-            perdiera de vista. Ahora es su propia sección, siempre visible, justo debajo de
-            la etapa (la otra decisión de alta frecuencia del panel). */}
-        <div className={`mb-4 ${CARD_CLASS}`}>
-          <p className={SECTION_LABEL_CLASS}>
-            <Calendar size={13} /> Citas
-          </p>
-          <div className="space-y-1.5 mt-2 mb-2 max-h-32 overflow-y-auto pr-1">
-            {appointments.length === 0 && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-                Sin citas registradas.
+        {/* ── Resumen: responde en pocos segundos quién es, qué busca, en qué etapa está
+            y qué sigue. Todo de solo lectura aquí — los campos que muestra se editan en su
+            pestaña correspondiente (Búsqueda/Seguimiento), para no duplicar la misma UI. */}
+        {activeTab === 'resumen' && (
+          <div>
+            <div className="mb-4">
+              <StageProgress lead={lead} canEdit={canEdit} onOpen={() => onOpenStagePicker(lead)} />
+              {canEdit && !isTerminal && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button
+                    onClick={() => onChangeStage(lead, 'venta_realizada')}
+                    className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors"
+                  >
+                    Marcar venta
+                  </button>
+                  <button
+                    onClick={() => onChangeStage(lead, 'no_interesado')}
+                    className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+                  >
+                    No interesado
+                  </button>
+                  <button
+                    onClick={() => onChangeStage(lead, 'lista_espera')}
+                    className="flex-1 min-w-[6rem] py-2.5 rounded-xl text-xs font-semibold border border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+                  >
+                    Lista de espera
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className={`mb-3 ${CARD_CLASS}`}>
+              <p className={SECTION_LABEL_CLASS}>
+                <Pin size={13} /> Próxima acción
               </p>
-            )}
-            {appointments.map((a) => (
-              <div
-                key={a.id}
-                className="bg-white dark:bg-[#242938] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between"
-              >
-                <span className="text-gray-700 dark:text-gray-300">
-                  {formatDateTime(a.scheduledAt)}
-                </span>
-                <Badge variant={APPOINTMENT_STATUS_VARIANTS[a.status]}>
-                  {APPOINTMENT_STATUS_LABELS[a.status]}
-                </Badge>
-              </div>
-            ))}
-          </div>
-          {canEdit && (
-            <div className="flex gap-2">
-              <input
-                type="datetime-local"
-                value={appointmentDate}
-                onChange={(e) => setAppointmentDate(e.target.value)}
-                className={ROW_CONTROL_CLASS}
-              />
-              <button
-                onClick={() =>
-                  appointmentDate &&
-                  scheduleMutation.mutate({
-                    leadId: selected.id,
-                    propertyId: appointmentPropertyId || undefined,
-                    scheduledAt: appointmentDate,
-                  })
-                }
-                disabled={!appointmentDate || scheduleMutation.isPending}
-                className={ROW_BUTTON_CLASS}
-              >
-                Agendar
-              </button>
+              {openTask ? (
+                <NextActionLine task={openTask} />
+              ) : (
+                <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1.5">
+                  Sin tarea pendiente.
+                </p>
+              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Responsable: {users?.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
+              </p>
             </div>
-          )}
-        </div>
 
-        {selected.message && (
-          <div className={`mb-4 ${CARD_CLASS}`}>
-            <p className={SECTION_LABEL_CLASS}>
-              <MessageSquare size={13} /> Mensaje inicial
-            </p>
-            <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed mt-1.5">
-              {selected.message}
+            <div className={`mb-3 ${CARD_CLASS}`}>
+              <p className={SECTION_LABEL_CLASS}>
+                <Target size={13} /> Qué busca
+              </p>
+              {searchSummary ? (
+                <p className="text-sm text-gray-700 dark:text-gray-200 mt-1.5 leading-relaxed">
+                  {searchSummary}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1.5">
+                  Sin información de búsqueda todavía — complétala en la pestaña "Búsqueda".
+                </p>
+              )}
+              {lead.desiredFeatures && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 italic">
+                  "{lead.desiredFeatures}"
+                </p>
+              )}
+            </div>
+
+            {selected.message && (
+              <div className={`mb-3 ${CARD_CLASS}`}>
+                <p className={SECTION_LABEL_CLASS}>
+                  <MessageSquare size={13} /> Mensaje inicial
+                </p>
+                <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed mt-1.5">
+                  {selected.message}
+                </p>
+              </div>
+            )}
+
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">
+              Registrado el {formatDateTime(lead.createdAt)}
             </p>
           </div>
         )}
 
-        {/* 🏠 ¿Qué busca? — motivo, línea de negocio, propiedades de interés, forma de
-            pago y presupuesto agrupados: todo lo que describe la necesidad del
-            prospecto en un solo lugar, tampoco se colapsa (es información esencial). */}
-        <div className={`space-y-3 mb-4 ${CARD_CLASS}`}>
-          <p className={SECTION_LABEL_CLASS}>
-            <Target size={13} /> ¿Qué busca?
-          </p>
-          <div>
-            <label htmlFor={`${formId}-type`} className={FIELD_LABEL_CLASS}>
-              Motivo de contacto
-            </label>
-            <select
-              id={`${formId}-type`}
-              value={lead.type}
-              onChange={(e) => saveField('type', { type: e.target.value })}
-              disabled={!canEdit}
-              className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {!knownType && (
-                <option value={lead.type} disabled>
-                  {LEAD_TYPE_LABELS[lead.type] || lead.type}
-                </option>
-              )}
-              {LEAD_TYPE_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <FieldStatus status={fieldStatus.type} />
-          </div>
-          <div>
-            <label htmlFor={`${formId}-businessLine`} className={FIELD_LABEL_CLASS}>
-              Línea de negocio
-            </label>
-            <select
-              id={`${formId}-businessLine`}
-              value={lead.businessLine || ''}
-              onChange={(e) => saveField('businessLine', { businessLine: e.target.value || null })}
-              disabled={!canEdit}
-              className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <option value="">Sin especificar</option>
-              {Object.entries(BUSINESS_LINE_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-            <FieldStatus status={fieldStatus.businessLine} />
-          </div>
-
-          {/* Forma de pago: 2 opciones nada más, así que son 2 botones visibles en vez de
-              un <select> — se ve de un vistazo cuál está elegida y toma un solo toque. */}
-          <div>
-            <p className={FIELD_LABEL_CLASS}>Forma de pago</p>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => {
-                const Icon = value === 'credito_hipotecario' ? Landmark : Banknote;
-                const active = lead.paymentMethod === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() =>
-                      saveField('paymentMethod', { paymentMethod: active ? null : value })
-                    }
-                    disabled={!canEdit}
-                    className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                      active
-                        ? 'bg-accent-400 border-accent-400 text-primary-900'
-                        : 'bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
-                    }`}
-                  >
-                    <Icon size={16} />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <FieldStatus status={fieldStatus.paymentMethod} />
-          </div>
-
-          {/* Presupuesto: un input + "No especificó" nada más (antes eran 4 controles:
-              checkbox + input + botón + texto de ayuda). Se guarda solo al salir del
-              campo, sin botón aparte. */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label htmlFor={`${formId}-budgetAmount`} className={FIELD_LABEL_CLASS}>
-                Presupuesto
-              </label>
-              <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!lead.budgetNotSpecified}
-                  onChange={(e) => {
-                    setBudgetAmountInput('');
-                    saveField('budgetNotSpecified', {
-                      budgetNotSpecified: e.target.checked,
-                      budgetAmount: e.target.checked ? null : undefined,
-                    });
-                  }}
-                  disabled={!canEdit}
-                  className="w-3.5 h-3.5 rounded accent-accent-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                No especificó
-              </label>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm text-gray-400 dark:text-gray-500">$</span>
-              <input
-                id={`${formId}-budgetAmount`}
-                type="text"
-                inputMode="numeric"
-                value={budgetAmountFocused ? budgetAmountInput : formatBudgetInput(budgetAmountInput)}
-                disabled={!canEdit || lead.budgetNotSpecified}
-                onFocus={() => setBudgetAmountFocused(true)}
-                onChange={(e) => setBudgetAmountInput(e.target.value.replace(/\D/g, ''))}
-                onBlur={() => {
-                  setBudgetAmountFocused(false);
-                  commitBudget();
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                placeholder="1,500,000"
-                className={`${ROW_CONTROL_CLASS} text-sm disabled:opacity-50 disabled:cursor-not-allowed ${budgetAmountInvalid ? 'ring-2 ring-red-400' : ''}`}
-              />
-            </div>
-            {budgetAmountInvalid ? (
-              <p className="text-xs text-red-500 mt-1">Ingresa un monto válido</p>
-            ) : (
-              <FieldStatus status={fieldStatus.budgetAmount || fieldStatus.budgetNotSpecified} />
-            )}
-            {!lead.budgetNotSpecified && lead.budgetAmount != null && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                {formatBudget(lead.budgetAmount, false)}
-              </p>
-            )}
-          </div>
-
-          {/* Propiedad de origen — con la que llegó el prospecto (lead.propertyId), ya
-              vinculada automáticamente desde el formulario público (ver ContactForm). Antes
-              se mostraba como texto fijo; ahora es editable para cuando el interés real
-              cambió de una propiedad a otra después del primer contacto. */}
-          <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-              Propiedad de origen
-            </p>
-            {canEdit ? (
-              <PropertyPicker
-                value={lead.propertyId || ''}
-                initialLabel={lead.property?.title || ''}
-                onChange={(id) =>
-                  saveField('propertyId', { propertyId: id ? Number(id) : null })
-                }
-                placeholder="Sin propiedad vinculada"
-                className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#242938]"
-              />
-            ) : (
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200 py-1">
-                {lead.property?.title || 'Sin propiedad vinculada'}
-              </p>
-            )}
-            <FieldStatus status={fieldStatus.propertyId} />
-          </div>
-
-          {/* Propiedades de interés — misma funcionalidad de siempre (ver/buscar/agregar/
-              quitar), pero subordinada visualmente a "¿Qué busca?" en vez de verse como
-              una herramienta aparte. */}
-          <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-              Otras propiedades de interés
-            </p>
-            <div className="space-y-1.5 mb-2">
-              {interestedProperties.length === 0 && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 italic">Ninguna todavía.</p>
-              )}
-              {interestedProperties.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between gap-2 bg-white dark:bg-[#242938] rounded-lg px-3 py-1.5 text-xs"
-                >
-                  <span className="text-gray-700 dark:text-gray-300 truncate">{p.title}</span>
-                  {canEdit && (
-                    <button
-                      onClick={() =>
-                        removePropertyMutation.mutate({ leadId: selected.id, propertyId: p.id })
-                      }
-                      className="text-gray-400 hover:text-red-500 flex-shrink-0"
-                    >
-                      <X size={13} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {canEdit && (
-              <div className="flex gap-2">
-                <div className="flex-1 min-w-0">
-                  <PropertyPicker
-                    value={addPropertyId}
-                    onChange={setAddPropertyId}
-                    excludeIds={excludePropertyIds}
-                    placeholder="Agregar propiedad..."
-                    className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#242938]"
-                  />
-                </div>
-                <button
-                  onClick={() =>
-                    addPropertyId &&
-                    addPropertyMutation.mutate({
-                      leadId: selected.id,
-                      propertyId: Number(addPropertyId),
-                    })
-                  }
-                  disabled={!addPropertyId}
-                  title="Agregar propiedad"
-                  className={ROW_BUTTON_CLASS}
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 📝 Seguimiento — Notas y Actividad (y el envío real de WhatsApp) fusionados en
-            una sola experiencia: un compositor con "tipo de interacción" + texto, y una
-            línea de tiempo cronológica debajo. El backend sigue guardando LeadNote y
-            LeadActivity como entidades separadas — esto es solo presentación. Responsable
-            vive aquí también (a quién le toca dar seguimiento). Abierta por defecto en
-            desktop (donde ya cabía todo de siempre); colapsada al entrar en celular. */}
-        <Collapsible
-          title="Seguimiento"
-          icon={<Activity size={13} />}
-          defaultOpen={!isMobile}
-        >
-          <div className="mb-3">
-            {canAssign ? (
-              <>
-                <label htmlFor={`${formId}-assignedToUserId`} className={FIELD_LABEL_CLASS}>
-                  Responsable
-                </label>
-                <select
-                  id={`${formId}-assignedToUserId`}
-                  value={lead.assignedToUserId || ''}
-                  onChange={(e) =>
-                    saveField('assignedToUserId', {
-                      assignedToUserId: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                  className={FIELD_CONTROL_CLASS}
-                >
-                  <option value="">Sin asignar</option>
-                  {users
-                    .filter((u) => u.isActive)
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                </select>
-              </>
-            ) : (
-              // Información, no un campo roto: sin permiso para reasignar, se muestra como
-              // texto simple — nada de caja con borde imitando un input deshabilitado.
-              <p className={FIELD_LABEL_CLASS}>Responsable</p>
-            )}
-            {!canAssign && (
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-200 py-1">
-                {users.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
-              </p>
-            )}
-            <FieldStatus status={fieldStatus.assignedToUserId} />
-          </div>
-
-          <div className="mb-3">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-              ¿Qué pasó con este prospecto?
-            </p>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {COMPOSER_TYPES.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setComposerType(key)}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                    composerType === key
-                      ? 'bg-accent-400 border-accent-400 text-primary-900'
-                      : 'bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-[#2e3650] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
-                  }`}
-                >
-                  <Icon size={12} /> {label}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <textarea
-                value={composerText}
-                onChange={(e) => setComposerText(e.target.value)}
-                rows={2}
-                placeholder={
-                  composerType === 'whatsapp'
-                    ? 'Mensaje para enviar por WhatsApp...'
-                    : 'Escribe una nota o registra una interacción...'
-                }
-                className="min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
-              />
-              <button
-                onClick={handleComposerSubmit}
-                disabled={
-                  !composerText.trim() ||
-                  composerPending ||
-                  (composerType === 'whatsapp' && !selected.phone)
-                }
-                title={
-                  composerType === 'whatsapp' && !selected.phone
-                    ? 'Este prospecto no tiene teléfono registrado'
-                    : undefined
-                }
-                className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-medium disabled:opacity-40 transition-colors ${
-                  composerType === 'whatsapp'
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-accent-400 text-primary-900 hover:bg-accent-300'
-                }`}
-              >
-                {composerPending ? '...' : composerType === 'whatsapp' ? 'Enviar' : 'Agregar'}
-              </button>
-            </div>
-            <FieldStatus status={fieldStatus.composer} />
-          </div>
-
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {notesLoading ? (
-              <Spinner size="sm" className="py-2" />
-            ) : timeline.length === 0 ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-                Sin actividad registrada todavía.
-              </p>
-            ) : (
-              timeline.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="group flex items-start gap-2 text-xs bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-2"
-                >
-                  <span
-                    className={`px-1.5 py-0.5 rounded-full flex-shrink-0 ${ACTIVITY_TYPE_COLORS[entry.type] || ACTIVITY_TYPE_COLORS.nota}`}
-                  >
-                    {ACTIVITY_TYPE_LABELS[entry.type] || 'Nota'}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                      {entry.content}
-                    </p>
-                    <p className="text-gray-400 mt-0.5">
-                      {formatDateTime(entry.date)}
-                      {entry.authorLabel ? ` · ${entry.authorLabel}` : ''}
-                    </p>
-                  </div>
-                  {entry.kind === 'note' && (canEdit || entry.userId === currentUser?.id) && (
-                    <button
-                      onClick={() =>
-                        deleteNoteMutation.mutate({ leadId: selected.id, noteId: entry.rawId })
-                      }
-                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity flex-shrink-0"
-                    >
-                      <Trash2 size={11} />
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </Collapsible>
-
-        {/* Información adicional — colapsada siempre por defecto: fuente, email, campaña,
-            fecha de primer contacto y quién lo creó/asignó. Nada se pierde, solo se saca de
-            la vista principal (a diferencia de Citas, que se movió fuera de aquí — ver
-            arriba — precisamente porque sí necesitaba estar siempre visible). */}
-        <Collapsible
-          title="Información adicional"
-          subtitle="Datos que normalmente no necesitas modificar."
-          icon={<Settings2 size={13} />}
-          defaultOpen={false}
-        >
-          <div className={`space-y-3 ${CARD_CLASS}`}>
+        {/* ── Datos: información personal y de contacto que normalmente no cambia
+            seguido — antes vivía colapsada bajo "Información adicional". */}
+        {activeTab === 'datos' && (
+          <div className="space-y-3">
             <div>
-              <label htmlFor={`${formId}-email`} className={FIELD_LABEL_CLASS}>
+              <FieldLabel icon={Mail} htmlFor={`${formId}-email`}>
                 Email
-              </label>
+              </FieldLabel>
               <input
                 id={`${formId}-email`}
                 type="email"
@@ -1108,9 +779,9 @@ export default function LeadDetailPanel({
               <FieldStatus status={fieldStatus.email} />
             </div>
             <div>
-              <label htmlFor={`${formId}-source`} className={FIELD_LABEL_CLASS}>
+              <FieldLabel icon={Radio} htmlFor={`${formId}-source`}>
                 Fuente
-              </label>
+              </FieldLabel>
               <select
                 id={`${formId}-source`}
                 value={selected.source || 'directo'}
@@ -1127,9 +798,9 @@ export default function LeadDetailPanel({
               <FieldStatus status={fieldStatus.source} />
             </div>
             <div>
-              <label htmlFor={`${formId}-firstContactDate`} className={FIELD_LABEL_CLASS}>
+              <FieldLabel icon={CalendarClock} htmlFor={`${formId}-firstContactDate`}>
                 Fecha de primer contacto
-              </label>
+              </FieldLabel>
               <input
                 id={`${formId}-firstContactDate`}
                 type="date"
@@ -1144,20 +815,548 @@ export default function LeadDetailPanel({
               <FieldStatus status={fieldStatus.firstContactDate} />
             </div>
             {(lead.campaign || lead.createdByUser || lead.assignedAt) && (
-              <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5 pt-1 border-t border-gray-200 dark:border-[#2e3650]">
+              <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5 pt-2 border-t border-gray-200 dark:border-[#2e3650]">
                 {lead.campaign && <p>Campaña: {lead.campaign.name}</p>}
                 {lead.createdByUser && <p>Creado por: {lead.createdByUser.name}</p>}
                 {lead.assignedAt && <p>Asignado el: {formatDateTime(lead.assignedAt)}</p>}
               </div>
             )}
           </div>
-        </Collapsible>
+        )}
+
+        {/* ── Búsqueda: todo lo que describe la necesidad del prospecto — motivo,
+            forma de pago/presupuesto (ya existían) más los criterios estructurados nuevos
+            (zona, tipo, recámaras/baños, características, urgencia) y las propiedades
+            relacionadas. */}
+        {activeTab === 'busqueda' && (
+          <div>
+            <p className={SUBSECTION_LABEL_CLASS}>Necesidad</p>
+            <div className="space-y-3">
+              <div>
+                <FieldLabel icon={HelpCircle} htmlFor={`${formId}-type`}>
+                  Motivo de contacto
+                </FieldLabel>
+                <select
+                  id={`${formId}-type`}
+                  value={lead.type}
+                  onChange={(e) => saveField('type', { type: e.target.value })}
+                  disabled={!canEdit}
+                  className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {!knownType && (
+                    <option value={lead.type} disabled>
+                      {LEAD_TYPE_LABELS[lead.type] || lead.type}
+                    </option>
+                  )}
+                  {LEAD_TYPE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <FieldStatus status={fieldStatus.type} />
+              </div>
+              <div>
+                <FieldLabel icon={Briefcase} htmlFor={`${formId}-businessLine`}>
+                  Línea de negocio
+                </FieldLabel>
+                <select
+                  id={`${formId}-businessLine`}
+                  value={lead.businessLine || ''}
+                  onChange={(e) => saveField('businessLine', { businessLine: e.target.value || null })}
+                  disabled={!canEdit}
+                  className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <option value="">Sin especificar</option>
+                  {Object.entries(BUSINESS_LINE_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+                <FieldStatus status={fieldStatus.businessLine} />
+              </div>
+
+              {/* Forma de pago: 2 opciones nada más, así que son 2 botones visibles en vez
+                  de un <select> — se ve de un vistazo cuál está elegida y toma un solo toque. */}
+              <div>
+                <FieldLabel icon={Wallet}>Forma de pago</FieldLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => {
+                    const Icon = value === 'credito_hipotecario' ? Landmark : Banknote;
+                    const active = lead.paymentMethod === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() =>
+                          saveField('paymentMethod', { paymentMethod: active ? null : value })
+                        }
+                        disabled={!canEdit}
+                        className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                          active
+                            ? 'bg-accent-400 border-accent-400 text-primary-900'
+                            : 'bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
+                        }`}
+                      >
+                        <Icon size={16} />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <FieldStatus status={fieldStatus.paymentMethod} />
+              </div>
+
+              {/* Presupuesto: un input + "No especificó" nada más. Se guarda solo al salir
+                  del campo, sin botón aparte. */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <FieldLabel icon={CircleDollarSign} htmlFor={`${formId}-budgetAmount`}>
+                    Presupuesto
+                  </FieldLabel>
+                  <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!lead.budgetNotSpecified}
+                      onChange={(e) => {
+                        setBudgetAmountInput('');
+                        saveField('budgetNotSpecified', {
+                          budgetNotSpecified: e.target.checked,
+                          budgetAmount: e.target.checked ? null : undefined,
+                        });
+                      }}
+                      disabled={!canEdit}
+                      className="w-3.5 h-3.5 rounded accent-accent-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    No especificó
+                  </label>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-gray-400 dark:text-gray-500">$</span>
+                  <input
+                    id={`${formId}-budgetAmount`}
+                    type="text"
+                    inputMode="numeric"
+                    value={budgetAmountFocused ? budgetAmountInput : formatBudgetInput(budgetAmountInput)}
+                    disabled={!canEdit || lead.budgetNotSpecified}
+                    onFocus={() => setBudgetAmountFocused(true)}
+                    onChange={(e) => setBudgetAmountInput(e.target.value.replace(/\D/g, ''))}
+                    onBlur={() => {
+                      setBudgetAmountFocused(false);
+                      commitBudget();
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    placeholder="1,500,000"
+                    className={`${ROW_CONTROL_CLASS} text-sm disabled:opacity-50 disabled:cursor-not-allowed ${budgetAmountInvalid ? 'ring-2 ring-red-400' : ''}`}
+                  />
+                </div>
+                {budgetAmountInvalid ? (
+                  <p className="text-xs text-red-500 mt-1">Ingresa un monto válido</p>
+                ) : (
+                  <FieldStatus status={fieldStatus.budgetAmount || fieldStatus.budgetNotSpecified} />
+                )}
+                {!lead.budgetNotSpecified && lead.budgetAmount != null && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    {formatBudget(lead.budgetAmount, false)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <p className={SUBSECTION_LABEL_CLASS}>Criterios de búsqueda</p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <FieldLabel icon={MapPin} htmlFor={`${formId}-searchCity`}>
+                    Ciudad
+                  </FieldLabel>
+                  <select
+                    id={`${formId}-searchCity`}
+                    value={lead.searchCity || ''}
+                    onChange={(e) => saveField('searchCity', { searchCity: e.target.value || null })}
+                    disabled={!canEdit}
+                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    <option value="">Sin especificar</option>
+                    {LEAD_SEARCH_CITY_OPTIONS.map(({ value, label }) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldStatus status={fieldStatus.searchCity} />
+                </div>
+                <div>
+                  <FieldLabel icon={Home} htmlFor={`${formId}-desiredType`}>
+                    Tipo de propiedad
+                  </FieldLabel>
+                  <select
+                    id={`${formId}-desiredType`}
+                    value={lead.desiredType || ''}
+                    onChange={(e) => saveField('desiredType', { desiredType: e.target.value || null })}
+                    disabled={!canEdit}
+                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    <option value="">Sin especificar</option>
+                    {LEAD_SEARCH_TYPE_OPTIONS.map(({ value, label }) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldStatus status={fieldStatus.desiredType} />
+                </div>
+              </div>
+              <div>
+                <FieldLabel icon={Navigation} htmlFor={`${formId}-searchZone`}>
+                  Colonia/zona específica
+                </FieldLabel>
+                <input
+                  id={`${formId}-searchZone`}
+                  type="text"
+                  value={searchZoneInput}
+                  onChange={(e) => setSearchZoneInput(e.target.value)}
+                  onBlur={commitSearchZone}
+                  onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                  disabled={!canEdit}
+                  placeholder="Ej. Campestre, Las Águilas..."
+                  className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                />
+                <FieldStatus status={fieldStatus.searchZone} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <FieldLabel icon={BedDouble} htmlFor={`${formId}-minBedrooms`}>
+                    Recámaras mín.
+                  </FieldLabel>
+                  <input
+                    id={`${formId}-minBedrooms`}
+                    type="number"
+                    min="0"
+                    value={minBedroomsInput}
+                    onChange={(e) => setMinBedroomsInput(e.target.value)}
+                    onBlur={commitMinBedrooms}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    disabled={!canEdit}
+                    placeholder="—"
+                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  />
+                  <FieldStatus status={fieldStatus.minBedrooms} />
+                </div>
+                <div>
+                  <FieldLabel icon={Bath} htmlFor={`${formId}-minBathrooms`}>
+                    Baños mín.
+                  </FieldLabel>
+                  <input
+                    id={`${formId}-minBathrooms`}
+                    type="number"
+                    min="0"
+                    value={minBathroomsInput}
+                    onChange={(e) => setMinBathroomsInput(e.target.value)}
+                    onBlur={commitMinBathrooms}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    disabled={!canEdit}
+                    placeholder="—"
+                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  />
+                  <FieldStatus status={fieldStatus.minBathrooms} />
+                </div>
+              </div>
+              <div>
+                <FieldLabel icon={ListChecks} htmlFor={`${formId}-desiredFeatures`}>
+                  Características deseadas
+                </FieldLabel>
+                <textarea
+                  id={`${formId}-desiredFeatures`}
+                  value={desiredFeaturesInput}
+                  onChange={(e) => setDesiredFeaturesInput(e.target.value)}
+                  onBlur={commitDesiredFeatures}
+                  disabled={!canEdit}
+                  rows={2}
+                  placeholder="Ej. con cochera, una planta, cerca de escuelas..."
+                  className={`${FIELD_CONTROL_CLASS} resize-none disabled:opacity-50 disabled:cursor-not-allowed`}
+                />
+                <FieldStatus status={fieldStatus.desiredFeatures} />
+              </div>
+              <div>
+                <FieldLabel icon={Zap} htmlFor={`${formId}-urgency`}>
+                  Urgencia
+                </FieldLabel>
+                <select
+                  id={`${formId}-urgency`}
+                  value={lead.urgency || ''}
+                  onChange={(e) => saveField('urgency', { urgency: e.target.value || null })}
+                  disabled={!canEdit}
+                  className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <option value="">Sin especificar</option>
+                  {Object.entries(LEAD_URGENCY_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+                <FieldStatus status={fieldStatus.urgency} />
+              </div>
+            </div>
+
+            <p className={SUBSECTION_LABEL_CLASS}>Propiedades</p>
+            <div className="space-y-3">
+              {/* Propiedad de origen — con la que llegó el prospecto (lead.propertyId), ya
+                  vinculada automáticamente desde el formulario público (ver ContactForm). */}
+              <div>
+                <FieldLabel icon={Building2}>Propiedad de origen</FieldLabel>
+                {canEdit ? (
+                  <PropertyPicker
+                    value={lead.propertyId || ''}
+                    initialLabel={lead.property?.title || ''}
+                    onChange={(id) =>
+                      saveField('propertyId', { propertyId: id ? Number(id) : null })
+                    }
+                    placeholder="Sin propiedad vinculada"
+                    className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#242938]"
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 py-1">
+                    {lead.property?.title || 'Sin propiedad vinculada'}
+                  </p>
+                )}
+                <FieldStatus status={fieldStatus.propertyId} />
+              </div>
+
+              {/* Propiedades de interés — ver/buscar/agregar/quitar. */}
+              <div>
+                <FieldLabel icon={Layers}>Otras propiedades de interés</FieldLabel>
+                <div className="space-y-1.5 mb-2">
+                  {interestedProperties.length === 0 && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 italic">Ninguna todavía.</p>
+                  )}
+                  {interestedProperties.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between gap-2 bg-white dark:bg-[#242938] rounded-lg px-3 py-1.5 text-xs"
+                    >
+                      <span className="text-gray-700 dark:text-gray-300 truncate">{p.title}</span>
+                      {canEdit && (
+                        <button
+                          onClick={() =>
+                            removePropertyMutation.mutate({ leadId: selected.id, propertyId: p.id })
+                          }
+                          className="text-gray-400 hover:text-red-500 flex-shrink-0"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {canEdit && (
+                  <div className="flex gap-2">
+                    <div className="flex-1 min-w-0">
+                      <PropertyPicker
+                        value={addPropertyId}
+                        onChange={setAddPropertyId}
+                        excludeIds={excludePropertyIds}
+                        placeholder="Agregar propiedad..."
+                        className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#242938]"
+                      />
+                    </div>
+                    <button
+                      onClick={() =>
+                        addPropertyId &&
+                        addPropertyMutation.mutate({
+                          leadId: selected.id,
+                          propertyId: Number(addPropertyId),
+                        })
+                      }
+                      disabled={!addPropertyId}
+                      title="Agregar propiedad"
+                      className={ROW_BUTTON_CLASS}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Seguimiento — Notas y Actividad (y el envío real de WhatsApp) fusionados en
+            una sola experiencia: un compositor con "tipo de interacción" + texto, y una
+            línea de tiempo cronológica debajo. El backend sigue guardando LeadNote y
+            LeadActivity como entidades separadas — esto es solo presentación. Se
+            deliberadamente NO se separó en "Seguimiento" + "Notas" (aunque el pedido
+            original lo sugería como ejemplo): partirlo en dos pestañas fragmentaría de
+            vuelta la línea de tiempo unificada que ya se construyó a propósito. Responsable
+            vive aquí también (a quién le toca dar seguimiento). */}
+        {activeTab === 'seguimiento' && (
+          <div>
+            <div className="mb-3">
+              {canAssign ? (
+                <>
+                  <FieldLabel icon={UserCheck} htmlFor={`${formId}-assignedToUserId`}>
+                    Responsable
+                  </FieldLabel>
+                  <select
+                    id={`${formId}-assignedToUserId`}
+                    value={lead.assignedToUserId || ''}
+                    onChange={(e) =>
+                      saveField('assignedToUserId', {
+                        assignedToUserId: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                    className={FIELD_CONTROL_CLASS}
+                  >
+                    <option value="">Sin asignar</option>
+                    {users
+                      .filter((u) => u.isActive)
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))}
+                  </select>
+                </>
+              ) : (
+                // Información, no un campo roto: sin permiso para reasignar, se muestra como
+                // texto simple — nada de caja con borde imitando un input deshabilitado.
+                <FieldLabel icon={UserCheck}>Responsable</FieldLabel>
+              )}
+              {!canAssign && (
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-200 py-1">
+                  {users.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
+                </p>
+              )}
+              <FieldStatus status={fieldStatus.assignedToUserId} />
+            </div>
+
+            <div className="mb-3">
+              <FieldLabel icon={MessageCircle}>¿Qué pasó con este prospecto?</FieldLabel>
+              <div className="flex gap-2">
+                <textarea
+                  value={composerText}
+                  onChange={(e) => setComposerText(e.target.value)}
+                  rows={2}
+                  placeholder="Escribe una nota o registra una interacción..."
+                  className="min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
+                />
+                <button
+                  onClick={handleComposerSubmit}
+                  disabled={!composerText.trim() || composerPending}
+                  className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-medium disabled:opacity-40 transition-colors bg-accent-400 text-primary-900 hover:bg-accent-300"
+                >
+                  {composerPending ? '...' : 'Agregar'}
+                </button>
+              </div>
+              <FieldStatus status={fieldStatus.composer} />
+            </div>
+
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+              {notesLoading ? (
+                <Spinner size="sm" className="py-2" />
+              ) : timeline.length === 0 ? (
+                <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+                  Sin actividad registrada todavía.
+                </p>
+              ) : (
+                timeline.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="group flex items-start gap-2 text-xs bg-gray-50 dark:bg-[#1a1f2e] rounded-lg px-3 py-2"
+                  >
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full flex-shrink-0 ${ACTIVITY_TYPE_COLORS[entry.type] || ACTIVITY_TYPE_COLORS.nota}`}
+                    >
+                      {ACTIVITY_TYPE_LABELS[entry.type] || 'Nota'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {entry.content}
+                      </p>
+                      <p className="text-gray-400 mt-0.5">
+                        {formatDateTime(entry.date)}
+                        {entry.authorLabel ? ` · ${entry.authorLabel}` : ''}
+                      </p>
+                    </div>
+                    {entry.kind === 'note' && (canEdit || entry.userId === currentUser?.id) && (
+                      <button
+                        onClick={() =>
+                          deleteNoteMutation.mutate({ leadId: selected.id, noteId: entry.rawId })
+                        }
+                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity flex-shrink-0"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Citas: mismo contenido de siempre, ahora en su propia pestaña en vez de
+            tarjeta siempre visible. */}
+        {activeTab === 'citas' && (
+          <div className={CARD_CLASS}>
+            <p className={SECTION_LABEL_CLASS}>
+              <Calendar size={13} /> Citas
+            </p>
+            <div className="space-y-1.5 mt-2 mb-2 max-h-64 overflow-y-auto pr-1">
+              {appointments.length === 0 && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 italic">
+                  Sin citas registradas.
+                </p>
+              )}
+              {appointments.map((a) => (
+                <div
+                  key={a.id}
+                  className="bg-white dark:bg-[#242938] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between"
+                >
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {formatDateTime(a.scheduledAt)}
+                  </span>
+                  <Badge variant={APPOINTMENT_STATUS_VARIANTS[a.status]}>
+                    {APPOINTMENT_STATUS_LABELS[a.status]}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            {canEdit && (
+              <div className="flex gap-2">
+                <input
+                  type="datetime-local"
+                  value={appointmentDate}
+                  onChange={(e) => setAppointmentDate(e.target.value)}
+                  className={ROW_CONTROL_CLASS}
+                />
+                <button
+                  onClick={() =>
+                    appointmentDate &&
+                    scheduleMutation.mutate({
+                      leadId: selected.id,
+                      propertyId: appointmentPropertyId || undefined,
+                      scheduledAt: appointmentDate,
+                    })
+                  }
+                  disabled={!appointmentDate || scheduleMutation.isPending}
+                  className={ROW_BUTTON_CLASS}
+                >
+                  Agendar
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Zona de peligro — separada del resto por espacio, borde y color; nunca en la
-            misma fila que Llamar/WhatsApp/Cerrar/Marcar venta. Mismo gate y mismo diálogo
-            de confirmación de siempre (ver ProspectosSection). */}
+            misma fila que Llamar/WhatsApp/Cerrar/Marcar venta, ni dentro de ninguna
+            pestaña (para que no dependa de dónde esté el asesor viendo). Mismo gate y mismo
+            diálogo de confirmación de siempre (ver ProspectosSection). */}
         {canDeleteLeads(currentUser) && (
-          <div className="mt-2 pt-4 border-t border-red-100 dark:border-red-900/30">
+          <div className="mt-4 pt-4 border-t border-red-100 dark:border-red-900/30">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wide mb-2">
               <ShieldAlert size={13} /> Zona de peligro
             </p>

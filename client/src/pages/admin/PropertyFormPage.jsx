@@ -64,19 +64,25 @@ const BUSINESS_LINE_TABS = [
 ];
 
 // Cada campo se agrupa por sección para que el formulario se lea como bloques
-// con propósito claro (Datos básicos, Ubicación, Detalles, Remate) en vez de una
-// grilla plana de 12 campos sin relación visual entre ellos.
+// con propósito claro (Datos básicos, Ubicación, Dirección, Detalles, Remate) en vez de una
+// grilla plana de campos sin relación visual entre ellos.
 // `visibilityField` liga cada apartado a su casilla "Mostrar al público" (ver
 // showBasicInfo/etc. en el modelo Property) — se renderiza junto al título de la sección.
+// Una sección sin `visibilityField` (ver 'ubicacion') no tiene casilla: sus campos son
+// estructurales y siempre se muestran en el sitio público (ver PropertyDetailPage.jsx), así
+// que no tiene caso ofrecer un control que no hace nada — se avisa con un indicador estático
+// en vez de un checkbox (pedido explícito del usuario: separar lo siempre-público de lo que
+// sí se puede ocultar).
 // legal/valuacion no tienen efecto visible todavía (esos campos nunca se muestran en el
 // sitio público hoy), pero se dejan listas por si algún día se decide mostrar algo de ahí.
-// showLocationInfo ya no controla la sección "ubicacion" completa: ciudad/estado/tipo/
-// categoría/fraccionamiento-colonia son estructurales y siempre se muestran en el sitio
-// público sin importar esta casilla; solo sigue ocultando dirección exacta/número/C.P. (ver
-// PropertyDetailPage.jsx).
 const SECTIONS = [
   { key: 'basicos', title: 'Datos básicos', visibilityField: 'showBasicInfo' },
-  { key: 'ubicacion', title: 'Ubicación y tipo', visibilityField: 'showLocationInfo' },
+  { key: 'ubicacion', title: 'Ubicación y tipo', visibilityField: null },
+  {
+    key: 'direccion',
+    title: 'Dirección exacta (opcional)',
+    visibilityField: 'showLocationInfo',
+  },
   { key: 'detalles', title: 'Detalles (opcional)', visibilityField: 'showDetailsInfo' },
   { key: 'remate', title: 'Remate y estatus', visibilityField: 'showAuctionInfo' },
   {
@@ -125,27 +131,27 @@ const FIELDS = [
     section: 'ubicacion',
     options: labelsToOptions(CATEGORY_LABELS),
   },
-  { key: 'address', label: 'Dirección (opcional)', type: 'text', col: 2, section: 'ubicacion' },
+  {
+    key: 'colonia',
+    label: 'Fraccionamiento/Colonia (opcional)',
+    type: 'text',
+    col: 2,
+    section: 'ubicacion',
+  },
+  { key: 'address', label: 'Dirección (opcional)', type: 'text', col: 2, section: 'direccion' },
   {
     key: 'propertyNumber',
     label: 'Número de propiedad (opcional)',
     type: 'text',
     col: 1,
-    section: 'ubicacion',
-  },
-  {
-    key: 'colonia',
-    label: 'Fraccionamiento/Colonia (opcional)',
-    type: 'text',
-    col: 1,
-    section: 'ubicacion',
+    section: 'direccion',
   },
   {
     key: 'postalCode',
     label: 'Código postal (opcional)',
     type: 'text',
     col: 1,
-    section: 'ubicacion',
+    section: 'direccion',
   },
   {
     key: 'terrainMeters',
@@ -694,23 +700,35 @@ export default function PropertyFormPage() {
           >
             <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h2>
-              {/* Controla si este apartado se muestra en la página pública de la
-                  propiedad (ver showBasicInfo/etc. en el modelo) — no borra los datos
-                  capturados, solo decide si se publican. */}
-              <label
-                className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none flex-shrink-0"
-                title="Si se desmarca, este apartado deja de mostrarse en la página pública de la propiedad"
-              >
-                <input
-                  type="checkbox"
-                  checked={form[visibilityField]}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, [visibilityField]: e.target.checked }))
-                  }
-                  className="w-4 h-4 rounded accent-accent-400"
-                />
-                Mostrar al público
-              </label>
+              {visibilityField ? (
+                // Controla si este apartado se muestra en la página pública de la
+                // propiedad (ver showBasicInfo/etc. en el modelo) — no borra los datos
+                // capturados, solo decide si se publican.
+                <label
+                  className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none flex-shrink-0"
+                  title="Si se desmarca, este apartado deja de mostrarse en la página pública de la propiedad"
+                >
+                  <input
+                    type="checkbox"
+                    checked={form[visibilityField]}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, [visibilityField]: e.target.checked }))
+                    }
+                    className="w-4 h-4 rounded accent-accent-400"
+                  />
+                  Mostrar al público
+                </label>
+              ) : (
+                // Sin casilla a propósito: estos campos son estructurales (ciudad/tipo/
+                // categoría/colonia) y siempre se muestran en el sitio público, sin
+                // importar ningún apartado — un checkbox aquí no tendría ningún efecto.
+                <span
+                  className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 flex-shrink-0"
+                  title="Estos campos son estructurales y siempre se muestran en el sitio público"
+                >
+                  <Eye size={14} /> Siempre visible al público
+                </span>
+              )}
             </div>
             {sectionKey === 'basicos' && (
               <div className="mb-4" role="group" aria-label="Línea de negocio">

@@ -163,6 +163,45 @@ const Lead = sequelize.define(
       comment:
         'Fecha en que el prospecto contactó por primera vez (puede ser anterior a createdAt)',
     },
+    // Rediseño CRM: "¿qué está buscando?" estructurado — antes solo vivía como texto libre
+    // en `message`. Mismos ENUMs que Property.city/Property.type (y PropertyAlert.city/
+    // .type), sin 'otra'. Todo opcional: se llena en la captura pública (searchCity/
+    // desiredType) o durante el seguimiento en el CRM.
+    searchCity: {
+      type: DataTypes.ENUM('juarez', 'chihuahua', 'queretaro'),
+      allowNull: true,
+      comment: 'Ciudad de interés para su búsqueda. null = sin especificar.',
+    },
+    searchZone: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+      comment: 'Colonia/zona específica de interés, texto libre.',
+    },
+    desiredType: {
+      type: DataTypes.ENUM('casa', 'departamento', 'terreno', 'local', 'bodega'),
+      allowNull: true,
+      comment: 'Tipo de propiedad que busca.',
+    },
+    minBedrooms: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'Recámaras mínimas deseadas.',
+    },
+    minBathrooms: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'Baños mínimos deseados.',
+    },
+    desiredFeatures: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Características deseadas en texto libre, ej. "con cochera, una planta".',
+    },
+    urgency: {
+      type: DataTypes.ENUM('inmediata', '1_3_meses', '3_6_meses', 'mas_6_meses'),
+      allowNull: true,
+      comment: 'Urgencia/tiempo estimado para realizar la operación. null = sin preguntar.',
+    },
   },
   {
     tableName: 'leads',

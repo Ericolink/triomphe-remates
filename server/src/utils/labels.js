@@ -62,6 +62,15 @@ const BUSINESS_LINE_LABEL = {
   inversion: 'Inversiones',
 };
 
+// Urgencia/tiempo estimado de un Lead (rediseño CRM) — debe coincidir con
+// LEAD_URGENCY_LABELS en client/src/utils/constants.js. Usado por el export de Excel de leads.
+const LEAD_URGENCY_LABEL = {
+  inmediata: 'Inmediata',
+  '1_3_meses': '1 a 3 meses',
+  '3_6_meses': '3 a 6 meses',
+  mas_6_meses: 'Más de 6 meses',
+};
+
 module.exports = {
   CITY_LABEL,
   PROPERTY_TYPE_LABEL,
@@ -69,4 +78,5 @@ module.exports = {
   LEAD_TYPE_LABEL,
   LEGAL_PROCESS_TYPE_LABEL,
   BUSINESS_LINE_LABEL,
+  LEAD_URGENCY_LABEL,
 };

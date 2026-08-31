@@ -286,6 +286,19 @@ export const PROPERTY_LEAD_TYPE_LABELS = {
   otro: 'Otro',
 };
 
+// Rediseño CRM — "¿qué está buscando?" estructurado. Reutilizan los mismos catálogos que
+// CITY_LABELS/TYPE_LABELS (Property/PropertyAlert) en vez de definir uno propio; 'otra' se
+// excluye porque el ENUM de Lead.searchCity no lo admite (mismo criterio que PropertyAlert.city).
+export const LEAD_SEARCH_CITY_OPTIONS = labelsToOptions(CITY_LABELS, ['otra']);
+export const LEAD_SEARCH_TYPE_OPTIONS = labelsToOptions(TYPE_LABELS);
+
+export const LEAD_URGENCY_LABELS = {
+  inmediata: 'Inmediata',
+  '1_3_meses': '1 a 3 meses',
+  '3_6_meses': '3 a 6 meses',
+  mas_6_meses: 'Más de 6 meses',
+};
+
 export const SOURCE_LABELS = {
   google: 'Google',
   facebook: 'Facebook',

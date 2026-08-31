@@ -236,7 +236,10 @@ const Property = sequelize.define(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
-      comment: 'Mostrar dirección/colonia (Ubicación y tipo) en la página pública',
+      comment:
+        'Mostrar dirección exacta/número/código postal en la página pública. Ciudad/estado/' +
+        'tipo/categoría/colonia son estructurales y siempre se muestran, sin importar esto ' +
+        '(ver PropertyDetailPage.jsx y el apartado "Dirección exacta" en PropertyFormPage.jsx)',
     },
     showDetailsInfo: {
       type: DataTypes.BOOLEAN,

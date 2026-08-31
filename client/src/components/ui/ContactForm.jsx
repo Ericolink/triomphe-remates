@@ -9,6 +9,8 @@ import {
   PROPERTY_LEAD_TYPE_LABELS,
   PAYMENT_METHOD_LABELS,
   BUDGET_RANGE_OPTIONS,
+  LEAD_SEARCH_CITY_OPTIONS,
+  LEAD_SEARCH_TYPE_OPTIONS,
   labelsToOptions,
 } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
@@ -40,6 +42,8 @@ const emptyForm = {
   appointmentTime: '',
   paymentMethod: '',
   budgetAmount: '',
+  desiredType: '',
+  searchCity: '',
 };
 
 export default function ContactForm({ propertyId, propertyTitle, defaultSource }) {
@@ -85,6 +89,10 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
       source,
       budgetAmount: Number(form.budgetAmount),
       budgetNotSpecified: false,
+      // Opcionales — se omiten del body en vez de mandarse como '' (el backend valida
+      // contra el ENUM y rechazaría un string vacío como valor inválido).
+      desiredType: form.desiredType || undefined,
+      searchCity: form.searchCity || undefined,
     });
   };
 
@@ -134,6 +142,34 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
           </option>
         ))}
       </select>
+      {/* Opcionales — ayudan al asesor a saber qué mostrarte sin alargar el formulario con
+          preguntas obligatorias (recámaras/baños/urgencia se afinan en la llamada). */}
+      <div className="grid grid-cols-2 gap-3">
+        <select
+          value={form.desiredType}
+          onChange={(e) => setForm((f) => ({ ...f, desiredType: e.target.value }))}
+          className={inputClass}
+        >
+          <option value="">Tipo de propiedad</option>
+          {LEAD_SEARCH_TYPE_OPTIONS.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={form.searchCity}
+          onChange={(e) => setForm((f) => ({ ...f, searchCity: e.target.value }))}
+          className={inputClass}
+        >
+          <option value="">Ciudad de interés</option>
+          {LEAD_SEARCH_CITY_OPTIONS.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
       <div>
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5">
           ¿Cómo planeas pagar? *

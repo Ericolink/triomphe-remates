@@ -87,4 +87,62 @@ describe('POST /api/leads', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/motivo/i);
   });
+
+  test('rechaza una ciudad de búsqueda fuera de la lista permitida', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .send({ phone: '6561234568', searchCity: 'monterrey' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/ciudad/i);
+  });
+
+  test('rechaza un tipo de propiedad buscado fuera de la lista permitida', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .send({ phone: '6561234569', desiredType: 'yate' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/tipo de propiedad/i);
+  });
+
+  test('rechaza una urgencia fuera de la lista permitida', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .send({ phone: '6561234570', urgency: 'ya_merito' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/urgencia/i);
+  });
+
+  test('rechaza recámaras mínimas negativas', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .send({ phone: '6561234571', minBedrooms: -1 });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('crea el lead con criterios de búsqueda válidos', async () => {
+    const res = await request(app).post('/api/leads').send({
+      phone: '6561234572',
+      searchCity: 'juarez',
+      searchZone: 'Campestre',
+      desiredType: 'casa',
+      minBedrooms: 3,
+      minBathrooms: 2,
+      desiredFeatures: 'con cochera',
+      urgency: 'inmediata',
+    });
+    expect(res.status).toBe(201);
+
+    const stored = await Lead.findOne({ where: { phone: '6561234572' } });
+    expect(stored.searchCity).toBe('juarez');
+    expect(stored.searchZone).toBe('Campestre');
+    expect(stored.desiredType).toBe('casa');
+    expect(stored.minBedrooms).toBe(3);
+    expect(stored.minBathrooms).toBe(2);
+    expect(stored.desiredFeatures).toBe('con cochera');
+    expect(stored.urgency).toBe('inmediata');
+  });
 });

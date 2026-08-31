@@ -1,7 +1,19 @@
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import {
+  X,
+  User,
+  Phone,
+  Radio,
+  Briefcase,
+  CalendarClock,
+  Wallet,
+  CircleDollarSign,
+  Megaphone,
+  Building2,
+  UserCheck,
+} from 'lucide-react';
 import { buttonHover, buttonTap } from '../../utils/animations';
 import { getCampaigns } from '../../services/campaignService';
 import { getUsers } from '../../services/usersService';
@@ -26,6 +38,21 @@ const emptyForm = {
   propertyId: '',
   assignedToUserId: '',
 };
+
+const FIELD_LABEL_CLASS =
+  'flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 mb-1';
+
+// Subtítulo de un campo con ícono — mismo criterio que FieldLabel en LeadDetailPanel.jsx
+// (pedido explícito: identificar cada input de un vistazo), duplicado localmente en vez de
+// importado porque son dos componentes sin relación de composición entre sí.
+function FieldLabel({ icon: Icon, htmlFor, className = FIELD_LABEL_CLASS, children }) {
+  return (
+    <label htmlFor={htmlFor} className={className}>
+      <Icon size={12} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
+      {children}
+    </label>
+  );
+}
 
 // Flujo "Registrar un nuevo prospecto" (CRM_UX_DESIGN.md §2.a): modal corto, sin
 // navegar de página, con los campos mínimos — ningún campo es obligatorio (un prospecto
@@ -127,12 +154,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
 
             <div className="space-y-3 mb-5">
               <div>
-                <label
-                  htmlFor={`${formId}-name`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
+                <FieldLabel icon={User} htmlFor={`${formId}-name`}>
                   Nombre (opcional)
-                </label>
+                </FieldLabel>
                 <input
                   id={`${formId}-name`}
                   type="text"
@@ -144,12 +168,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label
-                    htmlFor={`${formId}-phone`}
-                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                  >
+                  <FieldLabel icon={Phone} htmlFor={`${formId}-phone`}>
                     Teléfono
-                  </label>
+                  </FieldLabel>
                   <input
                     id={`${formId}-phone`}
                     type="text"
@@ -160,12 +181,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor={`${formId}-source`}
-                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                  >
+                  <FieldLabel icon={Radio} htmlFor={`${formId}-source`}>
                     Origen
-                  </label>
+                  </FieldLabel>
                   <select
                     id={`${formId}-source`}
                     value={form.source}
@@ -181,12 +199,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 </div>
               </div>
               <div>
-                <label
-                  htmlFor={`${formId}-businessLine`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
+                <FieldLabel icon={Briefcase} htmlFor={`${formId}-businessLine`}>
                   Línea de negocio (opcional)
-                </label>
+                </FieldLabel>
                 <select
                   id={`${formId}-businessLine`}
                   value={form.businessLine}
@@ -202,12 +217,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 </select>
               </div>
               <div>
-                <label
-                  htmlFor={`${formId}-firstContactDate`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
+                <FieldLabel icon={CalendarClock} htmlFor={`${formId}-firstContactDate`}>
                   Fecha de primer contacto (opcional)
-                </label>
+                </FieldLabel>
                 <input
                   id={`${formId}-firstContactDate`}
                   type="date"
@@ -218,12 +230,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 />
               </div>
               <div>
-                <label
-                  htmlFor={`${formId}-paymentMethod`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
+                <FieldLabel icon={Wallet} htmlFor={`${formId}-paymentMethod`}>
                   Forma de pago (opcional)
-                </label>
+                </FieldLabel>
                 <select
                   id={`${formId}-paymentMethod`}
                   value={form.paymentMethod}
@@ -243,12 +252,13 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
               {form.paymentMethod && (
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label
+                    <FieldLabel
+                      icon={CircleDollarSign}
                       htmlFor={`${formId}-budgetAmount`}
-                      className="block text-xs font-medium text-gray-500 dark:text-gray-400"
+                      className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400"
                     >
                       Monto disponible
-                    </label>
+                    </FieldLabel>
                     <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
                       <input
                         type="checkbox"
@@ -283,12 +293,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
               )}
               {campaigns.length > 0 && (
                 <div>
-                  <label
-                    htmlFor={`${formId}-campaignId`}
-                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                  >
+                  <FieldLabel icon={Megaphone} htmlFor={`${formId}-campaignId`}>
                     Campaña (opcional)
-                  </label>
+                  </FieldLabel>
                   <select
                     id={`${formId}-campaignId`}
                     value={form.campaignId}
@@ -305,12 +312,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
                 </div>
               )}
               <div>
-                <label
-                  htmlFor={`${formId}-propertyId`}
-                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                >
+                <FieldLabel icon={Building2} htmlFor={`${formId}-propertyId`}>
                   Propiedad de interés (opcional)
-                </label>
+                </FieldLabel>
                 <PropertyPicker
                   id={`${formId}-propertyId`}
                   value={form.propertyId}
@@ -319,12 +323,9 @@ export default function CreateLeadModal({ open, onClose, onSubmit, isPending }) 
               </div>
               {canAssign && (
                 <div>
-                  <label
-                    htmlFor={`${formId}-assignedToUserId`}
-                    className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-                  >
+                  <FieldLabel icon={UserCheck} htmlFor={`${formId}-assignedToUserId`}>
                     Responsable (opcional)
-                  </label>
+                  </FieldLabel>
                   <select
                     id={`${formId}-assignedToUserId`}
                     value={form.assignedToUserId}

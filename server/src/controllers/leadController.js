@@ -43,6 +43,10 @@ const VALID_CLOSE_REASONS = [
   'otro',
 ];
 const VALID_PAYMENT_METHODS = ['credito_hipotecario', 'contado'];
+// Rediseño CRM — "¿qué está buscando?" estructurado. searchCity/desiredType reutilizan los
+// mismos valores que Property.city/Property.type (vía VALID_ALERT_CITIES/VALID_ALERT_TYPES,
+// ya importados arriba para sendLeadToWaitingList) en vez de duplicar los arrays.
+const VALID_URGENCY = ['inmediata', '1_3_meses', '3_6_meses', 'mas_6_meses'];
 // Se elige manualmente al crear/editar el prospecto — a diferencia de Property, un lead no
 // siempre tiene una propiedad asociada de la que derivarlo (ver Lead.js businessLine). Mismos
 // 5 valores que Property.businessLine.
@@ -110,8 +114,9 @@ function validateAppointmentDate(appointmentDate) {
   return { date };
 }
 
-// Normaliza forma de pago / monto disponible / fecha de primer contacto — usado tanto
-// por createLead como updateLead para no duplicar las reglas de validación.
+// Normaliza forma de pago / monto disponible / fecha de primer contacto / criterios de
+// búsqueda (zona, tipo, recámaras/baños, características, urgencia) — usado tanto por
+// createLead como updateLead para no duplicar las reglas de validación.
 // Devuelve { error } o { values } con solo las llaves presentes en el body.
 function parseCommercialFields(body) {
   const values = {};
@@ -167,6 +172,48 @@ function parseCommercialFields(body) {
       }
       values.firstContactDate = body.firstContactDate;
     }
+  }
+
+  if (body.searchCity !== undefined) {
+    if (body.searchCity !== null && !VALID_ALERT_CITIES.includes(body.searchCity)) {
+      return { error: `Ciudad de búsqueda inválida. Valores permitidos: ${VALID_ALERT_CITIES.join(', ')}` };
+    }
+    values.searchCity = body.searchCity || null;
+  }
+
+  if (body.searchZone !== undefined) {
+    values.searchZone = body.searchZone ? body.searchZone.trim().slice(0, 150) : null;
+  }
+
+  if (body.desiredType !== undefined) {
+    if (body.desiredType !== null && !VALID_ALERT_TYPES.includes(body.desiredType)) {
+      return { error: `Tipo de propiedad inválido. Valores permitidos: ${VALID_ALERT_TYPES.join(', ')}` };
+    }
+    values.desiredType = body.desiredType || null;
+  }
+
+  for (const key of ['minBedrooms', 'minBathrooms']) {
+    if (body[key] === undefined) continue;
+    if (body[key] === null || body[key] === '') {
+      values[key] = null;
+      continue;
+    }
+    const parsed = Number(body[key]);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      return { error: `${key === 'minBedrooms' ? 'Recámaras' : 'Baños'} mínimos inválido` };
+    }
+    values[key] = parsed;
+  }
+
+  if (body.desiredFeatures !== undefined) {
+    values.desiredFeatures = body.desiredFeatures ? body.desiredFeatures.trim() : null;
+  }
+
+  if (body.urgency !== undefined) {
+    if (body.urgency !== null && !VALID_URGENCY.includes(body.urgency)) {
+      return { error: `Urgencia inválida. Valores permitidos: ${VALID_URGENCY.join(', ')}` };
+    }
+    values.urgency = body.urgency || null;
   }
 
   return { values };
