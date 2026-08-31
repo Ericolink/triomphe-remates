@@ -129,7 +129,12 @@ export default function Footer() {
       </div>
       <div className="border-t border-primary-800 py-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
-          <p>© {currentYear} Triomphe Bienes Raíces. Todos los derechos reservados.</p>
+          <p className="flex flex-wrap items-center justify-center gap-x-2">
+            <span>© {currentYear} Triomphe Bienes Raíces. Todos los derechos reservados.</span>
+            <Link to="/aviso-de-privacidad" className="hover:text-accent-400 transition-colors">
+              Aviso de Privacidad
+            </Link>
+          </p>
           <p>
             Desarrollado por{' '}
             <a

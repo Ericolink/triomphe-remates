@@ -23,6 +23,7 @@ const FavoritesPage = lazy(() => import('./pages/public/FavoritesPage'));
 const ComparatorPage = lazy(() => import('./pages/public/ComparatorPage'));
 const UnsubscribeAlertPage = lazy(() => import('./pages/public/UnsubscribeAlertPage'));
 const FAQPage = lazy(() => import('./pages/public/FAQPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/public/PrivacyPolicyPage'));
 
 // Panel admin — en un chunk separado para que nunca llegue a visitantes anónimos
 const LoginPage = lazy(() => import('./pages/admin/LoginPage'));
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/comparar" element={<ComparatorPage />} />
             <Route path="/cancelar-alerta" element={<UnsubscribeAlertPage />} />
             <Route path="/preguntas-frecuentes" element={<FAQPage />} />
+            <Route path="/aviso-de-privacidad" element={<PrivacyPolicyPage />} />
           </Route>
 
           <Route path="/admin/login" element={<LoginPage />} />
