@@ -292,6 +292,20 @@ export const PROPERTY_LEAD_TYPE_LABELS = {
 export const LEAD_SEARCH_CITY_OPTIONS = labelsToOptions(CITY_LABELS, ['otra']);
 export const LEAD_SEARCH_TYPE_OPTIONS = labelsToOptions(TYPE_LABELS);
 
+// Fase 3b del rediseño del CRM (formulario público) — motivos de contacto para los que
+// tiene sentido preguntar forma de pago/presupuesto. "Quiero vender mi propiedad", "solo
+// información" y "otro" no implican que el prospecto vaya a comprar/rentar nada, así que
+// forzar esas dos preguntas ahí es fricción sin ningún beneficio para el asesor. Única
+// fuente de verdad de esta regla — cualquier formulario que la necesite debe importar esto,
+// no reimplementar la lista.
+export const LEAD_TYPES_NEEDING_BUDGET = [
+  'comprar_propiedad',
+  'rentar_propiedad',
+  'invertir_remates',
+  'cita',
+  'asesoria_financiera',
+];
+
 export const LEAD_URGENCY_LABELS = {
   inmediata: 'Inmediata',
   '1_3_meses': '1 a 3 meses',

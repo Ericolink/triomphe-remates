@@ -8,7 +8,7 @@ const VALID_PLATFORMS = ['facebook', 'google', 'instagram', 'tiktok', 'otro'];
 
 // POST /api/campaigns
 const createCampaign = async (req, res) => {
-  const { platform, name, startDate, endDate, budget } = req.body;
+  const { platform, name, startDate, endDate, budget, utmCampaign } = req.body;
 
   if (!platform || !name || !startDate) {
     throw new ApiError(400, 'Plataforma, nombre y fecha de inicio son requeridos');
@@ -23,6 +23,9 @@ const createCampaign = async (req, res) => {
     startDate,
     endDate: endDate || null,
     budget: budget ?? null,
+    // Fase 3a: opcional — sin esto, los leads de esta campaña solo se vinculan si alguien
+    // los elige a mano en CreateLeadModal (ver leadController.createLead).
+    utmCampaign: utmCampaign || null,
   });
 
   logAudit(req, 'create', 'campaign', campaign.id);
@@ -88,7 +91,7 @@ const updateCampaign = async (req, res) => {
   const campaign = await Campaign.findByPk(req.params.id);
   if (!campaign) throw new ApiError(404, 'Campaña no encontrada');
 
-  const { platform, name, startDate, endDate, budget } = req.body;
+  const { platform, name, startDate, endDate, budget, utmCampaign } = req.body;
   if (platform !== undefined && !VALID_PLATFORMS.includes(platform)) {
     throw new ApiError(400, `Plataforma inválida. Valores permitidos: ${VALID_PLATFORMS.join(', ')}`);
   }
@@ -99,6 +102,7 @@ const updateCampaign = async (req, res) => {
   if (startDate !== undefined) updates.startDate = startDate;
   if (endDate !== undefined) updates.endDate = endDate;
   if (budget !== undefined) updates.budget = budget;
+  if (utmCampaign !== undefined) updates.utmCampaign = utmCampaign || null;
   await campaign.update(updates);
 
   logAudit(req, 'update', 'campaign', campaign.id);

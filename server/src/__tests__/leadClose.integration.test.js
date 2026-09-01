@@ -433,6 +433,55 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       expect(detail.fromStage).toBe('venta_realizada');
       expect(detail.toStage).toBe('contactado');
       expect(detail.dealDeleted).toBe(true);
+      // CRM-003: la auditoría debe conservar los datos financieros del Deal eliminado
+      // (monto/propiedad/fecha de cierre), no solo el booleano de que "se borró algo".
+      expect(detail.deletedDeal).toMatchObject({
+        propertyId: property.id,
+        propertyTitle: property.title,
+      });
+      expect(Number(detail.deletedDeal.amount)).toBe(500000);
+    });
+
+    test('la actividad de reapertura describe el monto y la propiedad de la venta eliminada', async () => {
+      const property = await createProperty({ title: 'Casa de prueba CRM-003' });
+      const lead = await createLead();
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 750000,
+      });
+
+      await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
+
+      const activity = await Activity.findOne({
+        where: { leadId: lead.id },
+        order: [['id', 'DESC']],
+      });
+      expect(activity.content).toContain('Casa de prueba CRM-003');
+      expect(activity.content).toMatch(/750,000|750000/);
+    });
+
+    test('reabrir una venta y volver a cerrarla no choca con el índice único de deals.leadId', async () => {
+      const property = await createProperty();
+      const lead = await createLead();
+      await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 500000,
+      });
+      await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
+      expect(await Deal.count({ where: { leadId: lead.id } })).toBe(0);
+
+      // CRM-003: el Deal original se borró (no es paranoid/soft-delete — ver comentario en
+      // reopenLead sobre el índice único de leadId) — volver a cerrar como venta debe
+      // poder crear un Deal nuevo sin violar esa restricción.
+      const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
+        propertyId: property.id,
+        amount: 600000,
+      });
+
+      expect(res.status).toBe(200);
+      const deals = await Deal.findAll({ where: { leadId: lead.id } });
+      expect(deals).toHaveLength(1);
+      expect(Number(deals[0].amount)).toBe(600000);
     });
 
     test('rollback de transacción: si falla un paso posterior, el Deal destruido y la etapa se restauran', async () => {

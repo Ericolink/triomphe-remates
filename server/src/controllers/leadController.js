@@ -77,22 +77,48 @@ const VALID_LEAD_TYPE = [
 const APPOINTMENT_MIN_HOUR = 9;
 const APPOINTMENT_MAX_HOUR = 18;
 const APPOINTMENT_MIN_LEAD_MS = 24 * 60 * 60 * 1000;
+// CAL-001: zona horaria de referencia para las reglas de "horario comercial" de citas —
+// Chihuahua (sede principal, ver OFFICES en client/src/utils/constants.js) no observa
+// horario de verano desde la reforma de 2022, así que su offset es fijo (UTC-6) todo el
+// año. Ciudad Juárez, en cambio, sí sigue el horario de verano de EE. UU. por ser
+// frontera — un `Intl.DateTimeFormat` con IANA timezone (no un offset fijo) es lo que
+// permite manejar esa clase de reglas correctamente si en el futuro se necesita
+// diferenciar por ciudad; por ahora, sin ese contexto de ciudad disponible en este punto,
+// se usa una sola zona de referencia para todo el negocio.
+const APPOINTMENT_BUSINESS_TIMEZONE = 'America/Chihuahua';
+
+// Devuelve la hora (0-23) y el día de la semana de `date` EN la zona horaria indicada,
+// usando el tz database de ICU (bundled con Node) — nunca aritmética manual de offsets,
+// que se rompería en cualquier ciudad/fecha con horario de verano.
+function getZonedHourAndWeekday(date, timeZone) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone, hour12: false, hour: '2-digit', weekday: 'short' })
+      .formatToParts(date)
+      .map((p) => [p.type, p.value])
+  );
+  // Algunas versiones de ICU devuelven "24" para la medianoche con hour12:false.
+  const hour = parts.hour === '24' ? 0 : Number(parts.hour);
+  return { hour, weekday: parts.weekday };
+}
 
 // No existe todavía un sistema de disponibilidad (el Appointment/Calendario es admin-only,
 // sin endpoint público de horarios ocupados) — esto valida solo las reglas de negocio
-// (24h de anticipación, horario/día hábil), no choques de horario entre citas. La hora se
-// lee directamente del string en vez de con Date#getHours() para no depender de la
-// zona horaria del proceso del servidor (que puede no coincidir con la de México).
+// (24h de anticipación, horario/día hábil), no choques de horario entre citas.
+//
+// CAL-001: `appointmentDate` llega como un ISO string YA convertido a UTC explícito (con
+// sufijo Z) por el cliente (ver ContactForm.jsx) — antes llegaba como un string "naive"
+// (sin zona horaria) y la hora se leía con una regex directamente del texto para evitar
+// depender de la zona horaria del proceso del servidor. Ahora que el string SÍ es UTC
+// real, leer la hora así devolvería la hora UTC, no la de México. `getZonedHourAndWeekday`
+// convierte correctamente el instante UTC a la zona horaria de negocio usando el tz
+// database de ICU, sea cual sea la zona horaria del proceso donde corra Node.
 function validateAppointmentDate(appointmentDate) {
   if (!appointmentDate) return { error: 'Fecha y hora de la cita son requeridas' };
 
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(appointmentDate);
-  if (!match) return { error: 'Fecha y hora de la cita inválidas' };
-
-  const [, year, month, day, hourStr] = match;
-  const hour = Number(hourStr);
   const date = new Date(appointmentDate);
   if (Number.isNaN(date.getTime())) return { error: 'Fecha y hora de la cita inválidas' };
+
+  const { hour, weekday } = getZonedHourAndWeekday(date, APPOINTMENT_BUSINESS_TIMEZONE);
 
   if (hour < APPOINTMENT_MIN_HOUR || hour >= APPOINTMENT_MAX_HOUR) {
     return {
@@ -100,10 +126,7 @@ function validateAppointmentDate(appointmentDate) {
     };
   }
 
-  // Día de la semana calculado a partir de year/month/day como fecha local "naive"
-  // (mismo criterio que la hora, sin pasar por el huso horario del proceso).
-  const weekday = new Date(Number(year), Number(month) - 1, Number(day)).getDay();
-  if (weekday === 0 || weekday === 6) {
+  if (weekday === 'Sat' || weekday === 'Sun') {
     return { error: 'No se pueden agendar citas en fin de semana' };
   }
 
@@ -219,6 +242,7 @@ function parseCommercialFields(body) {
   return { values };
 }
 const { validateEmail, validatePhone, normalizePhone } = require('../utils/validators');
+const { formatPrice } = require('../utils/formatters');
 const { sendNewLeadNotification, sendLeadConfirmation } = require('../services/emailService');
 const {
   sendLeadFollowUpWhatsApp,
@@ -255,20 +279,45 @@ const REOPEN_STAGES = VALID_PIPELINE_STAGES.filter((s) => !TERMINAL_STAGES.inclu
 // comparación es por valor normalizado (normalizePhone), no por string exacto — el teléfono
 // se guarda tal cual lo capturó quien lo creó (con o sin +52, con o sin separadores, ver
 // CreateLeadModal.jsx que no fuerza formato), así que "656-123-4567" y "6561234567" deben
-// detectarse como el mismo número aunque el texto guardado sea distinto. Trae solo
-// id/name/phone de toda la tabla en vez de un WHERE — no hay forma barata de normalizar en
-// SQL las variantes de formato que puede tener `phone` hoy.
+// detectarse como el mismo número aunque el texto guardado sea distinto.
+//
+// DB-001: antes esto traía toda la tabla (`Lead.findAll` sin WHERE) y comparaba en
+// JavaScript porque no había forma barata de normalizar en SQL las variantes de formato de
+// `phone` — full-table-scan en la ruta más transitada del CRM, y una condición de carrera
+// real (dos creaciones casi simultáneas del mismo teléfono podían pasar esta comprobación
+// antes de que cualquiera hubiera insertado). Ahora `phoneNormalized` (columna mantenida
+// por un hook del modelo, ver models/Lead.js) tiene un índice único: este lookup ya es
+// directo/indexado, y el índice único de la base de datos es el respaldo real contra la
+// condición de carrera — ver el catch de ER_DUP_ENTRY en createLead/updateLead, que
+// traduce una violación de esa restricción al mismo error de negocio que este chequeo.
 async function findDuplicatePhoneLead(phone, excludeId) {
   const target = normalizePhone(phone);
   if (!target) return null;
 
-  const candidates = await Lead.findAll({
+  return Lead.findOne({
     attributes: ['id', 'name', 'phone'],
-    where: { phone: { [Op.ne]: null } },
+    where: {
+      phoneNormalized: target,
+      ...(excludeId ? { id: { [Op.ne]: excludeId } } : {}),
+    },
   });
-  return (
-    candidates.find((l) => l.id !== excludeId && normalizePhone(l.phone) === target) || null
-  );
+}
+
+// DB-001: `findDuplicatePhoneLead` de arriba es un check-then-insert — dos creaciones/
+// ediciones casi simultáneas del mismo teléfono todavía podrían pasarlo ambas antes de que
+// cualquiera commitee. El respaldo real contra esa carrera es el índice único de
+// `phoneNormalized` en la base de datos (migración 20260901000000): si de todos modos
+// ambas llegan a intentar el INSERT/UPDATE, MySQL rechaza a la segunda con ER_DUP_ENTRY.
+// Esto traduce esa violación al mismo error de negocio (409) que ya usa el chequeo previo,
+// en vez de dejar que se propague como un 500 crudo de Sequelize.
+function isDuplicatePhoneConstraintError(error) {
+  if (error?.name !== 'SequelizeUniqueConstraintError') return false;
+  // Sequelize indexa `error.fields` por el NOMBRE DEL ÍNDICE de MySQL cuando lo puede leer
+  // del mensaje de error del driver (no siempre por el nombre de columna) — verificado
+  // directamente contra un ER_DUP_ENTRY real: `fields` viene como
+  // `{ idx_leads_phone_normalized_unique: '...' }`, no `{ phoneNormalized: '...' }`.
+  const fieldKeys = Object.keys(error.fields || {});
+  return fieldKeys.includes('phoneNormalized') || fieldKeys.includes('idx_leads_phone_normalized_unique');
 }
 
 // POST /api/leads
@@ -284,6 +333,11 @@ const createLead = async (req, res) => {
     source,
     campaignId,
     assignedToUserId,
+    // Fase 3a del rediseño del CRM — atribución de marketing, capturada automáticamente
+    // por el frontend desde la URL (ver ContactForm.jsx), nunca preguntada al prospecto.
+    utmMedium,
+    utmCampaign,
+    utmContent,
   } = req.body;
 
   // Nombre ya no es obligatorio: un prospecto capturado de prisa (llamada, feria) a
@@ -355,9 +409,18 @@ const createLead = async (req, res) => {
       ? commercialFields.businessLine
       : inferBusinessLineFromProperty(property);
 
-  if (campaignId) {
-    const campaign = await Campaign.findByPk(campaignId);
+  // Fase 3a: sin campaña explícita (nunca la manda el formulario público, solo
+  // CreateLeadModal a mano), intenta auto-vincular por utm_campaign — a diferencia del
+  // bloque de abajo (campaignId explícito inválido = 404), un utm_campaign que no matchea
+  // ninguna Campaign real NO es un error: simplemente el lead queda sin campaña, igual que
+  // hoy si nadie la elige.
+  let resolvedCampaignId = campaignId || null;
+  if (resolvedCampaignId) {
+    const campaign = await Campaign.findByPk(resolvedCampaignId);
     if (!campaign) throw new ApiError(404, 'Campaña no encontrada');
+  } else if (utmCampaign) {
+    const matchedCampaign = await Campaign.findOne({ where: { utmCampaign } });
+    if (matchedCampaign) resolvedCampaignId = matchedCampaign.id;
   }
 
   if (assignedToUserId) {
@@ -365,7 +428,9 @@ const createLead = async (req, res) => {
     if (!assignedUser) throw new ApiError(404, 'Usuario asignado no encontrado');
   }
 
-  const lead = await sequelize.transaction(async (transaction) => {
+  let lead;
+  try {
+    lead = await sequelize.transaction(async (transaction) => {
     const created = await Lead.create(
       {
         name: resolvedName,
@@ -376,10 +441,17 @@ const createLead = async (req, res) => {
         source: source || 'directo',
         propertyId: propertyId || null,
         appointmentDate: appointmentDate || null,
-        campaignId: campaignId || null,
+        campaignId: resolvedCampaignId,
         assignedToUserId: assignedToUserId || null,
         assignedAt: assignedToUserId ? new Date() : null,
         createdByUserId: req.user?.id ?? null,
+        utmMedium: utmMedium || null,
+        utmCampaign: utmCampaign || null,
+        utmContent: utmContent || null,
+        // Referer refleja la página exacta desde la que el navegador envió este POST
+        // (mismo header que ya usa Analytics para el evento "contact") — nunca lo escribe
+        // un humano.
+        landingPageUrl: req.headers['referer'] || null,
         ...commercialFields,
         businessLine: resolvedBusinessLine,
       },
@@ -422,7 +494,13 @@ const createLead = async (req, res) => {
     }
 
     return created;
-  });
+    });
+  } catch (error) {
+    if (isDuplicatePhoneConstraintError(error)) {
+      throw new ApiError(409, 'Ya existe un prospecto con este teléfono');
+    }
+    throw error;
+  }
 
   Promise.all([
     sendNewLeadNotification(lead, property).catch((e) =>
@@ -448,6 +526,10 @@ const createLead = async (req, res) => {
     type: lead.type,
     status: lead.status,
     createdAt: lead.createdAt,
+    // SEC-003/BUG-001: streamLeads necesita este campo para poder aplicar canViewLead por
+    // conexión antes de reenviar el evento — sin él no hay forma de saber si el prospecto
+    // es visible para un `asesor_ventas` conectado al stream.
+    assignedToUserId: lead.assignedToUserId,
     property: property ? { id: property.id, title: property.title } : null,
   });
 
@@ -706,6 +788,7 @@ const updateLead = async (req, res) => {
   const previousPropertyId = lead.propertyId;
 
   const updates = {};
+  try {
   await sequelize.transaction(async (transaction) => {
     if (status !== undefined) updates.status = status;
     if (notes !== undefined) updates.notes = notes;
@@ -777,6 +860,12 @@ const updateLead = async (req, res) => {
       });
     }
   });
+  } catch (error) {
+    if (isDuplicatePhoneConstraintError(error)) {
+      throw new ApiError(409, 'Ya existe un prospecto con este teléfono');
+    }
+    throw error;
+  }
 
   logAudit(req, 'update', 'lead', lead.id, updates);
 
@@ -1029,7 +1118,33 @@ const reopenLead = async (req, res) => {
 
     // La venta registrada deja de ser válida si el prospecto se reabre — igual que al
     // corregir un cierre equivocado en closeLeadAsLost.
+    //
+    // CRM-003: `deals.leadId` tiene un índice ÚNICO (ver models/Deal.js) — un lead solo
+    // puede tener un Deal a la vez, así que no hay forma de simplemente "desactivar" este
+    // sin borrarlo si el prospecto necesita poder volver a cerrarse como venta más
+    // adelante (el flujo que este mismo endpoint ya soporta). Convertir Deal a `paranoid`
+    // (soft-delete) chocaría con ese índice único de MySQL (que no distingue filas
+    // borradas-lógicamente) al intentar crear un Deal nuevo para el mismo lead. En vez de
+    // cambiar el esquema, se guarda una copia completa de los datos financieros (monto,
+    // propiedad, fecha de cierre) en el audit log y en la propia actividad del prospecto
+    // ANTES de borrar — así la información nunca desaparece, aunque el registro Deal en sí
+    // sí se elimine.
+    let deletedDealSnapshot = null;
     if (wasWon) {
+      const dealToDelete = await Deal.findOne({ where: { leadId: lead.id }, transaction });
+      if (dealToDelete) {
+        const dealProperty = await Property.findByPk(dealToDelete.propertyId, {
+          attributes: ['title'],
+          transaction,
+        });
+        deletedDealSnapshot = {
+          id: dealToDelete.id,
+          amount: dealToDelete.amount,
+          propertyId: dealToDelete.propertyId,
+          propertyTitle: dealProperty?.title || null,
+          closedAt: dealToDelete.closedAt,
+        };
+      }
       await Deal.destroy({ where: { leadId: lead.id }, transaction });
     }
 
@@ -1046,9 +1161,13 @@ const reopenLead = async (req, res) => {
     await logActivity({
       leadId: lead.id,
       type: 'sistema',
-      content: wasWon
-        ? `Prospecto reabierto (antes: ${previousStage} — se eliminó la venta registrada)`
-        : `Prospecto reabierto (antes: ${previousStage})`,
+      content: deletedDealSnapshot
+        ? `Prospecto reabierto (antes: ${previousStage} — se eliminó la venta registrada: ` +
+          `${formatPrice(deletedDealSnapshot.amount)} en "${deletedDealSnapshot.propertyTitle || 'propiedad eliminada'}", ` +
+          `cerrada el ${new Date(deletedDealSnapshot.closedAt).toLocaleDateString('es-MX')})`
+        : wasWon
+          ? `Prospecto reabierto (antes: ${previousStage} — se eliminó la venta registrada)`
+          : `Prospecto reabierto (antes: ${previousStage})`,
       userId: req.user?.id ?? null,
       transaction,
     });
@@ -1072,6 +1191,10 @@ const reopenLead = async (req, res) => {
       fromStage: previousStage,
       toStage: resolvedTarget,
       dealDeleted: wasWon,
+      // CRM-003: snapshot completo del Deal borrado (monto/propiedad/fecha de cierre) —
+      // antes solo quedaba el booleano `dealDeleted`, sin forma de reconstruir qué venta
+      // se eliminó si hacía falta investigarlo después.
+      deletedDeal: deletedDealSnapshot,
     });
 
     return res.json({ message: 'Prospecto reabierto exitosamente', data: lead });
@@ -1155,7 +1278,15 @@ const streamLeads = (req, res) => {
 
   res.write(': conectado\n\n');
 
+  // SEC-003/BUG-001: `leadEvents` es un EventEmitter global — sin este filtro, cada
+  // conexión SSE recibía el evento `new-lead` de TODO prospecto nuevo del sistema, sin
+  // importar a quién esté asignado, aunque cada endpoint REST del módulo (getLeads,
+  // getLeadById, appointments, tasks, deals, export) sí aplica canViewLead/
+  // getLeadVisibilityWhere. `req.user` es el usuario de ESTA conexión (capturado por
+  // authenticateSSE antes de llegar aquí), así que el mismo evento puede reenviarse a
+  // unos clientes conectados y filtrarse para otros.
   const onNewLead = (lead) => {
+    if (!canViewLead(req.user, lead)) return;
     res.write(`event: new-lead\ndata: ${JSON.stringify(lead)}\n\n`);
   };
   leadEvents.on('new-lead', onNewLead);

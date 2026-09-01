@@ -1,7 +1,7 @@
 // Factories compartidas para tests de integración — evitan repetir el boilerplate de
 // crear User/Property/Lead con valores válidos en cada archivo de test.
 const { generateToken, hashPassword } = require('../../utils/helpers');
-const { User, Property, Lead, Deal } = require('../../models/index');
+const { User, Property, Lead, Deal, Campaign } = require('../../models/index');
 
 let counter = 0;
 const nextId = () => ++counter;
@@ -68,4 +68,14 @@ async function createDeal(overrides = {}) {
   });
 }
 
-module.exports = { createUser, authToken, createProperty, createLead, createDeal };
+async function createCampaign(overrides = {}) {
+  const n = nextId();
+  return Campaign.create({
+    platform: overrides.platform ?? 'facebook',
+    name: overrides.name ?? `Campaña de prueba ${n}`,
+    startDate: overrides.startDate ?? new Date(),
+    ...overrides,
+  });
+}
+
+module.exports = { createUser, authToken, createProperty, createLead, createDeal, createCampaign };

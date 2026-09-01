@@ -43,7 +43,13 @@ export default function LeadDetailWithActions({ selected, setSelected, users }) 
               transition={{ type: 'spring', stiffness: 320, damping: 32 }}
               className="w-full max-w-md h-full overflow-y-auto bg-white dark:bg-[#242938] shadow-2xl border-l border-gray-200 dark:border-[#2e3650]"
             >
+              {/* CRM-001: key atado a selected.id — misma razón que en DetailPanelSlot
+                  (LeadDetailPanel.jsx): sin esto, dos "Ver prospecto" resolviendo fuera de
+                  orden (getLeadById es async) pueden cambiar `selected` de un lead a otro
+                  sin que el overlay se desmonte, dejando los inputs con el texto del
+                  prospecto anterior. */}
               <LeadDetailPanel
+                key={selected.id}
                 selected={selected}
                 onDeselect={onDeselect}
                 updateMutation={actions.updateMutation}

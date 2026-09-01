@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+const { Op, Transaction } = require('sequelize');
 const { sequelize, Lead, Property, Appointment, User } = require('../models/index');
 const { logActivity, ensureOpenTask } = require('../utils/pipelineHelpers');
 const { logAudit } = require('../utils/audit');
@@ -7,6 +7,60 @@ const { getLeadVisibilityWhere, canViewLead, canEditLead } = require('../utils/l
 const { ApiError } = require('../middleware/errorHandler');
 
 const VALID_APPOINTMENT_STATUS = ['programada', 'confirmada', 'completada', 'no_show', 'cancelada'];
+
+// CAL-002: no existía ninguna verificación de traslape de horario para el mismo asesor —
+// dos citas para el mismo `Lead.assignedToUserId` en horarios encimados podían crearse
+// sin ningún aviso. El modelo Appointment no tiene un campo de duración, así que se asume
+// una duración fija de 1 hora por cita (mismo criterio que el ejemplo de la auditoría:
+// "10:00–11:00"), suficiente para detectar el caso real de doble reserva sin necesitar una
+// migración nueva.
+const APPOINTMENT_DURATION_MS = 60 * 60 * 1000;
+
+// Busca una cita NO cancelada del mismo asesor dentro de +/- 1 hora del horario propuesto.
+// Debe llamarse dentro de una transacción con aislamiento SERIALIZABLE (ver
+// createAppointment/rescheduleAppointment): bajo InnoDB, SERIALIZABLE convierte incluso un
+// SELECT plano en un gap lock sobre el rango leído, así que dos requests concurrentes para
+// el mismo horario/asesor no pueden "no verse" entre sí — uno de los dos se bloquea hasta
+// que el otro termine (commit o rollback), en vez de que ambos pasen la verificación antes
+// de que cualquiera haya insertado nada.
+async function findOverlappingAppointment({ assignedToUserId, scheduledAt, excludeAppointmentId, transaction }) {
+  if (!assignedToUserId) return null; // sin responsable asignado, no hay agenda con quién chocar
+  const start = new Date(scheduledAt);
+  const windowStart = new Date(start.getTime() - APPOINTMENT_DURATION_MS + 1);
+  const windowEnd = new Date(start.getTime() + APPOINTMENT_DURATION_MS - 1);
+
+  return Appointment.findOne({
+    where: {
+      scheduledAt: { [Op.between]: [windowStart, windowEnd] },
+      status: { [Op.ne]: 'cancelada' },
+      ...(excludeAppointmentId ? { id: { [Op.ne]: excludeAppointmentId } } : {}),
+      '$lead.assignedToUserId$': assignedToUserId,
+    },
+    include: [{ model: Lead, as: 'lead', attributes: [] }],
+    transaction,
+  });
+}
+
+// Dos transacciones SERIALIZABLE concurrentes tomando gap locks sobre el mismo rango
+// pueden desembocar en un deadlock genuino de InnoDB (ER_LOCK_DEADLOCK) en vez de que una
+// de ellas simplemente "vea" la fila de la otra — MySQL aborta una de las dos para
+// resolverlo. Sin este wrapper, esa transacción abortada se propagaría como un 500 crudo
+// de Sequelize; aquí se traduce al mismo 409 de conflicto que ya usa el chequeo de
+// traslape, ya que semánticamente significa lo mismo: "alguien más agendó ahí primero".
+async function runAppointmentTransaction(fn) {
+  try {
+    return await sequelize.transaction({ isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE }, fn);
+  } catch (error) {
+    const code = error.original?.code || error.parent?.code;
+    if (code === 'ER_LOCK_DEADLOCK') {
+      throw new ApiError(
+        409,
+        'Otra persona agendó una cita para ese horario justo antes que tú — verifica la agenda e intenta de nuevo'
+      );
+    }
+    throw error;
+  }
+}
 
 // GET /api/appointments — alimenta el Calendario (reemplaza el filtro sobre
 // Lead.appointmentDate que usaba CalendarPage.jsx). AUDIT: antes tenía un `limit=500`
@@ -128,7 +182,19 @@ const createAppointment = async (req, res) => {
     if (!property) throw new ApiError(404, 'Propiedad no encontrada');
   }
 
-  const appointment = await sequelize.transaction(async (transaction) => {
+  const appointment = await runAppointmentTransaction(async (transaction) => {
+    const conflict = await findOverlappingAppointment({
+      assignedToUserId: lead.assignedToUserId,
+      scheduledAt,
+      transaction,
+    });
+    if (conflict) {
+      throw new ApiError(
+        409,
+        `El asesor ya tiene otra cita agendada cerca de ese horario (${new Date(conflict.scheduledAt).toLocaleString('es-MX')})`
+      );
+    }
+
     const created = await Appointment.create(
       {
         leadId,
@@ -220,8 +286,24 @@ const rescheduleAppointment = async (req, res) => {
   const { scheduledAt } = req.body;
   if (!scheduledAt) throw new ApiError(400, 'scheduledAt requerido');
 
-  const newAppointment = await sequelize.transaction(async (transaction) => {
+  const newAppointment = await runAppointmentTransaction(async (transaction) => {
     await oldAppointment.update({ status: 'cancelada' }, { transaction });
+
+    // CAL-002: excluye explícitamente a oldAppointment.id aunque ya quede 'cancelada'
+    // arriba (y por lo tanto ya no calificaría de todos modos) — defensivo por claridad,
+    // no por necesidad estricta.
+    const conflict = await findOverlappingAppointment({
+      assignedToUserId: oldAppointment.lead?.assignedToUserId,
+      scheduledAt,
+      excludeAppointmentId: oldAppointment.id,
+      transaction,
+    });
+    if (conflict) {
+      throw new ApiError(
+        409,
+        `El asesor ya tiene otra cita agendada cerca de ese horario (${new Date(conflict.scheduledAt).toLocaleString('es-MX')})`
+      );
+    }
 
     const created = await Appointment.create(
       {

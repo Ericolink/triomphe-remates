@@ -222,7 +222,9 @@ export default function AppointmentDetailModal({
                       disabled={!newDate || isPending}
                       onClick={() => {
                         if (!newDate) return;
-                        onReschedule(appointment.id, newDate);
+                        // CAL-001: convertir a ISO/UTC explícito antes de enviar — ver
+                        // el mismo comentario en LeadDetailPanel.jsx (agendar cita).
+                        onReschedule(appointment.id, new Date(newDate).toISOString());
                         setRescheduling(false);
                         setNewDate('');
                       }}

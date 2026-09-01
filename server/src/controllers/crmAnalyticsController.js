@@ -82,12 +82,14 @@ const getCrmDashboard = async (req, res) => {
   ] = await Promise.all([
     Lead.count({ where: { pipelineStage: 'nuevo' } }),
     Lead.count({ where: { pipelineStage: { [Op.in]: ['nuevo', 'contactado'] } } }),
-    // AUDIT pendiente (fuera de alcance de este cambio): a diferencia de este count, los
-    // demás counts de este Promise.all (prospectosNuevos, prospectosPendientes,
-    // seguimientosVencidos...) NO aplican getLeadVisibilityWhere — son globales sin
-    // importar el rol de quien llama, aunque asesor_ventas también puede llegar a esta
-    // ruta (ver requireCrmAccess en routes/crm.js). No se corrige aquí para no mezclar
-    // ese fix con este cambio; este count nuevo sí queda correctamente scoped.
+    // SEC-001: este count (y el resto del Promise.all de abajo — citasHoy con PII de
+    // teléfono, actividadReciente, ventas/campañas de toda la empresa) son agregados
+    // globales por diseño. Antes eran alcanzables también por `asesor_ventas` (vía
+    // requireCrmAccess), lo que filtraba esos datos entre asesores; ahora la ruta
+    // (routes/crm.js) está restringida a admin/asistente_administrativo, los únicos dos
+    // roles para los que getLeadVisibilityWhere ya devuelve `null` (sin restricción) — así
+    // que este filtro sigue siendo un no-op para quien de verdad llega aquí, y se deja
+    // como defensa en profundidad en vez de quitarlo.
     Lead.count({
       where: {
         pipelineStage: { [Op.notIn]: TERMINAL_STAGES },

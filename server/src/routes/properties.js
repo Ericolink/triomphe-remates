@@ -59,6 +59,7 @@ router.post(
   authenticate,
   authorize('admin', 'asistente_administrativo'),
   upload.array('images', 20),
+  upload.validateImageSignature,
   uploadImages
 );
 router.delete(

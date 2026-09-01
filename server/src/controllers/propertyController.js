@@ -3,7 +3,6 @@ const { cloudinary } = require('../config/cloudinary');
 const { sequelize, Property, Image, Analytics, PropertyStatusHistory } = require('../models/index');
 const { generateSlug } = require('../utils/helpers');
 const alertService = require('../services/alertService');
-const { isValidImageBuffer } = require('../utils/fileSignature');
 const { paginate } = require('../utils/pagination');
 const { logAudit } = require('../utils/audit');
 const logger = require('../utils/logger');
@@ -104,11 +103,26 @@ const getProperties = async (req, res) => {
     let matchedIds = null;
 
     if (booleanQuery) {
-      const matches = await sequelize.query(
-        'SELECT id FROM properties WHERE MATCH(title, address, description) AGAINST(:query IN BOOLEAN MODE)',
-        { replacements: { query: booleanQuery }, type: sequelize.QueryTypes.SELECT }
-      );
-      if (matches.length > 0) matchedIds = matches.map((m) => m.id);
+      // HOTFIX: si el índice FULLTEXT (idx_properties_fulltext_search, migración
+      // 20260721000000) falta en esta base de datos por cualquier razón — se confirmó que
+      // el bootstrap de una BD nueva puede omitirlo en silencio, ver
+      // checkPendingMigrations.js/checkSchemaSync.js —, MATCH/AGAINST lanza
+      // "Can't find FULLTEXT index matching the column list" y esto tumbaba TODA la
+      // petición con un 500, en cada tecleo del buscador (sin debounce, ver comentario de
+      // esa migración). Se degrada al fallback LIKE que ya existía para "sin resultados",
+      // en vez de dejar que una consulta rota reviente el listado completo.
+      try {
+        const matches = await sequelize.query(
+          'SELECT id FROM properties WHERE MATCH(title, address, description) AGAINST(:query IN BOOLEAN MODE)',
+          { replacements: { query: booleanQuery }, type: sequelize.QueryTypes.SELECT }
+        );
+        if (matches.length > 0) matchedIds = matches.map((m) => m.id);
+      } catch (error) {
+        logger.error('Búsqueda FULLTEXT de propiedades falló, usando fallback LIKE', {
+          message: error.message,
+          search,
+        });
+      }
     }
 
     // `code` (ej. JRCH-0227) no forma parte del índice FULLTEXT y su guion lo rompe como
@@ -596,11 +610,10 @@ const uploadImages = async (req, res) => {
     throw new ApiError(400, 'No se enviaron imágenes');
   }
 
-  // AUDIT-008: multer ya filtró por extensión/mimetype declarado (falsificable); esto
-  // verifica los bytes reales del archivo antes de subirlo a Cloudinary.
-  if (req.files.some((file) => !isValidImageBuffer(file.buffer))) {
-    throw new ApiError(400, 'Uno o más archivos no son imágenes válidas (JPG, PNG o WEBP)');
-  }
+  // AUDIT-008 / SEC-004: la verificación de bytes reales (extensión/mimetype declarado
+  // por el cliente son falsificables) ya corrió en `upload.validateImageSignature`,
+  // montado en routes/properties.js justo después de multer — mismo middleware que ahora
+  // también protegen testimonios y foto de perfil de usuario.
 
   const existingImages = await Image.count({ where: { propertyId: property.id } });
 

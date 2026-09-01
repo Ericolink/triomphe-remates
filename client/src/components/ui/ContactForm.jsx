@@ -11,6 +11,8 @@ import {
   BUDGET_RANGE_OPTIONS,
   LEAD_SEARCH_CITY_OPTIONS,
   LEAD_SEARCH_TYPE_OPTIONS,
+  LEAD_URGENCY_LABELS,
+  LEAD_TYPES_NEEDING_BUDGET,
   labelsToOptions,
 } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
@@ -44,6 +46,8 @@ const emptyForm = {
   budgetAmount: '',
   desiredType: '',
   searchCity: '',
+  searchZone: '',
+  urgency: '',
 };
 
 export default function ContactForm({ propertyId, propertyTitle, defaultSource }) {
@@ -51,6 +55,14 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
   const [searchParams] = useSearchParams();
   const source =
     defaultSource || searchParams.get('source') || searchParams.get('utm_source') || 'directo';
+  // Fase 3a del rediseño del CRM: captura automática de atribución — nunca se le pregunta
+  // esto al prospecto, solo se lee de la URL si un anuncio la trae (ver
+  // leadController.createLead, que además intenta auto-vincular la campaña por
+  // utmCampaign). `landingPageUrl` no se manda desde aquí — el backend ya la toma sola
+  // del header Referer del propio request.
+  const utmMedium = searchParams.get('utm_medium') || undefined;
+  const utmCampaign = searchParams.get('utm_campaign') || undefined;
+  const utmContent = searchParams.get('utm_content') || undefined;
   const [form, setForm] = useState(emptyForm);
   const typeOptions = propertyId ? PROPERTY_LEAD_TYPE_OPTIONS : LEAD_TYPE_OPTIONS;
 
@@ -64,22 +76,36 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
   });
 
   const isCita = form.type === 'cita';
+  // Fase 3b del rediseño del CRM: "quiero vender"/"solo información"/"otro" no implican
+  // que el prospecto vaya a comprar/rentar nada — preguntarle forma de pago/presupuesto
+  // ahí es fricción sin beneficio para el asesor (ver LEAD_TYPES_NEEDING_BUDGET).
+  const needsBudget = LEAD_TYPES_NEEDING_BUDGET.includes(form.type);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name || !form.phone) return toast.error('Nombre y teléfono son requeridos');
-    if (!form.paymentMethod) return toast.error('Elige cómo planeas pagar');
-    if (!form.budgetAmount) return toast.error('Elige tu presupuesto aproximado');
+    if (needsBudget && !form.paymentMethod) return toast.error('Elige cómo planeas pagar');
+    if (needsBudget && !form.budgetAmount) return toast.error('Elige tu presupuesto aproximado');
 
     let appointmentDate;
     if (isCita) {
       if (!form.appointmentDate || !form.appointmentTime) {
         return toast.error('Elige fecha y hora para tu cita');
       }
-      appointmentDate = `${form.appointmentDate}T${form.appointmentTime}:00`;
-      if (new Date(appointmentDate).getTime() - Date.now() < 24 * 60 * 60 * 1000) {
+      // CAL-001: `${form.appointmentDate}T${form.appointmentTime}:00` es un string SIN
+      // zona horaria — si se mandara tal cual al backend, Node lo reinterpretaría con la
+      // zona horaria del SERVIDOR (no la del navegador del cliente) al convertirlo a
+      // Date, desplazando la hora silenciosamente si el host no está en la zona horaria
+      // de México. Aquí se construye el Date una sola vez — `new Date(...)` interpreta
+      // el string SIN zona horaria como hora LOCAL DEL NAVEGADOR (la zona horaria real del
+      // cliente, que es justo lo que "hora de la cita" debe significar) — y se envía su
+      // `.toISOString()` (con sufijo Z, siempre UTC), que cualquier servidor interpreta de
+      // forma idéntica sin importar en qué zona horaria esté corriendo.
+      const localDateTime = new Date(`${form.appointmentDate}T${form.appointmentTime}:00`);
+      if (localDateTime.getTime() - Date.now() < 24 * 60 * 60 * 1000) {
         return toast.error('La cita debe programarse con al menos 24 horas de anticipación');
       }
+      appointmentDate = localDateTime.toISOString();
     }
 
     mutate({
@@ -87,12 +113,21 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
       appointmentDate,
       propertyId,
       source,
-      budgetAmount: Number(form.budgetAmount),
+      // Igual que desiredType/searchCity abajo: se omiten (undefined) en vez de mandarse
+      // como '' cuando el motivo no los necesita — el backend valida paymentMethod contra
+      // su ENUM y rechazaría un string vacío como valor inválido.
+      paymentMethod: needsBudget ? form.paymentMethod : undefined,
+      budgetAmount: needsBudget ? Number(form.budgetAmount) : undefined,
       budgetNotSpecified: false,
       // Opcionales — se omiten del body en vez de mandarse como '' (el backend valida
       // contra el ENUM y rechazaría un string vacío como valor inválido).
       desiredType: form.desiredType || undefined,
       searchCity: form.searchCity || undefined,
+      searchZone: form.searchZone.trim() || undefined,
+      urgency: form.urgency || undefined,
+      utmMedium,
+      utmCampaign,
+      utmContent,
     });
   };
 
@@ -143,7 +178,11 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
         ))}
       </select>
       {/* Opcionales — ayudan al asesor a saber qué mostrarte sin alargar el formulario con
-          preguntas obligatorias (recámaras/baños/urgencia se afinan en la llamada). */}
+          preguntas obligatorias (recámaras/baños/características se afinan en la llamada).
+          Fase 3b del rediseño del CRM: `urgency` es el campo con más impacto para que el
+          asesor priorice, y no costaba nada agregarlo (mismo patrón que desiredType/
+          searchCity). `searchZone` solo aparece una vez elegida una ciudad — preguntarla
+          antes no tendría sentido (progresivo, no una pregunta más siempre visible). */}
       <div className="grid grid-cols-2 gap-3">
         <select
           value={form.desiredType}
@@ -170,46 +209,71 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
           ))}
         </select>
       </div>
-      <div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-          ¿Cómo planeas pagar? *
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => {
-            const Icon = value === 'credito_hipotecario' ? Landmark : Banknote;
-            const active = form.paymentMethod === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, paymentMethod: value }))}
-                className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                  active
-                    ? 'bg-accent-400 border-accent-400 text-primary-900'
-                    : 'bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
-                }`}
-              >
-                <Icon size={18} />
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {form.searchCity && (
+        <input
+          type="text"
+          placeholder="Zona o colonia de tu interés (opcional)"
+          value={form.searchZone}
+          onChange={(e) => setForm((f) => ({ ...f, searchZone: e.target.value }))}
+          className={inputClass}
+        />
+      )}
       <select
-        value={form.budgetAmount}
-        onChange={(e) => setForm((f) => ({ ...f, budgetAmount: e.target.value }))}
+        value={form.urgency}
+        onChange={(e) => setForm((f) => ({ ...f, urgency: e.target.value }))}
         className={inputClass}
       >
-        <option value="" disabled>
-          Presupuesto aproximado *
-        </option>
-        {BUDGET_RANGE_OPTIONS.map(({ value, label }) => (
+        <option value="">¿Qué tan pronto quieres concretar? (opcional)</option>
+        {Object.entries(LEAD_URGENCY_LABELS).map(([value, label]) => (
           <option key={value} value={value}>
             {label}
           </option>
         ))}
       </select>
+      {needsBudget && (
+        <>
+          <div>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+              ¿Cómo planeas pagar? *
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => {
+                const Icon = value === 'credito_hipotecario' ? Landmark : Banknote;
+                const active = form.paymentMethod === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, paymentMethod: value }))}
+                    className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                      active
+                        ? 'bg-accent-400 border-accent-400 text-primary-900'
+                        : 'bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <select
+            value={form.budgetAmount}
+            onChange={(e) => setForm((f) => ({ ...f, budgetAmount: e.target.value }))}
+            className={inputClass}
+          >
+            <option value="" disabled>
+              Presupuesto aproximado *
+            </option>
+            {BUDGET_RANGE_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
       {isCita && (
         <div className="grid grid-cols-2 gap-3">
           <div>

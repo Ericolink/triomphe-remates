@@ -14,6 +14,7 @@ const app = require('./app');
 const { sequelize } = require('./src/models/index');
 const { verifyConnection } = require('./src/services/emailService');
 const { checkPendingMigrations } = require('./src/config/checkPendingMigrations');
+const { checkSchemaSync } = require('./src/config/checkSchemaSync');
 
 const PORT = process.env.HTTP_PLATFORM_PORT || process.env.PORT || 3001;
 console.log(`[startup] HTTP_PLATFORM_PORT=${process.env.HTTP_PLATFORM_PORT} PORT=${process.env.PORT} → usando ${PORT}`);
@@ -31,6 +32,11 @@ async function startServer() {
     console.log('✅ Modelos sincronizados con la base de datos');
 
     await checkPendingMigrations(sequelize);
+
+    // HOTFIX: ver checkSchemaSync.js — checkPendingMigrations no detecta una migración que
+    // nunca llegó a subirse a este despliegue; esto compara el esquema real contra lo que
+    // cada modelo espera, independientemente de la bitácora de migraciones.
+    await checkSchemaSync(sequelize, Object.values(sequelize.models));
 
     await verifyConnection();
 

@@ -272,7 +272,21 @@ const Property = sequelize.define(
     // Índice único con nombre fijo (ver migración fix-duplicate-unique-indexes): un `unique:
     // true` inline sin nombre hacía que cada ciclo de sync({alter:true}) creara un índice
     // nuevo en vez de reconocer el existente, hasta llegar al máximo de 64 claves de MySQL.
-    indexes: [{ unique: true, fields: ['slug'], name: 'properties_slug_unique' }],
+    //
+    // HOTFIX: el índice FULLTEXT (migración 20260721000000) vivía SOLO en la migración, no
+    // aquí — cuando checkPendingMigrations.js bootstrapea una base de datos nueva vía
+    // sync(), construye el esquema a partir de ESTOS `indexes`, no de las migraciones (que
+    // marca como "ya aplicadas" sin ejecutar su up() para una BD nueva). Un índice que solo
+    // existe en su migración y no aquí queda silenciosamente sin crear en cualquier base de
+    // datos bootstrapeada así — se confirmó exactamente este caso en la práctica.
+    indexes: [
+      { unique: true, fields: ['slug'], name: 'properties_slug_unique' },
+      {
+        fields: ['title', 'address', 'description'],
+        type: 'FULLTEXT',
+        name: 'idx_properties_fulltext_search',
+      },
+    ],
   }
 );
 

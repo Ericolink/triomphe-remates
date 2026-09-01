@@ -24,7 +24,14 @@ import { formatPrice, formatDate } from '../../../utils/formatters';
 import { CAMPAIGN_PLATFORM_LABELS } from '../../../utils/constants';
 import useModalA11y from '../../../hooks/useModalA11y';
 
-const emptyForm = { platform: 'facebook', name: '', startDate: '', endDate: '', budget: '' };
+const emptyForm = {
+  platform: 'facebook',
+  name: '',
+  startDate: '',
+  endDate: '',
+  budget: '',
+  utmCampaign: '',
+};
 const CAMPAIGNS_PAGE_SIZE = 20;
 
 function CampaignForm({ initial, onSave, onCancel, isPending }) {
@@ -117,6 +124,26 @@ function CampaignForm({ initial, onSave, onCancel, isPending }) {
             onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
             className={inputClass}
           />
+        </div>
+        <div className="md:col-span-2">
+          <label
+            htmlFor={`${formId}-utmCampaign`}
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
+            utm_campaign del anuncio (opcional)
+          </label>
+          <input
+            id={`${formId}-utmCampaign`}
+            type="text"
+            value={form.utmCampaign || ''}
+            placeholder="Ej: remate-polanco-julio"
+            onChange={(e) => setForm((f) => ({ ...f, utmCampaign: e.target.value }))}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Si coincide con el <code>utm_campaign</code> del anuncio, los prospectos que
+            lleguen de ahí se vinculan aquí automáticamente, sin tener que elegirlos a mano.
+          </p>
         </div>
       </div>
       <div className="flex gap-3 justify-end">

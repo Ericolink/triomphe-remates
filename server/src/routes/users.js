@@ -241,6 +241,7 @@ router.put(
   authenticate,
   authorize('admin'),
   upload.single('profilePhoto'),
+  upload.validateImageSignature,
   updateUser
 );
 router.delete('/:id', apiLimiter, authenticate, authorize('admin'), deactivateUser);

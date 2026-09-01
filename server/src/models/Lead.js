@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../config/db');
-const { validatePhone } = require('../utils/validators');
+const { validatePhone, normalizePhone } = require('../utils/validators');
 
 const Lead = sequelize.define(
   'Lead',
@@ -202,10 +202,51 @@ const Lead = sequelize.define(
       allowNull: true,
       comment: 'Urgencia/tiempo estimado para realizar la operación. null = sin preguntar.',
     },
+    // Fase 3a del rediseño del CRM — atribución de marketing capturada automáticamente
+    // (nunca la teclea un humano), ver migración 20260903000000. `source`/`campaignId` ya
+    // existían pero solo se llenan con `?source`/`?utm_source` o a mano; esto completa la
+    // cadena UTM y guarda además la página exacta de origen.
+    utmMedium: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'utm_medium de la URL de origen. null si no venía en la URL.',
+    },
+    utmCampaign: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+      comment: 'utm_campaign de la URL de origen — también se usa para auto-vincular campaignId.',
+    },
+    utmContent: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+      comment: 'utm_content de la URL de origen. null si no venía en la URL.',
+    },
+    landingPageUrl: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      comment: 'Página exacta donde se envió el formulario (Referer del request), capturada automáticamente.',
+    },
+    // DB-001: mantenida por el hook de abajo, nunca se asigna a mano desde un controller.
+    // Índice único (migración 20260901000000) — deja que MySQL, no solo el código de
+    // aplicación, impida teléfonos duplicados bajo requests simultáneos. null = sin
+    // teléfono válido (permitido: MySQL no aplica unicidad entre múltiples NULLs).
+    phoneNormalized: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      unique: true,
+    },
   },
   {
     tableName: 'leads',
     timestamps: true,
+    hooks: {
+      // Única fuente de verdad de la normalización: utils/validators.normalizePhone — no
+      // se reimplementa como expresión SQL/columna generada para no arriesgar que las dos
+      // definiciones diverjan con el tiempo.
+      beforeSave(lead) {
+        lead.phoneNormalized = normalizePhone(lead.phone);
+      },
+    },
   }
 );
 

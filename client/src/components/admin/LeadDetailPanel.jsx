@@ -299,6 +299,10 @@ export default function LeadDetailPanel({
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentPropertyId, setAppointmentPropertyId] = useState('');
   const [composerText, setComposerText] = useState('');
+  // Fase 3 del rediseño del CRM: tras registrar una interacción, ofrece saltar directo a
+  // Citas para agendar la siguiente acción — sin esto, "registrar" y "agendar" quedan en
+  // pestañas separadas y el asesor tiene que acordarse de volver por su cuenta.
+  const [justLoggedInteraction, setJustLoggedInteraction] = useState(false);
 
   // Confirmación por campo (ver FieldStatus) — una entrada por clave de campo, se limpia
   // sola un rato después de "saved". `statusTimers` guarda los setTimeout activos para
@@ -306,6 +310,12 @@ export default function LeadDetailPanel({
   const [fieldStatus, setFieldStatus] = useState({});
   const statusTimers = useRef({});
   useEffect(() => () => Object.values(statusTimers.current).forEach(clearTimeout), []);
+  // CRM-006: contador de peticiones en vuelo por campo. Si el usuario edita y confirma
+  // (blur) el mismo campo de nuevo antes de que la petición anterior resuelva, esa
+  // petición anterior queda "obsoleta" — sin esto, si llega a resolver DESPUÉS de la
+  // nueva, su callback (éxito o error) pisaría el indicador de la petición más reciente
+  // con información que ya no corresponde a lo que el usuario ve/espera.
+  const saveRequestSeq = useRef({});
 
   const budgetAmountInvalid = isInvalidOptionalAmount(budgetAmountInput);
 
@@ -402,31 +412,52 @@ export default function LeadDetailPanel({
 
   // Guarda un campo vía el PUT genérico y refleja el resultado junto al campo (ver
   // FieldStatus) en vez del toast global que usaba todo el panel antes. `updateMutation`
-  // sigue siendo la misma mutation compartida con ProspectosSection (mismas
-  // invalidaciones de queries); aquí solo se le agregan callbacks por-llamada.
+  // es una única mutation COMPARTIDA por todos los campos del panel (y por
+  // attemptStageChange, usado también por el drag&drop del Kanban) — ver
+  // useLeadDetailActions.js.
+  //
+  // CRM-006: por eso NO se le pasan callbacks por-llamada (`.mutate(vars, {onSuccess,
+  // onError})`) como antes. React Query guarda esos callbacks en un único campo del
+  // observer de la mutation, que se SOBREESCRIBE en cada `.mutate()` — si el usuario
+  // confirma OTRO campo (o el mismo, dos veces) antes de que la petición anterior
+  // resuelva, esa petición anterior se queda sin observador y su callback nunca se
+  // invoca: el indicador de ESE campo se quedaba en "Guardando…" para siempre, aunque el
+  // PUT sí hubiera terminado en el servidor. `mutateAsync` en cambio devuelve la promesa
+  // real de ESA llamada específica (`.mutate` normal siempre devuelve `undefined` — ver
+  // node_modules/@tanstack/react-query/src/useMutation.ts), que resuelve de forma
+  // independiente sin importar qué otras llamadas se hagan después — por eso se usa
+  // `.then()` sobre ella en vez de las opciones. `isStale()` cubre el caso restante: que
+  // la respuesta de una edición VIEJA del MISMO campo llegue después de una más reciente
+  // (el usuario editó y confirmó el mismo campo dos veces seguidas) — sin esto, esa
+  // respuesta tardía podría pisar el indicador ya actualizado por la petición más nueva.
   const saveField = (key, data) => {
+    const seq = (saveRequestSeq.current[key] = (saveRequestSeq.current[key] || 0) + 1);
+    const isStale = () => saveRequestSeq.current[key] !== seq;
+
     setFieldStatus((s) => ({ ...s, [key]: { state: 'saving' } }));
     clearTimeout(statusTimers.current[key]);
-    updateMutation.mutate(
-      { id: selected.id, data },
-      {
-        onSuccess: () => {
-          setFieldStatus((s) => ({ ...s, [key]: { state: 'saved' } }));
-          statusTimers.current[key] = setTimeout(() => {
-            setFieldStatus((s) => {
-              if (s[key]?.state !== 'saved') return s;
-              const next = { ...s };
-              delete next[key];
-              return next;
-            });
-          }, 2500);
-        },
-        onError: (e) => {
-          setFieldStatus((s) => ({
-            ...s,
-            [key]: { state: 'error', message: e?.response?.data?.error || 'No se pudo guardar' },
-          }));
-        },
+    updateMutation.mutateAsync({ id: selected.id, data }).then(
+      () => {
+        if (isStale()) return;
+        setFieldStatus((s) => ({ ...s, [key]: { state: 'saved' } }));
+        statusTimers.current[key] = setTimeout(() => {
+          setFieldStatus((s) => {
+            if (s[key]?.state !== 'saved') return s;
+            const next = { ...s };
+            delete next[key];
+            return next;
+          });
+        }, 2500);
+      },
+      (e) => {
+        if (isStale()) return;
+        const message = e?.response?.data?.error || 'No se pudo guardar';
+        // Además del indicador inline (que solo existe mientras la pestaña/prospecto de
+        // este campo sigan montados — ver comentario de FieldStatus más arriba), un toast
+        // global garantiza que el usuario se entere de un guardado fallido aunque ya haya
+        // cambiado de pestaña o de prospecto antes de que la respuesta llegara.
+        toast.error(message);
+        setFieldStatus((s) => ({ ...s, [key]: { state: 'error', message } }));
       }
     );
   };
@@ -517,6 +548,7 @@ export default function LeadDetailPanel({
     onSuccess: () => {
       setComposerText('');
       setFieldStatus((s) => ({ ...s, composer: undefined }));
+      setJustLoggedInteraction(true);
       queryClient.invalidateQueries(['lead-notes', selected.id]);
     },
     onError: (e) =>
@@ -583,6 +615,13 @@ export default function LeadDetailPanel({
   const isTerminal = TERMINAL_STAGES.includes(lead.pipelineStage);
   const knownType = LEAD_TYPE_OPTIONS.some((o) => o.value === lead.type);
 
+  // Fase 3 del rediseño del CRM: "prioridad" no es un campo nuevo que alguien tenga que
+  // mantener a mano — se calcula de lo que ya existe (urgencia declarada por el prospecto +
+  // si la próxima acción ya venció), igual que sortByUrgency ya hace en el Kanban
+  // (KanbanBoard.jsx). Un lead cerrado nunca se marca como prioritario.
+  const isOverdueTask = !!openTask && new Date(openTask.dueDate) < new Date();
+  const isHighPriority = !isTerminal && (lead.urgency === 'inmediata' || isOverdueTask);
+
   return (
     <motion.div
       key={selected.id}
@@ -598,9 +637,23 @@ export default function LeadDetailPanel({
             acciones de alta frecuencia sin importar en qué pestaña esté el asesor. */}
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">
-              Detalle del prospecto
-            </p>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                Detalle del prospecto
+              </p>
+              {isHighPriority && (
+                <span
+                  title={
+                    lead.urgency === 'inmediata'
+                      ? 'Urgencia: inmediata'
+                      : 'Próxima acción vencida'
+                  }
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 flex-shrink-0"
+                >
+                  🔥 Alta prioridad
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <input
                 value={nameInput}
@@ -738,6 +791,29 @@ export default function LeadDetailPanel({
                   "{lead.desiredFeatures}"
                 </p>
               )}
+              {/* Fase 3 del rediseño del CRM: urgencia editable aquí mismo — es el campo
+                  que más cambia según cómo va el seguimiento (y el que alimenta el badge de
+                  prioridad del encabezado), así que forzar un cambio de pestaña a "Búsqueda"
+                  solo para actualizarlo era la fricción más evitable. El resto de los
+                  criterios de búsqueda no se duplican aquí — ya están completos en
+                  `searchSummary` arriba, y editarlos vive en su pestaña dedicada. */}
+              <div className="flex items-center gap-2 mt-2">
+                <select
+                  aria-label="Urgencia"
+                  value={lead.urgency || ''}
+                  onChange={(e) => saveField('urgency', { urgency: e.target.value || null })}
+                  disabled={!canEdit}
+                  className="px-2 py-1 border border-gray-200 dark:border-[#2e3650] rounded-lg text-xs bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Urgencia: sin especificar</option>
+                  {Object.entries(LEAD_URGENCY_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      Urgencia: {l}
+                    </option>
+                  ))}
+                </select>
+                <FieldStatus status={fieldStatus.urgency} />
+              </div>
             </div>
 
             {selected.message && (
@@ -814,11 +890,26 @@ export default function LeadDetailPanel({
               />
               <FieldStatus status={fieldStatus.firstContactDate} />
             </div>
-            {(lead.campaign || lead.createdByUser || lead.assignedAt) && (
+            {(lead.campaign ||
+              lead.createdByUser ||
+              lead.assignedAt ||
+              lead.utmMedium ||
+              lead.utmCampaign ||
+              lead.utmContent ||
+              lead.landingPageUrl) && (
               <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5 pt-2 border-t border-gray-200 dark:border-[#2e3650]">
                 {lead.campaign && <p>Campaña: {lead.campaign.name}</p>}
                 {lead.createdByUser && <p>Creado por: {lead.createdByUser.name}</p>}
                 {lead.assignedAt && <p>Asignado el: {formatDateTime(lead.assignedAt)}</p>}
+                {/* Fase 3a del rediseño del CRM — atribución capturada automáticamente,
+                    nunca editable a mano (refleja lo que realmente pasó). */}
+                {(lead.utmMedium || lead.utmCampaign || lead.utmContent) && (
+                  <p>
+                    UTM:{' '}
+                    {[lead.utmMedium, lead.utmCampaign, lead.utmContent].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+                {lead.landingPageUrl && <p className="truncate">Página de origen: {lead.landingPageUrl}</p>}
               </div>
             )}
           </div>
@@ -1237,7 +1328,10 @@ export default function LeadDetailPanel({
               <div className="flex gap-2">
                 <textarea
                   value={composerText}
-                  onChange={(e) => setComposerText(e.target.value)}
+                  onChange={(e) => {
+                    setComposerText(e.target.value);
+                    setJustLoggedInteraction(false);
+                  }}
                   rows={2}
                   placeholder="Escribe una nota o registra una interacción..."
                   className="min-w-0 flex-1 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs resize-none focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-gray-100 dark:placeholder-gray-500"
@@ -1251,6 +1345,33 @@ export default function LeadDetailPanel({
                 </button>
               </div>
               <FieldStatus status={fieldStatus.composer} />
+              {/* Fase 3 del rediseño del CRM: cierra el ciclo "registrar → agendar" sin
+                  obligar al asesor a acordarse de cambiar de pestaña por su cuenta. */}
+              {justLoggedInteraction && (
+                <div className="flex items-center justify-between gap-2 mt-2 px-3 py-2 rounded-xl bg-accent-50 dark:bg-accent-900/10 border border-accent-200 dark:border-accent-800/40">
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    Interacción registrada. ¿Agendar la siguiente acción?
+                  </p>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => {
+                        setActiveTab('citas');
+                        setJustLoggedInteraction(false);
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-accent-400 text-primary-900 hover:bg-accent-300 transition-colors"
+                    >
+                      Agendar
+                    </button>
+                    <button
+                      onClick={() => setJustLoggedInteraction(false)}
+                      aria-label="Descartar"
+                      className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
@@ -1334,11 +1455,16 @@ export default function LeadDetailPanel({
                 />
                 <button
                   onClick={() =>
+                    // CAL-001: el valor crudo de <input type="datetime-local"> no trae
+                    // zona horaria — new Date(...) lo interpreta como hora LOCAL DEL
+                    // NAVEGADOR (correcto, es la zona horaria real de quien agenda) y
+                    // toISOString() lo manda como UTC explícito, para que el servidor lo
+                    // interprete igual sin importar en qué zona horaria esté corriendo.
                     appointmentDate &&
                     scheduleMutation.mutate({
                       leadId: selected.id,
                       propertyId: appointmentPropertyId || undefined,
-                      scheduledAt: appointmentDate,
+                      scheduledAt: new Date(appointmentDate).toISOString(),
                     })
                   }
                   disabled={!appointmentDate || scheduleMutation.isPending}
@@ -1403,7 +1529,18 @@ export function DetailPanelSlot({ selected, emptyText, onDeselect, ...panelProps
               transition={{ type: 'spring', stiffness: 320, damping: 32 }}
               className="w-full max-w-md h-full overflow-y-auto bg-white dark:bg-[#242938]"
             >
-              <LeadDetailPanel selected={selected} onDeselect={onDeselect} {...panelProps} />
+              {/* CRM-001: key atado a selected.id — sin esto React reutiliza la misma
+                  instancia si `selected` cambia mientras el overlay sigue montado (ej.
+                  dos "Ver prospecto" resolviendo fuera de orden), dejando los inputs con
+                  el texto del prospecto anterior y arriesgando que un blur posterior lo
+                  guarde sobre el id del prospecto nuevo. Misma protección que ya tenía la
+                  rama de escritorio de abajo. */}
+              <LeadDetailPanel
+                key={selected.id}
+                selected={selected}
+                onDeselect={onDeselect}
+                {...panelProps}
+              />
             </motion.div>
           </motion.div>
         )}

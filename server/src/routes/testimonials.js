@@ -33,6 +33,7 @@ router.post(
   authenticate,
   authorize('admin', 'asistente_administrativo'),
   testimonialImages,
+  upload.validateImageSignature,
   createTestimonial
 );
 router.put(
@@ -41,6 +42,7 @@ router.put(
   authenticate,
   authorize('admin', 'asistente_administrativo'),
   testimonialImages,
+  upload.validateImageSignature,
   updateTestimonial
 );
 router.delete('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deleteTestimonial);

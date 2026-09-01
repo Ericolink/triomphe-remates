@@ -1,4 +1,6 @@
 const multer = require('multer');
+const { ApiError } = require('./errorHandler');
+const { isValidImageBuffer } = require('../utils/fileSignature');
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|webp/;
@@ -19,4 +21,30 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+// SEC-004: `fileFilter` de arriba solo valida extensión + Content-Type declarados por el
+// cliente en el multipart/form-data — ambos falsificables con solo renombrar un archivo.
+// Este middleware corre después de multer (necesita `req.file`/`req.files` ya parseados) y
+// verifica los primeros bytes reales de cada archivo recibido contra las firmas de
+// JPEG/PNG/WEBP (ver utils/fileSignature.js), sin importar si llegó vía upload.single,
+// .array o .fields — usarlo siempre inmediatamente después del middleware de multer
+// correspondiente, en cualquier ruta que reciba imágenes.
+const validateImageSignature = (req, res, next) => {
+  const buffers = [];
+  if (req.file) buffers.push(req.file.buffer);
+  if (Array.isArray(req.files)) {
+    buffers.push(...req.files.map((file) => file.buffer));
+  } else if (req.files && typeof req.files === 'object') {
+    for (const fieldFiles of Object.values(req.files)) {
+      buffers.push(...fieldFiles.map((file) => file.buffer));
+    }
+  }
+
+  if (buffers.some((buffer) => !isValidImageBuffer(buffer))) {
+    throw new ApiError(400, 'Uno o más archivos no son imágenes válidas (JPG, PNG o WEBP)');
+  }
+
+  next();
+};
+
 module.exports = upload;
+module.exports.validateImageSignature = validateImageSignature;
