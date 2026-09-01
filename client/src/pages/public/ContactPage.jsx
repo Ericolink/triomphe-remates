@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import ContactForm from '../../components/ui/ContactForm';
 import SEO from '../../components/ui/SEO';
 import { OFFICES } from '../../utils/constants';
+import { trackEvent, ANALYTICS_EVENTS } from '../../utils/analytics';
 import { fadeInUp, fadeInLeft, fadeInRight, staggerContainer } from '../../utils/animations';
 
 export default function ContactPage() {
@@ -80,6 +81,7 @@ export default function ContactPage() {
                   {office.email.includes('@') ? (
                     <a
                       href={`mailto:${office.email}`}
+                      onClick={() => trackEvent(ANALYTICS_EVENTS.EMAIL_CLICK)}
                       className="text-base text-gray-600 dark:text-gray-300 hover:text-accent-500 transition-colors break-words"
                     >
                       {office.email}

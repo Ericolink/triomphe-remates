@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { WHATSAPP_NUMBER } from '../../utils/constants';
 import { toWhatsAppLink } from '../../utils/formatters';
 import { buttonHover, buttonTap } from '../../utils/animations';
+import { trackEvent, ANALYTICS_EVENTS } from '../../utils/analytics';
 
 const WhatsAppIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -18,6 +19,7 @@ export default function WhatsAppButton({
   label = 'Consultar por WhatsApp',
   className = '',
   floating = false,
+  propertyId = null,
 }) {
   const resolvedMessage =
     message ??
@@ -26,6 +28,7 @@ export default function WhatsAppButton({
       return `Hola, me interesa esta propiedad: ${title}${priceLabel ? ` (${priceLabel})` : ''}\n${fullUrl}`;
     })();
   const href = toWhatsAppLink(WHATSAPP_NUMBER, resolvedMessage);
+  const trackClick = () => trackEvent(ANALYTICS_EVENTS.WHATSAPP_CLICK, { propertyId });
 
   // Variante flotante (botón circular solo-ícono, ver FloatingWhatsAppButton.jsx): usa un
   // className base completo propio en vez de intentar sobreescribir el de la píldora vía
@@ -34,7 +37,7 @@ export default function WhatsAppButton({
   // otra solo por orden en el string de clases. El texto del label se conserva como
   // aria-label/title ya que no hay texto visible que lo exponga como nombre accesible.
   if (floating) {
-    return <FloatingWhatsApp href={href} label={label} className={className} />;
+    return <FloatingWhatsApp href={href} label={label} className={className} onClick={trackClick} />;
   }
 
   return (
@@ -42,6 +45,7 @@ export default function WhatsAppButton({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={trackClick}
       whileHover={buttonHover}
       whileTap={buttonTap}
       className={`flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-colors ${className}`}
@@ -54,13 +58,14 @@ export default function WhatsAppButton({
 // Botón flotante + globo de mensaje ("¿Cómo puedo ayudarte?"), con la colita apuntando
 // hacia el ícono. Separado del render principal solo para mantener legible el switch
 // floating/no-floating de WhatsAppButton.
-function FloatingWhatsApp({ href, label, className }) {
+function FloatingWhatsApp({ href, label, className, onClick }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <motion.a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={onClick}
         initial={{ opacity: 0, scale: 0.9, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.25 }}
@@ -73,6 +78,7 @@ function FloatingWhatsApp({ href, label, className }) {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={onClick}
         whileHover={buttonHover}
         whileTap={buttonTap}
         aria-label={label}

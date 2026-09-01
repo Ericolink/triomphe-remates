@@ -2,6 +2,7 @@ import { Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { WHATSAPP_NUMBER, OFFICES } from '../../utils/constants';
 import { toWhatsAppLink } from '../../utils/formatters';
+import { trackEvent, ANALYTICS_EVENTS } from '../../utils/analytics';
 
 const FacebookIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -98,6 +99,7 @@ export default function Footer() {
                 {email.includes('@') ? (
                   <a
                     href={`mailto:${email}`}
+                    onClick={() => trackEvent(ANALYTICS_EVENTS.EMAIL_CLICK)}
                     className="hover:text-accent-400 transition-colors break-words"
                   >
                     {email}

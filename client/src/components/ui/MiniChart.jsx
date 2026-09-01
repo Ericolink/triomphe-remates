@@ -118,11 +118,15 @@ export function BarChart({ data = [], color = '#22273A' }) {
   );
 }
 
-export function AreaChart({ data = [], color = '#7c3aed' }) {
+// `compareData` es opcional — misma longitud que `data`, se dibuja como una línea punteada
+// tenue por debajo de la serie principal (ej. "periodo anterior") sin sus propios puntos ni
+// tooltip, solo de referencia visual. Se alinea por índice, no por fecha: día 1 del periodo
+// actual contra día 1 del anterior.
+export function AreaChart({ data = [], color = '#7c3aed', compareData = null }) {
   const [hover, setHover] = useState(null);
   if (!data.length) return <EmptyChart />;
 
-  const maxVal = Math.max(...data.map((d) => d.count), 1);
+  const maxVal = Math.max(...data.map((d) => d.count), ...(compareData || []).map((d) => d.count), 1);
   const ts = ticks(maxVal);
   const maxT = ts[ts.length - 1] || 1;
 
@@ -135,6 +139,10 @@ export function AreaChart({ data = [], color = '#7c3aed' }) {
       ? `M${xPos(0)},${PAD.top + CHART_H} L${points} L${xPos(data.length - 1)},${PAD.top + CHART_H} Z`
       : '';
   const gradId = `grad-${color.replace('#', '')}`;
+  const comparePoints =
+    compareData && compareData.length > 1
+      ? compareData.map((d, i) => `${xPos(i)},${yPos(d.count)}`).join(' ')
+      : null;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }}>
@@ -157,6 +165,19 @@ export function AreaChart({ data = [], color = '#7c3aed' }) {
           </g>
         );
       })}
+
+      {/* Periodo anterior — línea punteada de referencia, sin relleno ni puntos */}
+      {comparePoints && (
+        <polyline
+          points={comparePoints}
+          fill="none"
+          stroke="#9ca3af"
+          strokeWidth={1.5}
+          strokeDasharray="4 3"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      )}
 
       {/* Area fill */}
       {areaPath && <path d={areaPath} fill={`url(#${gradId})`} />}

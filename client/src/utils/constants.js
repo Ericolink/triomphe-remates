@@ -317,6 +317,34 @@ export const SOURCE_COLORS = {
   otro: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
 };
 
+// Fuentes de tráfico del sitio (Analytics.referrerHost/utmSource, ver
+// analyticsController.classifySource) — dominio distinto de SOURCE_LABELS de arriba (fuente
+// de un LEAD, un ENUM propio de Lead.source, sin 'instagram'). No mezclar los dos.
+export const TRAFFIC_SOURCE_LABELS = {
+  google: 'Google',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  whatsapp: 'WhatsApp',
+  directo: 'Directo',
+  otros: 'Otros',
+};
+
+export const TRAFFIC_SOURCE_COLORS = {
+  google: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  instagram: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',
+  facebook: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+  whatsapp: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  directo: 'bg-gray-100 text-gray-600 dark:bg-gray-700/40 dark:text-gray-300',
+  otros: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+};
+
+export const DEVICE_LABELS = {
+  desktop: 'Escritorio',
+  mobile: 'Móvil',
+  tablet: 'Tablet',
+  unknown: 'Desconocido',
+};
+
 // CRM Comercial — embudo de 9 etapas (reemplaza el status de 4 valores en la UI; el
 // backend sigue escribiendo `status` en paralelo por compatibilidad, ver
 // server/src/utils/pipelineHelpers.js legacyStatusFor). El orden de estas claves es la

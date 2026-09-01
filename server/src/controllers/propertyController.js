@@ -1,6 +1,6 @@
 const { Op, fn, col } = require('sequelize');
 const { cloudinary } = require('../config/cloudinary');
-const { sequelize, Property, Image, Analytics, PropertyStatusHistory } = require('../models/index');
+const { sequelize, Property, Image, PropertyStatusHistory } = require('../models/index');
 const { generateSlug } = require('../utils/helpers');
 const alertService = require('../services/alertService');
 const { paginate } = require('../utils/pagination');
@@ -8,6 +8,7 @@ const { logAudit } = require('../utils/audit');
 const logger = require('../utils/logger');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { ApiError } = require('../middleware/errorHandler');
+const { sanitizeOptionalContext, recordEvent } = require('../services/analyticsService');
 
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined ? null : val);
@@ -805,28 +806,41 @@ const getPublicPriceHistory = async (req, res) => {
 // POST /api/properties/:id/view — registra una visita real a la ficha pública. Separado
 // del GET para que ese GET (y el de admin) queden libres de efectos secundarios: cacheables,
 // y sin riesgo de que abrir una propiedad para editarla infle el contador de vistas.
+//
+// Migrado a analyticsService.recordEvent (Fase 1 de analítica) — mismo endpoint y misma
+// firma de respuesta que antes (204, sin body), pero ahora el evento es 'property_view',
+// se deduplica por visitante/ventana de 30 min, y ya no persiste IP ni el userAgent/referrer
+// crudos (ver comentario de privacidad en el modelo Analytics). `visitorId`/`sessionId`/
+// atribución llegan en el body como campos OPCIONALES — un cliente viejo en caché que
+// todavía no los manda sigue funcionando exactamente igual que antes.
 const trackView = async (req, res) => {
-  await Analytics.create({
-    event: 'view',
-    propertyId: req.params.id,
-    ip: req.ip,
+  const context = sanitizeOptionalContext(req.body);
+  await recordEvent({
+    event: 'property_view',
+    propertyId: Number(req.params.id),
+    // Ruta sintética por id, no el slug real (/propiedades/:slug) — el dedup y las
+    // consultas del dashboard agrupan por propertyId, así que esta cadena solo necesita
+    // ser estable; usar el id evita que un cambio de slug rompa la deduplicación de una
+    // sesión en curso.
+    path: `/propiedades/${req.params.id}`,
     userAgent: req.headers['user-agent'],
-    referrer: req.headers['referer'] || null,
+    ...context,
   });
-
-  await Property.increment('views', { where: { id: req.params.id } });
 
   return res.status(204).send();
 };
 
-// POST /api/properties/:id/share — registra evento de compartir
+// POST /api/properties/:id/share — registra evento de compartir. Ver comentario de
+// trackView — mismo cambio de migración/privacidad. Nunca se deduplica (ver DEDUP_EVENTS
+// en analyticsService): compartir varias veces es una interacción real cada vez.
 const trackShare = async (req, res) => {
-  await Analytics.create({
-    event: 'share',
-    propertyId: req.params.id,
-    ip: req.ip,
+  const context = sanitizeOptionalContext(req.body);
+  await recordEvent({
+    event: 'property_share',
+    propertyId: Number(req.params.id),
+    path: `/propiedades/${req.params.id}`,
     userAgent: req.headers['user-agent'],
-    referrer: req.headers['referer'] || null,
+    ...context,
   });
   return res.status(204).send();
 };

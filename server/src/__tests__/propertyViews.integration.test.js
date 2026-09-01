@@ -3,10 +3,20 @@ const app = require('../../app');
 const { sequelize, Property, Analytics, User } = require('../models/index');
 const { createUser, authToken, createProperty } = require('./helpers/factories');
 
+// Un User-Agent ausente se trata como bot (ver botDetection.js — ningún navegador real omite
+// esta cabecera), y supertest no manda una por default. Se simula un navegador real para que
+// estos tests reflejen una visita real y no queden marcados isBot=true.
+const REAL_BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 // Regresión: getPropertyById (admin, PropertyFormPage) y getPropertyBySlug (ficha pública)
 // alguna vez incrementaban `views` en el propio GET. Abrir una propiedad para editarla
 // contaminaba el ranking de "más vistas". El registro de vistas ahora vive únicamente en
 // POST /:id/view, disparado por el cliente solo en el render real de la ficha pública.
+// Desde la Fase 1 de analítica de tráfico, ese endpoint delega en
+// analyticsService.recordEvent con event='property_view' (antes 'view', ver migración
+// 20260903000002) — mismo endpoint, misma respuesta 204, cobertura de deduplicación/bots
+// ver analyticsEvents.integration.test.js.
 describe('Registro de vistas de propiedades', () => {
   let admin, token;
 
@@ -37,7 +47,7 @@ describe('Registro de vistas de propiedades', () => {
 
     await property.reload();
     expect(property.views).toBe(0);
-    expect(await Analytics.count({ where: { propertyId: property.id, event: 'view' } })).toBe(0);
+    expect(await Analytics.count({ where: { propertyId: property.id, event: 'property_view' } })).toBe(0);
   });
 
   test('GET /api/properties/slug/:slug (ficha pública) tampoco incrementa views por sí solo', async () => {
@@ -48,19 +58,21 @@ describe('Registro de vistas de propiedades', () => {
 
     await property.reload();
     expect(property.views).toBe(0);
-    expect(await Analytics.count({ where: { propertyId: property.id, event: 'view' } })).toBe(0);
+    expect(await Analytics.count({ where: { propertyId: property.id, event: 'property_view' } })).toBe(0);
   });
 
   test('POST /api/properties/:id/view registra la visita e incrementa views', async () => {
     const property = await createProperty();
 
-    const res = await request(app).post(`/api/properties/${property.id}/view`);
+    const res = await request(app)
+      .post(`/api/properties/${property.id}/view`)
+      .set('User-Agent', REAL_BROWSER_UA);
     expect(res.status).toBe(204);
 
     await property.reload();
     expect(property.views).toBe(1);
 
-    const events = await Analytics.findAll({ where: { propertyId: property.id, event: 'view' } });
+    const events = await Analytics.findAll({ where: { propertyId: property.id, event: 'property_view' } });
     expect(events).toHaveLength(1);
   });
 
@@ -77,7 +89,7 @@ describe('Registro de vistas de propiedades', () => {
     expect(property.views).toBe(0);
 
     // Y sigue subiendo solo cuando un visitante real dispara el endpoint dedicado.
-    await request(app).post(`/api/properties/${property.id}/view`);
+    await request(app).post(`/api/properties/${property.id}/view`).set('User-Agent', REAL_BROWSER_UA);
     await property.reload();
     expect(property.views).toBe(1);
   });

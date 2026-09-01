@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas';
 import FichaTecnica from './FichaTecnica';
 import { downloadBlob } from '../../utils/download';
 import { buttonHover, buttonTap } from '../../utils/animations';
+import { trackEvent, ANALYTICS_EVENTS } from '../../utils/analytics';
 
 // Espera a que las imágenes dentro de la ficha oculta (foto de portada + logo) terminen de
 // cargar antes de rasterizarla — sin esto, html2canvas puede capturar el nodo a medio cargar
@@ -39,6 +40,7 @@ export default function DownloadQuoteButton({ property, className = '' }) {
       });
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
       downloadBlob(blob, `ficha-${property.slug || property.id}.png`);
+      trackEvent(ANALYTICS_EVENTS.TECHNICAL_SHEET_DOWNLOAD, { propertyId: property.id });
     } catch {
       toast.error('Error al generar la ficha');
     } finally {

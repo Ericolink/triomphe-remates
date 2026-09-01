@@ -1,4 +1,5 @@
 import api from './api';
+import { getAnalyticsRequestContext } from '../utils/analytics';
 
 export const getProperties = async (params = {}) => {
   const { data } = await api.get('/properties', { params });
@@ -88,9 +89,9 @@ export const getPriceHistory = async (id) => {
 };
 
 export const trackView = async (id) => {
-  await api.post(`/properties/${id}/view`);
+  await api.post(`/properties/${id}/view`, getAnalyticsRequestContext());
 };
 
 export const trackShare = async (id) => {
-  await api.post(`/properties/${id}/share`);
+  await api.post(`/properties/${id}/share`, getAnalyticsRequestContext());
 };

@@ -468,6 +468,7 @@ export default function PropertyDetailPage() {
             priceLabel={formatPrice(property.price)}
             url={`/propiedades/${property.slug}`}
             className="order-6 mb-6"
+            propertyId={property.id}
           />
 
           {/* w-full explícito en vez de confiar en el stretch por defecto del grid: un

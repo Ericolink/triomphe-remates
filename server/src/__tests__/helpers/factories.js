@@ -1,7 +1,7 @@
 // Factories compartidas para tests de integración — evitan repetir el boilerplate de
 // crear User/Property/Lead con valores válidos en cada archivo de test.
 const { generateToken, hashPassword } = require('../../utils/helpers');
-const { User, Property, Lead, Deal, Campaign } = require('../../models/index');
+const { User, Property, Lead, Deal, Campaign, Analytics, LeadProperty } = require('../../models/index');
 
 let counter = 0;
 const nextId = () => ++counter;
@@ -78,4 +78,40 @@ async function createCampaign(overrides = {}) {
   });
 }
 
-module.exports = { createUser, authToken, createProperty, createLead, createDeal, createCampaign };
+// Genera un UUID v4 con forma válida (no criptográficamente fuerte, no hace falta para
+// datos de prueba) — evita depender del paquete `uuid` solo para los tests.
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+async function createAnalyticsEvent(overrides = {}) {
+  return Analytics.create({
+    event: overrides.event ?? 'page_view',
+    visitorId: overrides.visitorId === undefined ? uuid() : overrides.visitorId,
+    sessionId: overrides.sessionId === undefined ? uuid() : overrides.sessionId,
+    path: overrides.path ?? '/',
+    device: overrides.device ?? 'desktop',
+    isBot: overrides.isBot ?? false,
+    ...overrides,
+  });
+}
+
+async function createLeadProperty(overrides = {}) {
+  return LeadProperty.create({ ...overrides });
+}
+
+module.exports = {
+  createUser,
+  authToken,
+  createProperty,
+  createLead,
+  createDeal,
+  createCampaign,
+  createAnalyticsEvent,
+  createLeadProperty,
+  uuid,
+};

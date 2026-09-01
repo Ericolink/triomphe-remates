@@ -13,7 +13,9 @@
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write src/",
     "migrate": "sequelize-cli db:migrate",
-    "migrate:undo": "sequelize-cli db:migrate:undo"
+    "migrate:undo": "sequelize-cli db:migrate:undo",
+    "migrate:test": "sequelize-cli db:migrate --env test",
+    "migrate:test:undo": "sequelize-cli db:migrate:undo --env test"
   },
   "keywords": [],
   "author": "",

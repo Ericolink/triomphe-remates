@@ -18,6 +18,7 @@ import CollapsibleSection from '../../ui/CollapsibleSection';
 import TabBar from '../../ui/TabBar';
 import Badge from '../../ui/Badge';
 import { BarChart, AreaChart } from '../../ui/MiniChart';
+import TrafficSection from './TrafficSection';
 import { staggerContainer, fadeInUp } from '../../../utils/animations';
 import { formatPrice } from '../../../utils/formatters';
 import {
@@ -41,6 +42,7 @@ const leadStatusLabel = {
 const TABS = [
   { key: 'inventario', label: 'Inventario y tráfico' },
   { key: 'leads', label: 'Leads y conversión' },
+  { key: 'trafico', label: 'Tráfico del sitio' },
 ];
 
 // Nivel 3 — analítica y tendencias. Colapsado por defecto y dividido en pestañas para no
@@ -396,6 +398,8 @@ export default function AnalyticsSection({ d }) {
           </motion.div>
         </motion.div>
       )}
+
+      {tab === 'trafico' && <TrafficSection />}
     </CollapsibleSection>
   );
 }

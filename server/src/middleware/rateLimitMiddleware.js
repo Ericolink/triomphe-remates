@@ -110,6 +110,36 @@ const exportLimiter = rateLimit({
   keyGenerator: resolveUserOrIpKey,
 });
 
+// POST /api/analytics/events — endpoint anónimo por diseño (nunca lleva JWT), así que su
+// única defensa contra abuso es este limiter + la detección de bots por User-Agent (ver
+// botDetection.js). Se agrupa por visitorId (el UUID anónimo del cliente) cuando el body ya
+// trae uno válido, en vez de por IP: varios visitantes reales detrás de la misma IP/NAT
+// (oficina, red móvil compartida) no deben compartir un solo cupo. Cae a IP cuando el body
+// todavía no se pudo leer/parsear o no trae un visitorId con forma de UUID.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const resolveVisitorOrIpKey = (req, res) => {
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      body = null;
+    }
+  }
+  const visitorId = body?.visitorId;
+  if (typeof visitorId === 'string' && UUID_RE.test(visitorId)) return `visitor:${visitorId}`;
+  return ipKeyGenerator(req, res);
+};
+
+const analyticsLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: 120,
+  message: { error: 'Demasiados eventos. Intenta de nuevo en unos minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: resolveVisitorOrIpKey,
+});
+
 module.exports = {
   authLimiter,
   publicFormLimiter,
@@ -118,5 +148,6 @@ module.exports = {
   uploadLimiter,
   exportLimiter,
   alertSubscribeLimiter,
+  analyticsLimiter,
   resolveUserKey,
 };
