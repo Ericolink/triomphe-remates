@@ -11,8 +11,6 @@ import {
   BUDGET_RANGE_OPTIONS,
   LEAD_SEARCH_CITY_OPTIONS,
   LEAD_SEARCH_TYPE_OPTIONS,
-  LEAD_URGENCY_LABELS,
-  LEAD_TYPES_NEEDING_BUDGET,
   labelsToOptions,
 } from '../../utils/constants';
 import { todayISODate } from '../../utils/formatters';
@@ -47,7 +45,6 @@ const emptyForm = {
   desiredType: '',
   searchCity: '',
   searchZone: '',
-  urgency: '',
 };
 
 export default function ContactForm({ propertyId, propertyTitle, defaultSource }) {
@@ -76,16 +73,12 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
   });
 
   const isCita = form.type === 'cita';
-  // Fase 3b del rediseño del CRM: "quiero vender"/"solo información"/"otro" no implican
-  // que el prospecto vaya a comprar/rentar nada — preguntarle forma de pago/presupuesto
-  // ahí es fricción sin beneficio para el asesor (ver LEAD_TYPES_NEEDING_BUDGET).
-  const needsBudget = LEAD_TYPES_NEEDING_BUDGET.includes(form.type);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name || !form.phone) return toast.error('Nombre y teléfono son requeridos');
-    if (needsBudget && !form.paymentMethod) return toast.error('Elige cómo planeas pagar');
-    if (needsBudget && !form.budgetAmount) return toast.error('Elige tu presupuesto aproximado');
+    if (!form.paymentMethod) return toast.error('Elige cómo planeas pagar');
+    if (!form.budgetAmount) return toast.error('Elige tu presupuesto aproximado');
 
     let appointmentDate;
     if (isCita) {
@@ -113,18 +106,14 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
       appointmentDate,
       propertyId,
       source,
-      // Igual que desiredType/searchCity abajo: se omiten (undefined) en vez de mandarse
-      // como '' cuando el motivo no los necesita — el backend valida paymentMethod contra
-      // su ENUM y rechazaría un string vacío como valor inválido.
-      paymentMethod: needsBudget ? form.paymentMethod : undefined,
-      budgetAmount: needsBudget ? Number(form.budgetAmount) : undefined,
+      paymentMethod: form.paymentMethod,
+      budgetAmount: Number(form.budgetAmount),
       budgetNotSpecified: false,
       // Opcionales — se omiten del body en vez de mandarse como '' (el backend valida
       // contra el ENUM y rechazaría un string vacío como valor inválido).
       desiredType: form.desiredType || undefined,
       searchCity: form.searchCity || undefined,
       searchZone: form.searchZone.trim() || undefined,
-      urgency: form.urgency || undefined,
       utmMedium,
       utmCampaign,
       utmContent,
@@ -179,10 +168,8 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
       </select>
       {/* Opcionales — ayudan al asesor a saber qué mostrarte sin alargar el formulario con
           preguntas obligatorias (recámaras/baños/características se afinan en la llamada).
-          Fase 3b del rediseño del CRM: `urgency` es el campo con más impacto para que el
-          asesor priorice, y no costaba nada agregarlo (mismo patrón que desiredType/
-          searchCity). `searchZone` solo aparece una vez elegida una ciudad — preguntarla
-          antes no tendría sentido (progresivo, no una pregunta más siempre visible). */}
+          `searchZone` solo aparece una vez elegida una ciudad — preguntarla antes no
+          tendría sentido (progresivo, no una pregunta más siempre visible). */}
       <div className="grid grid-cols-2 gap-3">
         <select
           value={form.desiredType}
@@ -218,62 +205,46 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
           className={inputClass}
         />
       )}
+      <div>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+          ¿Cómo planeas pagar? *
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => {
+            const Icon = value === 'credito_hipotecario' ? Landmark : Banknote;
+            const active = form.paymentMethod === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, paymentMethod: value }))}
+                className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                  active
+                    ? 'bg-accent-400 border-accent-400 text-primary-900'
+                    : 'bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
+                }`}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <select
-        value={form.urgency}
-        onChange={(e) => setForm((f) => ({ ...f, urgency: e.target.value }))}
+        value={form.budgetAmount}
+        onChange={(e) => setForm((f) => ({ ...f, budgetAmount: e.target.value }))}
         className={inputClass}
       >
-        <option value="">¿Qué tan pronto quieres concretar? (opcional)</option>
-        {Object.entries(LEAD_URGENCY_LABELS).map(([value, label]) => (
+        <option value="" disabled>
+          Presupuesto aproximado *
+        </option>
+        {BUDGET_RANGE_OPTIONS.map(({ value, label }) => (
           <option key={value} value={value}>
             {label}
           </option>
         ))}
       </select>
-      {needsBudget && (
-        <>
-          <div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-              ¿Cómo planeas pagar? *
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => {
-                const Icon = value === 'credito_hipotecario' ? Landmark : Banknote;
-                const active = form.paymentMethod === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, paymentMethod: value }))}
-                    className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                      active
-                        ? 'bg-accent-400 border-accent-400 text-primary-900'
-                        : 'bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
-                    }`}
-                  >
-                    <Icon size={18} />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <select
-            value={form.budgetAmount}
-            onChange={(e) => setForm((f) => ({ ...f, budgetAmount: e.target.value }))}
-            className={inputClass}
-          >
-            <option value="" disabled>
-              Presupuesto aproximado *
-            </option>
-            {BUDGET_RANGE_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </>
-      )}
       {isCita && (
         <div className="grid grid-cols-2 gap-3">
           <div>

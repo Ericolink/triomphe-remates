@@ -1,8 +1,7 @@
-// Fase 3b del rediseño del CRM: el formulario público ya no exige forma de pago/
-// presupuesto para motivos que no implican comprar/rentar ("solo información", "quiero
-// vender", "otro"), agrega `urgency` (opcional) y revela `searchZone` solo después de
-// elegir una ciudad. Fase 3a: captura UTM automáticamente desde la URL. Estos tests
-// verifican ambos comportamientos contra el formulario real, no solo la lógica aislada.
+// Forma de pago/presupuesto son siempre obligatorias en el formulario público, sin
+// importar el motivo de contacto elegido (se revirtió la gating por motivo de Fase 3b).
+// Fase 3a: sigue capturando UTM automáticamente desde la URL. `searchZone` sigue
+// revelándose solo después de elegir una ciudad.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -33,60 +32,37 @@ function renderForm({ route = '/', props = {} } = {}) {
 const fillRequired = async (user) => {
   await user.type(screen.getByPlaceholderText('Tu nombre *'), 'Juan Pérez');
   await user.type(screen.getByPlaceholderText('Tu teléfono *'), '6561234567');
+  await user.click(screen.getByRole('button', { name: /contado/i }));
+  await user.selectOptions(screen.getByText('Presupuesto aproximado *').closest('select'), [
+    '750000',
+  ]);
 };
 
-describe('ContactForm — motivo condiciona forma de pago/presupuesto (Fase 3b)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe('ContactForm — forma de pago/presupuesto siempre visibles y obligatorias', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-  it('con el motivo por defecto ("solicitar información") no muestra forma de pago ni presupuesto', () => {
+  it('muestra forma de pago y presupuesto sin importar el motivo por defecto', () => {
     renderForm();
-    expect(screen.queryByText('¿Cómo planeas pagar? *')).not.toBeInTheDocument();
-    expect(screen.queryByText('Presupuesto aproximado *')).not.toBeInTheDocument();
-  });
-
-  it('envía el lead sin pedir forma de pago/presupuesto cuando el motivo no los necesita', async () => {
-    const user = userEvent.setup();
-    renderForm();
-    await fillRequired(user);
-
-    await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
-
-    await waitFor(() => expect(createLead).toHaveBeenCalled());
-    const payload = createLead.mock.calls[0][0];
-    expect(payload.paymentMethod).toBeUndefined();
-    expect(payload.budgetAmount).toBeUndefined();
-    expect(toast.error).not.toHaveBeenCalled();
-  });
-
-  it('al elegir un motivo transaccional ("quiero comprar"), muestra forma de pago/presupuesto y los exige', async () => {
-    const user = userEvent.setup();
-    renderForm();
-    await fillRequired(user);
-
-    await user.selectOptions(screen.getByDisplayValue('Solicitar información de una propiedad'), [
-      'comprar_propiedad',
-    ]);
     expect(screen.getByText('¿Cómo planeas pagar? *')).toBeInTheDocument();
+    expect(screen.getByText('Presupuesto aproximado *')).toBeInTheDocument();
+  });
+
+  it('no permite enviar sin elegir forma de pago', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(screen.getByPlaceholderText('Tu nombre *'), 'Juan Pérez');
+    await user.type(screen.getByPlaceholderText('Tu teléfono *'), '6561234567');
 
     await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
     expect(toast.error).toHaveBeenCalledWith('Elige cómo planeas pagar');
     expect(createLead).not.toHaveBeenCalled();
   });
 
-  it('con un motivo transaccional, completar forma de pago y presupuesto sí permite enviar', async () => {
+  it('con forma de pago y presupuesto completos, envía el lead', async () => {
     const user = userEvent.setup();
     renderForm();
     await fillRequired(user);
-    await user.selectOptions(screen.getByDisplayValue('Solicitar información de una propiedad'), [
-      'comprar_propiedad',
-    ]);
 
-    await user.click(screen.getByRole('button', { name: /contado/i }));
-    await user.selectOptions(screen.getByText('Presupuesto aproximado *').closest('select'), [
-      '750000',
-    ]);
     await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
 
     await waitFor(() => expect(createLead).toHaveBeenCalled());
@@ -96,7 +72,7 @@ describe('ContactForm — motivo condiciona forma de pago/presupuesto (Fase 3b)'
   });
 });
 
-describe('ContactForm — campos progresivos de necesidad (Fase 3b)', () => {
+describe('ContactForm — campos progresivos de necesidad', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('no muestra "zona o colonia" hasta que se elige una ciudad', async () => {
@@ -108,15 +84,12 @@ describe('ContactForm — campos progresivos de necesidad (Fase 3b)', () => {
     expect(screen.getByPlaceholderText(/zona o colonia/i)).toBeInTheDocument();
   });
 
-  it('incluye urgency y searchZone en el envío cuando se completan', async () => {
+  it('incluye searchZone en el envío cuando se completa', async () => {
     const user = userEvent.setup();
     renderForm();
     await fillRequired(user);
     await user.selectOptions(screen.getByDisplayValue('Ciudad de interés'), ['juarez']);
     await user.type(screen.getByPlaceholderText(/zona o colonia/i), 'Campestre');
-    await user.selectOptions(screen.getByDisplayValue('¿Qué tan pronto quieres concretar? (opcional)'), [
-      'inmediata',
-    ]);
 
     await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
 
@@ -124,7 +97,6 @@ describe('ContactForm — campos progresivos de necesidad (Fase 3b)', () => {
     const payload = createLead.mock.calls[0][0];
     expect(payload.searchCity).toBe('juarez');
     expect(payload.searchZone).toBe('Campestre');
-    expect(payload.urgency).toBe('inmediata');
   });
 });
 
