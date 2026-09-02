@@ -26,6 +26,7 @@ const flushMicrotasks = () =>
     await Promise.resolve();
   });
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import LeadDetailWithActions from '../crm/LeadDetailWithActions';
 import { getLeadById, updateLead } from '../../../services/leadService';
 
@@ -49,9 +50,6 @@ vi.mock('../../../services/activityService', () => ({
 vi.mock('../../../services/appointmentService', () => ({
   getLeadAppointments: vi.fn().mockResolvedValue({ data: [] }),
   createAppointment: vi.fn(),
-}));
-vi.mock('../../../services/taskService', () => ({
-  getLeadTasks: vi.fn().mockResolvedValue({ data: [] }),
 }));
 vi.mock('../../../services/propertyService', () => ({
   getProperties: vi.fn().mockResolvedValue({ data: [] }),
@@ -87,7 +85,11 @@ function renderWithClient(ui) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>
+  );
 }
 
 function Harness({ initial }) {

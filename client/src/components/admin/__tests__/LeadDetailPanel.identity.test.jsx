@@ -16,6 +16,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import LeadDetailWithActions from '../crm/LeadDetailWithActions';
 import { DetailPanelSlot } from '../LeadDetailPanel';
 import { getLeadById, updateLead } from '../../../services/leadService';
@@ -40,9 +41,6 @@ vi.mock('../../../services/activityService', () => ({
 vi.mock('../../../services/appointmentService', () => ({
   getLeadAppointments: vi.fn().mockResolvedValue({ data: [] }),
   createAppointment: vi.fn(),
-}));
-vi.mock('../../../services/taskService', () => ({
-  getLeadTasks: vi.fn().mockResolvedValue({ data: [] }),
 }));
 vi.mock('../../../services/propertyService', () => ({
   getProperties: vi.fn().mockResolvedValue({ data: [] }),
@@ -83,7 +81,11 @@ function renderWithClient(ui) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>
+  );
 }
 
 beforeEach(() => {

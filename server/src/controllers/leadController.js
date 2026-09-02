@@ -371,14 +371,23 @@ const createLead = async (req, res) => {
   // responsable, sin importar qué venga en el body (no se confía en el cliente). El caso de
   // uso típico es agendarle una cita de inmediato desde el Calendario cuando no encuentra al
   // prospecto ya capturado (ver AgendarCitaModal.jsx).
-  let resolvedAssignedToUserId = assignedToUserId || null;
+  //
+  // BUG real reportado por el dueño del negocio: esta rama antes solo revisaba
+  // `assignedToUserId && req.user && !canAssignLeads(req.user)` — como el `&& req.user`
+  // cortocircuitaba a `false` en cuanto NO había usuario autenticado, una request pública
+  // (sin token, ej. el formulario "Contactar asesor") que incluyera `assignedToUserId` en
+  // el body pasaba de largo sin ningún chequeo y el valor inyectado se guardaba tal cual —
+  // cualquiera, sin sesión, podía preasignar un prospecto público a cualquier usuario.
+  // Ahora el `else if` cubre explícitamente el caso "no hay usuario que pueda asignar"
+  // (`!req.user`), no solo "hay usuario pero no puede".
+  let resolvedAssignedToUserId = null;
   if (req.user && crmAccessLevel(req.user) === 'asesor_ventas') {
     resolvedAssignedToUserId = req.user.id;
-  } else if (assignedToUserId && req.user && !canAssignLeads(req.user)) {
-    // Defensa en profundidad: ningún rol que llegue aquí hoy vía requireCrmAccess (solo
-    // admin/asistente_administrativo/asesor_ventas, y asesor_ventas ya se resolvió arriba)
-    // debería caer en esta rama — se conserva por si el modelo de roles cambia.
-    throw new ApiError(403, 'No tienes permisos para asignar un responsable');
+  } else if (assignedToUserId) {
+    if (!req.user || !canAssignLeads(req.user)) {
+      throw new ApiError(403, 'No tienes permisos para asignar un responsable');
+    }
+    resolvedAssignedToUserId = assignedToUserId;
   }
 
   if (type && !VALID_LEAD_TYPE.includes(type)) {

@@ -1,17 +1,21 @@
 // Fase 3 del rediseño del CRM — el asesor debe entender un prospecto en 5-10 segundos sin
-// salir de "Resumen": un badge de prioridad CALCULADO (nunca un campo que alguien tenga que
-// mantener a mano) a partir de la urgencia declarada y de si la próxima acción ya venció,
-// urgencia editable ahí mismo (evita el viaje a "Búsqueda" solo para actualizarla), y un
-// atajo que cierra el ciclo "registrar interacción → agendar seguimiento" sin cambiar de
-// pestaña por su cuenta.
+// salir de "Resumen": un badge de "no se ha dado seguimiento" CALCULADO (nunca un campo que
+// alguien tenga que mantener a mano) a partir de si ya existe alguna interacción humana real
+// (llamada/whatsapp/email/visita/nota), urgencia editable ahí mismo (evita el viaje a la
+// pestaña "Datos" solo para actualizarla), y un atajo que cierra el ciclo "registrar
+// interacción → agendar seguimiento" sin cambiar de pestaña por su cuenta. El sistema de
+// tareas ("próxima acción") que antes alimentaba este badge fue eliminado (pedido del dueño
+// del negocio); el badge ya no depende de `lead.urgency` tampoco — solo de si alguien ya
+// tocó al prospecto.
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import LeadDetailWithActions from '../crm/LeadDetailWithActions';
-import { getLeadById, updateLead, addLeadNote } from '../../../services/leadService';
-import { getLeadTasks } from '../../../services/taskService';
+import { getLeadById, updateLead, addLeadNote, getLeadNotes } from '../../../services/leadService';
+import { getLeadActivities } from '../../../services/activityService';
 
 vi.mock('../../../services/leadService', () => ({
   getLeadById: vi.fn(),
@@ -33,9 +37,6 @@ vi.mock('../../../services/activityService', () => ({
 vi.mock('../../../services/appointmentService', () => ({
   getLeadAppointments: vi.fn().mockResolvedValue({ data: [] }),
   createAppointment: vi.fn(),
-}));
-vi.mock('../../../services/taskService', () => ({
-  getLeadTasks: vi.fn().mockResolvedValue({ data: [] }),
 }));
 vi.mock('../../../services/propertyService', () => ({
   getProperties: vi.fn().mockResolvedValue({ data: [] }),
@@ -70,7 +71,11 @@ function renderWithClient(ui) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>
+  );
 }
 
 function Harness({ initial }) {
@@ -83,50 +88,67 @@ beforeEach(() => {
   updateLead.mockResolvedValue({ data: {} });
 });
 
-describe('LeadDetailPanel — badge de prioridad calculado (Fase 3)', () => {
-  it('muestra "Alta prioridad" cuando la urgencia declarada es "inmediata"', async () => {
-    const lead = { ...baseLead, urgency: 'inmediata' };
+describe('LeadDetailPanel — badge "no se ha dado seguimiento" calculado (Fase 3)', () => {
+  it('muestra el badge cuando no hay ninguna nota ni actividad humana registrada', async () => {
+    const lead = { ...baseLead };
     getLeadById.mockResolvedValue({ data: lead });
+    getLeadNotes.mockResolvedValue({ data: [] });
+    getLeadActivities.mockResolvedValue({ data: [] });
     renderWithClient(<Harness initial={lead} />);
 
-    expect(await screen.findByText('🔥 Alta prioridad')).toBeInTheDocument();
+    expect(await screen.findByText('No se ha dado seguimiento')).toBeInTheDocument();
   });
 
-  it('muestra "Alta prioridad" cuando la próxima acción ya venció, aunque la urgencia no sea inmediata', async () => {
-    const lead = { ...baseLead, urgency: '3_6_meses' };
+  it('las actividades autogeneradas (sistema/reasignación) no cuentan como seguimiento', async () => {
+    const lead = { ...baseLead };
     getLeadById.mockResolvedValue({ data: lead });
-    getLeadTasks.mockResolvedValue({
+    getLeadNotes.mockResolvedValue({ data: [] });
+    getLeadActivities.mockResolvedValue({
       data: [
-        {
-          id: 1,
-          leadId: lead.id,
-          type: 'llamar',
-          done: false,
-          dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // ayer
-        },
+        { id: 1, type: 'sistema', content: 'Prospecto creado', occurredAt: new Date().toISOString() },
+        { id: 2, type: 'reasignacion', content: 'Responsable cambiado', occurredAt: new Date().toISOString() },
       ],
     });
     renderWithClient(<Harness initial={lead} />);
 
-    expect(await screen.findByText('🔥 Alta prioridad')).toBeInTheDocument();
+    expect(await screen.findByText('No se ha dado seguimiento')).toBeInTheDocument();
   });
 
-  it('NO muestra el badge si no hay urgencia inmediata ni tarea vencida', async () => {
-    const lead = { ...baseLead, urgency: 'mas_6_meses' };
+  it('NO muestra el badge si ya existe una nota', async () => {
+    const lead = { ...baseLead };
     getLeadById.mockResolvedValue({ data: lead });
+    getLeadNotes.mockResolvedValue({
+      data: [{ id: 1, content: 'Llamé, quedó de confirmar', createdAt: new Date().toISOString() }],
+    });
+    getLeadActivities.mockResolvedValue({ data: [] });
     renderWithClient(<Harness initial={lead} />);
 
     await screen.findByRole('dialog');
-    expect(screen.queryByText('🔥 Alta prioridad')).not.toBeInTheDocument();
+    expect(screen.queryByText('No se ha dado seguimiento')).not.toBeInTheDocument();
   });
 
-  it('NO muestra el badge para un lead ya cerrado, aunque tenga urgencia inmediata', async () => {
-    const lead = { ...baseLead, urgency: 'inmediata', pipelineStage: 'venta_realizada' };
+  it('NO muestra el badge si ya existe una actividad humana (llamada)', async () => {
+    const lead = { ...baseLead };
     getLeadById.mockResolvedValue({ data: lead });
+    getLeadNotes.mockResolvedValue({ data: [] });
+    getLeadActivities.mockResolvedValue({
+      data: [{ id: 1, type: 'llamada', content: 'Llamada realizada', occurredAt: new Date().toISOString() }],
+    });
     renderWithClient(<Harness initial={lead} />);
 
     await screen.findByRole('dialog');
-    expect(screen.queryByText('🔥 Alta prioridad')).not.toBeInTheDocument();
+    expect(screen.queryByText('No se ha dado seguimiento')).not.toBeInTheDocument();
+  });
+
+  it('NO muestra el badge para un lead ya cerrado, aunque no tenga ninguna interacción registrada', async () => {
+    const lead = { ...baseLead, pipelineStage: 'venta_realizada' };
+    getLeadById.mockResolvedValue({ data: lead });
+    getLeadNotes.mockResolvedValue({ data: [] });
+    getLeadActivities.mockResolvedValue({ data: [] });
+    renderWithClient(<Harness initial={lead} />);
+
+    await screen.findByRole('dialog');
+    expect(screen.queryByText('No se ha dado seguimiento')).not.toBeInTheDocument();
   });
 });
 

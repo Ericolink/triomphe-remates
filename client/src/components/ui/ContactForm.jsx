@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Landmark, Banknote } from 'lucide-react';
-import { createLead } from '../../services/leadService';
+import { createPublicLead } from '../../services/leadService';
 import {
   LEAD_TYPE_LABELS,
   PROPERTY_LEAD_TYPE_LABELS,
@@ -64,7 +64,7 @@ export default function ContactForm({ propertyId, propertyTitle, defaultSource }
   const typeOptions = propertyId ? PROPERTY_LEAD_TYPE_OPTIONS : LEAD_TYPE_OPTIONS;
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data) => createLead(data),
+    mutationFn: (data) => createPublicLead(data),
     onSuccess: () => {
       toast.success('¡Mensaje enviado! Te contactaremos pronto.');
       setForm(emptyForm);

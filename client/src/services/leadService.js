@@ -5,6 +5,18 @@ export const createLead = async (leadData) => {
   return data;
 };
 
+// Usado exclusivamente por los formularios públicos (ContactForm) — POST /leads es el mismo
+// endpoint que "Nuevo prospecto" del CRM (leadController.createLead distingue el origen por
+// si req.user viene presente o no), así que un envío público NUNCA debe llevar el JWT de
+// quien sea que esté logueado en /admin en ese mismo navegador: si lo llevara, el backend lo
+// trataría como una captura manual de ese usuario (y, si es asesor_ventas, el prospecto
+// público quedaría auto-asignado a él en vez de sin asignar para que admin/asistente lo
+// repartan). skipAuth se implementa en api.js.
+export const createPublicLead = async (leadData) => {
+  const { data } = await api.post('/leads', leadData, { skipAuth: true });
+  return data;
+};
+
 export const getLeads = async (params = {}) => {
   const { data } = await api.get('/leads', { params });
   return data;

@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { BedDouble, Bath, Droplets, Maximize2, LandPlot, MapPin } from 'lucide-react';
+import { BedDouble, Bath, Droplets, Maximize2, LandPlot } from 'lucide-react';
 import { buildImageUrl } from '../../utils/images';
 import { formatPrice } from '../../utils/formatters';
 import {
@@ -47,7 +47,7 @@ function InfoRow({ label, value }) {
 function FeatureChip({ icon: Icon, value, label }) {
   return (
     <div className="flex items-center gap-1.5 text-gray-700">
-      <Icon size={17} className="text-accent-500 shrink-0" />
+      <Icon size={17} className="text-accent-500 shrink-0 mt-[3px]" />
       <span className="text-sm font-semibold whitespace-nowrap">{value}</span>
       <span className="text-[10px] text-gray-400 whitespace-nowrap">{label}</span>
     </div>
@@ -165,10 +165,7 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
       <div className="shrink-0 bg-gray-50 px-8 pt-6 pb-4 border-b border-gray-100">
         <h1 className="text-primary-900 text-[32px] font-bold leading-snug">{title}</h1>
         {heroLocation && (
-          <p className="text-gray-500 text-sm mt-3 flex items-center gap-1">
-            <MapPin size={14} className="shrink-0 text-accent-500" />
-            <span className="leading-none">{heroLocation}</span>
-          </p>
+          <p className="text-gray-500 text-sm mt-3">{heroLocation}</p>
         )}
         <div className="flex items-center justify-between gap-6 mt-4">
           <div>

@@ -8,10 +8,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ContactForm from '../ContactForm';
-import { createLead } from '../../../services/leadService';
+import { createPublicLead } from '../../../services/leadService';
 
 vi.mock('../../../services/leadService', () => ({
-  createLead: vi.fn().mockResolvedValue({ data: { id: 1 } }),
+  createPublicLead: vi.fn().mockResolvedValue({ data: { id: 1 } }),
 }));
 vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
@@ -55,7 +55,7 @@ describe('ContactForm — forma de pago/presupuesto siempre visibles y obligator
 
     await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
     expect(toast.error).toHaveBeenCalledWith('Elige cómo planeas pagar');
-    expect(createLead).not.toHaveBeenCalled();
+    expect(createPublicLead).not.toHaveBeenCalled();
   });
 
   it('con forma de pago y presupuesto completos, envía el lead', async () => {
@@ -65,8 +65,8 @@ describe('ContactForm — forma de pago/presupuesto siempre visibles y obligator
 
     await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
 
-    await waitFor(() => expect(createLead).toHaveBeenCalled());
-    const payload = createLead.mock.calls[0][0];
+    await waitFor(() => expect(createPublicLead).toHaveBeenCalled());
+    const payload = createPublicLead.mock.calls[0][0];
     expect(payload.paymentMethod).toBe('contado');
     expect(payload.budgetAmount).toBe(750000);
   });
@@ -93,8 +93,8 @@ describe('ContactForm — campos progresivos de necesidad', () => {
 
     await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
 
-    await waitFor(() => expect(createLead).toHaveBeenCalled());
-    const payload = createLead.mock.calls[0][0];
+    await waitFor(() => expect(createPublicLead).toHaveBeenCalled());
+    const payload = createPublicLead.mock.calls[0][0];
     expect(payload.searchCity).toBe('juarez');
     expect(payload.searchZone).toBe('Campestre');
   });
@@ -110,8 +110,8 @@ describe('ContactForm — captura automática de atribución UTM (Fase 3a)', () 
 
     await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
 
-    await waitFor(() => expect(createLead).toHaveBeenCalled());
-    const payload = createLead.mock.calls[0][0];
+    await waitFor(() => expect(createPublicLead).toHaveBeenCalled());
+    const payload = createPublicLead.mock.calls[0][0];
     expect(payload.utmMedium).toBe('cpc');
     expect(payload.utmCampaign).toBe('remate-polanco-julio');
     expect(payload.utmContent).toBe('variante-b');
@@ -124,8 +124,8 @@ describe('ContactForm — captura automática de atribución UTM (Fase 3a)', () 
 
     await user.click(screen.getByRole('button', { name: /enviar mensaje/i }));
 
-    await waitFor(() => expect(createLead).toHaveBeenCalled());
-    const payload = createLead.mock.calls[0][0];
+    await waitFor(() => expect(createPublicLead).toHaveBeenCalled());
+    const payload = createPublicLead.mock.calls[0][0];
     expect(payload.utmMedium).toBeUndefined();
     expect(payload.utmCampaign).toBeUndefined();
     expect(payload.utmContent).toBeUndefined();

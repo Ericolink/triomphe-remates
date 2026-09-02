@@ -34,7 +34,7 @@ import {
   Layers,
   UserCheck,
   MessageCircle,
-  Flame,
+  UserX,
   ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -103,6 +103,12 @@ const SUBSECTION_LABEL_CLASS =
   'text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 mt-4 first:mt-0';
 const CARD_CLASS = 'rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3';
 
+// Tipos de Activity que representan una interacción humana real. 'sistema' (creación del
+// prospecto, cambios de etapa, citas agendadas) y 'reasignacion' quedan fuera a propósito:
+// todo prospecto recibe un Activity 'sistema' de "Prospecto creado" al registrarse, así que
+// contarlo rompería el badge de "no se ha dado seguimiento" (nunca se apagaría).
+const HUMAN_ACTIVITY_TYPES = new Set(['llamada', 'whatsapp', 'email', 'visita', 'nota']);
+
 // PHONE_PATTERN es un string estático propio (utils/phone.js, ya usado como atributo
 // `pattern` en los formularios públicos), no entrada de usuario.
 // eslint-disable-next-line security/detect-non-literal-regexp
@@ -135,18 +141,19 @@ const ACTIVE_STAGES = Object.keys(PIPELINE_STAGE_LABELS).filter(
   (s) => !TERMINAL_STAGES.includes(s)
 );
 
-// Pestañas del panel de detalle (rediseño CRM, ago-2026) — antes era una sola columna con
-// scroll y dos secciones colapsables ("Seguimiento"/"Información adicional"). Se separó en
-// pestañas explícitas para que un asesor pueda ir directo a lo que necesita ("Búsqueda" para
-// saber qué le interesa al prospecto, "Seguimiento" para registrar avance) sin desplazarse
-// por todo lo demás. "Resumen" es la pestaña por defecto: responde en pocos segundos quién
-// es, qué busca, en qué etapa está y qué sigue — sin poder editarse ahí (los campos
-// editables viven en su pestaña correspondiente, para no duplicar la misma UI en dos
-// lugares).
+// Pestañas del panel de detalle (rediseño CRM, ago-2026; fusión Resumen+Datos, sep-2026,
+// pedido del dueño del negocio) — antes era una sola columna con scroll y dos secciones
+// colapsables ("Seguimiento"/"Información adicional"). Se separó en pestañas explícitas
+// para que un asesor pueda ir directo a lo que necesita ("Datos" para los criterios de
+// búsqueda detallados, "Seguimiento" para registrar avance) sin desplazarse por todo lo
+// demás. "Resumen" es la pestaña por defecto: responde en pocos segundos quién es, sus
+// datos de contacto, qué busca, en qué etapa está y qué sigue — los campos que muestra son
+// editables ahí mismo (ya no hay una pestaña "Datos" aparte solo para eso); los criterios
+// de búsqueda más detallados y las propiedades relacionadas siguen viviendo en su propia
+// pestaña (Datos) para no duplicar esa UI.
 const TABS = [
   { key: 'resumen', label: 'Resumen', icon: <LayoutGrid size={14} /> },
-  { key: 'datos', label: 'Datos', icon: <Settings2 size={14} /> },
-  { key: 'busqueda', label: 'Búsqueda', icon: <Target size={14} /> },
+  { key: 'datos', label: 'Datos', icon: <Target size={14} /> },
   { key: 'seguimiento', label: 'Seguimiento', icon: <Activity size={14} /> },
   { key: 'citas', label: 'Citas', icon: <Calendar size={14} /> },
 ];
@@ -329,7 +336,7 @@ export default function LeadDetailPanel({
     enabled: !!selected?.id,
   });
 
-  const { data: activitiesData } = useQuery({
+  const { data: activitiesData, isLoading: activitiesLoading } = useQuery({
     queryKey: ['lead-activities', selected?.id],
     queryFn: () => getLeadActivities(selected.id),
     enabled: !!selected?.id,
@@ -371,24 +378,31 @@ export default function LeadDetailPanel({
     );
   }, [notesData, activitiesData]);
 
-  // Resumen de búsqueda en una sola línea (pestaña Resumen, solo lectura) — se arma a
-  // partir de los mismos campos editables en la pestaña "Búsqueda", para que el asesor no
-  // tenga que cambiar de pestaña solo para saber qué busca el prospecto.
-  const searchSummary = useMemo(() => {
-    const parts = [];
-    if (lead.desiredType) parts.push(TYPE_LABELS[lead.desiredType] || lead.desiredType);
-    const zoneBits = [
-      lead.searchCity ? CITY_LABELS[lead.searchCity] : null,
-      lead.searchZone,
-    ].filter(Boolean);
-    if (zoneBits.length) parts.push(`en ${zoneBits.join(' — ')}`);
-    if (lead.minBedrooms) parts.push(`${lead.minBedrooms}+ recámaras`);
-    if (lead.minBathrooms) parts.push(`${lead.minBathrooms}+ baños`);
-    if (!lead.budgetNotSpecified && lead.budgetAmount != null) {
-      parts.push(`hasta ${formatBudget(lead.budgetAmount, false)}`);
+  // "Qué busca" (pestaña Resumen, solo lectura) — antes se armaba como una sola línea
+  // condensada ("Casa · en Cd. Juárez — División del Norte · hasta $1,500,000"), pero eso
+  // ocultaba en qué campo exacto quedó cada dato. Pedido explícito del dueño del negocio:
+  // mostrar el nombre de cada campo que el prospecto llenó (típicamente desde el formulario
+  // público de una propiedad), no una frase armada — así el asesor ve de un vistazo qué puso
+  // en cada input, igual que se ve en la pestaña "Datos" donde son editables.
+  const searchFields = useMemo(() => {
+    const rows = [];
+    if (lead.desiredType) {
+      rows.push({ label: 'Tipo de propiedad', value: TYPE_LABELS[lead.desiredType] || lead.desiredType });
     }
-    if (lead.urgency) parts.push((LEAD_URGENCY_LABELS[lead.urgency] || '').toLowerCase());
-    return parts.length ? parts.join(' · ') : null;
+    if (lead.searchCity) {
+      rows.push({ label: 'Ciudad', value: CITY_LABELS[lead.searchCity] || lead.searchCity });
+    }
+    if (lead.searchZone) {
+      rows.push({ label: 'Colonia/zona', value: lead.searchZone });
+    }
+    if (lead.minBedrooms) rows.push({ label: 'Recámaras mínimas', value: `${lead.minBedrooms}+` });
+    if (lead.minBathrooms) rows.push({ label: 'Baños mínimos', value: `${lead.minBathrooms}+` });
+    if (lead.budgetNotSpecified) {
+      rows.push({ label: 'Presupuesto', value: 'No especificó' });
+    } else if (lead.budgetAmount != null) {
+      rows.push({ label: 'Presupuesto', value: formatBudget(lead.budgetAmount, false) });
+    }
+    return rows;
   }, [lead]);
 
   // Guarda un campo vía el PUT genérico y refleja el resultado junto al campo (ver
@@ -563,10 +577,17 @@ export default function LeadDetailPanel({
   const isTerminal = TERMINAL_STAGES.includes(lead.pipelineStage);
   const knownType = LEAD_TYPE_OPTIONS.some((o) => o.value === lead.type);
 
-  // Fase 3 del rediseño del CRM: "prioridad" no es un campo nuevo que alguien tenga que
-  // mantener a mano — se calcula de la urgencia declarada por el prospecto. Un lead cerrado
-  // nunca se marca como prioritario.
-  const isHighPriority = !isTerminal && lead.urgency === 'inmediata';
+  // Fase 3 del rediseño del CRM: "necesita seguimiento" no es un campo que alguien tenga que
+  // mantener a mano — se calcula de si ya existe alguna interacción humana real (llamada,
+  // whatsapp, email, visita o nota) registrada. La urgencia declarada por el prospecto ya no
+  // decide esto (sigue visible/editable en "Qué busca"): un lead puede llegar con urgencia
+  // inmediata y aun así no haber sido tocado por nadie, que es justo el caso que se quiere
+  // señalar. Mientras las notas/actividades siguen cargando, no se muestra nada (evita un
+  // parpadeo del badge). Un lead cerrado nunca se marca.
+  const hasFollowUp =
+    (notesData?.data?.length ?? 0) > 0 ||
+    (activitiesData?.data ?? []).some((a) => HUMAN_ACTIVITY_TYPES.has(a.type));
+  const needsFollowUp = !isTerminal && !notesLoading && !activitiesLoading && !hasFollowUp;
 
   return (
     <motion.div
@@ -587,12 +608,12 @@ export default function LeadDetailPanel({
               <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
                 Detalle del prospecto
               </p>
-              {isHighPriority && (
+              {needsFollowUp && (
                 <span
-                  title="Urgencia: inmediata"
+                  title="Sin llamada, whatsapp, email, visita ni nota registrada"
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 flex-shrink-0"
                 >
-                  <Flame size={11} /> Alta prioridad
+                  <UserX size={11} /> No se ha dado seguimiento
                 </span>
               )}
             </div>
@@ -625,10 +646,16 @@ export default function LeadDetailPanel({
             </div>
             <FieldStatus status={fieldStatus.phone} />
             {selected.property?.title && (
-              <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+              <a
+                href={selected.property.slug ? `/propiedades/${selected.property.slug}` : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Ver propiedad"
+                className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400 min-w-0 hover:text-accent-500 dark:hover:text-accent-400 hover:underline"
+              >
                 <Building2 size={11} className="flex-shrink-0" />
                 <span className="truncate">{selected.property.title}</span>
-              </div>
+              </a>
             )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -669,8 +696,11 @@ export default function LeadDetailPanel({
         </div>
 
         {/* ── Resumen: responde en pocos segundos quién es, qué busca, en qué etapa está
-            y qué sigue. Todo de solo lectura aquí — los campos que muestra se editan en su
-            pestaña correspondiente (Búsqueda/Seguimiento), para no duplicar la misma UI. */}
+            y qué sigue — incluye sus datos de contacto (fusionado desde la antigua pestaña
+            "Datos", pedido del dueño del negocio) y por eso ya son editables aquí mismo,
+            junto con la urgencia. Los criterios de búsqueda más detallados y las
+            propiedades relacionadas se siguen editando en su pestaña dedicada (Datos, antes
+            "Búsqueda") para no duplicar esa UI. */}
         {activeTab === 'resumen' && (
           <div>
             <div className="mb-4">
@@ -699,17 +729,110 @@ export default function LeadDetailPanel({
               )}
             </div>
 
+            {/* Datos de contacto — antes vivían en su propia pestaña "Datos"; el dueño del
+                negocio pidió fusionarla con Resumen (un prospecto sin abrir una segunda
+                pestaña ya muestra sus datos, no solo su etapa). */}
+            <div className={`mb-3 ${CARD_CLASS}`}>
+              <p className={SECTION_LABEL_CLASS}>
+                <Settings2 size={13} /> Datos de contacto
+              </p>
+              <div className="space-y-3 mt-1.5">
+                <div>
+                  <FieldLabel icon={Mail} htmlFor={`${formId}-email`}>
+                    Email
+                  </FieldLabel>
+                  <input
+                    id={`${formId}-email`}
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    onBlur={commitEmail}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    disabled={!canEdit}
+                    placeholder="Sin email"
+                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  />
+                  <FieldStatus status={fieldStatus.email} />
+                </div>
+                <div>
+                  <FieldLabel icon={Radio} htmlFor={`${formId}-source`}>
+                    Fuente
+                  </FieldLabel>
+                  <select
+                    id={`${formId}-source`}
+                    value={selected.source || 'directo'}
+                    onChange={(e) => saveField('source', { source: e.target.value })}
+                    disabled={!canEdit}
+                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {Object.entries(SOURCE_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldStatus status={fieldStatus.source} />
+                </div>
+                <div>
+                  <FieldLabel icon={CalendarClock} htmlFor={`${formId}-firstContactDate`}>
+                    Fecha de primer contacto
+                  </FieldLabel>
+                  <input
+                    id={`${formId}-firstContactDate`}
+                    type="date"
+                    max={todayISODate()}
+                    value={lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : ''}
+                    onChange={(e) =>
+                      saveField('firstContactDate', { firstContactDate: e.target.value || null })
+                    }
+                    disabled={!canEdit}
+                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  />
+                  <FieldStatus status={fieldStatus.firstContactDate} />
+                </div>
+              </div>
+              {(lead.campaign ||
+                lead.createdByUser ||
+                lead.assignedAt ||
+                lead.utmMedium ||
+                lead.utmCampaign ||
+                lead.utmContent ||
+                lead.landingPageUrl) && (
+                <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5 mt-3 pt-2 border-t border-gray-200 dark:border-[#2e3650]">
+                  {lead.campaign && <p>Campaña: {lead.campaign.name}</p>}
+                  {lead.createdByUser && <p>Creado por: {lead.createdByUser.name}</p>}
+                  {lead.assignedAt && <p>Asignado el: {formatDateTime(lead.assignedAt)}</p>}
+                  {/* Fase 3a del rediseño del CRM — atribución capturada automáticamente,
+                      nunca editable a mano (refleja lo que realmente pasó). */}
+                  {(lead.utmMedium || lead.utmCampaign || lead.utmContent) && (
+                    <p>
+                      UTM:{' '}
+                      {[lead.utmMedium, lead.utmCampaign, lead.utmContent].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  {lead.landingPageUrl && <p className="truncate">Página de origen: {lead.landingPageUrl}</p>}
+                </div>
+              )}
+            </div>
+
             <div className={`mb-3 ${CARD_CLASS}`}>
               <p className={SECTION_LABEL_CLASS}>
                 <Target size={13} /> Qué busca
               </p>
-              {searchSummary ? (
-                <p className="text-sm text-gray-700 dark:text-gray-200 mt-1.5 leading-relaxed">
-                  {searchSummary}
-                </p>
+              {searchFields.length > 0 ? (
+                <dl className="space-y-1 mt-1.5">
+                  {searchFields.map(({ label, value }) => (
+                    <div key={label} className="flex items-baseline gap-1.5 text-sm">
+                      <dt className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
+                        {label}:
+                      </dt>
+                      <dd className="text-gray-700 dark:text-gray-200">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
               ) : (
                 <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1.5">
-                  Sin información de búsqueda todavía — complétala en la pestaña "Búsqueda".
+                  Sin información de búsqueda todavía — complétala en la pestaña "Datos".
                 </p>
               )}
               {lead.desiredFeatures && (
@@ -719,10 +842,10 @@ export default function LeadDetailPanel({
               )}
               {/* Fase 3 del rediseño del CRM: urgencia editable aquí mismo — es el campo
                   que más cambia según cómo va el seguimiento (y el que alimenta el badge de
-                  prioridad del encabezado), así que forzar un cambio de pestaña a "Búsqueda"
+                  prioridad del encabezado), así que forzar un cambio de pestaña a "Datos"
                   solo para actualizarlo era la fricción más evitable. El resto de los
                   criterios de búsqueda no se duplican aquí — ya están completos en
-                  `searchSummary` arriba, y editarlos vive en su pestaña dedicada. */}
+                  `searchFields` arriba, y editarlos vive en su pestaña dedicada. */}
               <div className="flex items-center gap-2 mt-2">
                 <select
                   aria-label="Urgencia"
@@ -759,93 +882,12 @@ export default function LeadDetailPanel({
           </div>
         )}
 
-        {/* ── Datos: información personal y de contacto que normalmente no cambia
-            seguido — antes vivía colapsada bajo "Información adicional". */}
+        {/* ── Datos (antes "Búsqueda", renombrada cuando "Datos de contacto" se fusionó con
+            Resumen y dejó libre el nombre): todo lo que describe la necesidad del
+            prospecto — motivo, forma de pago/presupuesto (ya existían) más los criterios
+            estructurados (zona, tipo, recámaras/baños, características, urgencia) y las
+            propiedades relacionadas. */}
         {activeTab === 'datos' && (
-          <div className="space-y-3">
-            <div>
-              <FieldLabel icon={Mail} htmlFor={`${formId}-email`}>
-                Email
-              </FieldLabel>
-              <input
-                id={`${formId}-email`}
-                type="email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                onBlur={commitEmail}
-                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                disabled={!canEdit}
-                placeholder="Sin email"
-                className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
-              />
-              <FieldStatus status={fieldStatus.email} />
-            </div>
-            <div>
-              <FieldLabel icon={Radio} htmlFor={`${formId}-source`}>
-                Fuente
-              </FieldLabel>
-              <select
-                id={`${formId}-source`}
-                value={selected.source || 'directo'}
-                onChange={(e) => saveField('source', { source: e.target.value })}
-                disabled={!canEdit}
-                className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {Object.entries(SOURCE_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-              <FieldStatus status={fieldStatus.source} />
-            </div>
-            <div>
-              <FieldLabel icon={CalendarClock} htmlFor={`${formId}-firstContactDate`}>
-                Fecha de primer contacto
-              </FieldLabel>
-              <input
-                id={`${formId}-firstContactDate`}
-                type="date"
-                max={todayISODate()}
-                value={lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : ''}
-                onChange={(e) =>
-                  saveField('firstContactDate', { firstContactDate: e.target.value || null })
-                }
-                disabled={!canEdit}
-                className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
-              />
-              <FieldStatus status={fieldStatus.firstContactDate} />
-            </div>
-            {(lead.campaign ||
-              lead.createdByUser ||
-              lead.assignedAt ||
-              lead.utmMedium ||
-              lead.utmCampaign ||
-              lead.utmContent ||
-              lead.landingPageUrl) && (
-              <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5 pt-2 border-t border-gray-200 dark:border-[#2e3650]">
-                {lead.campaign && <p>Campaña: {lead.campaign.name}</p>}
-                {lead.createdByUser && <p>Creado por: {lead.createdByUser.name}</p>}
-                {lead.assignedAt && <p>Asignado el: {formatDateTime(lead.assignedAt)}</p>}
-                {/* Fase 3a del rediseño del CRM — atribución capturada automáticamente,
-                    nunca editable a mano (refleja lo que realmente pasó). */}
-                {(lead.utmMedium || lead.utmCampaign || lead.utmContent) && (
-                  <p>
-                    UTM:{' '}
-                    {[lead.utmMedium, lead.utmCampaign, lead.utmContent].filter(Boolean).join(' · ')}
-                  </p>
-                )}
-                {lead.landingPageUrl && <p className="truncate">Página de origen: {lead.landingPageUrl}</p>}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Búsqueda: todo lo que describe la necesidad del prospecto — motivo,
-            forma de pago/presupuesto (ya existían) más los criterios estructurados nuevos
-            (zona, tipo, recámaras/baños, características, urgencia) y las propiedades
-            relacionadas. */}
-        {activeTab === 'busqueda' && (
           <div>
             <p className={SUBSECTION_LABEL_CLASS}>Necesidad</p>
             <div className="space-y-3">
@@ -1067,15 +1109,41 @@ export default function LeadDetailPanel({
               <div>
                 <FieldLabel icon={Building2}>Propiedad de origen</FieldLabel>
                 {canEdit ? (
-                  <PropertyPicker
-                    value={lead.propertyId || ''}
-                    initialLabel={lead.property?.title || ''}
-                    onChange={(id) =>
-                      saveField('propertyId', { propertyId: id ? Number(id) : null })
-                    }
-                    placeholder="Sin propiedad vinculada"
-                    className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#242938]"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex-1 min-w-0">
+                      <PropertyPicker
+                        value={lead.propertyId || ''}
+                        initialLabel={lead.property?.title || ''}
+                        onChange={(id) =>
+                          saveField('propertyId', { propertyId: id ? Number(id) : null })
+                        }
+                        placeholder="Sin propiedad vinculada"
+                        className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#242938]"
+                      />
+                    </div>
+                    {lead.property?.slug && (
+                      <a
+                        href={`/propiedades/${lead.property.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Ver propiedad"
+                        className="p-2 text-gray-400 hover:text-accent-500 flex-shrink-0"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    )}
+                  </div>
+                ) : lead.property?.slug ? (
+                  <a
+                    href={`/propiedades/${lead.property.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Ver propiedad"
+                    className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 py-1 hover:text-accent-500 dark:hover:text-accent-400 hover:underline w-fit"
+                  >
+                    {lead.property.title}
+                    <ExternalLink size={12} className="flex-shrink-0" />
+                  </a>
                 ) : (
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200 py-1">
                     {lead.property?.title || 'Sin propiedad vinculada'}

@@ -89,6 +89,38 @@ describe('POST /api/leads — asesor_ventas puede crear prospectos, auto-asignad
     expect(res.body.data.assignedToUserId).toBe(asesor.id);
   });
 
+  // Bug real reportado por el dueño del negocio: un prospecto capturado desde el formulario
+  // público "Contactar asesor" apareció auto-asignado a un asesor. Causa raíz #1 (frontend):
+  // el cliente adjunta el JWT de localStorage a TODA request (incluidas las públicas, ver
+  // interceptor de api.js) — si ese asesor tenía una pestaña de /admin abierta en el mismo
+  // navegador, su token viajaba sin querer en el POST público. Corrección: createPublicLead
+  // en leadService.js usa skipAuth. Causa raíz #2 (backend, hallada al escribir esta prueba):
+  // el chequeo `assignedToUserId && req.user && !canAssignLeads(req.user)` cortocircuitaba a
+  // `false` en cuanto NO había req.user — una request sin token con `assignedToUserId` en el
+  // body pasaba de largo sin ningún chequeo, así que CUALQUIERA sin sesión podía preasignar
+  // un prospecto público a cualquier usuario con solo mandarlo en el body. Ahora se rechaza.
+  test('sin token (formulario público), un assignedToUserId inyectado en el body se rechaza (403)', async () => {
+    const res = await request(app)
+      .post('/api/leads')
+      .send({ name: 'Prospecto público', phone: '6561112239', assignedToUserId: asesor.id });
+    expect(res.status).toBe(403);
+
+    // No debe haber creado el lead a medias.
+    const leads = await Lead.findAll({ where: { phone: '6561112239' } });
+    expect(leads).toHaveLength(0);
+  });
+
+  test('sin token (formulario público) y sin assignedToUserId en el body, el lead se crea sin asignar ni creador', async () => {
+    const created = await request(app)
+      .post('/api/leads')
+      .send({ name: 'Prospecto público', phone: '6561112240' });
+    expect(created.status).toBe(201);
+
+    const res = await authed(adminToken)(request(app).get(`/api/leads/${created.body.data.id}`));
+    expect(res.body.data.assignedToUserId).toBeNull();
+    expect(res.body.data.createdByUserId).toBeNull();
+  });
+
   test('extremo a extremo: el asesor crea un lead y de inmediato le agenda una cita', async () => {
     const created = await request(app)
       .post('/api/leads')

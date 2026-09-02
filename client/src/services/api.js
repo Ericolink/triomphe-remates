@@ -5,9 +5,17 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// `skipAuth: true` en la config de una llamada evita adjuntar el JWT — necesario para
+// formularios públicos que comparten endpoint con el panel admin (ej. POST /leads, usado
+// tanto por el "Contactar asesor" público como por "Nuevo prospecto" del CRM): sin esto,
+// un visitante con una pestaña de /admin abierta en el mismo navegador manda sin querer el
+// token de ESA sesión (localStorage es por origen, no por pestaña) en un envío que debería
+// ser anónimo — ver createPublicLead en leadService.js para el caso real que lo motivó.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (!config.skipAuth) {
+    const token = localStorage.getItem('token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
