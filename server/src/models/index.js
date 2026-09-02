@@ -16,7 +16,6 @@ const Campaign = require('./Campaign');
 const LeadProperty = require('./LeadProperty');
 const Activity = require('./Activity');
 const Appointment = require('./Appointment');
-const Task = require('./Task');
 const Deal = require('./Deal');
 
 // Propiedades
@@ -93,11 +92,6 @@ Appointment.belongsTo(Appointment, { foreignKey: 'rescheduledFromId', as: 'resch
 Appointment.hasOne(Appointment, { foreignKey: 'rescheduledFromId', as: 'rescheduledTo' });
 Appointment.belongsTo(User, { foreignKey: 'createdByUserId', as: 'createdByUser' });
 
-Lead.hasMany(Task, { foreignKey: 'leadId', as: 'tasks', onDelete: 'CASCADE' });
-Task.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });
-User.hasMany(Task, { foreignKey: 'assignedToUserId', as: 'assignedTasks' });
-Task.belongsTo(User, { foreignKey: 'assignedToUserId', as: 'assignedTo' });
-
 Lead.hasOne(Deal, { foreignKey: 'leadId', as: 'deal', onDelete: 'CASCADE' });
 Deal.belongsTo(Lead, { foreignKey: 'leadId', as: 'lead' });
 Property.hasMany(Deal, { foreignKey: 'propertyId', as: 'deals' });
@@ -122,6 +116,5 @@ module.exports = {
   LeadProperty,
   Activity,
   Appointment,
-  Task,
   Deal,
 };

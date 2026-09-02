@@ -10,7 +10,6 @@ const {
   sequelize,
   Lead,
   Deal,
-  Task,
   Activity,
   AuditLog,
   User,
@@ -40,7 +39,6 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
 
   afterEach(async () => {
     await Deal.destroy({ where: {}, force: true });
-    await Task.destroy({ where: {}, force: true });
     await Activity.destroy({ where: {}, force: true });
     await AuditLog.destroy({ where: {}, force: true });
     await Lead.destroy({ where: {}, force: true });
@@ -55,12 +53,10 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
   const authed = (req) => req.set('Authorization', `Bearer ${token}`);
 
   describe('close-won', () => {
-    test('crea el Deal, mueve la etapa y cierra la task abierta', async () => {
+    test('crea el Deal y mueve la etapa', async () => {
       const property = await createProperty({ price: 850000 });
       const lead = await createLead();
       await authed(request(app).put(`/api/leads/${lead.id}`)).send({ assignedToUserId: admin.id });
-      const openTask = await Task.findOne({ where: { leadId: lead.id, done: false } });
-      expect(openTask).not.toBeNull();
 
       const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
         propertyId: property.id,
@@ -77,10 +73,6 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       const deals = await Deal.findAll({ where: { leadId: lead.id } });
       expect(deals).toHaveLength(1);
       expect(deals[0].propertyId).toBe(property.id);
-
-      await openTask.reload();
-      expect(openTask.done).toBe(true);
-      expect(openTask.doneAt).not.toBeNull();
     });
 
     test('registra la auditoría con el dealId', async () => {
@@ -180,9 +172,9 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       const lead = await createLead();
       const originalStage = lead.pipelineStage;
 
-      // closeOpenTask (Task.update) corre DESPUÉS de crear el Deal y actualizar el lead
+      // logActivity (Activity.create) corre DESPUÉS de crear el Deal y actualizar el lead
       // dentro de la misma transacción — forzar su fallo prueba que lo anterior se revierte.
-      const spy = jest.spyOn(Task, 'update').mockRejectedValueOnce(new Error('fallo simulado'));
+      const spy = jest.spyOn(Activity, 'create').mockRejectedValueOnce(new Error('fallo simulado'));
 
       const res = await authed(request(app).put(`/api/leads/${lead.id}/close-won`)).send({
         propertyId: property.id,
@@ -201,10 +193,9 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
   });
 
   describe('close-lost', () => {
-    test('marca el lead como no_interesado y cierra la task abierta', async () => {
+    test('marca el lead como no_interesado', async () => {
       const lead = await createLead();
       await authed(request(app).put(`/api/leads/${lead.id}`)).send({ assignedToUserId: admin.id });
-      const openTask = await Task.findOne({ where: { leadId: lead.id, done: false } });
 
       const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
         closeReason: 'no_respondio',
@@ -215,9 +206,6 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       expect(lead.pipelineStage).toBe('no_interesado');
       expect(lead.status).toBe('descartado');
       expect(lead.closeReason).toBe('no_respondio');
-
-      await openTask.reload();
-      expect(openTask.done).toBe(true);
     });
 
     test('rechaza cerrar dos veces como perdido', async () => {
@@ -282,7 +270,7 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
         amount: 500000,
       });
 
-      const spy = jest.spyOn(Task, 'update').mockRejectedValueOnce(new Error('fallo simulado'));
+      const spy = jest.spyOn(Activity, 'create').mockRejectedValueOnce(new Error('fallo simulado'));
 
       const res = await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
         closeReason: 'no_respondio',
@@ -382,34 +370,6 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
       expect(lead.pipelineStage).toBe('no_interesado'); // no se movió
     });
 
-    test('restaura la invariante de la task: recrea una task abierta si el lead tiene responsable', async () => {
-      const lead = await createLead();
-      await authed(request(app).put(`/api/leads/${lead.id}`)).send({ assignedToUserId: admin.id });
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
-        closeReason: 'no_respondio',
-      });
-      expect(await Task.count({ where: { leadId: lead.id, done: false } })).toBe(0);
-
-      const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
-
-      expect(res.status).toBe(200);
-      const openTasks = await Task.findAll({ where: { leadId: lead.id, done: false } });
-      expect(openTasks).toHaveLength(1);
-      expect(openTasks[0].assignedToUserId).toBe(admin.id);
-    });
-
-    test('sin responsable asignado, reabrir no crea ninguna task (misma regla que al crear)', async () => {
-      const lead = await createLead(); // sin assignedToUserId
-      await authed(request(app).put(`/api/leads/${lead.id}/close-lost`)).send({
-        closeReason: 'no_respondio',
-      });
-
-      await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
-
-      const openTasks = await Task.count({ where: { leadId: lead.id, done: false } });
-      expect(openTasks).toBe(0);
-    });
-
     test('registra la auditoría de la reapertura', async () => {
       const property = await createProperty();
       const lead = await createLead();
@@ -493,9 +453,9 @@ describe('PUT /api/leads/:id/close-won, /close-lost y /reopen', () => {
         amount: 500000,
       });
 
-      // ensureOpenTask (Task.create) corre al final, después de destruir el Deal y
+      // logActivity (Activity.create) corre al final, después de destruir el Deal y
       // actualizar el lead dentro de la misma transacción.
-      const spy = jest.spyOn(Task, 'create').mockRejectedValueOnce(new Error('fallo simulado'));
+      const spy = jest.spyOn(Activity, 'create').mockRejectedValueOnce(new Error('fallo simulado'));
 
       const res = await authed(request(app).put(`/api/leads/${lead.id}/reopen`)).send({});
 

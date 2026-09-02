@@ -26,7 +26,7 @@ function hasCrmAccess(user) {
 
 // Fragmento de `where` para restringir una consulta de Lead a lo visible para `user`, o
 // `null` si no hay restricción. `alias` se usa cuando Lead viene incluido en otro modelo
-// (Task/Appointment/Deal) vía `include: [{ model: Lead, as: alias }]`, generando claves
+// (Appointment/Deal) vía `include: [{ model: Lead, as: alias }]`, generando claves
 // `$alias.campo$` — mismo patrón que ya usa dealController para su filtro de `search`.
 function getLeadVisibilityWhere(user, { alias } = {}) {
   const level = crmAccessLevel(user);

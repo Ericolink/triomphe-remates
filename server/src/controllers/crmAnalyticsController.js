@@ -2,7 +2,6 @@ const { Op, fn, col } = require('sequelize');
 const {
   sequelize,
   Lead,
-  Task,
   Appointment,
   Deal,
   Activity,
@@ -20,7 +19,7 @@ const {
 
 // Separado de analyticsController.js: ese archivo es específico del funnel de marketing de
 // propiedades (vistas/leads por status legacy); mezclar ahí la agregación de
-// Task/Appointment/Deal/Activity sobrecargaría un dominio con otro.
+// Appointment/Deal/Activity sobrecargaría un dominio con otro.
 
 const PIPELINE_STAGES = [
   'nuevo',
@@ -78,7 +77,6 @@ const getCrmDashboard = async (req, res) => {
     prospectosNuevos,
     prospectosPendientes,
     prospectosEstancados,
-    seguimientosVencidos,
     citasHoy,
     [ventasSemanaRaw],
     [ventasMesRaw],
@@ -102,7 +100,6 @@ const getCrmDashboard = async (req, res) => {
         ...(getLeadVisibilityWhere(req.user) || {}),
       },
     }),
-    Task.count({ where: { done: false, dueDate: { [Op.lt]: now } } }),
     Appointment.findAll({
       where: {
         scheduledAt: { [Op.between]: [startOfToday, endOfToday] },
@@ -194,7 +191,6 @@ const getCrmDashboard = async (req, res) => {
       prospectosNuevos,
       prospectosPendientes,
       prospectosEstancados,
-      seguimientosVencidos,
       citasHoy,
       ventasSemana: {
         count: parseInt(ventasSemanaRaw?.count || 0, 10),
@@ -337,7 +333,7 @@ const getCrmReports = async (req, res) => {
 // qué debo atender hoy?"). A diferencia de getCrmDashboard/getCrmReports (ver comentario en
 // routes/crm.js — SEC-001/SEC-002, agregados globales sin filtrar por fila), este endpoint
 // se diseñó desde cero para exponer solo la cartera de quien lo pide: cada consulta aplica
-// getLeadVisibilityWhere, la misma fuente de verdad que ya usan leadController/taskController/
+// getLeadVisibilityWhere, la misma fuente de verdad que ya usan leadController/
 // appointmentController/dealController. La ruta además restringe con authorize('asesor_ventas')
 // (routes/crm.js) — el filtro de aquí es defensa en profundidad, no la única barrera.
 const getMyCrmDashboard = async (req, res) => {
@@ -370,7 +366,6 @@ const getMyCrmDashboard = async (req, res) => {
     nuevosHoy,
     nuevos7dias,
     nuevosMes,
-    seguimientosVencidos,
     citasHoy,
     citasManana,
     citasProximas7Dias,
@@ -385,10 +380,6 @@ const getMyCrmDashboard = async (req, res) => {
     Lead.count({ where: { ...leadWhere, assignedAt: { [Op.gte]: startOfToday } } }),
     Lead.count({ where: { ...leadWhere, assignedAt: { [Op.gte]: start7DaysAgo } } }),
     Lead.count({ where: { ...leadWhere, assignedAt: { [Op.gte]: startOfMonth } } }),
-    Task.count({
-      where: { done: false, dueDate: { [Op.lt]: now }, ...leadAliasWhere },
-      include: [makeLeadInclude()],
-    }),
     Appointment.findAll({
       where: {
         scheduledAt: { [Op.gte]: startOfToday, [Op.lt]: startOfTomorrow },
@@ -473,31 +464,18 @@ const getMyCrmDashboard = async (req, res) => {
     }),
   ]);
 
-  // Segundo lote: depende de los ids de activeLeads (tareas abiertas + total gestionado
-  // histórico para la conversión) — no dependen entre sí, se lanzan juntos.
-  const activeLeadIds = activeLeads.map((l) => l.id);
-  const [openTasks, gestionados] = await Promise.all([
-    activeLeadIds.length
-      ? Task.findAll({
-          where: { leadId: { [Op.in]: activeLeadIds }, done: false },
-          attributes: ['id', 'leadId', 'type', 'dueDate'],
-        })
-      : [],
-    Lead.count({ where: { ...leadWhere, pipelineStage: { [Op.ne]: 'lista_espera' } } }),
-  ]);
-  const openTaskByLeadId = new Map(openTasks.map((t) => [t.leadId, t]));
+  // Total gestionado histórico para la conversión (independiente de todo lo anterior).
+  const gestionados = await Lead.count({
+    where: { ...leadWhere, pipelineStage: { [Op.ne]: 'lista_espera' } },
+  });
 
-  // "Requieren tu atención" — un lead por fila, motivo de mayor a menor prioridad (PASO 6):
-  // 1) cita hoy, 2) tarea vencida, 3) sin contacto ≥7 días, 4) cita mañana, 5) etapa avanzada
-  // sin cita ni tarea programada. Un lead con cita hoy y tarea vencida solo aparece una vez,
-  // con el motivo de mayor prioridad.
+  // "Requieren tu atención" — un lead por fila, motivo de mayor a menor prioridad: 1) cita
+  // hoy, 2) sin contacto ≥7 días, 3) cita mañana. Un lead con cita hoy y sin contacto hace
+  // rato solo aparece una vez, con el motivo de mayor prioridad.
   const citasHoyByLeadId = new Set(citasHoy.map((a) => a.leadId));
   const citasMananaByLeadId = new Set(citasManana.map((a) => a.leadId));
-  const ADVANCED_STAGES = ['negociacion', 'cita_con_seguimiento', 'cita_realizada'];
   const requierenAtencion = activeLeads
     .map((lead) => {
-      const task = openTaskByLeadId.get(lead.id);
-      const isTaskOverdue = task && new Date(task.dueDate) < now;
       const lastTouchedAt = lead.get('lastTouchedAt');
       const staleDays = lastTouchedAt
         ? Math.floor((now - new Date(lastTouchedAt)) / (24 * 60 * 60 * 1000))
@@ -510,22 +488,14 @@ const getMyCrmDashboard = async (req, res) => {
         reasonType = 'cita_hoy';
         reason = 'Tiene cita agendada para hoy';
         priority = 1;
-      } else if (isTaskOverdue) {
-        reasonType = 'tarea_vencida';
-        reason = 'Seguimiento vencido';
-        priority = 2;
       } else if (staleDays !== null && staleDays >= 7) {
         reasonType = 'sin_contacto';
         reason = `Sin contacto hace ${staleDays} días`;
-        priority = 3;
+        priority = 2;
       } else if (citasMananaByLeadId.has(lead.id)) {
         reasonType = 'cita_manana';
         reason = 'Tiene cita agendada para mañana';
-        priority = 4;
-      } else if (ADVANCED_STAGES.includes(lead.pipelineStage) && !task) {
-        reasonType = 'etapa_avanzada_sin_seguimiento';
-        reason = 'En etapa avanzada sin próxima acción programada';
-        priority = 5;
+        priority = 3;
       }
 
       if (!reasonType) return null;
@@ -584,7 +554,6 @@ const getMyCrmDashboard = async (req, res) => {
     data: {
       prospectosActivos,
       nuevos: { hoy: nuevosHoy, ultimos7dias: nuevos7dias, esteMes: nuevosMes },
-      seguimientosVencidos,
       citasHoy,
       citasManana,
       citasProximas7Dias,

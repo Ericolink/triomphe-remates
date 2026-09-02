@@ -5,9 +5,9 @@ import { buttonHover, buttonTap } from '../../utils/animations';
 import { NON_TERMINAL_PIPELINE_STAGE_OPTIONS } from '../../utils/constants';
 import useModalA11y from '../../hooks/useModalA11y';
 
-// Modal obligatorio al reabrir un prospecto cerrado (drag a una columna activa del Kanban,
-// o selección de etapa desde el botón "Etapa" del detalle / bottom sheet móvil) — mismo
-// patrón visual y de accesibilidad que CloseLeadModal. La advertencia de venta eliminada es
+// Modal obligatorio al reabrir un prospecto cerrado (selección de etapa desde el botón
+// "Etapa" del detalle / bottom sheet) — mismo patrón visual y de accesibilidad que
+// CloseLeadModal. La advertencia de venta eliminada es
 // obligatoria (no un checkbox opcional): reopenLead en el backend borra el Deal asociado si
 // el prospecto venía de `venta_realizada`, y ese efecto debe quedar explícito antes de confirmar.
 //

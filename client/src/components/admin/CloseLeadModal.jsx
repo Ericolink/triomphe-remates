@@ -6,9 +6,9 @@ import { formatPrice } from '../../utils/formatters';
 import { CLOSE_REASON_LABELS } from '../../utils/constants';
 import useModalA11y from '../../hooks/useModalA11y';
 
-// Modal obligatorio y mínimo al cerrar un prospecto (drag a una columna terminal del
-// Kanban, o botón directo en el detalle) — mismo patrón visual que ConfirmDialog, pero
-// con un formulario corto en vez de solo confirmar/cancelar. Ver CRM_UX_DESIGN.md §10.c:
+// Modal obligatorio y mínimo al cerrar un prospecto (selección de etapa terminal desde el
+// detalle) — mismo patrón visual que ConfirmDialog, pero con un formulario corto en vez de
+// solo confirmar/cancelar. Ver CRM_UX_DESIGN.md §10.c:
 // debe sentirse rápido, no burocrático.
 export default function CloseLeadModal({
   open,

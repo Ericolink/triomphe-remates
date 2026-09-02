@@ -143,17 +143,4 @@ describe('Guardarraíl de operaciones batch (ids)', () => {
       expect(res.status).toBe(400);
     });
   });
-
-  describe('GET /api/tasks?leadIds=... (mismo guardarraíl en lectura)', () => {
-    test('rechaza más de MAX_BATCH_IDS leadIds en el query param', async () => {
-      const tooMany = Array.from({ length: MAX_BATCH_IDS + 1 }, (_, i) => i + 1).join(',');
-      const res = await authed(request(app).get('/api/tasks')).query({ leadIds: tooMany });
-      expect(res.status).toBe(400);
-    });
-
-    test('acepta una lista normal de leadIds', async () => {
-      const res = await authed(request(app).get('/api/tasks')).query({ leadIds: '1,2,3' });
-      expect(res.status).toBe(200);
-    });
-  });
 });

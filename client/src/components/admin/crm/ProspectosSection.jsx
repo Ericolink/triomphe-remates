@@ -6,8 +6,6 @@ import {
   Phone,
   Building2,
   FileSpreadsheet,
-  LayoutList,
-  Columns,
   Plus,
   Search,
   UserCheck,
@@ -23,7 +21,6 @@ import {
   batchUpdateLeads,
   batchDeleteLeads,
 } from '../../../services/leadService';
-import { getTasks } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
 import { canCreateLeads, canDeleteLeads } from '../../../utils/permissions';
@@ -33,7 +30,6 @@ import ConfirmDialog from '../../ui/ConfirmDialog';
 import BatchActionBar from '../../ui/BatchActionBar';
 import GradientListCard from '../../ui/GradientListCard';
 import CreateLeadModal from '../CreateLeadModal';
-import KanbanBoard, { NextActionLine } from '../KanbanBoard';
 import { DetailPanelSlot } from '../LeadDetailPanel';
 import useLeadDetailActions from './useLeadDetailActions';
 import LeadDetailModals from './LeadDetailModals';
@@ -80,7 +76,6 @@ export default function ProspectosSection() {
   // BatchActionBar, que no pasa por ahí.
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(null);
   const [checked, setChecked] = useState([]);
-  const [view, setView] = useState('list');
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(false);
@@ -89,12 +84,9 @@ export default function ProspectosSection() {
   const leadActions = useLeadDetailActions({ selected, setSelected });
   const { attemptStageChange, setSheetLead } = leadActions;
 
-  // Búsqueda y "Mis prospectos" son compartidos entre Lista y Kanban — barra persistente
-  // por encima de ambas vistas, tal como pide CRM_UX_DESIGN.md §2g.
   // AUDIT: pedía `limit: 100` y nunca avanzaba de página — el backend (getLeads) ya pagina
   // correctamente, así que con >100 prospectos el conteo mostrado era real pero la lista
-  // se veía truncada en silencio. Ahora usa el mismo patrón useInfiniteQuery + "Cargar más"
-  // que ya prueba el Kanban de esta misma pantalla (useColumnLeads en KanbanBoard.jsx).
+  // se veía truncada en silencio. Ahora usa useInfiniteQuery + "Cargar más".
   const {
     data,
     isLoading,
@@ -122,25 +114,6 @@ export default function ProspectosSection() {
   const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: getUsers });
   const users = usersData?.data ?? [];
 
-  // Usada por la vista Lista (que sigue trayendo un solo lote de prospectos). El Kanban
-  // ya no depende de esto: cada columna resuelve sus propias tareas abiertas. `leadIds` se
-  // recorta a MAX_BATCH_IDS (100) porque /api/tasks lo exige — con "Cargar más" acumulando
-  // páginas, una sesión larga puede superar ese tope; el indicador de "próxima acción" solo
-  // deja de calcularse para el excedente, no rompe el resto de la lista.
-  const leadIds = useMemo(() => leads.slice(0, 100).map((l) => l.id), [leads]);
-  const { data: openTasksData } = useQuery({
-    queryKey: ['open-tasks', leadIds.join(',')],
-    queryFn: () => getTasks({ leadIds: leadIds.join(','), done: false }),
-    enabled: leadIds.length > 0,
-  });
-  const openTaskByLead = useMemo(() => {
-    const map = {};
-    (openTasksData?.data ?? []).forEach((t) => {
-      map[t.leadId] = t;
-    });
-    return map;
-  }, [openTasksData]);
-
   const createMutation = useMutation({
     mutationFn: createLead,
     onSuccess: () => {
@@ -159,7 +132,6 @@ export default function ProspectosSection() {
       setChecked([]);
       queryClient.invalidateQueries(['leads']);
       queryClient.invalidateQueries(['leads-column']);
-      queryClient.invalidateQueries(['open-tasks-column']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al actualizar en lote'),
   });
@@ -246,20 +218,6 @@ export default function ProspectosSection() {
           >
             <FileSpreadsheet size={16} className="text-green-600" /> Excel
           </button>
-          <div className="flex border border-gray-200 dark:border-[#2e3650] rounded-xl overflow-hidden">
-            <button
-              onClick={() => setView('list')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${view === 'list' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-[#242938] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2e3650]'}`}
-            >
-              <LayoutList size={15} /> Lista
-            </button>
-            <button
-              onClick={() => setView('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${view === 'kanban' ? 'bg-primary-600 text-white' : 'bg-white dark:bg-[#242938] text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2e3650]'}`}
-            >
-              <Columns size={15} /> Kanban
-            </button>
-          </div>
           <select
             value={stage}
             onChange={(e) => {
@@ -292,41 +250,8 @@ export default function ProspectosSection() {
         </div>
       </motion.div>
 
-      {view === 'kanban' ? (
-        <div className="flex flex-col xl:flex-row gap-6">
-          <div className="flex-1 min-w-0">
-            <KanbanBoard
-              filters={{ search, assignedToUserId }}
-              focusStage={stage}
-              currentUser={currentUser}
-              onSelect={setSelected}
-              onAttemptStageChange={attemptStageChange}
-            />
-          </div>
-          {/* Sin prospecto seleccionado no se reserva ancho para el panel — así el Kanban
-              usa el espacio completo para mostrar las 8 columnas; en cuanto se selecciona
-              un prospecto, el panel reclama sus 320px habituales. */}
-          <div
-            className={
-              selected ? 'xl:w-80 flex-shrink-0' : 'xl:w-0 xl:flex-shrink-0 xl:overflow-hidden'
-            }
-          >
-            <DetailPanelSlot
-              selected={selected}
-              updateMutation={leadActions.updateMutation}
-              users={users}
-              onOpenStagePicker={(lead) => setSheetLead(lead)}
-              onChangeStage={attemptStageChange}
-              onDeselect={() => setSelected(null)}
-              emptyText="Haz clic en un prospecto para ver el detalle"
-              onDelete={leadActions.handleDelete}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Lista */}
-          <div className="xl:col-span-2 space-y-3">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2 space-y-3">
             {leads.length > 0 && (
               <div className="flex items-center gap-2 px-1">
                 <input
@@ -404,7 +329,6 @@ export default function ProspectosSection() {
                             </span>
                           )}
                         </div>
-                        <NextActionLine task={openTaskByLead[lead.id]} />
                         {staleDays && lead.lastTouchedAt && (
                           <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                             Sin actividad hace {daysSince(lead.lastTouchedAt)} día
@@ -472,8 +396,6 @@ export default function ProspectosSection() {
             />
           </div>
         </div>
-      )}
-
       <LeadDetailModals actions={leadActions} />
 
       <ConfirmDialog
@@ -492,29 +414,27 @@ export default function ProspectosSection() {
         onSubmit={(payload) => createMutation.mutate(payload)}
       />
 
-      {view === 'list' && (
-        <BatchActionBar
-          count={checked.length}
-          onClear={() => setChecked([])}
-          statusOptions={NON_TERMINAL_PIPELINE_STAGE_OPTIONS}
-          onStatus={(s) => batchStatusMutation.mutate({ ids: checked, stage: s })}
-          // Sin onDelete, BatchActionBar oculta el botón en vez de ofrecer una acción que
-          // el backend rechazaría con 403 (ver canDeleteLeads / routes/leads.js).
-          onDelete={
-            canDeleteLeads(currentUser)
-              ? () =>
-                  setBatchDeleteConfirm({
-                    title: `¿Eliminar ${checked.length} prospecto(s)?`,
-                    message: 'Esta acción no se puede deshacer.',
-                    onConfirm: () => {
-                      batchDeleteMutation.mutate(checked);
-                      setBatchDeleteConfirm(null);
-                    },
-                  })
-              : undefined
-          }
-        />
-      )}
+      <BatchActionBar
+        count={checked.length}
+        onClear={() => setChecked([])}
+        statusOptions={NON_TERMINAL_PIPELINE_STAGE_OPTIONS}
+        onStatus={(s) => batchStatusMutation.mutate({ ids: checked, stage: s })}
+        // Sin onDelete, BatchActionBar oculta el botón en vez de ofrecer una acción que
+        // el backend rechazaría con 403 (ver canDeleteLeads / routes/leads.js).
+        onDelete={
+          canDeleteLeads(currentUser)
+            ? () =>
+                setBatchDeleteConfirm({
+                  title: `¿Eliminar ${checked.length} prospecto(s)?`,
+                  message: 'Esta acción no se puede deshacer.',
+                  onConfirm: () => {
+                    batchDeleteMutation.mutate(checked);
+                    setBatchDeleteConfirm(null);
+                  },
+                })
+            : undefined
+        }
+      />
     </motion.div>
   );
 }

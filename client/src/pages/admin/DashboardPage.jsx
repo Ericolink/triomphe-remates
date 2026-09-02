@@ -1,10 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
 import { getDashboard } from '../../services/analyticsService';
 import { getCrmDashboard } from '../../services/crmAnalyticsService';
 import { getFeedbacks } from '../../services/feedbackService';
-import { getTasks, completeTask } from '../../services/taskService';
 import Spinner from '../../components/ui/Spinner';
 import UrgentSection from '../../components/admin/dashboard/UrgentSection';
 import OverviewSection from '../../components/admin/dashboard/OverviewSection';
@@ -17,8 +15,6 @@ import { fadeIn } from '../../utils/animations';
 // reportes — para que toda la información importante viva en una sola pantalla sin
 // obligar al usuario a adivinar en qué sección buscarla.
 export default function DashboardPage() {
-  const queryClient = useQueryClient();
-
   const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
     queryKey: ['dashboard'],
     queryFn: getDashboard,
@@ -33,32 +29,11 @@ export default function DashboardPage() {
   });
   const crm = crmData?.data;
 
-  // AUDIT: getTasks siempre pagina cuando no se pasa `leadIds` (ver taskController.js) —
-  // acotarlo aquí no afecta a Kanban/detalle de lead, que llaman getTasks con `leadIds`.
-  // `pagination.total` viene del backend para poder avisar cuántas quedan fuera en vez de
-  // ocultarlas en silencio.
-  const { data: overdueData } = useQuery({
-    queryKey: ['tasks-overdue'],
-    queryFn: () => getTasks({ overdue: true, limit: 20 }),
-  });
-  const overdueTasks = overdueData?.data ?? [];
-  const overdueTotal = overdueData?.pagination?.total ?? overdueTasks.length;
-
   const { data: newFeedbackData } = useQuery({
     queryKey: ['dashboard-new-feedback'],
     queryFn: () => getFeedbacks({ status: 'nuevo', limit: 5 }),
   });
   const newFeedback = newFeedbackData?.data ?? [];
-
-  const completeMutation = useMutation({
-    mutationFn: (id) => completeTask(id),
-    onSuccess: () => {
-      toast.success('Tarea completada');
-      queryClient.invalidateQueries(['tasks-overdue']);
-      queryClient.invalidateQueries(['crm-dashboard']);
-    },
-    onError: () => toast.error('Error al completar la tarea'),
-  });
 
   if (loadingDashboard || loadingCrm) return <Spinner size="lg" className="py-20" />;
 
@@ -72,9 +47,6 @@ export default function DashboardPage() {
       </motion.div>
 
       <UrgentSection
-        overdueTasks={overdueTasks}
-        overdueTotal={overdueTotal}
-        onCompleteTask={(id) => completeMutation.mutate(id)}
         prospectosNuevos={crm?.prospectosNuevos ?? 0}
         prospectosPendientes={crm?.prospectosPendientes ?? 0}
         prospectosEstancados={crm?.prospectosEstancados ?? 0}

@@ -14,9 +14,7 @@ import { TERMINAL_STAGES } from '../../../utils/constants';
 
 // Toda la lógica de "editar/cerrar/reabrir/eliminar un prospecto" en un solo lugar —
 // extraído de ProspectosSection para que Calendario (vía LeadDetailWithActions) pueda
-// reusarla exacta, sin reimplementarla. ProspectosSection sigue usando este hook
-// directamente (no el wrapper) porque `attemptStageChange`/`updateMutation` también los
-// necesita KanbanBoard para el drag & drop, no solo el panel de detalle.
+// reusarla exacta, sin reimplementarla.
 export default function useLeadDetailActions({ selected, setSelected }) {
   const queryClient = useQueryClient();
   const [confirm, setConfirm] = useState(null);
@@ -32,8 +30,8 @@ export default function useLeadDetailActions({ selected, setSelected }) {
   });
 
   // Sin toast global de éxito: cada campo editado desde LeadDetailPanel confirma junto al
-  // propio campo (ver FieldStatus ahí), y un movimiento de etapa por drag/hoja ya es
-  // visible por sí mismo (la tarjeta cambia de columna / la etapa del encabezado cambia).
+  // propio campo (ver FieldStatus ahí), y un movimiento de etapa por la hoja de selección
+  // ya es visible por sí mismo (la etapa del encabezado cambia).
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => updateLead(id, data),
     onSuccess: (res, { data: updated }) => {
@@ -42,12 +40,7 @@ export default function useLeadDetailActions({ selected, setSelected }) {
       queryClient.invalidateQueries(['appointments-month']);
       queryClient.invalidateQueries(['appointments-agenda']);
       const affectsColumns = updated.pipelineStage !== undefined;
-      const affectsTasks = affectsColumns || updated.assignedToUserId !== undefined;
       if (affectsColumns) queryClient.invalidateQueries(['leads-column']);
-      if (affectsTasks) {
-        queryClient.invalidateQueries(['open-tasks']);
-        queryClient.invalidateQueries(['open-tasks-column']);
-      }
       if (updated.pipelineStage)
         setSelected((s) => (s ? { ...s, pipelineStage: updated.pipelineStage } : s));
     },
@@ -61,8 +54,6 @@ export default function useLeadDetailActions({ selected, setSelected }) {
       setSelected(null);
       queryClient.invalidateQueries(['leads']);
       queryClient.invalidateQueries(['leads-column']);
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['open-tasks-column']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al registrar la venta'),
   });
@@ -75,8 +66,6 @@ export default function useLeadDetailActions({ selected, setSelected }) {
       setSelected(null);
       queryClient.invalidateQueries(['leads']);
       queryClient.invalidateQueries(['leads-column']);
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['open-tasks-column']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al cerrar el prospecto'),
   });
@@ -89,8 +78,6 @@ export default function useLeadDetailActions({ selected, setSelected }) {
       setSelected(null);
       queryClient.invalidateQueries(['leads']);
       queryClient.invalidateQueries(['leads-column']);
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['open-tasks-column']);
     },
     onError: (e) => toast.error(e?.response?.data?.error || 'Error al enviar a lista de espera'),
   });
@@ -103,8 +90,6 @@ export default function useLeadDetailActions({ selected, setSelected }) {
       queryClient.invalidateQueries(['leads']);
       queryClient.invalidateQueries(['leads-column']);
       queryClient.invalidateQueries(['lead-detail']);
-      queryClient.invalidateQueries(['open-tasks']);
-      queryClient.invalidateQueries(['open-tasks-column']);
       // A diferencia de close-won/close-lost (que deseleccionan al cerrar), aquí conviene
       // dejar el panel abierto: reabrir es el punto de partida para seguir trabajando el
       // prospecto, no el final de su ciclo de vida.
@@ -123,7 +108,7 @@ export default function useLeadDetailActions({ selected, setSelected }) {
     },
   });
 
-  // Único punto de entrada para cambiar de etapa (drag, bottom sheet o botón del detalle):
+  // Único punto de entrada para cambiar de etapa (bottom sheet o botón del detalle):
   // las etapas terminales siempre pasan por el modal de cierre, y sacar un prospecto YA
   // cerrado de su etapa terminal siempre pasa por el modal de reapertura — el PUT genérico
   // (updateMutation) rechaza ese caso en el backend, así que nunca debe intentarse directo.

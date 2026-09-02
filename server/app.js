@@ -146,7 +146,6 @@ app.use('/api/audit',      require('./src/routes/audit'));
 app.use('/api/testimonials', require('./src/routes/testimonials'));
 app.use('/api/campaigns',    require('./src/routes/campaigns'));
 app.use('/api/appointments', require('./src/routes/appointments'));
-app.use('/api/tasks',        require('./src/routes/tasks'));
 app.use('/api/deals',        require('./src/routes/deals'));
 app.use('/api/crm',          require('./src/routes/crm'));
 

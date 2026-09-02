@@ -257,9 +257,6 @@ const { validateBatchIds } = require('../utils/batchValidation');
 const {
   TERMINAL_STAGES,
   logActivity,
-  ensureOpenTask,
-  closeOpenTask,
-  syncOpenTaskAssignee,
   legacyStatusFor,
   staleSinceExpr,
 } = require('../utils/pipelineHelpers');
@@ -490,20 +487,6 @@ const createLead = async (req, res) => {
       });
     }
 
-    // Diferido hasta asignar: un prospecto público sin responsable no tiene "próxima
-    // acción" todavía (ver CRM_UX_DESIGN.md / plan de Fase 1). Usa resolvedAssignedToUserId
-    // (no el `assignedToUserId` crudo del body) para que un lead auto-asignado a un asesor
-    // (ver arriba) también reciba su tarea inicial, igual que uno asignado explícitamente
-    // por un admin/asistente — misma invariante "responsable siempre tiene tarea abierta".
-    if (resolvedAssignedToUserId) {
-      await ensureOpenTask({
-        leadId: created.id,
-        assignedToUserId: resolvedAssignedToUserId,
-        type: 'llamar',
-        transaction,
-      });
-    }
-
     return created;
     });
   } catch (error) {
@@ -574,7 +557,7 @@ const getLeads = async (req, res) => {
   if (pipelineStage) where.pipelineStage = pipelineStage;
   if (campaignId) where.campaignId = campaignId;
   if (assignedToUserId) where.assignedToUserId = assignedToUserId;
-  // Búsqueda instantánea (Kanban/Lista) — mismo patrón Op.or/Op.like que propertyController.
+  // Búsqueda instantánea — mismo patrón Op.or/Op.like que propertyController.
   if (search) {
     where[Op.or] = [
       { name: { [Op.like]: `%${search}%` } },
@@ -598,7 +581,7 @@ const getLeads = async (req, res) => {
   Object.assign(where, getLeadVisibilityWhere(req.user) || {});
 
   // Los prospectos enviados a lista de espera desaparecen de "Todas las etapas" — siguen
-  // accesibles filtrando explícitamente por esa etapa, en Kanban o en WaitingListPage.
+  // accesibles filtrando explícitamente por esa etapa, o en WaitingListPage.
   // No_interesado NO se toca (decisión explícita: solo se ordena al final, sigue visible,
   // ver comentario de abajo).
   if (!pipelineStage) {
@@ -767,7 +750,7 @@ const updateLead = async (req, res) => {
     }
     // AUDIT: simétrico al bloqueo de arriba — un lead ya cerrado tampoco puede salir de
     // su etapa terminal por esta vía genérica, porque cerrar/reabrir tiene efectos
-    // colaterales (Deal, Task, Activity) que este endpoint no conoce. Usa PUT /:id/reopen.
+    // colaterales (Deal, Activity) que este endpoint no conoce. Usa PUT /:id/reopen.
     if (TERMINAL_STAGES.includes(lead.pipelineStage)) {
       throw new ApiError(400, 'Este prospecto está cerrado — usa PUT /:id/reopen para reactivarlo');
     }
@@ -858,17 +841,6 @@ const updateLead = async (req, res) => {
         newAssignedToUserId: assignedToUserId,
         transaction,
       });
-      // Mantiene sincronizada la task abierta con el nuevo responsable — cubre tanto la
-      // primera asignación (crea, vía ensureOpenTask) como una reasignación entre asesores
-      // (actualiza la task existente) y una desasignación (la cierra). Ver pipelineHelpers.
-      // lead.pipelineStage ya refleja el valor resultante de este mismo update (lead.update
-      // ya corrió arriba), así que sirve para el chequeo "etapa terminal, sin task nueva".
-      await syncOpenTaskAssignee({
-        leadId: lead.id,
-        assignedToUserId,
-        pipelineStage: lead.pipelineStage,
-        transaction,
-      });
     }
   });
   } catch (error) {
@@ -939,9 +911,6 @@ const closeLeadAsWon = async (req, res) => {
       transaction,
     });
 
-    // Etapa terminal — no se crea una tarea siguiente.
-    await closeOpenTask({ leadId: lead.id, transaction });
-
     await transaction.commit();
 
     logAudit(req, 'update', 'lead', lead.id, { closedAs: 'won', dealId: deal.id });
@@ -1002,8 +971,6 @@ const closeLeadAsLost = async (req, res) => {
       userId: req.user?.id ?? null,
       transaction,
     });
-
-    await closeOpenTask({ leadId: lead.id, transaction });
 
     await transaction.commit();
 
@@ -1085,9 +1052,6 @@ const sendLeadToWaitingList = async (req, res) => {
       transaction,
     });
 
-    // Etapa terminal — no se crea una tarea siguiente.
-    await closeOpenTask({ leadId: lead.id, transaction });
-
     await transaction.commit();
 
     logAudit(req, 'update', 'lead', lead.id, { sentToWaitingList: true, propertyAlertId: alert.id });
@@ -1102,7 +1066,7 @@ const sendLeadToWaitingList = async (req, res) => {
 // PUT /api/leads/:id/reopen — única vía para sacar un prospecto de una etapa terminal.
 // Reabrir no es "cambiar un campo": si venía de venta_realizada implica que la venta
 // registrada ya no es válida (mismo criterio que closeLeadAsLost usa al corregir un cierre
-// equivocado), y todo prospecto activo debe recuperar su Task abierta si tiene responsable.
+// equivocado).
 const reopenLead = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
@@ -1182,18 +1146,6 @@ const reopenLead = async (req, res) => {
       userId: req.user?.id ?? null,
       transaction,
     });
-
-    // Restaura la invariante "todo prospecto activo con responsable tiene una task
-    // abierta" — closeOpenTask la había cerrado al cerrar el prospecto y nada más la
-    // vuelve a crear automáticamente.
-    if (lead.assignedToUserId) {
-      await ensureOpenTask({
-        leadId: lead.id,
-        assignedToUserId: lead.assignedToUserId,
-        type: 'llamar',
-        transaction,
-      });
-    }
 
     await transaction.commit();
 
@@ -1292,7 +1244,7 @@ const streamLeads = (req, res) => {
   // SEC-003/BUG-001: `leadEvents` es un EventEmitter global — sin este filtro, cada
   // conexión SSE recibía el evento `new-lead` de TODO prospecto nuevo del sistema, sin
   // importar a quién esté asignado, aunque cada endpoint REST del módulo (getLeads,
-  // getLeadById, appointments, tasks, deals, export) sí aplica canViewLead/
+  // getLeadById, appointments, deals, export) sí aplica canViewLead/
   // getLeadVisibilityWhere. `req.user` es el usuario de ESTA conexión (capturado por
   // authenticateSSE antes de llegar aquí), así que el mismo evento puede reenviarse a
   // unos clientes conectados y filtrarse para otros.

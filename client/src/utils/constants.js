@@ -348,8 +348,8 @@ export const DEVICE_LABELS = {
 // CRM Comercial — embudo de 9 etapas (reemplaza el status de 4 valores en la UI; el
 // backend sigue escribiendo `status` en paralelo por compatibilidad, ver
 // server/src/utils/pipelineHelpers.js legacyStatusFor). El orden de estas claves es la
-// única fuente del orden de despliegue en Kanban (KanbanBoard.jsx) y en el embudo de
-// ReportsSection — no hay nada más que reordenar aparte de este objeto.
+// única fuente del orden de despliegue en el embudo de ReportsSection — no hay nada más
+// que reordenar aparte de este objeto.
 export const PIPELINE_STAGE_LABELS = {
   nuevo: 'Nuevo',
   contactado: 'Contactado',
@@ -389,7 +389,7 @@ export const NON_TERMINAL_PIPELINE_STAGE_OPTIONS = Object.entries(PIPELINE_STAGE
 // Color de barra por etapa en los reportes (ReportsSection del Dashboard) — a diferencia de
 // PIPELINE_STAGE_VARIANTS (que agrupa varias etapas bajo el mismo estado de Badge), aquí
 // cada etapa necesita un color distinto para poder distinguirse en la misma gráfica. Las
-// dos etapas terminales sí reutilizan el verde/gris ya establecido en Badge/Kanban para
+// dos etapas terminales sí reutilizan el verde/gris ya establecido en Badge para
 // "venta"/"perdido"; el resto sigue un orden categórico fijo, nunca por posición en el
 // arreglo (evita que los colores cambien si una fila se filtra por tener total 0). Orden
 // validado con el script de accesibilidad de la skill dataviz (separación ante daltonismo
@@ -524,17 +524,6 @@ export const APPOINTMENT_STATUS_VARIANTS = {
   completada: 'success',
   no_show: 'danger',
   cancelada: 'default',
-};
-
-// Task.type es un STRING libre en el backend (no un ENUM estricto) — estas son solo las
-// etiquetas "bonitas" para los tipos más comunes; cualquier otro valor se muestra tal cual.
-export const TASK_TYPE_LABELS = {
-  llamar: 'Llamar',
-  dar_seguimiento: 'Dar seguimiento',
-  confirmar_cita: 'Confirmar cita',
-  enviar_info: 'Enviar información',
-  esperar_documentacion: 'Esperar documentación',
-  otro: 'Otro',
 };
 
 export const PAYMENT_METHOD_LABELS = {

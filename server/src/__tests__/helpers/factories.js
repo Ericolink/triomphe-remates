@@ -9,7 +9,6 @@ const {
   Campaign,
   Analytics,
   LeadProperty,
-  Task,
   Appointment,
 } = require('../../models/index');
 
@@ -114,17 +113,6 @@ async function createLeadProperty(overrides = {}) {
   return LeadProperty.create({ ...overrides });
 }
 
-// Task requiere leadId/assignedToUserId (FKs allowNull:false) — sin valores por defecto
-// sensatos, igual que createDeal.
-async function createTask(overrides = {}) {
-  return Task.create({
-    type: overrides.type ?? 'llamar',
-    dueDate: overrides.dueDate ?? new Date(),
-    done: overrides.done ?? false,
-    ...overrides,
-  });
-}
-
 // Appointment requiere leadId (FK allowNull:false) — propertyId es opcional.
 async function createAppointment(overrides = {}) {
   return Appointment.create({
@@ -143,7 +131,6 @@ module.exports = {
   createCampaign,
   createAnalyticsEvent,
   createLeadProperty,
-  createTask,
   createAppointment,
   uuid,
 };

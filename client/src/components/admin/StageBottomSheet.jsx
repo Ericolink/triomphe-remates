@@ -3,11 +3,12 @@ import { Check } from 'lucide-react';
 import { PIPELINE_STAGE_LABELS } from '../../utils/constants';
 import useModalA11y from '../../hooks/useModalA11y';
 
-// Alternativa táctil al drag & drop del Kanban — en mobile arrastrar tarjetas con el dedo
-// es impreciso, así que tocar la tarjeta abre esta hoja inferior con las etapas como
-// opciones grandes de una sola columna (1 tap = cambio de etapa). Dispara el mismo
-// callback que el drop de escritorio (onSelectStage), así que la lógica de "si es una
-// etapa terminal, abre CloseLeadModal" vive en un solo lugar (LeadsPage), no duplicada.
+// Selector de etapa por toque — se abre desde el detalle del prospecto (StageProgress en
+// LeadDetailPanel.jsx) con las etapas como opciones grandes de una sola columna (1 tap =
+// cambio de etapa), en vez de un <select> nativo. Dispara el mismo callback
+// (onSelectStage/attemptStageChange) que decide si es una etapa terminal y abre el modal
+// de cierre correspondiente — esa lógica vive en un solo lugar (useLeadDetailActions.js),
+// no duplicada aquí.
 export default function StageBottomSheet({ open, lead, onClose, onSelectStage }) {
   const panelRef = useModalA11y(Boolean(open && lead), onClose);
 

@@ -8,10 +8,8 @@ import { toWhatsAppLink } from '../../../../utils/formatters';
 // decide el backend en getMyCrmDashboard.requierenAtencion).
 const REASON_DOT_COLOR = {
   cita_hoy: 'bg-red-500',
-  tarea_vencida: 'bg-red-500',
   sin_contacto: 'bg-orange-500',
   cita_manana: 'bg-yellow-500',
-  etapa_avanzada_sin_seguimiento: 'bg-yellow-500',
 };
 
 // "Necesitan tu atención" — un lead por fila con su motivo, priorizado por el backend.

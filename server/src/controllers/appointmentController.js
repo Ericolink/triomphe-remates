@@ -1,6 +1,6 @@
 const { Op, Transaction } = require('sequelize');
 const { sequelize, Lead, Property, Appointment, User } = require('../models/index');
-const { logActivity, ensureOpenTask } = require('../utils/pipelineHelpers');
+const { logActivity } = require('../utils/pipelineHelpers');
 const { logAudit } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
 const { getLeadVisibilityWhere, canViewLead, canEditLead } = require('../utils/leadAccess');
@@ -253,17 +253,6 @@ const updateAppointmentStatus = async (req, res) => {
         userId: req.user?.id ?? null,
         transaction,
       });
-
-      // Una cita cancelada o a la que no se presentó el prospecto necesita una nueva
-      // próxima acción — sin esto, el prospecto se queda "olvidado" sin seguimiento.
-      if ((status === 'cancelada' || status === 'no_show') && appointment.lead?.assignedToUserId) {
-        await ensureOpenTask({
-          leadId: appointment.leadId,
-          assignedToUserId: appointment.lead.assignedToUserId,
-          type: 'llamar',
-          transaction,
-        });
-      }
     }
   });
 

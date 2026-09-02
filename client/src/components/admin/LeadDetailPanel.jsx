@@ -21,7 +21,6 @@ import {
   Settings2,
   ShieldAlert,
   LayoutGrid,
-  Pin,
   Radio,
   CalendarClock,
   HelpCircle,
@@ -50,7 +49,6 @@ import {
 } from '../../services/leadService';
 import { getLeadActivities } from '../../services/activityService';
 import { getLeadAppointments, createAppointment } from '../../services/appointmentService';
-import { getLeadTasks } from '../../services/taskService';
 import useAuthStore from '../../store/authStore';
 import { canAssignLeads, canEditLead, canDeleteLeads } from '../../utils/permissions';
 import { isInvalidOptionalAmount } from '../../utils/validation';
@@ -59,7 +57,6 @@ import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
 import TabBar from '../ui/TabBar';
 import PropertyPicker from './PropertyPicker';
-import { NextActionLine } from './KanbanBoard';
 import useModalA11y from '../../hooks/useModalA11y';
 import { fadeIn, fadeInRight } from '../../utils/animations';
 import {
@@ -345,17 +342,6 @@ export default function LeadDetailPanel({
   });
   const appointments = appointmentsData?.data ?? [];
 
-  // Próxima acción (pestaña Resumen) — reutiliza exactamente la misma tarea abierta y el
-  // mismo componente <NextActionLine> que ya usan Kanban/Lista (ver KanbanBoard.jsx), en vez
-  // de reimplementar el cálculo de vencida/por vencer. GET /leads/:id/tasks trae el
-  // historial completo; la invariante de negocio garantiza a lo más una sin `done`.
-  const { data: leadTasksData } = useQuery({
-    queryKey: ['lead-tasks', selected?.id],
-    queryFn: () => getLeadTasks(selected.id),
-    enabled: !!selected?.id,
-  });
-  const openTask = (leadTasksData?.data ?? []).find((t) => !t.done) || null;
-
   // Línea de tiempo unificada — LeadNote y LeadActivity siguen siendo dos entidades
   // distintas en el backend (ver leadService/activityService); esto solo las combina para
   // que el usuario vea "lo que ha pasado con el prospecto" como una sola lista, sin tener
@@ -408,8 +394,7 @@ export default function LeadDetailPanel({
   // Guarda un campo vía el PUT genérico y refleja el resultado junto al campo (ver
   // FieldStatus) en vez del toast global que usaba todo el panel antes. `updateMutation`
   // es una única mutation COMPARTIDA por todos los campos del panel (y por
-  // attemptStageChange, usado también por el drag&drop del Kanban) — ver
-  // useLeadDetailActions.js.
+  // attemptStageChange) — ver useLeadDetailActions.js.
   //
   // CRM-006: por eso NO se le pasan callbacks por-llamada (`.mutate(vars, {onSuccess,
   // onError})`) como antes. React Query guarda esos callbacks en un único campo del
@@ -579,11 +564,9 @@ export default function LeadDetailPanel({
   const knownType = LEAD_TYPE_OPTIONS.some((o) => o.value === lead.type);
 
   // Fase 3 del rediseño del CRM: "prioridad" no es un campo nuevo que alguien tenga que
-  // mantener a mano — se calcula de lo que ya existe (urgencia declarada por el prospecto +
-  // si la próxima acción ya venció), igual que sortByUrgency ya hace en el Kanban
-  // (KanbanBoard.jsx). Un lead cerrado nunca se marca como prioritario.
-  const isOverdueTask = !!openTask && new Date(openTask.dueDate) < new Date();
-  const isHighPriority = !isTerminal && (lead.urgency === 'inmediata' || isOverdueTask);
+  // mantener a mano — se calcula de la urgencia declarada por el prospecto. Un lead cerrado
+  // nunca se marca como prioritario.
+  const isHighPriority = !isTerminal && lead.urgency === 'inmediata';
 
   return (
     <motion.div
@@ -606,11 +589,7 @@ export default function LeadDetailPanel({
               </p>
               {isHighPriority && (
                 <span
-                  title={
-                    lead.urgency === 'inmediata'
-                      ? 'Urgencia: inmediata'
-                      : 'Próxima acción vencida'
-                  }
+                  title="Urgencia: inmediata"
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 flex-shrink-0"
                 >
                   <Flame size={11} /> Alta prioridad
@@ -717,24 +696,6 @@ export default function LeadDetailPanel({
                     Lista de espera
                   </button>
                 </div>
-              )}
-            </div>
-
-            <div className={`mb-3 ${CARD_CLASS}`}>
-              <p className={SECTION_LABEL_CLASS}>
-                <Pin size={13} /> Próxima acción
-              </p>
-              {openTask ? (
-                <NextActionLine task={openTask} />
-              ) : (
-                <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1.5">
-                  Sin tarea pendiente.
-                </p>
-              )}
-              {canAssign && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Responsable: {users?.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
-                </p>
               )}
             </div>
 

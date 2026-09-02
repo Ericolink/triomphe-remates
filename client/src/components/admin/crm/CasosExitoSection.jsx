@@ -344,9 +344,8 @@ const DEALS_PAGE_SIZE = 12;
 // a "Venta realizada"; ver leadController.closeLeadAsWon/closeLeadAsLost). Separado de
 // Prospectos porque aquí el objetivo es revisar lo ya ganado, no seguir trabajando el caso.
 // AUDIT: antes pedía getDeals() sin params, descargando todo el historial de ventas en
-// cada visita y filtrando/sumando en el cliente. Ahora pagina con el mismo patrón
-// useInfiniteQuery + "Cargar más" que ya usa el Kanban de Prospectos (useColumnLeads en
-// KanbanBoard.jsx) y la búsqueda va debounced al backend en vez de filtrar localmente —
+// cada visita y filtrando/sumando en el cliente. Ahora pagina con useInfiniteQuery +
+// "Cargar más" y la búsqueda va debounced al backend en vez de filtrar localmente —
 // así el conteo y el monto total mostrados reflejan siempre TODO el historial que
 // coincide con la búsqueda, no solo lo que ya se cargó.
 export default function CasosExitoSection() {

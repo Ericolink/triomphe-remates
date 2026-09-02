@@ -10,7 +10,6 @@ const {
   createUser,
   authToken,
   createLead,
-  createTask,
   createAppointment,
   createDeal,
 } = require('./helpers/factories');
@@ -34,8 +33,8 @@ describe('GET /api/crm/my-dashboard', () => {
   });
 
   afterEach(async () => {
-    // Cascada (onDelete: 'CASCADE' en las asociaciones Lead->Activity/Appointment/Task/Deal,
-    // ver models/index.js) — borrar los Lead ya limpia Task/Appointment/Deal/Activity.
+    // Cascada (onDelete: 'CASCADE' en las asociaciones Lead->Activity/Appointment/Deal, ver
+    // models/index.js) — borrar los Lead ya limpia Appointment/Deal/Activity.
     await Lead.destroy({ where: {}, force: true });
   });
 
@@ -86,7 +85,6 @@ describe('GET /api/crm/my-dashboard', () => {
       const d = res.body.data;
       expect(d.prospectosActivos).toBe(0);
       expect(d.nuevos).toEqual({ hoy: 0, ultimos7dias: 0, esteMes: 0 });
-      expect(d.seguimientosVencidos).toBe(0);
       expect(d.citasHoy).toEqual([]);
       expect(d.citasManana).toEqual([]);
       expect(d.citasProximas7Dias).toEqual([]);
@@ -106,10 +104,6 @@ describe('GET /api/crm/my-dashboard', () => {
       leadA = await createLead({ name: 'Prospecto de A', assignedToUserId: asesorA.id, assignedAt: new Date() });
       leadB = await createLead({ name: 'Prospecto de B', assignedToUserId: asesorB.id, assignedAt: new Date() });
 
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      await createTask({ leadId: leadA.id, assignedToUserId: asesorA.id, dueDate: yesterday, done: false });
-      await createTask({ leadId: leadB.id, assignedToUserId: asesorB.id, dueDate: yesterday, done: false });
-
       const today = new Date();
       await createAppointment({ leadId: leadA.id, scheduledAt: today });
       await createAppointment({ leadId: leadB.id, scheduledAt: today });
@@ -124,7 +118,6 @@ describe('GET /api/crm/my-dashboard', () => {
       const d = res.body.data;
 
       expect(d.prospectosActivos).toBe(1);
-      expect(d.seguimientosVencidos).toBe(1);
 
       expect(d.citasHoy).toHaveLength(1);
       expect(d.citasHoy[0].leadId).toBe(leadA.id);
@@ -227,10 +220,10 @@ describe('GET /api/crm/my-dashboard', () => {
       expect(res.body.data.ventasMes.total).toBe(500000);
     });
 
-    test('requierenAtencion prioriza cita de hoy sobre tarea vencida para el mismo lead', async () => {
+    test('requierenAtencion prioriza cita de hoy sobre sin contacto para el mismo lead', async () => {
       const lead = await createLead({ assignedToUserId: asesorA.id, pipelineStage: 'nuevo' });
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      await createTask({ leadId: lead.id, assignedToUserId: asesorA.id, dueDate: yesterday, done: false });
+      const longAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+      await Lead.update({ createdAt: longAgo }, { where: { id: lead.id } });
       await createAppointment({ leadId: lead.id, scheduledAt: new Date() });
 
       const res = await authed(asesorAToken);

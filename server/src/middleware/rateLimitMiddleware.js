@@ -56,11 +56,10 @@ const publicFormLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// AUDIT: 200/15min se agotaba con uso normal del panel admin — el Kanban de 8 columnas
-// hace 2 queries por columna solo al montar (leads-column + open-tasks-column), y cada
-// cambio de etapa/responsable las vuelve a pedir todas. Todas estas rutas ya están detrás
-// de authenticate/authorize (JWT), así que este límite es una segunda capa, no el control
-// de acceso principal — subirlo no abre una puerta nueva.
+// AUDIT: 200/15min se agotaba con uso normal del panel admin (origen histórico: el Kanban
+// de Prospectos, ya eliminado, hacía ráfagas de queries por columna). Todas estas rutas ya
+// están detrás de authenticate/authorize (JWT), así que este límite es una segunda capa, no
+// el control de acceso principal — subirlo no abre una puerta nueva.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,

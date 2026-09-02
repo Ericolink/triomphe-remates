@@ -20,7 +20,6 @@ const {
 const { addLeadProperty, removeLeadProperty } = require('../controllers/leadPropertyController');
 const { getLeadActivities, createLeadActivity } = require('../controllers/activityController');
 const { getLeadAppointments } = require('../controllers/appointmentController');
-const { getLeadTasks } = require('../controllers/taskController');
 const {
   authenticate,
   authenticateSSE,
@@ -88,6 +87,5 @@ router.delete(
 router.get('/:id/activities', apiLimiter, authenticate, requireCrmAccess, getLeadActivities);
 router.post('/:id/activities', apiLimiter, authenticate, requireCrmAccess, createLeadActivity);
 router.get('/:id/appointments', apiLimiter, authenticate, requireCrmAccess, getLeadAppointments);
-router.get('/:id/tasks', apiLimiter, authenticate, requireCrmAccess, getLeadTasks);
 
 module.exports = router;

@@ -1,16 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CalendarClock, PhoneCall, MessageCircle } from 'lucide-react';
+import { AlertTriangle, CalendarClock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '../../../utils/animations';
-import { formatDateTime, toWhatsAppLink } from '../../../utils/formatters';
-import { TASK_TYPE_LABELS } from '../../../utils/constants';
 
-// Nivel 1 — lo urgente: seguimientos vencidos, prospectos sin atender, mensajes nuevos y
-// citas del día. Es lo único que el usuario debe leer para saber "qué debo atender hoy".
+// Nivel 1 — lo urgente: prospectos sin atender, mensajes nuevos y citas del día. Es lo único
+// que el usuario debe leer para saber "qué debo atender hoy".
 export default function UrgentSection({
-  overdueTasks,
-  overdueTotal,
-  onCompleteTask,
   prospectosNuevos,
   prospectosPendientes,
   prospectosEstancados,
@@ -58,7 +53,7 @@ export default function UrgentSection({
       : []),
   ];
 
-  const nothingUrgent = overdueTasks.length === 0 && attentionItems.length === 0;
+  const nothingUrgent = attentionItems.length === 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -77,61 +72,6 @@ export default function UrgentSection({
           </p>
         ) : (
           <div className="space-y-2">
-            {overdueTasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/10"
-              >
-                <button
-                  onClick={() => navigate('/admin/crm?tab=prospectos')}
-                  className="text-left flex-1 min-w-0"
-                >
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                    {task.lead?.name}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 block">
-                    {TASK_TYPE_LABELS[task.type] || task.type} — venció{' '}
-                    {formatDateTime(task.dueDate)}
-                  </span>
-                </button>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {task.lead?.phone && (
-                    <a
-                      href={`tel:${task.lead.phone}`}
-                      title="Llamar"
-                      className="p-1.5 text-gray-400 hover:text-primary-500"
-                    >
-                      <PhoneCall size={15} />
-                    </a>
-                  )}
-                  {task.lead?.phone && (
-                    <a
-                      href={toWhatsAppLink(task.lead.phone)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="WhatsApp"
-                      className="p-1.5 text-gray-400 hover:text-green-500"
-                    >
-                      <MessageCircle size={15} />
-                    </a>
-                  )}
-                  <button
-                    onClick={() => onCompleteTask(task.id)}
-                    className="text-xs font-medium px-2.5 py-1.5 bg-accent-400 text-primary-900 rounded-lg hover:bg-accent-300 transition-colors"
-                  >
-                    Completar
-                  </button>
-                </div>
-              </div>
-            ))}
-            {overdueTotal > overdueTasks.length && (
-              <button
-                onClick={() => navigate('/admin/crm?tab=prospectos')}
-                className="w-full text-center text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 py-1"
-              >
-                Mostrando {overdueTasks.length} de {overdueTotal} vencidas — ver todas
-              </button>
-            )}
             {attentionItems.map(({ key, text, onClick }) => (
               <button
                 key={key}

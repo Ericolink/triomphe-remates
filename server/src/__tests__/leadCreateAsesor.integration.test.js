@@ -61,21 +61,6 @@ describe('POST /api/leads — asesor_ventas puede crear prospectos, auto-asignad
     expect(res.body.data.assignedToUserId).not.toBe(otroAsesor.id);
   });
 
-  test('el lead auto-creado por el asesor recibe su tarea inicial ("próxima acción")', async () => {
-    const res = await request(app)
-      .post('/api/leads')
-      .set('Authorization', `Bearer ${asesorToken}`)
-      .send({ name: 'Prospecto con tarea', phone: '6561112235' });
-
-    expect(res.status).toBe(201);
-    const taskRes = await request(app)
-      .get(`/api/leads/${res.body.data.id}/tasks`)
-      .set('Authorization', `Bearer ${asesorToken}`);
-    expect(taskRes.status).toBe(200);
-    expect(taskRes.body.data.length).toBeGreaterThan(0);
-    expect(taskRes.body.data[0].done).toBe(false);
-  });
-
   test('admin puede ver el lead creado por el asesor y quién lo creó (createdByUser)', async () => {
     const created = await request(app)
       .post('/api/leads')
