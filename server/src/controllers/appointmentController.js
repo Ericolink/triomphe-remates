@@ -1,7 +1,7 @@
 const { Op, Transaction } = require('sequelize');
 const { sequelize, Lead, Property, Appointment, User } = require('../models/index');
 const { logActivity } = require('../utils/pipelineHelpers');
-const { logAudit } = require('../utils/audit');
+const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
 const { getLeadVisibilityWhere, canViewLead, canEditLead } = require('../utils/leadAccess');
 const { ApiError } = require('../middleware/errorHandler');
@@ -239,10 +239,12 @@ const updateAppointmentStatus = async (req, res) => {
     );
   }
 
+  const updates = {};
+  let beforeSnapshot = {};
   await sequelize.transaction(async (transaction) => {
-    const updates = {};
     if (status !== undefined) updates.status = status;
     if (outcome !== undefined) updates.outcome = outcome;
+    beforeSnapshot = snapshotFields(appointment, Object.keys(updates));
     await appointment.update(updates, { transaction });
 
     if (status !== undefined) {
@@ -256,7 +258,10 @@ const updateAppointmentStatus = async (req, res) => {
     }
   });
 
-  logAudit(req, 'update', 'appointment', appointment.id, { status });
+  logAudit(req, 'update', 'appointment', appointment.id, {
+    status,
+    changes: buildChanges(beforeSnapshot, appointment),
+  });
 
   return res.json({ message: 'Cita actualizada exitosamente', data: appointment });
 };

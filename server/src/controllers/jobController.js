@@ -4,7 +4,7 @@ const {
   sendJobApplicationNotification,
   sendJobApplicationConfirmation,
 } = require('../services/emailService');
-const { logAudit } = require('../utils/audit');
+const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -100,8 +100,9 @@ const updatePosition = async (req, res) => {
   if (type !== undefined) updates.type = type;
   if (status !== undefined) updates.status = status;
   if (isUrgent !== undefined) updates.isUrgent = isUrgent;
+  const beforeSnapshot = snapshotFields(position, Object.keys(updates));
   await position.update(updates);
-  logAudit(req, 'update', 'job', position.id, updates);
+  logAudit(req, 'update', 'job', position.id, { changes: buildChanges(beforeSnapshot, position) });
   return res.json({ message: 'Vacante actualizada', data: position });
 };
 
@@ -211,8 +212,11 @@ const updateApplication = async (req, res) => {
   const updates = {};
   if (status !== undefined) updates.status = status;
   if (notes !== undefined) updates.notes = notes;
+  const beforeSnapshot = snapshotFields(application, Object.keys(updates));
   await application.update(updates);
-  logAudit(req, 'update', 'application', application.id, updates);
+  logAudit(req, 'update', 'application', application.id, {
+    changes: buildChanges(beforeSnapshot, application),
+  });
   return res.json({ message: 'Postulación actualizada', data: application });
 };
 

@@ -645,3 +645,16 @@ export const CAMPAIGN_PLATFORM_LABELS = {
   tiktok: 'TikTok',
   otro: 'Otro',
 };
+
+// AuditLog.result — solo 'success'/'failed' están implementados (ver
+// server/src/models/AuditLog.js): nada en el sistema hoy detecta de forma confiable un
+// evento "bloqueado" o "automático", así que esos estados no se ofrecen como opción.
+export const AUDIT_RESULT_LABELS = {
+  success: 'Exitoso',
+  failed: 'Fallido',
+};
+
+export const AUDIT_RESULT_VARIANTS = {
+  success: 'success',
+  failed: 'danger',
+};

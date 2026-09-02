@@ -4,7 +4,7 @@ const { sequelize, Property, Image, PropertyStatusHistory } = require('../models
 const { generateSlug } = require('../utils/helpers');
 const alertService = require('../services/alertService');
 const { paginate } = require('../utils/pagination');
-const { logAudit } = require('../utils/audit');
+const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const logger = require('../utils/logger');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { ApiError } = require('../middleware/errorHandler');
@@ -619,6 +619,7 @@ const updateProperty = async (req, res) => {
   if (showValuationInfo !== undefined) updates.showValuationInfo = showValuationInfo;
   if (req.body.slug) updates.slug = req.body.slug;
 
+  const beforeSnapshot = snapshotFields(property, Object.keys(updates));
   await property.update(updates);
 
   if (status && status !== previousStatus) {
@@ -652,7 +653,10 @@ const updateProperty = async (req, res) => {
     }).catch((e) => console.error('Error registrando historial de precio:', e));
   }
 
-  logAudit(req, 'update', 'property', property.id, { title: property.title });
+  logAudit(req, 'update', 'property', property.id, {
+    title: property.title,
+    changes: buildChanges(beforeSnapshot, property),
+  });
 
   return res.json({
     message: 'Propiedad actualizada exitosamente',

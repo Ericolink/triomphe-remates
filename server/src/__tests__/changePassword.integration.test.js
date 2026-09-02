@@ -1,7 +1,16 @@
 const request = require('supertest');
 const app = require('../../app');
-const { sequelize, User } = require('../models/index');
+const { sequelize, User, AuditLog } = require('../models/index');
 const { hashPassword } = require('../utils/helpers');
+
+async function waitForAuditLog(where, { retries = 10, delayMs = 20 } = {}) {
+  for (let i = 0; i < retries; i++) {
+    const row = await AuditLog.findOne({ where, order: [['id', 'DESC']] });
+    if (row) return row;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return null;
+}
 
 describe('PUT /api/auth/change-password', () => {
   beforeAll(async () => {
@@ -10,6 +19,7 @@ describe('PUT /api/auth/change-password', () => {
 
   beforeEach(async () => {
     await User.destroy({ where: {}, force: true });
+    await AuditLog.destroy({ where: {}, force: true });
     await User.create({
       name: 'Editor de prueba',
       email: 'change-password-test@triomphe.test',
@@ -21,6 +31,7 @@ describe('PUT /api/auth/change-password', () => {
 
   afterAll(async () => {
     await User.destroy({ where: {}, force: true });
+    await AuditLog.destroy({ where: {}, force: true });
     await sequelize.close();
   });
 
@@ -64,6 +75,33 @@ describe('PUT /api/auth/change-password', () => {
 
     const stillOld = await login();
     expect(stillOld.status).toBe(200);
+  });
+
+  test('un cambio de contraseña exitoso queda registrado en Audit Log', async () => {
+    const loginRes = await login();
+
+    await request(app)
+      .put('/api/auth/change-password')
+      .set('Authorization', `Bearer ${loginRes.body.token}`)
+      .send({ currentPassword: 'OldPassword123', newPassword: 'NewPassword456' });
+
+    const row = await waitForAuditLog({ action: 'update', resource: 'user', result: 'success' });
+    expect(row).not.toBeNull();
+    expect(JSON.parse(row.detail).event).toBe('change_password');
+  });
+
+  test('un intento fallido (contraseña actual incorrecta) queda registrado con result:failed', async () => {
+    const loginRes = await login();
+
+    await request(app)
+      .put('/api/auth/change-password')
+      .set('Authorization', `Bearer ${loginRes.body.token}`)
+      .send({ currentPassword: 'WrongPassword', newPassword: 'NewPassword456' });
+
+    const row = await waitForAuditLog({ action: 'update', resource: 'user', result: 'failed' });
+    expect(row).not.toBeNull();
+    expect(JSON.parse(row.detail).event).toBe('change_password_failed');
+    expect(row.detail).not.toContain('WrongPassword');
   });
 
   test('rechaza con 400 una nueva contraseña menor a 8 caracteres', async () => {

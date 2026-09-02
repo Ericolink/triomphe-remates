@@ -3,7 +3,7 @@ const { Feedback } = require('../models/index');
 const { validateEmail } = require('../utils/validators');
 const { sendFeedbackNotification } = require('../services/emailService');
 const { paginate } = require('../utils/pagination');
-const { logAudit } = require('../utils/audit');
+const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const { validateBatchIds } = require('../utils/batchValidation');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -80,8 +80,9 @@ const updateFeedback = async (req, res) => {
   if (req.body.status !== undefined) updates.status = req.body.status;
   if (req.body.notes !== undefined) updates.notes = req.body.notes;
 
+  const beforeSnapshot = snapshotFields(feedback, Object.keys(updates));
   await feedback.update(updates);
-  logAudit(req, 'update', 'feedback', feedback.id, updates);
+  logAudit(req, 'update', 'feedback', feedback.id, { changes: buildChanges(beforeSnapshot, feedback) });
   return res.json({ message: 'Feedback actualizado', data: feedback });
 };
 

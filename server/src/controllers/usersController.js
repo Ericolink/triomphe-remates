@@ -1,7 +1,7 @@
 const { cloudinary } = require('../config/cloudinary');
 const { User } = require('../models/index');
 const { generateToken, hashPassword, comparePassword } = require('../utils/helpers');
-const { logAudit } = require('../utils/audit');
+const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { paginate } = require('../utils/pagination');
 const userService = require('../services/userService');
@@ -104,7 +104,10 @@ const updateUser = async (req, res) => {
       // Mismo `code` que authController.changePassword — ambos endpoints permiten a un
       // usuario cambiar su propia contraseña, y ambos deben distinguirse de "sesión
       // inválida" ante el interceptor global de axios (ver client/src/services/api.js).
-      if (!isMatch) throw new ApiError(401, 'Contraseña actual incorrecta', { code: 'INVALID_CURRENT_PASSWORD' });
+      if (!isMatch) {
+        logAudit(req, 'update', 'user', user.id, { event: 'change_password_failed' }, 'failed');
+        throw new ApiError(401, 'Contraseña actual incorrecta', { code: 'INVALID_CURRENT_PASSWORD' });
+      }
     }
     const hashed = await hashPassword(newPassword);
     await user.update({ password: hashed });
@@ -146,6 +149,8 @@ const updateUser = async (req, res) => {
     profilePhoto = result.secure_url;
   }
 
+  const beforeSnapshot = snapshotFields(user, ['name', 'email', 'role', 'isActive', 'profilePhoto']);
+
   await user.update({
     ...(name && { name }),
     ...(email && { email }),
@@ -156,10 +161,7 @@ const updateUser = async (req, res) => {
   });
 
   logAudit(req, 'update', 'user', user.id, {
-    ...(name && { name }),
-    ...(email && { email }),
-    ...(role && { role }),
-    ...(isActive !== undefined && { isActive }),
+    changes: buildChanges(beforeSnapshot, user),
     ...(newPassword && { passwordChanged: true }),
   });
 

@@ -1,6 +1,6 @@
 const { Testimonial, Property } = require('../models/index');
 const { cloudinary } = require('../config/cloudinary');
-const { logAudit } = require('../utils/audit');
+const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { ApiError } = require('../middleware/errorHandler');
@@ -173,10 +173,12 @@ const updateTestimonial = async (req, res) => {
       updates.afterImageFilename = result.public_id;
     }
 
+    const beforeSnapshot = snapshotFields(testimonial, Object.keys(updates));
     await testimonial.update(updates);
     logAudit(req, 'update', 'testimonial', testimonial.id, {
       clientName: testimonial.clientName,
       status: testimonial.status,
+      changes: buildChanges(beforeSnapshot, testimonial),
     });
 
     return res.json({ message: 'Testimonio actualizado', data: testimonial });

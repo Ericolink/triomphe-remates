@@ -248,7 +248,7 @@ const {
   sendLeadFollowUpWhatsApp,
   isConfigured: isWhatsappConfigured,
 } = require('../services/whatsappService');
-const { logAudit } = require('../utils/audit');
+const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const leadEvents = require('../utils/leadEvents');
 const { paginate } = require('../utils/pagination');
 const logger = require('../utils/logger');
@@ -796,6 +796,7 @@ const updateLead = async (req, res) => {
   const previousPropertyId = lead.propertyId;
 
   const updates = {};
+  let beforeSnapshot = {};
   try {
   await sequelize.transaction(async (transaction) => {
     if (status !== undefined) updates.status = status;
@@ -818,6 +819,7 @@ const updateLead = async (req, res) => {
     }
     Object.assign(updates, commercialFields);
 
+    beforeSnapshot = snapshotFields(lead, Object.keys(updates));
     await lead.update(updates, { transaction });
 
     if (pipelineStage !== undefined && pipelineStage !== previousStage) {
@@ -864,7 +866,7 @@ const updateLead = async (req, res) => {
     throw error;
   }
 
-  logAudit(req, 'update', 'lead', lead.id, updates);
+  logAudit(req, 'update', 'lead', lead.id, { changes: buildChanges(beforeSnapshot, lead) });
 
   return res.json({ message: 'Lead actualizado exitosamente', data: lead });
 };
@@ -904,6 +906,7 @@ const closeLeadAsWon = async (req, res) => {
       { transaction }
     );
 
+    const beforeSnapshot = snapshotFields(lead, ['pipelineStage', 'status', 'closeReason', 'closeReasonDetail']);
     await lead.update(
       {
         pipelineStage: 'venta_realizada',
@@ -927,7 +930,11 @@ const closeLeadAsWon = async (req, res) => {
 
     await transaction.commit();
 
-    logAudit(req, 'update', 'lead', lead.id, { closedAs: 'won', dealId: deal.id });
+    logAudit(req, 'update', 'lead', lead.id, {
+      closedAs: 'won',
+      dealId: deal.id,
+      changes: buildChanges(beforeSnapshot, lead),
+    });
 
     return res.json({ message: 'Venta registrada exitosamente', data: { lead, deal } });
   } catch (error) {
@@ -966,6 +973,7 @@ const closeLeadAsLost = async (req, res) => {
       await Deal.destroy({ where: { leadId: lead.id }, transaction });
     }
 
+    const beforeSnapshot = snapshotFields(lead, ['pipelineStage', 'status', 'closeReason', 'closeReasonDetail']);
     await lead.update(
       {
         pipelineStage: 'no_interesado',
@@ -988,7 +996,11 @@ const closeLeadAsLost = async (req, res) => {
 
     await transaction.commit();
 
-    logAudit(req, 'update', 'lead', lead.id, { closedAs: 'lost', closeReason });
+    logAudit(req, 'update', 'lead', lead.id, {
+      closedAs: 'lost',
+      closeReason,
+      changes: buildChanges(beforeSnapshot, lead),
+    });
 
     return res.json({ message: 'Prospecto cerrado', data: lead });
   } catch (error) {
@@ -1050,6 +1062,7 @@ const sendLeadToWaitingList = async (req, res) => {
       { transaction }
     );
 
+    const beforeSnapshot = snapshotFields(lead, ['pipelineStage', 'status']);
     await lead.update(
       {
         pipelineStage: 'lista_espera',
@@ -1068,7 +1081,11 @@ const sendLeadToWaitingList = async (req, res) => {
 
     await transaction.commit();
 
-    logAudit(req, 'update', 'lead', lead.id, { sentToWaitingList: true, propertyAlertId: alert.id });
+    logAudit(req, 'update', 'lead', lead.id, {
+      sentToWaitingList: true,
+      propertyAlertId: alert.id,
+      changes: buildChanges(beforeSnapshot, lead),
+    });
 
     return res.json({ message: 'Prospecto enviado a lista de espera', data: { lead, alert } });
   } catch (error) {
@@ -1382,11 +1399,14 @@ const sendLeadWhatsApp = async (req, res) => {
       userId: req.user?.id ?? null,
     });
 
-    logAudit(req, 'update', 'lead', lead.id, {
-      whatsapp: true,
-      success: !sendError,
-      error: sendError?.message || null,
-    });
+    logAudit(
+      req,
+      'update',
+      'lead',
+      lead.id,
+      { whatsapp: true, success: !sendError, error: sendError?.message || null },
+      sendError ? 'failed' : 'success'
+    );
 
     return res.json({ message: warning || 'Mensaje de WhatsApp enviado', data: note, warning });
   } catch (error) {

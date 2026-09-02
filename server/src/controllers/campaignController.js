@@ -1,6 +1,6 @@
 const { Campaign, Lead, Deal } = require('../models/index');
 const { fn, col } = require('sequelize');
-const { logAudit } = require('../utils/audit');
+const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const { paginate } = require('../utils/pagination');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -100,9 +100,10 @@ const updateCampaign = async (req, res) => {
   if (endDate !== undefined) updates.endDate = endDate;
   if (budget !== undefined) updates.budget = budget;
   if (utmCampaign !== undefined) updates.utmCampaign = utmCampaign || null;
+  const beforeSnapshot = snapshotFields(campaign, Object.keys(updates));
   await campaign.update(updates);
 
-  logAudit(req, 'update', 'campaign', campaign.id);
+  logAudit(req, 'update', 'campaign', campaign.id, { changes: buildChanges(beforeSnapshot, campaign) });
 
   return res.json({ message: 'Campaña actualizada exitosamente', data: campaign });
 };

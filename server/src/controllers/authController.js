@@ -103,11 +103,19 @@ const login = async (req, res) => {
 
   const user = await User.findOne({ where: { email } });
   if (!user || !user.isActive) {
+    // No hay `req.user` en un login fallido (nunca se autenticó) — se registra igual
+    // pasando { ip: req.ip } directo, mismo patrón que el login exitoso de abajo. Solo se
+    // guarda el email intentado, nunca la contraseña.
+    logAudit({ ip: req.ip }, 'login', 'user', null, {
+      emailAttempted: email,
+      reason: user ? 'inactive' : 'user_not_found',
+    }, 'failed');
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
 
   const isMatch = await comparePassword(password, user.password);
   if (!isMatch) {
+    logAudit({ ip: req.ip }, 'login', 'user', user.id, { emailAttempted: email, reason: 'invalid_password' }, 'failed');
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
 
@@ -150,11 +158,13 @@ const changePassword = async (req, res) => {
     // ambos casos de forma estable para el interceptor global de axios (client/src/services/
     // api.js), que de otro modo trataría cualquier 401 como "sesión expirada" y cerraría
     // sesión al usuario en medio del formulario.
+    logAudit(req, 'update', 'user', user.id, { event: 'change_password_failed' }, 'failed');
     throw new ApiError(401, 'Contraseña actual incorrecta', { code: 'INVALID_CURRENT_PASSWORD' });
   }
 
   const hashedPassword = await hashPassword(newPassword);
   await user.update({ password: hashedPassword, tokenVersion: user.tokenVersion + 1 });
+  logAudit(req, 'update', 'user', user.id, { event: 'change_password' });
 
   // El token actual quedó invalidado por el cambio de tokenVersion — se reemite uno
   // nuevo en la respuesta para que el usuario no se quede sin sesión tras el cambio.
