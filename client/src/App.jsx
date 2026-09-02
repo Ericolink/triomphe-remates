@@ -9,6 +9,7 @@ import {
   hasCrmAccess,
   hasBackofficeAccess,
   canManageInventory,
+  isAsesorVentas,
 } from './utils/permissions';
 
 // Páginas públicas — cargadas de forma diferida para no bloquear el primer render
@@ -30,6 +31,7 @@ const PrivacyPolicyPage = lazy(() => import('./pages/public/PrivacyPolicyPage'))
 const LoginPage = lazy(() => import('./pages/admin/LoginPage'));
 const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
 const DashboardPage = lazy(() => import('./pages/admin/DashboardPage'));
+const AsesorDashboardPage = lazy(() => import('./pages/admin/AsesorDashboardPage'));
 const AdminPropertiesPage = lazy(() => import('./pages/admin/AdminPropertiesPage'));
 const PropertyFormPage = lazy(() => import('./pages/admin/PropertyFormPage'));
 const CrmPage = lazy(() => import('./pages/admin/CrmPage'));
@@ -108,6 +110,14 @@ export default function App() {
                 }
               />
               <Route path="estadisticas" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route
+                path="mi-dashboard"
+                element={
+                  <RoleRoute allow={isAsesorVentas}>
+                    <AsesorDashboardPage />
+                  </RoleRoute>
+                }
+              />
               <Route path="propiedades" element={<AdminPropertiesPage />} />
               <Route
                 path="propiedades/nueva"

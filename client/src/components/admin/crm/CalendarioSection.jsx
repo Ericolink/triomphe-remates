@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,6 +8,8 @@ import {
   LayoutList,
   Search,
   User,
+  Plus,
+  CalendarPlus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -23,6 +26,7 @@ import { crmAccessLevel } from '../../../utils/permissions';
 import Spinner from '../../ui/Spinner';
 import Badge from '../../ui/Badge';
 import AppointmentDetailModal from './AppointmentDetailModal';
+import AgendarCitaModal from './AgendarCitaModal';
 import LeadDetailWithActions from './LeadDetailWithActions';
 import { fadeIn, fadeInUp, staggerContainer } from '../../../utils/animations';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_VARIANTS } from '../../../utils/constants';
@@ -173,6 +177,10 @@ export default function CalendarioSection() {
   const [dateRangeMode, setDateRangeMode] = useState('week');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  // scheduleModal: null (cerrado) | { initialDate: Date|null } — abierto desde el botón
+  // "Nueva cita" (sin fecha) o desde "+ Agendar cita este día" (con el día ya elegido).
+  const [scheduleModal, setScheduleModal] = useState(null);
+  const [searchParams] = useSearchParams();
 
   const [filters, setFilters] = useState({
     status: '',
@@ -247,6 +255,39 @@ export default function CalendarioSection() {
     return monthAppointments.filter((a) => isSameDay(new Date(a.scheduledAt), d));
   };
   const selectedAppointments = selectedDay ? appointmentsOnDay(selectedDay) : [];
+
+  // "Ver cita" desde LeadDetailPanel (?tab=calendario&date=...&appointmentId=...) — ajuste de
+  // estado durante el render (no un useEffect, ver mismo criterio en AgendarCitaModal.jsx),
+  // reactivo a los valores de la URL porque el detalle de un prospecto también se abre
+  // DENTRO de este mismo Calendario (LeadDetailWithActions más abajo): un segundo "Ver cita"
+  // sin cambiar de pestaña no vuelve a montar este componente, así que no basta con "solo al
+  // montar" como el patrón ?leadId= de ProspectosSection.
+  const dateParam = searchParams.get('date');
+  const appointmentIdParam = searchParams.get('appointmentId');
+  const [positionedForDate, setPositionedForDate] = useState(null);
+  if (dateParam && dateParam !== positionedForDate) {
+    setPositionedForDate(dateParam);
+    const d = new Date(dateParam);
+    if (!Number.isNaN(d.getTime())) {
+      setCurrent({ year: d.getFullYear(), month: d.getMonth() });
+      setSelectedDay(d.getDate());
+      setView('month');
+    }
+  }
+
+  // `autoOpenedApptId` recuerda qué cita ya se auto-abrió — sin esto, cada refetch de
+  // monthAppointments (invalidateAll tras cambiar estado/reagendar) reabriría el modal aunque
+  // el usuario ya lo hubiera cerrado. Antes de que la query del mes resuelva, `found` es
+  // undefined y este bloque simplemente no hace nada — se vuelve a evaluar solo en el
+  // siguiente render que sí traiga `monthAppointments` actualizado.
+  const [autoOpenedApptId, setAutoOpenedApptId] = useState(null);
+  if (appointmentIdParam && appointmentIdParam !== autoOpenedApptId) {
+    const found = monthAppointments.find((a) => String(a.id) === appointmentIdParam);
+    if (found) {
+      setAutoOpenedApptId(appointmentIdParam);
+      setOpenAppointment(found);
+    }
+  }
 
   // Vista Agenda
   const [agendaFrom, agendaTo] =
@@ -384,6 +425,13 @@ export default function CalendarioSection() {
             <LayoutList size={15} /> Agenda
           </button>
         </div>
+
+        <button
+          onClick={() => setScheduleModal({ initialDate: null })}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-accent-400 text-primary-900 hover:bg-accent-300 transition-colors"
+        >
+          <Plus size={15} /> Nueva cita
+        </button>
 
         <select
           value={filters.status}
@@ -562,10 +610,22 @@ export default function CalendarioSection() {
                     exit={{ opacity: 0 }}
                     className="bg-white dark:bg-[#242938] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-[#2e3650]"
                   >
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">
-                      <CalendarDays size={15} className="text-primary-600" />
-                      {selectedDay} de {MONTH_NAMES[current.month]}
-                    </h3>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <h3 className="font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                        <CalendarDays size={15} className="text-primary-600" />
+                        {selectedDay} de {MONTH_NAMES[current.month]}
+                      </h3>
+                      <button
+                        onClick={() =>
+                          setScheduleModal({
+                            initialDate: new Date(current.year, current.month, selectedDay),
+                          })
+                        }
+                        className="flex items-center gap-1 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline flex-shrink-0"
+                      >
+                        <CalendarPlus size={13} /> Agendar cita este día
+                      </button>
+                    </div>
                     {selectedAppointments.length === 0 ? (
                       <p className="text-sm text-gray-400 dark:text-gray-500 italic">
                         Sin citas este día.
@@ -691,6 +751,13 @@ export default function CalendarioSection() {
       />
 
       <LeadDetailWithActions selected={selectedLead} setSelected={setSelectedLead} users={users} />
+
+      <AgendarCitaModal
+        open={Boolean(scheduleModal)}
+        initialDate={scheduleModal?.initialDate}
+        onClose={() => setScheduleModal(null)}
+        onScheduled={invalidateAll}
+      />
     </motion.div>
   );
 }

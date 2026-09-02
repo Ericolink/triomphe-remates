@@ -38,6 +38,13 @@ const dashboardGroup = {
   links: [{ to: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' }],
 };
 
+// Dashboard personal de asesor_ventas — distinto de dashboardGroup (dashboard admin, datos
+// de toda la empresa). Solo visible para ese rol, ver Sidebar más abajo.
+const asesorDashboardGroup = {
+  label: null,
+  links: [{ to: '/admin/mi-dashboard', icon: <LayoutDashboard size={18} />, label: 'Mi Dashboard' }],
+};
+
 const propertiesGroup = {
   label: 'Propiedades',
   links: [{ to: '/admin/propiedades', icon: <Building2 size={18} />, label: 'Propiedades' }],
@@ -89,6 +96,7 @@ function Sidebar({ user, onClose, onLogout }) {
   // de soporte (Comunicación/Reclutamiento/Contenido/Dashboard) con hasBackofficeAccess.
   const groups = [
     ...(hasBackofficeAccess(user) ? [dashboardGroup] : []),
+    ...(user?.role === 'asesor_ventas' ? [asesorDashboardGroup] : []),
     propertiesGroup,
     ...(hasCrmAccess(user) ? [crmGroup] : []),
     ...(hasBackofficeAccess(user) ? backofficeGroups : []),

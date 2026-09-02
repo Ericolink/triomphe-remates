@@ -1,4 +1,5 @@
 import { useId, useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Mail,
@@ -30,13 +31,12 @@ import {
   MapPin,
   Home,
   Navigation,
-  BedDouble,
-  Bath,
   ListChecks,
-  Zap,
   Layers,
   UserCheck,
   MessageCircle,
+  Flame,
+  ExternalLink,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -273,6 +273,7 @@ export default function LeadDetailPanel({
   onChangeStage,
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const formId = useId();
   const currentUser = useAuthStore((s) => s.user);
   const canAssign = canAssignLeads(currentUser);
@@ -286,12 +287,6 @@ export default function LeadDetailPanel({
   );
   const [budgetAmountFocused, setBudgetAmountFocused] = useState(false);
   const [searchZoneInput, setSearchZoneInput] = useState(selected.searchZone || '');
-  const [minBedroomsInput, setMinBedroomsInput] = useState(
-    selected.minBedrooms != null ? String(selected.minBedrooms) : ''
-  );
-  const [minBathroomsInput, setMinBathroomsInput] = useState(
-    selected.minBathrooms != null ? String(selected.minBathrooms) : ''
-  );
   const [desiredFeaturesInput, setDesiredFeaturesInput] = useState(
     selected.desiredFeatures || ''
   );
@@ -505,38 +500,6 @@ export default function LeadDetailPanel({
     saveField('searchZone', { searchZone: trimmed || null });
   };
 
-  const commitMinCount = (field, input, setError) => {
-    const trimmed = input.trim();
-    if (trimmed === '') {
-      if ((lead[field] ?? null) === null) return;
-      saveField(field, { [field]: null });
-      return;
-    }
-    const value = Number(trimmed);
-    if (!Number.isInteger(value) || value < 0) {
-      setError();
-      return;
-    }
-    if (value === (lead[field] ?? null)) return;
-    saveField(field, { [field]: value });
-  };
-
-  const commitMinBedrooms = () =>
-    commitMinCount('minBedrooms', minBedroomsInput, () =>
-      setFieldStatus((s) => ({
-        ...s,
-        minBedrooms: { state: 'error', message: 'Valor inválido' },
-      }))
-    );
-
-  const commitMinBathrooms = () =>
-    commitMinCount('minBathrooms', minBathroomsInput, () =>
-      setFieldStatus((s) => ({
-        ...s,
-        minBathrooms: { state: 'error', message: 'Valor inválido' },
-      }))
-    );
-
   const commitDesiredFeatures = () => {
     const trimmed = desiredFeaturesInput.trim();
     if (trimmed === (lead.desiredFeatures || '')) return;
@@ -650,7 +613,7 @@ export default function LeadDetailPanel({
                   }
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 flex-shrink-0"
                 >
-                  🔥 Alta prioridad
+                  <Flame size={11} /> Alta prioridad
                 </span>
               )}
             </div>
@@ -768,9 +731,11 @@ export default function LeadDetailPanel({
                   Sin tarea pendiente.
                 </p>
               )}
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Responsable: {users?.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
-              </p>
+              {canAssign && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Responsable: {users?.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
+                </p>
+              )}
             </div>
 
             <div className={`mb-3 ${CARD_CLASS}`}>
@@ -1116,44 +1081,6 @@ export default function LeadDetailPanel({
                 />
                 <FieldStatus status={fieldStatus.searchZone} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <FieldLabel icon={BedDouble} htmlFor={`${formId}-minBedrooms`}>
-                    Recámaras mín.
-                  </FieldLabel>
-                  <input
-                    id={`${formId}-minBedrooms`}
-                    type="number"
-                    min="0"
-                    value={minBedroomsInput}
-                    onChange={(e) => setMinBedroomsInput(e.target.value)}
-                    onBlur={commitMinBedrooms}
-                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                    disabled={!canEdit}
-                    placeholder="—"
-                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
-                  />
-                  <FieldStatus status={fieldStatus.minBedrooms} />
-                </div>
-                <div>
-                  <FieldLabel icon={Bath} htmlFor={`${formId}-minBathrooms`}>
-                    Baños mín.
-                  </FieldLabel>
-                  <input
-                    id={`${formId}-minBathrooms`}
-                    type="number"
-                    min="0"
-                    value={minBathroomsInput}
-                    onChange={(e) => setMinBathroomsInput(e.target.value)}
-                    onBlur={commitMinBathrooms}
-                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                    disabled={!canEdit}
-                    placeholder="—"
-                    className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
-                  />
-                  <FieldStatus status={fieldStatus.minBathrooms} />
-                </div>
-              </div>
               <div>
                 <FieldLabel icon={ListChecks} htmlFor={`${formId}-desiredFeatures`}>
                   Características deseadas
@@ -1169,26 +1096,6 @@ export default function LeadDetailPanel({
                   className={`${FIELD_CONTROL_CLASS} resize-none disabled:opacity-50 disabled:cursor-not-allowed`}
                 />
                 <FieldStatus status={fieldStatus.desiredFeatures} />
-              </div>
-              <div>
-                <FieldLabel icon={Zap} htmlFor={`${formId}-urgency`}>
-                  Urgencia
-                </FieldLabel>
-                <select
-                  id={`${formId}-urgency`}
-                  value={lead.urgency || ''}
-                  onChange={(e) => saveField('urgency', { urgency: e.target.value || null })}
-                  disabled={!canEdit}
-                  className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  <option value="">Sin especificar</option>
-                  {Object.entries(LEAD_URGENCY_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-                <FieldStatus status={fieldStatus.urgency} />
               </div>
             </div>
 
@@ -1284,44 +1191,36 @@ export default function LeadDetailPanel({
             vive aquí también (a quién le toca dar seguimiento). */}
         {activeTab === 'seguimiento' && (
           <div>
-            <div className="mb-3">
-              {canAssign ? (
-                <>
-                  <FieldLabel icon={UserCheck} htmlFor={`${formId}-assignedToUserId`}>
-                    Responsable
-                  </FieldLabel>
-                  <select
-                    id={`${formId}-assignedToUserId`}
-                    value={lead.assignedToUserId || ''}
-                    onChange={(e) =>
-                      saveField('assignedToUserId', {
-                        assignedToUserId: e.target.value ? Number(e.target.value) : null,
-                      })
-                    }
-                    className={FIELD_CONTROL_CLASS}
-                  >
-                    <option value="">Sin asignar</option>
-                    {users
-                      .filter((u) => u.isActive)
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name}
-                        </option>
-                      ))}
-                  </select>
-                </>
-              ) : (
-                // Información, no un campo roto: sin permiso para reasignar, se muestra como
-                // texto simple — nada de caja con borde imitando un input deshabilitado.
-                <FieldLabel icon={UserCheck}>Responsable</FieldLabel>
-              )}
-              {!canAssign && (
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-200 py-1">
-                  {users.find((u) => u.id === lead.assignedToUserId)?.name || 'Sin asignar'}
-                </p>
-              )}
-              <FieldStatus status={fieldStatus.assignedToUserId} />
-            </div>
+            {/* Responsable: exclusivo de admin/asistente_administrativo (únicos roles que
+                pueden reasignar, ver canAssignLeads) — un asesor_ventas solo ve leads que ya
+                son suyos, así que mostrárselo aquí era información redundante, no útil. */}
+            {canAssign && (
+              <div className="mb-3">
+                <FieldLabel icon={UserCheck} htmlFor={`${formId}-assignedToUserId`}>
+                  Responsable
+                </FieldLabel>
+                <select
+                  id={`${formId}-assignedToUserId`}
+                  value={lead.assignedToUserId || ''}
+                  onChange={(e) =>
+                    saveField('assignedToUserId', {
+                      assignedToUserId: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                  className={FIELD_CONTROL_CLASS}
+                >
+                  <option value="">Sin asignar</option>
+                  {users
+                    .filter((u) => u.isActive)
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                </select>
+                <FieldStatus status={fieldStatus.assignedToUserId} />
+              </div>
+            )}
 
             <div className="mb-3">
               <FieldLabel icon={MessageCircle}>¿Qué pasó con este prospecto?</FieldLabel>
@@ -1434,14 +1333,27 @@ export default function LeadDetailPanel({
               {appointments.map((a) => (
                 <div
                   key={a.id}
-                  className="bg-white dark:bg-[#242938] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between"
+                  className="bg-white dark:bg-[#242938] rounded-lg px-3 py-1.5 text-xs flex items-center justify-between gap-2"
                 >
                   <span className="text-gray-700 dark:text-gray-300">
                     {formatDateTime(a.scheduledAt)}
                   </span>
-                  <Badge variant={APPOINTMENT_STATUS_VARIANTS[a.status]}>
-                    {APPOINTMENT_STATUS_LABELS[a.status]}
-                  </Badge>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Badge variant={APPOINTMENT_STATUS_VARIANTS[a.status]}>
+                      {APPOINTMENT_STATUS_LABELS[a.status]}
+                    </Badge>
+                    <button
+                      onClick={() =>
+                        navigate(
+                          `/admin/crm?tab=calendario&date=${encodeURIComponent(a.scheduledAt)}&appointmentId=${a.id}`
+                        )
+                      }
+                      title="Ver cita en el calendario"
+                      className="p-1 text-gray-400 hover:text-primary-500"
+                    >
+                      <ExternalLink size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

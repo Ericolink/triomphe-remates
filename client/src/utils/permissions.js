@@ -5,6 +5,10 @@
 
 export const isAdmin = (user) => user?.role === 'admin';
 
+// Dashboard personal del asesor de ventas — distinto de hasBackofficeAccess (que gatea el
+// dashboard admin de toda la empresa). Solo asesor_ventas, ver GET /crm/my-dashboard.
+export const isAsesorVentas = (user) => user?.role === 'asesor_ventas';
+
 // --- CRM de Leads --------------------------------------------------------
 // Espejo exacto de crmAccessLevel en leadAccess.js.
 export function crmAccessLevel(user) {
@@ -24,8 +28,10 @@ export const canAssignLeads = (user) =>
 export const canDeleteLeads = (user) =>
   ['admin', 'asistente_administrativo'].includes(user?.role);
 
-// Un Asesor de Ventas solo trabaja los leads que ya se le asignaron, no crea nuevos.
-export const canCreateLeads = (user) => hasCrmAccess(user) && user?.role !== 'asesor_ventas';
+// Un Asesor de Ventas SÍ puede crear prospectos (excepción explícita del dueño del negocio) —
+// quedan auto-asignados a él mismo, ver leadController.createLead. Queda igual que
+// hasCrmAccess; se mantiene como export aparte por legibilidad en los call sites.
+export const canCreateLeads = (user) => hasCrmAccess(user);
 
 // Espejo exacto de canEditLead en leadAccess.js — autorización por-registro (no solo por
 // rol): un asesor solo edita lo que tiene asignado.
@@ -65,9 +71,11 @@ export const hasBackofficeAccess = (user) =>
   ['admin', 'asistente_administrativo'].includes(user?.role);
 
 // Ruta a la que se manda a cada rol después de iniciar sesión / al entrar a "/admin" —
-// Coordinador de ventas y Asesor de ventas no tienen acceso al dashboard de analytics.
+// Coordinador de ventas no tiene acceso al dashboard de analytics (ni a ningún dashboard).
+// Asesor de ventas sí tiene el suyo propio (mi-dashboard) — es su punto de partida natural
+// ("¿cómo va mi cartera y qué debo atender hoy?"), no el CRM directo.
 export function defaultRouteFor(user) {
   if (user?.role === 'coordinador_ventas') return '/admin/propiedades';
-  if (user?.role === 'asesor_ventas') return '/admin/crm';
+  if (user?.role === 'asesor_ventas') return '/admin/mi-dashboard';
   return '/admin/dashboard';
 }

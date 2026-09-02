@@ -1,7 +1,17 @@
 // Factories compartidas para tests de integración — evitan repetir el boilerplate de
 // crear User/Property/Lead con valores válidos en cada archivo de test.
 const { generateToken, hashPassword } = require('../../utils/helpers');
-const { User, Property, Lead, Deal, Campaign, Analytics, LeadProperty } = require('../../models/index');
+const {
+  User,
+  Property,
+  Lead,
+  Deal,
+  Campaign,
+  Analytics,
+  LeadProperty,
+  Task,
+  Appointment,
+} = require('../../models/index');
 
 let counter = 0;
 const nextId = () => ++counter;
@@ -104,6 +114,26 @@ async function createLeadProperty(overrides = {}) {
   return LeadProperty.create({ ...overrides });
 }
 
+// Task requiere leadId/assignedToUserId (FKs allowNull:false) — sin valores por defecto
+// sensatos, igual que createDeal.
+async function createTask(overrides = {}) {
+  return Task.create({
+    type: overrides.type ?? 'llamar',
+    dueDate: overrides.dueDate ?? new Date(),
+    done: overrides.done ?? false,
+    ...overrides,
+  });
+}
+
+// Appointment requiere leadId (FK allowNull:false) — propertyId es opcional.
+async function createAppointment(overrides = {}) {
+  return Appointment.create({
+    scheduledAt: overrides.scheduledAt ?? new Date(),
+    status: overrides.status ?? 'programada',
+    ...overrides,
+  });
+}
+
 module.exports = {
   createUser,
   authToken,
@@ -113,5 +143,7 @@ module.exports = {
   createCampaign,
   createAnalyticsEvent,
   createLeadProperty,
+  createTask,
+  createAppointment,
   uuid,
 };

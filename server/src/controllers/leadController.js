@@ -368,16 +368,19 @@ const createLead = async (req, res) => {
     }
   }
 
-  // CRM de Leads: un Asesor de Ventas no puede crear prospectos manualmente (solo
-  // trabaja los que ya se le asignaron); el formulario público no tiene req.user, así
-  // que esto solo aplica a la captura manual desde el CRM.
+  // CRM de Leads: un Asesor de Ventas SÍ puede crear prospectos manualmente (pedido
+  // explícito del dueño del negocio, excepción a la regla original de "solo trabaja lo que
+  // ya se le asignó") — pero SIEMPRE quedan asignados a él mismo, nunca puede elegir otro
+  // responsable, sin importar qué venga en el body (no se confía en el cliente). El caso de
+  // uso típico es agendarle una cita de inmediato desde el Calendario cuando no encuentra al
+  // prospecto ya capturado (ver AgendarCitaModal.jsx).
+  let resolvedAssignedToUserId = assignedToUserId || null;
   if (req.user && crmAccessLevel(req.user) === 'asesor_ventas') {
-    throw new ApiError(403, 'Los asesores de ventas no pueden crear prospectos');
-  }
-  // Asignar responsable al crear queda reservado a quien puede asignar (admin/
-  // asistente_administrativo) — ver utils/leadAccess.js. El formulario público nunca envía
-  // este campo, así que esto solo bloquea una captura manual mal intencionada.
-  if (assignedToUserId && req.user && !canAssignLeads(req.user)) {
+    resolvedAssignedToUserId = req.user.id;
+  } else if (assignedToUserId && req.user && !canAssignLeads(req.user)) {
+    // Defensa en profundidad: ningún rol que llegue aquí hoy vía requireCrmAccess (solo
+    // admin/asistente_administrativo/asesor_ventas, y asesor_ventas ya se resolvió arriba)
+    // debería caer en esta rama — se conserva por si el modelo de roles cambia.
     throw new ApiError(403, 'No tienes permisos para asignar un responsable');
   }
 
@@ -442,8 +445,8 @@ const createLead = async (req, res) => {
         propertyId: propertyId || null,
         appointmentDate: appointmentDate || null,
         campaignId: resolvedCampaignId,
-        assignedToUserId: assignedToUserId || null,
-        assignedAt: assignedToUserId ? new Date() : null,
+        assignedToUserId: resolvedAssignedToUserId,
+        assignedAt: resolvedAssignedToUserId ? new Date() : null,
         createdByUserId: req.user?.id ?? null,
         utmMedium: utmMedium || null,
         utmCampaign: utmCampaign || null,
@@ -488,9 +491,17 @@ const createLead = async (req, res) => {
     }
 
     // Diferido hasta asignar: un prospecto público sin responsable no tiene "próxima
-    // acción" todavía (ver CRM_UX_DESIGN.md / plan de Fase 1).
-    if (assignedToUserId) {
-      await ensureOpenTask({ leadId: created.id, assignedToUserId, type: 'llamar', transaction });
+    // acción" todavía (ver CRM_UX_DESIGN.md / plan de Fase 1). Usa resolvedAssignedToUserId
+    // (no el `assignedToUserId` crudo del body) para que un lead auto-asignado a un asesor
+    // (ver arriba) también reciba su tarea inicial, igual que uno asignado explícitamente
+    // por un admin/asistente — misma invariante "responsable siempre tiene tarea abierta".
+    if (resolvedAssignedToUserId) {
+      await ensureOpenTask({
+        leadId: created.id,
+        assignedToUserId: resolvedAssignedToUserId,
+        type: 'llamar',
+        transaction,
+      });
     }
 
     return created;

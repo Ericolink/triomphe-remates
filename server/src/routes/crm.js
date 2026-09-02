@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { getCrmDashboard, getCrmReports } = require('../controllers/crmAnalyticsController');
+const { getCrmDashboard, getCrmReports, getMyCrmDashboard } = require('../controllers/crmAnalyticsController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { apiLimiter } = require('../middleware/rateLimitMiddleware');
@@ -36,5 +36,11 @@ router.get(
   authorize('admin', 'asistente_administrativo'),
   getCrmReports
 );
+
+// Dashboard personal de asesor_ventas — a diferencia de los dos endpoints de arriba, cada
+// consulta de getMyCrmDashboard SÍ aplica getLeadVisibilityWhere desde el diseño, así que
+// no hace falta (ni tiene sentido) abrirlo a admin/asistente_administrativo: ellos ya tienen
+// su propio dashboard con datos agregados de toda la empresa.
+router.get('/my-dashboard', apiLimiter, authenticate, authorize('asesor_ventas'), getMyCrmDashboard);
 
 module.exports = router;

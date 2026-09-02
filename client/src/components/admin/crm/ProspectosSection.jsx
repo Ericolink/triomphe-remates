@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,7 +16,13 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
-import { createLead, getLeads, batchUpdateLeads, batchDeleteLeads } from '../../../services/leadService';
+import {
+  createLead,
+  getLeads,
+  getLeadById,
+  batchUpdateLeads,
+  batchDeleteLeads,
+} from '../../../services/leadService';
 import { getTasks } from '../../../services/taskService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
@@ -56,6 +62,19 @@ export default function ProspectosSection() {
   // después — sobrevive un refresh y un deep link desde el Dashboard (?staleDays=7).
   const [staleDays, setStaleDays] = useState(searchParams.get('staleDays') || '');
   const [selected, setSelected] = useState(null);
+
+  // Deep-link "Ver prospecto" (ej. desde el dashboard del asesor, ?tab=prospectos&leadId=N)
+  // — igual que CalendarioSection.handleViewLead, trae el registro completo (el que venga
+  // en otro contexto puede estar recortado) y abre el mismo panel de detalle. Solo al
+  // montar, mismo criterio que stage/staleDays arriba.
+  useEffect(() => {
+    const leadId = searchParams.get('leadId');
+    if (!leadId) return;
+    getLeadById(leadId)
+      .then((res) => setSelected(res.data))
+      .catch(() => toast.error('No se pudo abrir el prospecto'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Separado del `confirm` interno de useLeadDetailActions (que es para eliminar UN
   // prospecto desde su detalle) — este es específicamente para el borrado en lote de
   // BatchActionBar, que no pasa por ahí.
