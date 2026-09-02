@@ -12,6 +12,9 @@ const getLogoAttachment = async () => {
     path.join(__dirname, '../client/public/logo.png'),
     path.join(__dirname, '../../public/logo.png'),
   ];
+  // Los 4 candidatos son literales fijos del código (ninguno viene de request/DB) — el
+  // plugin de seguridad solo no puede probarlo estáticamente porque pasan por path.join().
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const logoPath = candidates.find((p) => fs.existsSync(p));
   if (!logoPath) return null;
   try {

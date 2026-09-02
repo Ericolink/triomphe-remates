@@ -1,6 +1,18 @@
 // asesor_ventas ahora SÍ puede crear prospectos (excepción explícita del dueño del negocio
 // a la regla original) — pero siempre quedan auto-asignados a él mismo, nunca a quien el
 // body intente inyectar. Ver leadController.createLead.
+//
+// createLead dispara el correo de confirmación sin esperarlo (fire-and-forget, ver
+// leadController.js) — sin este mock, cada test aquí disparaba un envío real que rechazaba
+// en CI ("No recipients defined") DESPUÉS de que el test ya había terminado, y ese
+// console.error tardío ("Cannot log after tests are done") hacía que todo el proceso de
+// Jest saliera con código 1 aunque los 362 tests reportaran "passed". Mismo mock que ya usan
+// leads.integration.test.js y el resto de los tests que llegan a POST /api/leads.
+jest.mock('../services/emailService', () => ({
+  sendNewLeadNotification: jest.fn().mockResolvedValue(),
+  sendLeadConfirmation: jest.fn().mockResolvedValue(),
+}));
+
 const request = require('supertest');
 const app = require('../../app');
 const { sequelize, User, Lead } = require('../models/index');

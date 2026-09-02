@@ -44,6 +44,14 @@ function DealCard({ deal, isSelected, onSelect }) {
   return (
     <motion.div
       variants={fadeInUp}
+      // Sin esto, cada vez que se entra a la pestaña (montaje condicional, ver CrmPage) las
+      // tarjetas heredan el "hidden" (opacity: 0) del staggerContainer del padre y tardan
+      // ~0.6-1s en llegar a opacity:1 — durante ese tramo se ven "sombreadas" frente al
+      // panel de detalle de al lado, que no tiene ese mismo fade. `initial={false}` salta
+      // la animación de entrada (aparece ya visible) sin perder el fade-out al eliminar un
+      // caso, que sigue viniendo de AnimatePresence + este mismo `variants` al desmontar.
+      initial={false}
+      animate="visible"
       layout
       onClick={() => onSelect(deal)}
       whileHover={{ y: -3, transition: { duration: 0.15 } }}

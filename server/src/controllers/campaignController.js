@@ -74,14 +74,11 @@ const getCampaignById = async (req, res) => {
   });
   const dealCount = parseInt(dealsRaw[0]?.dealCount || 0, 10);
   const revenue = parseFloat(dealsRaw[0]?.revenue || 0);
-  const conversionRate = leadCount > 0 ? Math.round((dealCount / leadCount) * 1000) / 10 : 0;
-  const costPerSale =
-    campaign.budget && dealCount > 0 ? Math.round((campaign.budget / dealCount) * 100) / 100 : null;
 
   return res.json({
     data: {
       ...campaign.toJSON(),
-      metrics: { leadCount, dealCount, revenue, conversionRate, costPerSale },
+      metrics: { leadCount, dealCount, revenue },
     },
   });
 };

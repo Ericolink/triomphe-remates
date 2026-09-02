@@ -36,6 +36,7 @@ import {
   MessageCircle,
   UserX,
   ExternalLink,
+  Megaphone,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -49,6 +50,7 @@ import {
 } from '../../services/leadService';
 import { getLeadActivities } from '../../services/activityService';
 import { getLeadAppointments, createAppointment } from '../../services/appointmentService';
+import { getCampaigns } from '../../services/campaignService';
 import useAuthStore from '../../store/authStore';
 import { canAssignLeads, canEditLead, canDeleteLeads } from '../../utils/permissions';
 import { isInvalidOptionalAmount } from '../../utils/validation';
@@ -348,6 +350,16 @@ export default function LeadDetailPanel({
     enabled: !!selected?.id,
   });
   const appointments = appointmentsData?.data ?? [];
+
+  // Igual que en CreateLeadModal: /api/campaigns es admin/asistente_administrativo-only (ver
+  // routes/campaigns.js), así que solo tiene sentido pedir la lista si el usuario actual
+  // puede verla — un asesor nunca podría elegir campaña de todos modos.
+  const { data: campaignsData } = useQuery({
+    queryKey: ['campaigns-for-picker'],
+    queryFn: () => getCampaigns({ limit: 100 }),
+    enabled: canAssign,
+  });
+  const campaignOptions = campaignsData?.data ?? [];
 
   // Línea de tiempo unificada — LeadNote y LeadActivity siguen siendo dos entidades
   // distintas en el backend (ver leadService/activityService); esto solo las combina para
@@ -773,6 +785,32 @@ export default function LeadDetailPanel({
                   </select>
                   <FieldStatus status={fieldStatus.source} />
                 </div>
+                {canAssign && (
+                  <div>
+                    <FieldLabel icon={Megaphone} htmlFor={`${formId}-campaignId`}>
+                      Campaña
+                    </FieldLabel>
+                    <select
+                      id={`${formId}-campaignId`}
+                      value={lead.campaignId || ''}
+                      onChange={(e) =>
+                        saveField('campaignId', {
+                          campaignId: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                      disabled={!canEdit}
+                      className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      <option value="">Sin campaña</option>
+                      {campaignOptions.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <FieldStatus status={fieldStatus.campaignId} />
+                  </div>
+                )}
                 <div>
                   <FieldLabel icon={CalendarClock} htmlFor={`${formId}-firstContactDate`}>
                     Fecha de primer contacto
@@ -791,15 +829,13 @@ export default function LeadDetailPanel({
                   <FieldStatus status={fieldStatus.firstContactDate} />
                 </div>
               </div>
-              {(lead.campaign ||
-                lead.createdByUser ||
+              {(lead.createdByUser ||
                 lead.assignedAt ||
                 lead.utmMedium ||
                 lead.utmCampaign ||
                 lead.utmContent ||
                 lead.landingPageUrl) && (
                 <div className="text-xs text-gray-400 dark:text-gray-500 space-y-0.5 mt-3 pt-2 border-t border-gray-200 dark:border-[#2e3650]">
-                  {lead.campaign && <p>Campaña: {lead.campaign.name}</p>}
                   {lead.createdByUser && <p>Creado por: {lead.createdByUser.name}</p>}
                   {lead.assignedAt && <p>Asignado el: {formatDateTime(lead.assignedAt)}</p>}
                   {/* Fase 3a del rediseño del CRM — atribución capturada automáticamente,

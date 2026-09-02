@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, X, Megaphone } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Megaphone, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
@@ -10,7 +11,9 @@ import {
   updateCampaign,
   deleteCampaign,
 } from '../../../services/campaignService';
+import { getLeads } from '../../../services/leadService';
 import Spinner from '../../ui/Spinner';
+import Badge from '../../ui/Badge';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import OverflowMenu from '../../ui/OverflowMenu';
 import {
@@ -21,8 +24,14 @@ import {
   buttonTap,
 } from '../../../utils/animations';
 import { formatPrice, formatDate } from '../../../utils/formatters';
-import { CAMPAIGN_PLATFORM_LABELS } from '../../../utils/constants';
+import {
+  CAMPAIGN_PLATFORM_LABELS,
+  PIPELINE_STAGE_LABELS,
+  PIPELINE_STAGE_VARIANTS,
+} from '../../../utils/constants';
 import useModalA11y from '../../../hooks/useModalA11y';
+
+const CAMPAIGN_LEADS_PAGE_SIZE = 10;
 
 const emptyForm = {
   platform: 'facebook',
@@ -170,6 +179,7 @@ function CampaignForm({ initial, onSave, onCancel, isPending }) {
 }
 
 function CampaignDetail({ campaignId, onClose }) {
+  const navigate = useNavigate();
   const { data, isLoading } = useQuery({
     queryKey: ['campaign-detail', campaignId],
     queryFn: () => getCampaignById(campaignId),
@@ -178,6 +188,33 @@ function CampaignDetail({ campaignId, onClose }) {
   const c = data?.data;
   const titleId = useId();
   const panelRef = useModalA11y(true, onClose);
+
+  // Prospectos que llegaron por esta campaña — mismo endpoint/filtro que ya soporta
+  // ProspectosSection (?campaignId=), solo que aquí ya viene fijo. Mismo patrón
+  // useInfiniteQuery + "Cargar más" que el resto de los listados del CRM (ver
+  // ProspectosSection/CampanasSection), en vez de traer todo de una vez.
+  const {
+    data: leadsData,
+    isLoading: leadsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['campaign-leads', campaignId],
+    queryFn: ({ pageParam = 1 }) =>
+      getLeads({ campaignId, page: pageParam, limit: CAMPAIGN_LEADS_PAGE_SIZE, allStages: true }),
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasNext ? lastPage.pagination.page + 1 : undefined,
+    initialPageParam: 1,
+    enabled: !!campaignId,
+  });
+  const leads = useMemo(() => leadsData?.pages.flatMap((p) => p.data) ?? [], [leadsData]);
+  const leadsTotal = leadsData?.pages?.[0]?.pagination?.total ?? 0;
+
+  const openLead = (leadId) => {
+    onClose();
+    navigate(`/admin/crm?tab=prospectos&leadId=${leadId}`);
+  };
 
   return (
     <motion.div
@@ -198,7 +235,7 @@ function CampaignDetail({ campaignId, onClose }) {
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-md p-6"
+        className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-lg max-h-[85vh] overflow-y-auto p-6"
       >
         <div className="flex items-center justify-between mb-4">
           <h2 id={titleId} className="text-lg font-bold text-gray-800 dark:text-gray-100">
@@ -215,24 +252,71 @@ function CampaignDetail({ campaignId, onClose }) {
         {isLoading || !c ? (
           <Spinner size="md" className="py-8" />
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Prospectos generados', value: c.metrics.leadCount },
-              { label: 'Ventas', value: c.metrics.dealCount },
-              { label: 'Conversión', value: `${c.metrics.conversionRate}%` },
-              { label: 'Ingresos', value: formatPrice(c.metrics.revenue) },
-              { label: 'Presupuesto', value: c.budget ? formatPrice(c.budget) : '—' },
-              {
-                label: 'Costo por venta',
-                value: c.metrics.costPerSale ? formatPrice(c.metrics.costPerSale) : '—',
-              },
-            ].map(({ label, value }) => (
-              <div key={label} className="bg-gray-50 dark:bg-[#1a1f2e] rounded-xl p-3">
-                <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
-                <p className="font-bold text-gray-800 dark:text-gray-100">{value}</p>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Prospectos generados', value: c.metrics.leadCount },
+                {
+                  label: 'Ventas',
+                  value: `${c.metrics.dealCount} · ${formatPrice(c.metrics.revenue)}`,
+                },
+                { label: 'Presupuesto', value: c.budget ? formatPrice(c.budget) : '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-gray-50 dark:bg-[#1a1f2e] rounded-xl p-3">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-[#2e3650]">
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                Prospectos {leadsTotal > 0 ? `(${leadsTotal})` : ''}
+              </p>
+              {leadsLoading ? (
+                <Spinner size="sm" className="py-4" />
+              ) : leads.length === 0 ? (
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">
+                  Sin prospectos todavía.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {leads.map((lead) => (
+                    <button
+                      key={lead.id}
+                      type="button"
+                      onClick={() => openLead(lead.id)}
+                      className="w-full flex items-center justify-between gap-2 bg-gray-50 dark:bg-[#1a1f2e] hover:bg-gray-100 dark:hover:bg-[#2e3650] rounded-xl px-3 py-2 text-left transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                          {lead.name}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{lead.phone}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <Badge variant={PIPELINE_STAGE_VARIANTS[lead.pipelineStage]}>
+                          {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
+                        </Badge>
+                        <ChevronRight size={14} className="text-gray-300 dark:text-gray-600" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {hasNextPage && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="px-4 py-1.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] disabled:opacity-50 transition-colors"
+                  >
+                    {isFetchingNextPage ? 'Cargando...' : 'Cargar más'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </motion.div>
     </motion.div>

@@ -556,6 +556,7 @@ const getLeads = async (req, res) => {
     assignedToUserId,
     search,
     staleDays,
+    allStages,
   } = req.query;
   const where = {};
 
@@ -593,7 +594,11 @@ const getLeads = async (req, res) => {
   // accesibles filtrando explícitamente por esa etapa, o en WaitingListPage.
   // No_interesado NO se toca (decisión explícita: solo se ordena al final, sigue visible,
   // ver comentario de abajo).
-  if (!pipelineStage) {
+  // ?allStages=true se salta este default — lo usa CampanasSection para listar TODOS los
+  // prospectos de una campaña (incluida lista de espera): ahí el punto es completitud
+  // frente al conteo de "Prospectos generados" de getCampaignById (Lead.count sin filtrar
+  // por etapa), no la vista de triage de "Todas las etapas".
+  if (!pipelineStage && allStages !== 'true') {
     where.pipelineStage = { [Op.ne]: 'lista_espera' };
   }
 

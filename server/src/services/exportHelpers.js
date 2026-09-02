@@ -34,6 +34,9 @@ const getLogoPath = () => {
     path.join(__dirname, '../client/public/logo.png'),
     path.join(__dirname, '../../public/logo.png'),
   ];
+  // Los 4 candidatos son literales fijos del código (ninguno viene de request/DB) — el
+  // plugin de seguridad solo no puede probarlo estáticamente porque pasan por path.join().
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   return candidates.find((p) => fs.existsSync(p)) || null;
 };
 
@@ -189,7 +192,14 @@ const buildThumbnailUrl = (url, size = 80) => {
   return url.replace('/upload/', `/upload/f_jpg,q_auto,c_fill,w_${size},h_${size}/`);
 };
 
-// Devuelve un buffer de imagen ya sea de una URL remota (Cloudinary) o un archivo local
+// Devuelve un buffer de imagen ya sea de una URL remota (Cloudinary) o un archivo local. En
+// la práctica `url` siempre viene de Image.url, que solo se llena con el secure_url que
+// devuelve Cloudinary (ver propertyController.uploadImages) — nunca hay un endpoint que deje
+// escribir esa columna con un valor arbitrario, así que la rama "archivo local" de abajo es
+// código muerto hoy. Aun así, si algo cambiara eso, resolvedPath fuera de LOCAL_BASE_DIR
+// (p.ej. `url = '../../../.env'`) sería path traversal — el chequeo de abajo lo bloquea en
+// vez de confiar solo en que el caller nunca mande algo así.
+const LOCAL_BASE_DIR = path.join(__dirname, '../../../');
 const getImageBuffer = async (url) => {
   if (!url) return null;
   try {
@@ -198,8 +208,10 @@ const getImageBuffer = async (url) => {
       if (!response.ok) return null;
       return Buffer.from(await response.arrayBuffer());
     }
-    const localPath = path.join(__dirname, '../../../', url);
-    return fs.existsSync(localPath) ? fs.readFileSync(localPath) : null;
+    const resolvedPath = path.resolve(LOCAL_BASE_DIR, url);
+    if (!resolvedPath.startsWith(LOCAL_BASE_DIR)) return null;
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- resolvedPath está confinado a LOCAL_BASE_DIR por el chequeo de arriba
+    return fs.existsSync(resolvedPath) ? fs.readFileSync(resolvedPath) : null;
   } catch {
     return null;
   }
@@ -209,7 +221,12 @@ const getImageBuffer = async (url) => {
 const stripUnsupported = (str) => {
   if (!str) return str;
   return str
+    // Ambas son una sola clase de caracteres sin cuantificadores ni grupos — no hay forma de
+    // backtracking catastrófico; el análisis de "regex insegura" del linter da falso
+    // positivo con rangos Unicode altos (flag `u`) por cómo cuenta pares suplentes.
+    // eslint-disable-next-line security/detect-unsafe-regex
     .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // Supplementary planes (emoji, symbols)
+    // eslint-disable-next-line security/detect-unsafe-regex
     .replace(/[\u{2600}-\u{27BF}]/gu, '') // Misc symbols, dingbats
     .replace(/️/gu, '') // Emoji variation selector
     .replace(/‍/gu, '') // Zero-width joiner
