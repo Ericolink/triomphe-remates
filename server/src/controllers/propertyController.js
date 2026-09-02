@@ -13,6 +13,68 @@ const { sanitizeOptionalContext, recordEvent } = require('../services/analyticsS
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined ? null : val);
 
+// AUDITORÍA 500s (2026-09-01): mismo patrón que AUDIT-024 en leadController.js, aplicado
+// aquí por primera vez. Property.js define 7 columnas ENUM pero, a diferencia de Lead, esta
+// tabla nunca validaba sus valores antes de llegar a Sequelize/MySQL — un valor que ya no es
+// válido (ej. una pestaña del navegador con el bundle de ANTES de un deploy que renombró un
+// ENUM, como ocurrió con `category` en 2026-07-23 o con los roles en 2026-08-13) terminaba
+// en un SequelizeDatabaseError/SequelizeValidationError crudo → 500 "Error interno del
+// servidor" sin ninguna pista de qué campo era el problema. errorHandler.js ahora traduce
+// esa clase de error genéricamente (ver translateKnownError), pero validar aquí sigue dando
+// un mensaje mucho más específico y útil (qué campo, qué valores sí son válidos) que el 400
+// genérico de la red de seguridad.
+const VALID_CITIES = ['juarez', 'chihuahua', 'queretaro'];
+const VALID_TYPES = ['casa', 'departamento', 'terreno', 'local', 'bodega'];
+const VALID_CATEGORIES = ['remate', 'renta', 'compra_venta'];
+const VALID_BUSINESS_LINES = ['remate', 'credito', 'renta', 'contado', 'inversion'];
+const VALID_STATUSES = ['disponible', 'en_revision', 'apartado', 'vendido', 'de_vuelta'];
+const VALID_ACQUISITION_STAGES = [
+  'sin_proceso',
+  'documentacion',
+  'avaluo',
+  'negociacion',
+  'firma',
+  'entrega',
+];
+const VALID_LEGAL_PROCESS_TYPES = ['cesion', 'dacion', 'adjudicacion'];
+
+// Valida solo los campos ENUM que vinieron en el body (`undefined` = no se está tocando ese
+// campo, válido tanto en creación con default como en updates parciales). Devuelve el
+// mensaje de error del primero que falle, o null si todos son válidos.
+function validatePropertyEnums({ city, type, category, businessLine, status, acquisitionStage, legalProcessType }) {
+  if (city !== undefined && !VALID_CITIES.includes(city)) {
+    return `Ciudad inválida. Valores permitidos: ${VALID_CITIES.join(', ')}`;
+  }
+  if (type !== undefined && !VALID_TYPES.includes(type)) {
+    return `Tipo inválido. Valores permitidos: ${VALID_TYPES.join(', ')}`;
+  }
+  if (category !== undefined && category !== '' && !VALID_CATEGORIES.includes(category)) {
+    return `Categoría inválida. Valores permitidos: ${VALID_CATEGORIES.join(', ')}`;
+  }
+  if (businessLine !== undefined && businessLine !== '' && !VALID_BUSINESS_LINES.includes(businessLine)) {
+    return `Línea de negocio inválida. Valores permitidos: ${VALID_BUSINESS_LINES.join(', ')}`;
+  }
+  if (status !== undefined && status !== '' && !VALID_STATUSES.includes(status)) {
+    return `Estatus inválido. Valores permitidos: ${VALID_STATUSES.join(', ')}`;
+  }
+  if (
+    acquisitionStage !== undefined &&
+    acquisitionStage !== '' &&
+    !VALID_ACQUISITION_STAGES.includes(acquisitionStage)
+  ) {
+    return `Etapa de adquisición inválida. Valores permitidos: ${VALID_ACQUISITION_STAGES.join(', ')}`;
+  }
+  if (
+    legalProcessType !== undefined &&
+    legalProcessType !== '' &&
+    legalProcessType !== null &&
+    !VALID_LEGAL_PROCESS_TYPES.includes(legalProcessType)
+  ) {
+    return `Tipo de proceso legal inválido. Valores permitidos: ${VALID_LEGAL_PROCESS_TYPES.join(', ')}`;
+  }
+  return null;
+}
+
 // Arma el query en IN BOOLEAN MODE para el índice FULLTEXT de properties (title, address,
 // description). Tokens <3 caracteres se descartan porque innodb_ft_min_token_size (default 3)
 // nunca los indexa — incluirlos con '+' forzaría el AND a fallar siempre. Se despojan los
@@ -317,6 +379,17 @@ const createProperty = async (req, res) => {
     throw new ApiError(400, 'Título, precio, ciudad y tipo son requeridos');
   }
 
+  const enumError = validatePropertyEnums({
+    city,
+    type,
+    category,
+    businessLine,
+    status,
+    acquisitionStage,
+    legalProcessType,
+  });
+  if (enumError) throw new ApiError(400, enumError);
+
   let slug = generateSlug(title);
 
   // Asegurar slug único
@@ -465,6 +538,17 @@ const updateProperty = async (req, res) => {
     showLegalInfo,
     showValuationInfo,
   } = req.body;
+
+  const enumError = validatePropertyEnums({
+    city,
+    type,
+    category,
+    businessLine,
+    status,
+    acquisitionStage,
+    legalProcessType,
+  });
+  if (enumError) throw new ApiError(400, enumError);
 
   if (title && title !== property.title) {
     let slug = generateSlug(title);
@@ -633,24 +717,65 @@ const uploadImages = async (req, res) => {
       stream.end(buffer);
     });
 
+  // AUDITORÍA 500s — revisión pre-deploy (PASO 7, "operaciones parcialmente completadas"):
+  // con Promise.all, si UNA sola imagen fallaba al subir a Cloudinary (timeout, red), TODA
+  // la petición rechazaba con un error genérico — pero las imágenes que sí habían terminado
+  // de subirse ANTES del rechazo, junto con sus filas Image ya creadas en ese punto, se
+  // quedaban a medias: el admin veía un error y no tenía forma de saber que 3 de 5 fotos en
+  // realidad sí se guardaron (con riesgo real de reintentar y subir duplicados). Con
+  // Promise.allSettled se guarda todo lo que sí subió, se reporta cuántas fallaron, y solo
+  // se responde con error si NINGUNA se pudo subir.
+  const settled = await Promise.allSettled(req.files.map((file) => uploadToCloudinary(file.buffer)));
+  const uploaded = settled
+    .map((result, index) => ({ result, index }))
+    .filter(({ result }) => result.status === 'fulfilled');
+  const failedCount = settled.length - uploaded.length;
+
+  if (uploaded.length === 0) {
+    logger.error('Fallaron todas las subidas de imágenes a Cloudinary', {
+      propertyId: property.id,
+      errors: settled.filter((r) => r.status === 'rejected').map((r) => r.reason?.message),
+    });
+    throw new ApiError(502, 'No se pudo subir ninguna imagen. Intenta de nuevo.');
+  }
+
+  // El índice usado para `order`/`isCover` es la posición entre las que SÍ se subieron (no
+  // la posición original en req.files) — así, si justo la primera imagen del formulario
+  // falla pero las demás no, la portada igual se asigna a la primera que sí llegó, en vez de
+  // que la propiedad se quede sin portada.
   const images = await Promise.all(
-    req.files.map(async (file, index) => {
-      const result = await uploadToCloudinary(file.buffer);
-      return Image.create({
+    uploaded.map(({ result }, i) =>
+      Image.create({
         propertyId: property.id,
-        url: result.secure_url,
-        filename: result.public_id,
-        order: existingImages + index,
-        isCover: existingImages === 0 && index === 0,
-      });
-    })
+        url: result.value.secure_url,
+        filename: result.value.public_id,
+        order: existingImages + i,
+        isCover: existingImages === 0 && i === 0,
+      })
+    )
   );
 
-  logAudit(req, 'create', 'property', property.id, { imagesAdded: images.length });
+  if (failedCount > 0) {
+    logger.error('Subida parcial de imágenes de propiedad — algunas fallaron', {
+      propertyId: property.id,
+      succeeded: images.length,
+      failed: failedCount,
+      errors: settled.filter((r) => r.status === 'rejected').map((r) => r.reason?.message),
+    });
+  }
+
+  logAudit(req, 'create', 'property', property.id, {
+    imagesAdded: images.length,
+    imagesFailed: failedCount,
+  });
 
   return res.status(201).json({
-    message: `${images.length} imagen(es) subida(s) exitosamente`,
+    message:
+      failedCount > 0
+        ? `${images.length} imagen(es) subida(s); ${failedCount} fallaron — puedes reintentarlas.`
+        : `${images.length} imagen(es) subida(s) exitosamente`,
     data: images,
+    failedCount,
   });
 };
 

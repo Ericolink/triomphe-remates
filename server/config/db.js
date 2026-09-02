@@ -31,6 +31,23 @@ const sequelize = new Sequelize(
       acquire: 30000,
       idle: 10000,
     },
+    // AUDITORÍA 500s (2026-09-01) — REVERTIDO tras revisión previa al deploy: se había
+    // agregado aquí un `retry` para errores de conexión transitorios (ETIMEDOUT, ECONNRESET,
+    // etc.), pero Sequelize aplica `retry` alrededor de CADA `sequelize.query()` individual —
+    // incluida una consulta de ESCRITURA ya en vuelo — y `retry-as-promised` (la librería que
+    // lo implementa) solo recibe el `Error`, nunca la query ni su tipo, así que no hay forma
+    // de acotar el retry a "solo lecturas" desde aquí sin envolver cada llamada a mano (el
+    // refactor masivo que se quiere evitar). Si la conexión se cae DESPUÉS de que MySQL ya
+    // comprometió un INSERT pero ANTES de que el cliente reciba el ack (ventana angosta pero
+    // real para ECONNRESET/EPIPE/ETIMEDOUT), un retry automático reenvía el mismo INSERT.
+    // `Lead.create()` permite `phone` nulo en captura manual de staff — sin ningún índice
+    // único que lo respalde — así que ese reintento podía crear un prospecto duplicado real,
+    // no solo un error confuso. `Property`/`Lead` con teléfono sí tienen un índice único de
+    // respaldo, pero ahí el resultado tampoco era mejor: un 409 "ya existe" sobre una
+    // operación que en realidad SÍ se había completado. Un error de conexión transitorio
+    // ahora se traduce a un 503 claro en errorHandler.js (ver CONNECTION_ERROR_NAMES) — el
+    // admin ve "intenta de nuevo" y decide él mismo si reintentar, sin el riesgo de que el
+    // propio framework duplique una escritura por su cuenta.
   }
 );
 

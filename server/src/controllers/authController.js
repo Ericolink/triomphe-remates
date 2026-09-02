@@ -96,41 +96,36 @@ const register = async (req, res) => {
 
 // POST /api/auth/login
 const login = async (req, res) => {
-  try {
-    const errors = validateLogin(req.body);
-    if (errors.length > 0) return res.status(400).json({ errors });
+  const errors = validateLogin(req.body);
+  if (errors.length > 0) return res.status(400).json({ errors });
 
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    const user = await User.findOne({ where: { email } });
-    if (!user || !user.isActive) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    const isMatch = await comparePassword(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    await user.update({ lastLogin: new Date() });
-    logAudit({ user, ip: req.ip }, 'login', 'user', user.id, { email: user.email });
-
-    const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
-
-    return res.json({
-      message: 'Login exitoso',
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error('Error en login:', error);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+  const user = await User.findOne({ where: { email } });
+  if (!user || !user.isActive) {
+    return res.status(401).json({ error: 'Credenciales inválidas' });
   }
+
+  const isMatch = await comparePassword(password, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ error: 'Credenciales inválidas' });
+  }
+
+  await user.update({ lastLogin: new Date() });
+  logAudit({ user, ip: req.ip }, 'login', 'user', user.id, { email: user.email });
+
+  const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+
+  return res.json({
+    message: 'Login exitoso',
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  });
 };
 
 // GET /api/auth/me

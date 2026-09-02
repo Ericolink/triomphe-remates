@@ -10,7 +10,12 @@ const fileFilter = (req, file, cb) => {
   if (isValid) {
     cb(null, true);
   } else {
-    cb(new Error('Solo se permiten imágenes JPG, PNG o WEBP'));
+    // AUDITORÍA 500s: un `Error` genérico aquí llegaba a errorHandler.js como un error no
+    // reconocido → 500 "Error interno del servidor", ocultando un rechazo de negocio
+    // perfectamente claro (tipo de archivo no permitido) detrás del mismo mensaje opaco que
+    // una falla real del servidor. ApiError se propaga igual (multer solo reenvía lo que
+    // fileFilter le pase a cb) pero ahora sí responde 400 con el mensaje real.
+    cb(new ApiError(400, 'Solo se permiten imágenes JPG, PNG o WEBP'));
   }
 };
 

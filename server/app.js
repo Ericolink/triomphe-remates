@@ -15,6 +15,11 @@ const app = express();
 // y falsea los logs de auditoría.
 app.set('trust proxy', 1);
 
+// Primer middleware, antes que cualquier otra cosa — así absolutamente toda respuesta
+// (incluyendo un rechazo de CORS o de rate limiting, que nunca llegan a un controller)
+// lleva un id de correlación. Ver requestContext.js / errorHandler.js.
+app.use(require('./src/middleware/requestContext'));
+
 // La redirección HTTP → HTTPS se hace a nivel IIS (panel de SmarterASP → Advanced
 // Features → Force HTTPS), no aquí — ocurre antes de que la petición llegue a Node.
 

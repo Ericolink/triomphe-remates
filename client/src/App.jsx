@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import Spinner from './components/ui/Spinner';
+import ErrorBoundary from './components/ErrorBoundary';
 import {
   defaultRouteFor,
   isAdmin,
@@ -69,150 +70,152 @@ const PageFallback = () => <Spinner size="lg" className="py-40" />;
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<PageFallback />}>
-        <Routes>
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/propiedades" element={<PropertiesPage />} />
-            <Route path="/propiedades/:slug" element={<PropertyDetailPage />} />
-            <Route path="/contacto" element={<ContactPage />} />
-            <Route path="/nosotros" element={<AboutPage />} />
-            <Route path="/proceso-adquisicion" element={<ProcessPage />} />
-            <Route path="/trabaja-con-nosotros" element={<JobsPage />} />
-            <Route path="/buzon" element={<BuzonPage />} />
-            <Route path="/favoritos" element={<FavoritesPage />} />
-            <Route path="/comparar" element={<ComparatorPage />} />
-            <Route path="/cancelar-alerta" element={<UnsubscribeAlertPage />} />
-            <Route path="/preguntas-frecuentes" element={<FAQPage />} />
-            <Route path="/aviso-de-privacidad" element={<PrivacyPolicyPage />} />
-          </Route>
+      <ErrorBoundary>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/propiedades" element={<PropertiesPage />} />
+              <Route path="/propiedades/:slug" element={<PropertyDetailPage />} />
+              <Route path="/contacto" element={<ContactPage />} />
+              <Route path="/nosotros" element={<AboutPage />} />
+              <Route path="/proceso-adquisicion" element={<ProcessPage />} />
+              <Route path="/trabaja-con-nosotros" element={<JobsPage />} />
+              <Route path="/buzon" element={<BuzonPage />} />
+              <Route path="/favoritos" element={<FavoritesPage />} />
+              <Route path="/comparar" element={<ComparatorPage />} />
+              <Route path="/cancelar-alerta" element={<UnsubscribeAlertPage />} />
+              <Route path="/preguntas-frecuentes" element={<FAQPage />} />
+              <Route path="/aviso-de-privacidad" element={<PrivacyPolicyPage />} />
+            </Route>
 
-          <Route path="/admin/login" element={<LoginPage />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DefaultAdminRoute />} />
+            <Route path="/admin/login" element={<LoginPage />} />
             <Route
-              path="dashboard"
+              path="/admin"
               element={
-                <RoleRoute allow={hasBackofficeAccess}>
-                  <DashboardPage />
-                </RoleRoute>
+                <ProtectedRoute>
+                  <AdminLayout />
+                </ProtectedRoute>
               }
-            />
-            <Route path="estadisticas" element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="propiedades" element={<AdminPropertiesPage />} />
-            <Route
-              path="propiedades/nueva"
-              element={
-                <RoleRoute allow={canManageInventory}>
-                  <PropertyFormPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="propiedades/:id/editar"
-              element={
-                <RoleRoute allow={canManageInventory}>
-                  <PropertyFormPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="crm"
-              element={
-                <RoleRoute allow={hasCrmAccess}>
-                  <CrmPage />
-                </RoleRoute>
-              }
-            />
-            <Route path="leads" element={<Navigate to="/admin/crm?tab=prospectos" replace />} />
-            <Route
-              path="calendario"
-              element={<Navigate to="/admin/crm?tab=calendario" replace />}
-            />
-            <Route path="campanas" element={<Navigate to="/admin/crm?tab=campanas" replace />} />
-            <Route
-              path="casos-exito"
-              element={<Navigate to="/admin/crm?tab=casos-exito" replace />}
-            />
-            <Route
-              path="vacantes"
-              element={
-                <RoleRoute allow={hasBackofficeAccess}>
-                  <JobsAdminPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="postulaciones"
-              element={
-                <RoleRoute allow={hasBackofficeAccess}>
-                  <ApplicationsPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="usuarios"
-              element={
-                <RoleRoute allow={isAdmin}>
-                  <UsersPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="buzon"
-              element={
-                <RoleRoute allow={hasBackofficeAccess}>
-                  <BuzonAdminPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="alertas"
-              element={
-                <RoleRoute allow={hasBackofficeAccess}>
-                  <AlertsAdminPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="lista-espera"
-              element={
-                <RoleRoute allow={hasBackofficeAccess}>
-                  <WaitingListPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="auditoria"
-              element={
-                <RoleRoute allow={isAdmin}>
-                  <AuditPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="testimonios"
-              element={
-                <RoleRoute allow={hasBackofficeAccess}>
-                  <TestimonialsAdminPage />
-                </RoleRoute>
-              }
-            />
-            <Route
-              path="dashboard-comercial"
-              element={<Navigate to="/admin/dashboard" replace />}
-            />
-            <Route path="reportes" element={<Navigate to="/admin/dashboard" replace />} />
-          </Route>
-        </Routes>
-      </Suspense>
+            >
+              <Route index element={<DefaultAdminRoute />} />
+              <Route
+                path="dashboard"
+                element={
+                  <RoleRoute allow={hasBackofficeAccess}>
+                    <DashboardPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="estadisticas" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="propiedades" element={<AdminPropertiesPage />} />
+              <Route
+                path="propiedades/nueva"
+                element={
+                  <RoleRoute allow={canManageInventory}>
+                    <PropertyFormPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="propiedades/:id/editar"
+                element={
+                  <RoleRoute allow={canManageInventory}>
+                    <PropertyFormPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="crm"
+                element={
+                  <RoleRoute allow={hasCrmAccess}>
+                    <CrmPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="leads" element={<Navigate to="/admin/crm?tab=prospectos" replace />} />
+              <Route
+                path="calendario"
+                element={<Navigate to="/admin/crm?tab=calendario" replace />}
+              />
+              <Route path="campanas" element={<Navigate to="/admin/crm?tab=campanas" replace />} />
+              <Route
+                path="casos-exito"
+                element={<Navigate to="/admin/crm?tab=casos-exito" replace />}
+              />
+              <Route
+                path="vacantes"
+                element={
+                  <RoleRoute allow={hasBackofficeAccess}>
+                    <JobsAdminPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="postulaciones"
+                element={
+                  <RoleRoute allow={hasBackofficeAccess}>
+                    <ApplicationsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="usuarios"
+                element={
+                  <RoleRoute allow={isAdmin}>
+                    <UsersPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="buzon"
+                element={
+                  <RoleRoute allow={hasBackofficeAccess}>
+                    <BuzonAdminPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="alertas"
+                element={
+                  <RoleRoute allow={hasBackofficeAccess}>
+                    <AlertsAdminPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="lista-espera"
+                element={
+                  <RoleRoute allow={hasBackofficeAccess}>
+                    <WaitingListPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="auditoria"
+                element={
+                  <RoleRoute allow={isAdmin}>
+                    <AuditPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="testimonios"
+                element={
+                  <RoleRoute allow={hasBackofficeAccess}>
+                    <TestimonialsAdminPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="dashboard-comercial"
+                element={<Navigate to="/admin/dashboard" replace />}
+              />
+              <Route path="reportes" element={<Navigate to="/admin/dashboard" replace />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
