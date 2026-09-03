@@ -70,14 +70,14 @@ app.use((req, res, next) => (req.path.startsWith('/api/docs') ? docsCsp(req, res
 // CORS primero — así las respuestas de rate limit también llevan los headers correctos
 // La whitelist de orígenes vive en utils/corsOrigins.js — es la misma fuente de verdad
 // que usa el stream SSE de leadController.js, para que ambos no puedan desincronizarse.
-const { isOriginAllowed } = require('./src/utils/corsOrigins');
+const { isOriginAllowed, CorsError } = require('./src/utils/corsOrigins');
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('No permitido por CORS'));
+      callback(new CorsError());
     }
   },
   credentials: true,

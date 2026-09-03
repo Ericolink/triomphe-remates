@@ -2,6 +2,7 @@ jest.mock('../../utils/logger', () => ({ error: jest.fn() }));
 
 const logger = require('../../utils/logger');
 const { ApiError, errorHandler } = require('../errorHandler');
+const { CorsError } = require('../../utils/corsOrigins');
 
 function mockRes() {
   const res = {};
@@ -219,6 +220,51 @@ describe('errorHandler', () => {
     expect(logger.error).toHaveBeenCalledWith(
       'GET /api/test',
       expect.objectContaining({ errorClass: 'ApiError' })
+    );
+  });
+
+  // Pool agotado (config/db.js: max:5, acquire:30000) — Sequelize lanza esta clase
+  // específica, distinta de SequelizeConnectionTimedOutError, cuando ninguna conexión se
+  // libera a tiempo. Antes de agregarla a CONNECTION_ERROR_NAMES caía al 500 genérico,
+  // indistinguible en logs de un bug real de código.
+  test('traduce SequelizeConnectionAcquireTimeoutError a 503, no 500', () => {
+    const req = mockReq();
+    const res = mockRes();
+    const err = new Error('ResourceRequest timed out');
+    err.name = 'SequelizeConnectionAcquireTimeoutError';
+
+    errorHandler(err, req, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'Servicio temporalmente no disponible, intenta de nuevo en unos segundos.',
+      })
+    );
+  });
+
+  // El middleware cors() (app.js) rechaza un origin no permitido pasando un CorsError —
+  // antes caía al 500 genérico igual que cualquier bug real; ahora se distingue como 403.
+  test('traduce CorsError (origin rechazado) a 403, no 500', () => {
+    const req = mockReq();
+    const res = mockRes();
+    const err = new CorsError();
+
+    errorHandler(err, req, res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Origen no permitido.' }));
+  });
+
+  test('un CorsError se loguea con errorClass "CorsError", con requestId/route/durationMs disponibles', () => {
+    const req = { ...mockReq(), id: 'cafe1234' };
+    const res = mockRes();
+
+    errorHandler(new CorsError(), req, res, jest.fn());
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'GET /api/test',
+      expect.objectContaining({ requestId: 'cafe1234', errorClass: 'CorsError' })
     );
   });
 

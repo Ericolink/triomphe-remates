@@ -23,4 +23,17 @@ const isDevLocalOrigin = (origin) =>
 const isOriginAllowed = (origin) =>
   !!origin && (allowedOrigins.includes(origin) || isDevLocalOrigin(origin));
 
-module.exports = { isOriginAllowed };
+// Clase propia (en vez del `Error` genérico que se pasaba antes al callback de `cors()`)
+// para que errorHandler.js pueda reconocer un rechazo de CORS por `instanceof` y
+// traducirlo a un 403 explícito, en vez de caer en el 500 genérico de cualquier error no
+// reconocido — mismo criterio que ya existe para SequelizeValidationError/MulterError/etc.
+// No cambia la política de CORS en sí (qué orígenes se permiten), solo cómo se clasifica
+// la respuesta cuando uno ya rechazado llega aquí.
+class CorsError extends Error {
+  constructor(message = 'No permitido por CORS') {
+    super(message);
+    this.name = 'CorsError';
+  }
+}
+
+module.exports = { isOriginAllowed, CorsError };

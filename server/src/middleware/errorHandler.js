@@ -3,6 +3,7 @@
 // hacen `throw new ApiError(statusCode, mensaje)` y Express 5 reenvía automáticamente
 // el rechazo hasta este handler, registrado al final de app.js.
 const logger = require('../utils/logger');
+const { CorsError } = require('../utils/corsOrigins');
 
 class ApiError extends Error {
   // `code` es un identificador estable y opcional (ej. 'INVALID_CURRENT_PASSWORD') para
@@ -52,16 +53,30 @@ const SAFE_DB_INPUT_ERROR_CODES = new Set([
 // que un bug real de código. Todas estas heredan de SequelizeConnectionError, pero se listan
 // explícitas (en vez de usar instanceof contra la clase base) para no depender de requerir
 // el paquete `sequelize` completo solo por sus clases de error en este archivo.
+//
+// SequelizeConnectionAcquireTimeoutError (agregado en la auditoría de observabilidad): se
+// lanza cuando el pool (`max: 5` en config/db.js) no libera una conexión dentro de
+// `acquire: 30000ms` — antes de este cambio caía al 500 genérico, indistinguible de un bug
+// real de código en los logs. No implica reintroducir ningún retry automático: solo cambia
+// cómo se clasifica y responde un error que Sequelize ya lanza por su cuenta.
 const CONNECTION_ERROR_NAMES = new Set([
   'SequelizeConnectionError',
   'SequelizeConnectionRefusedError',
   'SequelizeConnectionTimedOutError',
+  'SequelizeConnectionAcquireTimeoutError',
   'SequelizeHostNotFoundError',
   'SequelizeHostNotReachableError',
   'SequelizeInvalidConnectionError',
 ]);
 
 function translateKnownError(err) {
+  // El middleware cors() (app.js) rechaza un origin no permitido pasando un CorsError al
+  // siguiente error handler — sin esto, ese rechazo caía al 500 genérico igual que un bug
+  // real, en vez de un 403 que refleja lo que en realidad pasó. No cambia qué orígenes se
+  // permiten, solo cómo se clasifica la respuesta cuando uno ya rechazado llega aquí.
+  if (err instanceof CorsError) {
+    return { statusCode: 403, message: 'Origen no permitido.' };
+  }
   if (err.name === 'MulterError') {
     return {
       statusCode: 400,
