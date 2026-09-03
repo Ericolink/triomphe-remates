@@ -608,7 +608,7 @@ export default function LeadDetailPanel({
       initial="hidden"
       animate="visible"
       exit={{ opacity: 0, x: 20 }}
-      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-170px)]"
+      className="bg-white dark:bg-[#242938] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2e3650] sticky top-6 overflow-y-auto max-h-[calc(100vh-170px)] [scrollbar-gutter:stable]"
     >
       <div className="p-6">
         {/* ── Encabezado: siempre visible, nunca se colapsa ni depende de la pestaña
