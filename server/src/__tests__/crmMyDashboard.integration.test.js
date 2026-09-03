@@ -60,9 +60,10 @@ describe('GET /api/crm/my-dashboard', () => {
       expect(res.status).toBe(403);
     });
 
-    test('coordinador_ventas recibe 403 (sin acceso al CRM de leads)', async () => {
+    test('coordinador_ventas recibe 200 (dashboard agregado de su equipo)', async () => {
       const res = await authed(coordinadorToken);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toBeDefined();
     });
 
     test('asesor_ventas recibe 200 con datos', async () => {
@@ -75,6 +76,47 @@ describe('GET /api/crm/my-dashboard', () => {
       const res = await request(app).get('/api/crm/my-dashboard');
       expect(res.status).toBe(401);
       expect(res.body.data).toBeUndefined();
+    });
+  });
+
+  describe('coordinador_ventas — agregación del equipo', () => {
+    let equipoCoordinador, equipoAsesor1, equipoAsesor2, equipoCoordinadorToken;
+
+    beforeAll(async () => {
+      equipoCoordinador = await createUser({ role: 'coordinador_ventas' });
+      equipoAsesor1 = await createUser({ role: 'asesor_ventas', supervisorId: equipoCoordinador.id });
+      equipoAsesor2 = await createUser({ role: 'asesor_ventas', supervisorId: equipoCoordinador.id });
+      equipoCoordinadorToken = authToken(equipoCoordinador);
+    });
+
+    afterAll(async () => {
+      await User.destroy({
+        where: { id: [equipoCoordinador.id, equipoAsesor1.id, equipoAsesor2.id] },
+        force: true,
+      });
+    });
+
+    test('suma los prospectos activos de todos los asesores de su equipo, no solo los suyos', async () => {
+      await createLead({ assignedToUserId: equipoAsesor1.id, pipelineStage: 'nuevo' });
+      await createLead({ assignedToUserId: equipoAsesor2.id, pipelineStage: 'contactado' });
+      // Fuera del equipo — no debe sumar.
+      await createLead({ assignedToUserId: asesorA.id, pipelineStage: 'nuevo' });
+
+      const res = await authed(equipoCoordinadorToken);
+      expect(res.status).toBe(200);
+      expect(res.body.data.prospectosActivos).toBe(2);
+    });
+
+    test('un coordinador sin asesores supervisados solo ve lo que tiene asignado a sí mismo', async () => {
+      const coordinadorSolo = await createUser({ role: 'coordinador_ventas' });
+      const soloToken = authToken(coordinadorSolo);
+      await createLead({ assignedToUserId: equipoAsesor1.id, pipelineStage: 'nuevo' });
+
+      const res = await authed(soloToken);
+      expect(res.status).toBe(200);
+      expect(res.body.data.prospectosActivos).toBe(0);
+
+      await User.destroy({ where: { id: coordinadorSolo.id }, force: true });
     });
   });
 

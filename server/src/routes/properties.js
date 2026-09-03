@@ -13,7 +13,6 @@ const {
   getPromotedProperty,
   promoteProperty,
   getStatusHistory,
-  getPublicPriceHistory,
   trackView,
   trackShare,
   getPropertyStats,
@@ -50,7 +49,6 @@ router.get(
   authorize('admin', 'asistente_administrativo'),
   getStatusHistory
 );
-router.get('/:id/price-history', apiLimiter, getPublicPriceHistory);
 router.post('/:id/view', apiLimiter, trackView);
 router.post('/:id/share', apiLimiter, trackShare);
 router.post(

@@ -83,11 +83,6 @@ export const getStatusHistory = async (id) => {
   return data;
 };
 
-export const getPriceHistory = async (id) => {
-  const { data } = await api.get(`/properties/${id}/price-history`);
-  return data;
-};
-
 export const trackView = async (id) => {
   await api.post(`/properties/${id}/view`, getAnalyticsRequestContext());
 };

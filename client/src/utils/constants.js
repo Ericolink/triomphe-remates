@@ -105,6 +105,7 @@ export const LEGAL_PROCESS_TYPE_LABELS = {
   cesion: 'Cesión',
   dacion: 'Dación',
   adjudicacion: 'Adjudicación',
+  escritura: 'Escritura',
 };
 
 // Mapeadas a las 5 variantes que soporta Badge, mismo criterio que STATUS_VARIANTS

@@ -161,7 +161,7 @@ const Property = sequelize.define(
       allowNull: true,
     },
     legalProcessType: {
-      type: DataTypes.ENUM('cesion', 'dacion', 'adjudicacion'),
+      type: DataTypes.ENUM('cesion', 'dacion', 'adjudicacion', 'escritura'),
       allowNull: true,
       comment: 'Tipo de proceso legal de adquisición (columna COFINAVIT/VIABILIDAD/TIPO)',
     },
@@ -202,36 +202,14 @@ const Property = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
-    commercialPrice2: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: true,
-      comment: 'Segundo precio de avalúo comercial capturado (actualización posterior)',
-    },
-    commercialPrice2Date: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    utility: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: true,
-      comment: 'Utilidad — se captura a mano, no se calcula automáticamente',
-    },
-    inventoryEntryDate: {
-      type: DataTypes.DATE,
-      allowNull: true,
-      comment: 'Fecha en que la propiedad ingresó al inventario',
-    },
     // Control de visibilidad pública por apartado — uno por cada sección de SECTIONS en
     // PropertyFormPage.jsx, ver migración 20260818000000-add-public-visibility-flags-to-
     // properties. Todos default true (una propiedad nueva se ve completa hasta que alguien
-    // oculte un apartado a propósito). showLegalInfo/showValuationInfo se guardan pero hoy
-    // no tienen ningún efecto visible: esos 2 apartados nunca se renderizan al público.
-    showBasicInfo: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-      comment: 'Mostrar la descripción (Datos básicos) en la página pública',
-    },
+    // oculte un apartado a propósito). showLegalInfo se guarda pero hoy no tiene ningún
+    // efecto visible: ese apartado nunca se renderiza al público.
+    // (Datos básicos ya no tiene bandera propia — showBasicInfo se eliminó porque ese
+    // apartado ahora siempre se muestra al público, ver migración
+    // 20260904000002-drop-show-basic-info-from-properties.)
     showLocationInfo: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -258,12 +236,6 @@ const Property = sequelize.define(
       allowNull: false,
       defaultValue: true,
       comment: 'Reservado — Datos catastrales y legales no se muestran hoy en ningún lado',
-    },
-    showValuationInfo: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-      comment: 'Reservado — Valuación comercial no se muestra hoy en ningún lado',
     },
   },
   {

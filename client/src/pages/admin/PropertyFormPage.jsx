@@ -67,8 +67,8 @@ const BUSINESS_LINE_TABS = [
 // con propósito claro (Datos básicos, Ubicación, Dirección, Detalles, Remate) en vez de una
 // grilla plana de campos sin relación visual entre ellos.
 // `visibilityField` liga cada apartado a su casilla "Mostrar al público" (ver
-// showBasicInfo/etc. en el modelo Property) — se renderiza junto al título de la sección.
-// Una sección sin `visibilityField` (ver 'ubicacion') no tiene casilla: sus campos son
+// showLocationInfo/etc. en el modelo Property) — se renderiza junto al título de la sección.
+// Una sección sin `visibilityField` (ver 'basicos'/'ubicacion') no tiene casilla: sus campos son
 // estructurales y siempre se muestran en el sitio público (ver PropertyDetailPage.jsx), así
 // que no tiene caso ofrecer un control que no hace nada — se avisa con un indicador estático
 // en vez de un checkbox (pedido explícito del usuario: separar lo siempre-público de lo que
@@ -76,7 +76,7 @@ const BUSINESS_LINE_TABS = [
 // legal/valuacion no tienen efecto visible todavía (esos campos nunca se muestran en el
 // sitio público hoy), pero se dejan listas por si algún día se decide mostrar algo de ahí.
 const SECTIONS = [
-  { key: 'basicos', title: 'Datos básicos', visibilityField: 'showBasicInfo' },
+  { key: 'basicos', title: 'Datos básicos', visibilityField: null },
   { key: 'ubicacion', title: 'Ubicación y tipo', visibilityField: null },
   {
     key: 'direccion',
@@ -89,11 +89,6 @@ const SECTIONS = [
     key: 'legal',
     title: 'Datos catastrales y legales (opcional)',
     visibilityField: 'showLegalInfo',
-  },
-  {
-    key: 'valuacion',
-    title: 'Valuación comercial (opcional)',
-    visibilityField: 'showValuationInfo',
   },
 ];
 
@@ -202,7 +197,7 @@ const FIELDS = [
     label: 'Tipo de proceso legal (opcional)',
     type: 'select',
     col: 1,
-    section: 'legal',
+    section: 'detalles',
     options: [
       { value: '', label: 'No especificado' },
       ...labelsToOptions(LEGAL_PROCESS_TYPE_LABELS),
@@ -242,36 +237,14 @@ const FIELDS = [
     label: 'Precio comercial 1 (opcional)',
     type: 'number',
     col: 1,
-    section: 'valuacion',
+    section: 'legal',
   },
   {
     key: 'commercialPrice1Date',
     label: 'Fecha comercial 1 (opcional)',
     type: 'date',
     col: 1,
-    section: 'valuacion',
-  },
-  {
-    key: 'commercialPrice2',
-    label: 'Precio comercial 2 (opcional)',
-    type: 'number',
-    col: 1,
-    section: 'valuacion',
-  },
-  {
-    key: 'commercialPrice2Date',
-    label: 'Fecha comercial 2 (opcional)',
-    type: 'date',
-    col: 1,
-    section: 'valuacion',
-  },
-  { key: 'utility', label: 'Utilidad (opcional)', type: 'number', col: 1, section: 'valuacion' },
-  {
-    key: 'inventoryEntryDate',
-    label: 'Fecha de ingreso a inventario (opcional)',
-    type: 'date',
-    col: 1,
-    section: 'valuacion',
+    section: 'legal',
   },
 ];
 
@@ -315,16 +288,10 @@ const emptyForm = {
   debtsUpdateDate: '',
   commercialPrice1: '',
   commercialPrice1Date: '',
-  commercialPrice2: '',
-  commercialPrice2Date: '',
-  utility: '',
-  inventoryEntryDate: '',
-  showBasicInfo: true,
   showLocationInfo: true,
   showDetailsInfo: true,
   showAuctionInfo: true,
   showLegalInfo: true,
-  showValuationInfo: true,
 };
 
 const propertyToForm = (p) => ({
@@ -369,20 +336,10 @@ const propertyToForm = (p) => ({
   commercialPrice1Date: p.commercialPrice1Date
     ? new Date(p.commercialPrice1Date).toISOString().split('T')[0]
     : '',
-  commercialPrice2: p.commercialPrice2 ?? '',
-  commercialPrice2Date: p.commercialPrice2Date
-    ? new Date(p.commercialPrice2Date).toISOString().split('T')[0]
-    : '',
-  utility: p.utility ?? '',
-  inventoryEntryDate: p.inventoryEntryDate
-    ? new Date(p.inventoryEntryDate).toISOString().split('T')[0]
-    : '',
-  showBasicInfo: p.showBasicInfo ?? true,
   showLocationInfo: p.showLocationInfo ?? true,
   showDetailsInfo: p.showDetailsInfo ?? true,
   showAuctionInfo: p.showAuctionInfo ?? true,
   showLegalInfo: p.showLegalInfo ?? true,
-  showValuationInfo: p.showValuationInfo ?? true,
 });
 
 const inputClass =
@@ -702,7 +659,7 @@ export default function PropertyFormPage() {
               <h2 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h2>
               {visibilityField ? (
                 // Controla si este apartado se muestra en la página pública de la
-                // propiedad (ver showBasicInfo/etc. en el modelo) — no borra los datos
+                // propiedad (ver showLocationInfo/etc. en el modelo) — no borra los datos
                 // capturados, solo decide si se publican.
                 <label
                   className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none flex-shrink-0"

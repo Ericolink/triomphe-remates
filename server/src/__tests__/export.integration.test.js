@@ -114,10 +114,6 @@ describe('exportController', () => {
         'ADEUDOS ACTUALIZADO',
         'Precio comercial 1',
         'Fecha comercial 1',
-        'Precio comercial 2',
-        'Fecha comercial 2',
-        'UTILIDAD',
-        'INGRESO A INVENTARIO',
         'Ciudad',
         'Tipo',
         'Estatus',
@@ -142,16 +138,16 @@ describe('exportController', () => {
       expect(completa[3]).toBe('Av. Siempre Viva 123'); // CALLE
       expect(completa[9]).toBe('300.00 m²'); // MTS. T — DECIMAL(8,2) vuelve como string desde MySQL
       expect(completa[13]).toBe(formatPrice(1250000)); // PRECIO VENTA
-      expect(completa[28]).toBe(CITY_LABEL.chihuahua);
-      expect(completa[29]).toBe(PROPERTY_TYPE_LABEL.casa);
-      expect(completa[30]).toBe(STATUS_LABEL.disponible);
-      expect(completa[33]).toBe(formatDate(withEverything.createdAt)); // Fecha alta, dd/mm/aaaa no ISO
+      expect(completa[24]).toBe(CITY_LABEL.chihuahua);
+      expect(completa[25]).toBe(PROPERTY_TYPE_LABEL.casa);
+      expect(completa[26]).toBe(STATUS_LABEL.disponible);
+      expect(completa[29]).toBe(formatDate(withEverything.createdAt)); // Fecha alta, dd/mm/aaaa no ISO
 
       const pendiente = findRowByTitle('Terreno en remate');
       expect(pendiente[9]).toBe(dash(null)); // '—' cuando no hay MTS. T
       expect(pendiente[13]).toBe('PENDIENTE'); // price: null — regla de dominio, no un error
-      expect(pendiente[28]).toBe(CITY_LABEL.juarez);
-      expect(pendiente[31]).toBe(dash(null)); // recámaras faltantes
+      expect(pendiente[24]).toBe(CITY_LABEL.juarez);
+      expect(pendiente[27]).toBe(dash(null)); // recámaras faltantes
 
       const totalRow = sheet.getRow(sheet.rowCount).values;
       expect(totalRow[2]).toBe('TOTAL: 2 propiedades');
@@ -206,7 +202,7 @@ describe('exportController', () => {
       const workbook = await readWorkbook(res.body);
       const sheet = workbook.getWorksheet('Inventario');
       expect(sheet.rowCount - 4).toBe(1);
-      expect(sheet.getRow(4).values[28]).toBe(CITY_LABEL.chihuahua);
+      expect(sheet.getRow(4).values[24]).toBe(CITY_LABEL.chihuahua);
     });
 
     test('caracteres especiales y acentos se preservan tal cual (Excel no los recorta)', async () => {

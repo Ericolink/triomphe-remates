@@ -262,10 +262,11 @@ const {
 } = require('../utils/pipelineHelpers');
 const {
   crmAccessLevel,
+  getTeamUserIds,
   getLeadVisibilityWhere,
   canViewLead,
   canEditLead,
-  canAssignLeads,
+  canAssignLeadTo,
 } = require('../utils/leadAccess');
 const { ApiError } = require('../middleware/errorHandler');
 // Etapas a las que un prospecto cerrado puede volver al reabrirse — cualquier etapa no
@@ -384,7 +385,9 @@ const createLead = async (req, res) => {
   if (req.user && crmAccessLevel(req.user) === 'asesor_ventas') {
     resolvedAssignedToUserId = req.user.id;
   } else if (assignedToUserId) {
-    if (!req.user || !canAssignLeads(req.user)) {
+    // Un coordinador puede asignar de una vez a sí mismo o a un asesor de su equipo (ver
+    // canAssignLeadTo); admin/asistente pueden asignar a cualquiera, sin cambios.
+    if (!req.user || !canAssignLeadTo(req.user, assignedToUserId)) {
       throw new ApiError(403, 'No tienes permisos para asignar un responsable');
     }
     resolvedAssignedToUserId = assignedToUserId;
@@ -418,18 +421,10 @@ const createLead = async (req, res) => {
       ? commercialFields.businessLine
       : inferBusinessLineFromProperty(property);
 
-  // Fase 3a: sin campaña explícita (nunca la manda el formulario público, solo
-  // CreateLeadModal a mano), intenta auto-vincular por utm_campaign — a diferencia del
-  // bloque de abajo (campaignId explícito inválido = 404), un utm_campaign que no matchea
-  // ninguna Campaign real NO es un error: simplemente el lead queda sin campaña, igual que
-  // hoy si nadie la elige.
   let resolvedCampaignId = campaignId || null;
   if (resolvedCampaignId) {
     const campaign = await Campaign.findByPk(resolvedCampaignId);
     if (!campaign) throw new ApiError(404, 'Campaña no encontrada');
-  } else if (utmCampaign) {
-    const matchedCampaign = await Campaign.findOne({ where: { utmCampaign } });
-    if (matchedCampaign) resolvedCampaignId = matchedCampaign.id;
   }
 
   if (assignedToUserId) {
@@ -692,9 +687,6 @@ const getLeadById = async (req, res) => {
 const updateLead = async (req, res) => {
   const lead = await Lead.findByPk(req.params.id);
   if (!lead) throw new ApiError(404, 'Lead no encontrado');
-  if (!canEditLead(req.user, lead)) {
-    throw new ApiError(403, 'No tienes acceso a este prospecto');
-  }
 
   const {
     status,
@@ -711,11 +703,32 @@ const updateLead = async (req, res) => {
     propertyId,
   } = req.body;
 
-  // Asignar/reasignar responsable queda reservado a admin/asistente_administrativo — ver
-  // utils/leadAccess.js. Un Asesor con permiso de edición sobre este lead puede seguir
-  // cambiando otros campos, solo no este.
-  if (assignedToUserId !== undefined && !canAssignLeads(req.user)) {
-    throw new ApiError(403, 'No tienes permisos para asignar un responsable');
+  // Un coordinador no tiene edición general sobre los leads de su equipo (canEditLead es
+  // false salvo que el lead ya sea suyo) — pero sí puede reasignar uno que sea de su
+  // equipo, siempre que la request solo traiga ese campo (nada de colarse una edición
+  // general vía este atajo) y el nuevo responsable también sea válido para él (ver
+  // canAssignLeadTo). admin/asistente/asesor no usan esta rama: canEditLead ya los cubre.
+  const canEdit = canEditLead(req.user, lead);
+  const onlyAssignmentField = Object.keys(req.body).every(
+    (k) => req.body[k] === undefined || k === 'assignedToUserId'
+  );
+  const wantsReassignOnly =
+    !canEdit &&
+    crmAccessLevel(req.user) === 'coordinador_ventas' &&
+    onlyAssignmentField &&
+    assignedToUserId !== undefined &&
+    getTeamUserIds(req.user).includes(lead.assignedToUserId) &&
+    canAssignLeadTo(req.user, assignedToUserId);
+
+  if (!canEdit && !wantsReassignOnly) {
+    throw new ApiError(403, 'No tienes acceso a este prospecto');
+  }
+
+  // Asignar/reasignar responsable: admin/asistente a cualquiera, coordinador solo a sí
+  // mismo o a un asesor de su equipo (ver canAssignLeadTo) — un asesor con permiso de
+  // edición sobre este lead puede seguir cambiando otros campos, solo no este.
+  if (assignedToUserId !== undefined && !canAssignLeadTo(req.user, assignedToUserId)) {
+    throw new ApiError(403, 'No tienes permisos para asignar este responsable');
   }
   if (status !== undefined && !VALID_LEAD_STATUS.includes(status)) {
     throw new ApiError(400, `Estatus inválido. Valores permitidos: ${VALID_LEAD_STATUS.join(', ')}`);

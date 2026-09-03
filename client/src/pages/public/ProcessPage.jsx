@@ -66,19 +66,19 @@ const processSteps = [
     step: 8,
     icon: Scale,
     title: 'Periodo legal',
-    desc: 'Se gestiona el seguimiento de las etapas legales y se mantiene comunicación mensual con el cliente.',
+    desc: 'Se gestiona el seguimiento de las etapas legales y se mantiene comunicación con el cliente.',
   },
   {
     step: 9,
-    icon: ScrollText,
-    title: 'Escrituración',
-    desc: 'Se completan todos los trámites notariales y legales necesarios para la escrituración de la propiedad.',
-  },
-  {
-    step: 10,
     icon: Home,
     title: 'Entrega de propiedad',
     desc: 'El cliente recibe su propiedad. Culminación exitosa del proceso de adquisición del remate bancario.',
+  },
+  {
+    step: 10,
+    icon: ScrollText,
+    title: 'Escrituración',
+    desc: 'Se completan todos los trámites notariales y legales necesarios para la escrituración de la propiedad.',
   },
 ];
 
@@ -149,7 +149,7 @@ export default function ProcessPage() {
                   to={link}
                   className="inline-flex items-center gap-1.5 mt-4 text-sm font-bold text-primary-900 dark:text-accent-400 hover:gap-2.5 transition-all"
                 >
-                  Ir a Contáctanos
+                  Contáctanos
                   <ArrowRight size={16} />
                 </Link>
               )}

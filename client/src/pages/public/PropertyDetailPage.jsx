@@ -15,12 +15,7 @@ import {
   Clock,
   CheckCircle2,
 } from 'lucide-react';
-import {
-  getPropertyBySlug,
-  getProperties,
-  getPriceHistory,
-  trackView,
-} from '../../services/propertyService';
+import { getPropertyBySlug, getProperties, trackView } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
@@ -32,7 +27,6 @@ import FavoriteButton from '../../components/ui/FavoriteButton';
 import ComparatorButton from '../../components/ui/ComparatorButton';
 import PropertyCard from '../../components/ui/PropertyCard';
 import Lightbox from '../../components/ui/Lightbox';
-import PriceHistoryTimeline from '../../components/ui/PriceHistoryTimeline';
 import { buildImageUrl } from '../../utils/images';
 import { formatPrice, formatMetric } from '../../utils/formatters';
 import {
@@ -116,13 +110,6 @@ export default function PropertyDetailPage() {
     enabled: !!property,
   });
   const similar = similarData?.data?.filter((p) => p.id !== property?.id).slice(0, 3) ?? [];
-
-  const { data: priceHistoryData } = useQuery({
-    queryKey: ['property-price-history', property?.id],
-    queryFn: () => getPriceHistory(property.id),
-    enabled: !!property,
-  });
-  const priceHistory = (priceHistoryData?.data ?? []).filter((e) => e.changeType === 'price');
 
   const daysLeft = property?.auctionDate
     ? Math.ceil((new Date(property.auctionDate) - new Date()) / 86400000)
@@ -411,9 +398,8 @@ export default function PropertyDetailPage() {
             </div>
           )}
 
-          {/* showBasicInfo: casilla del apartado Datos básicos — el título es estructural
-              (H1 de la página) y siempre se muestra; solo se oculta la descripción. */}
-          {property.showBasicInfo !== false && property.description && (
+          {/* Datos básicos (título y descripción) son estructurales y siempre se muestran. */}
+          {property.description && (
             <div className="order-9 mb-6">
               <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-2">
                 Descripción
@@ -421,17 +407,6 @@ export default function PropertyDetailPage() {
               <p className="text-gray-600 dark:text-white leading-relaxed whitespace-pre-wrap">
                 {property.description}
               </p>
-            </div>
-          )}
-
-          {/* showAuctionInfo: casilla del apartado Remate y estatus — también controla el
-              historial de precio, ya que es información derivada del mismo precio. */}
-          {property.showAuctionInfo !== false && priceHistory.length > 1 && (
-            <div className="order-10 bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md mb-6">
-              <h2 className="text-lg font-semibold text-primary-900 dark:text-primary-300 mb-4">
-                Historial de precio
-              </h2>
-              <PriceHistoryTimeline history={priceHistory} />
             </div>
           )}
         </div>

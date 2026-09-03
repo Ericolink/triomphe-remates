@@ -19,6 +19,7 @@ import { fadeIn } from '../../utils/animations';
 // llamada HTTP para toda la pantalla — no una cascada de requests por tarjeta.
 export default function AsesorDashboardPage() {
   const user = useAuthStore((s) => s.user);
+  const isCoordinador = user?.role === 'coordinador_ventas';
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['crm-my-dashboard'],
@@ -64,7 +65,9 @@ export default function AsesorDashboardPage() {
             Hola, {user?.name?.split(' ')[0] || 'asesor'}
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Aquí tienes el resumen de tu actividad comercial
+            {isCoordinador
+              ? 'Aquí tienes el resumen de la actividad comercial de tu equipo'
+              : 'Aquí tienes el resumen de tu actividad comercial'}
           </p>
         </div>
         {isFetching && <Spinner size="sm" />}
@@ -73,7 +76,9 @@ export default function AsesorDashboardPage() {
       {isEmpty ? (
         <div className="bg-white dark:bg-[#242938] rounded-2xl p-10 shadow-sm border border-gray-100 dark:border-[#2e3650] text-center">
           <p className="text-gray-500 dark:text-gray-400">
-            Aún no tienes prospectos asignados. En cuanto te asignen uno, aparecerá aquí.
+            {isCoordinador
+              ? 'Tu equipo aún no tiene prospectos asignados. En cuanto les asignen uno, aparecerá aquí.'
+              : 'Aún no tienes prospectos asignados. En cuanto te asignen uno, aparecerá aquí.'}
           </p>
         </div>
       ) : (

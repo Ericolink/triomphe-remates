@@ -29,6 +29,7 @@ const EMPTY_FORM = {
   email: '',
   password: '',
   role: 'asistente_administrativo',
+  supervisorId: '',
   currentPassword: '',
   newPassword: '',
 };
@@ -55,6 +56,17 @@ export default function UsersPage() {
     queryKey: ['users', page],
     queryFn: () => getUsers({ page, limit: 20 }),
   });
+
+  // Lista completa (sin paginar) solo para poblar el selector "Coordinador asignado" del
+  // formulario — se filtra a coordinador_ventas del lado del cliente, la misma lista ya se
+  // usa en otros selectores de responsable (CreateLeadModal, etc.).
+  const { data: allUsersData } = useQuery({
+    queryKey: ['users', 'all'],
+    queryFn: () => getUsers(),
+  });
+  const coordinadores = (allUsersData?.data ?? []).filter(
+    (u) => u.role === 'coordinador_ventas' && u.isActive
+  );
 
   // Consulta aparte (1 fila) para el admin principal: es el usuario más antiguo
   // (id más bajo, createdAt ASC), pero puede no estar en la página que se ve ahora.
@@ -129,6 +141,7 @@ export default function UsersPage() {
       name: user.name,
       email: user.email,
       role: user.role,
+      supervisorId: user.supervisorId || '',
       password: '',
       currentPassword: '',
       newPassword: '',
@@ -158,12 +171,14 @@ export default function UsersPage() {
         email: form.email,
         password: form.password,
         role: form.role,
+        supervisorId: form.role === 'asesor_ventas' ? form.supervisorId || null : null,
       });
     } else {
       const fd = new FormData();
       fd.append('name', form.name);
       fd.append('email', form.email);
       fd.append('role', form.role);
+      fd.append('supervisorId', form.role === 'asesor_ventas' ? form.supervisorId || '' : '');
       if (form.newPassword) {
         fd.append('newPassword', form.newPassword);
         fd.append('currentPassword', form.currentPassword);
@@ -479,6 +494,30 @@ export default function UsersPage() {
                 ))}
               </select>
             </div>
+
+            {form.role === 'asesor_ventas' && (
+              <div>
+                <label
+                  htmlFor={`${formId}-supervisorId`}
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+                >
+                  Coordinador asignado (opcional)
+                </label>
+                <select
+                  id={`${formId}-supervisorId`}
+                  value={form.supervisorId}
+                  onChange={(e) => setForm({ ...form, supervisorId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
+                >
+                  <option value="">Sin coordinador</option>
+                  {coordinadores.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {!isEditing ? (
               <div>

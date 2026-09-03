@@ -28,7 +28,7 @@ const faqGroups = [
     items: [
       {
         q: '¿Cuáles son los pasos para adquirir una propiedad?',
-        a: 'En términos generales: 1) primera información y agenda de cita, 2) presentación de la propiedad con documentación legal y adeudos, 3) verificación legal de viabilidad, 4) apartado con el monto requerido, 5) firma de contrato, 6) pago del remate al banco, 7) firma de cesión de derechos ante notario, 8) seguimiento del periodo legal, 9) escrituración y entrega de la propiedad.',
+        a: 'En términos generales: 1) primera información y agenda de cita, 2) presentación de la propiedad con documentación legal y adeudos, 3) verificación legal de viabilidad, 4) apartado con el monto requerido, 5) firma de contrato y pago de servicios a la empresa, 6) pago del remate al banco, 7) firma de cesión de derechos ante notario, 8) seguimiento del periodo legal, 9) escrituración y entrega de la propiedad.',
       },
       {
         q: '¿Cuánto tiempo tarda el proceso completo?',
@@ -37,10 +37,6 @@ const faqGroups = [
       {
         q: '¿Qué documentos necesito para empezar?',
         a: 'Para la primera cita basta con tu identificación oficial (INE) y contar con el monto requerido para el apartado. Conforme avanza el proceso se solicitará documentación adicional según el caso.',
-      },
-      {
-        q: '¿Qué significa la "fecha de subasta" (auctionDate) que aparece en algunas propiedades?',
-        a: 'Es la fecha programada por el juzgado para la subasta judicial de la propiedad. No todas las propiedades están en esta etapa; cuando aplica, lo mostramos junto con un conteo regresivo en la ficha de la propiedad.',
       },
     ],
   },
@@ -52,12 +48,12 @@ const faqGroups = [
         a: 'El precio mostrado corresponde al monto de cesión/remate. Adicionalmente existen gastos legales, notariales y de escrituración propios de cada caso, que tu asesor te detallará antes de firmar cualquier contrato.',
       },
       {
-        q: '¿Puedo pagar en pagos parciales?',
-        a: 'El apartado inicial asegura tu lugar en el proceso. Las condiciones de pago del monto total se acuerdan directamente con tu asesor y dependen de cada propiedad y banco.',
+        q: '¿Cómo serían los pagos?',
+        a: 'No se manejan parcialidades, el apartado inicial asegura tu lugar en el proceso. El monto total de la venta se divide en dos exhibiciones (pago por servicios de intermediación a la empresa y pago del remate a la institución financiera), los montos y condiciones para entregar dichos pagos dependen de cada propiedad y banco.',
       },
       {
         q: '¿Qué pasa si me arrepiento después de apartar la propiedad?',
-        a: 'Las condiciones de cancelación se especifican en el contrato de apartado. Te recomendamos revisarlas con tu asesor antes de realizar cualquier pago.',
+        a: 'Las condiciones de cancelación se especifican en el recibo de apartado.',
       },
     ],
   },
@@ -70,11 +66,7 @@ const faqGroups = [
       },
       {
         q: '¿Qué pasa si la propiedad está ocupada?',
-        a: 'Algunas propiedades pueden encontrarse en proceso de desocupación o entrega de posesión. Esta información, cuando aplica, se gestiona durante el seguimiento legal y se te informa con anticipación.',
-      },
-      {
-        q: '¿Qué pasa si cambia el estatus o el precio de una propiedad que me interesa?',
-        a: 'Cada propiedad muestra su historial de cambios de precio y estatus en su ficha. Si activaste una alerta para esa propiedad, te notificamos por correo cuando haya cambios relevantes.',
+        a: 'Algunas propiedades pueden encontrarse invadidas, y estas a su vez se les hará un proceso de reivindicatoria para poder obtener la posesión, y posteriormente escritura. Hay algunas propiedades ya desabitadas y/o adjudicadas las cuales su entrega es más pronta.',
       },
     ],
   },

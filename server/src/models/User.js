@@ -64,6 +64,14 @@ const User = sequelize.define(
       defaultValue: 0,
       comment: 'Se incrementa al cambiar password/rol/desactivar — invalida JWT ya emitidos',
     },
+    // Jerarquía coordinador_ventas -> asesor_ventas — solo tiene sentido cuando este usuario
+    // es asesor_ventas: apunta al coordinador_ventas que lo supervisa (ver
+    // server/src/utils/leadAccess.js para cómo esto afecta la visibilidad de leads).
+    supervisorId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'Coordinador de ventas que supervisa a este usuario (solo aplica a asesor_ventas)',
+    },
   },
   {
     tableName: 'users',

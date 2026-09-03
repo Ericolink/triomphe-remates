@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { cloudinary } = require('../config/cloudinary');
 const { User } = require('../models/index');
 const { generateToken, hashPassword, comparePassword } = require('../utils/helpers');
@@ -9,7 +10,7 @@ const { ApiError } = require('../middleware/errorHandler');
 
 // Reexportados desde userService para no duplicar la lista/función — updateUser
 // y createUser comparten estas reglas de negocio.
-const { VALID_ROLES, safeUser } = userService;
+const { VALID_ROLES, safeUser, resolveSupervisorId } = userService;
 
 // GET /api/users
 const getUsers = async (req, res) => {
@@ -18,6 +19,13 @@ const getUsers = async (req, res) => {
     attributes: { exclude: ['password'] },
     order: [['createdAt', 'ASC']],
   };
+
+  // Un coordinador_ventas solo necesita este listado para el selector de "responsable" del
+  // CRM (ver comentario en routes/users.js) — se le escopa a su propio equipo en vez de
+  // exponerle el roster completo de empleados, que no necesita ver.
+  if (req.user.role === 'coordinador_ventas') {
+    queryOptions.where = { [Op.or]: [{ id: req.user.id }, { supervisorId: req.user.id }] };
+  }
 
   // page/limit son opcionales: sin ellos se devuelve la lista completa, igual que
   // antes — varios selectores de "responsable" (CreateLeadModal, CasosExitoSection,
@@ -33,7 +41,7 @@ const getUsers = async (req, res) => {
 
 // POST /api/users
 const createUser = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, supervisorId } = req.body;
 
   if (!name || !email || !password) {
     throw new ApiError(400, 'Nombre, email y contraseña son requeridos');
@@ -45,7 +53,7 @@ const createUser = async (req, res) => {
   let user;
   try {
     user = await userService.createUser(
-      { name, email, password, role },
+      { name, email, password, role, supervisorId: supervisorId || null },
       {
         audit: (created) =>
           logAudit(req, 'create', 'user', created.id, {
@@ -57,6 +65,7 @@ const createUser = async (req, res) => {
     );
   } catch (err) {
     if (err.code === 'INVALID_ROLE') throw new ApiError(400, err.message);
+    if (err.code === 'INVALID_SUPERVISOR') throw new ApiError(400, err.message);
     if (err.code === 'DUPLICATE_EMAIL') throw new ApiError(409, err.message);
     throw err;
   }
@@ -69,7 +78,7 @@ const updateUser = async (req, res) => {
   const user = await User.findByPk(req.params.id);
   if (!user) throw new ApiError(404, 'Usuario no encontrado');
 
-  const { name, email, role, isActive, newPassword, currentPassword } = req.body;
+  const { name, email, role, isActive, newPassword, currentPassword, supervisorId } = req.body;
 
   if (email && email !== user.email) {
     const existing = await User.findOne({ where: { email } });
@@ -77,6 +86,21 @@ const updateUser = async (req, res) => {
   }
   if (role && !VALID_ROLES.includes(role)) {
     throw new ApiError(400, `Rol inválido. Valores permitidos: ${VALID_ROLES.join(', ')}`);
+  }
+
+  let resolvedSupervisorId;
+  if (supervisorId !== undefined) {
+    try {
+      resolvedSupervisorId = await resolveSupervisorId(supervisorId || null, role || user.role);
+    } catch (err) {
+      if (err.code === 'INVALID_SUPERVISOR') throw new ApiError(400, err.message);
+      throw err;
+    }
+  } else if (role && role !== 'asesor_ventas' && user.supervisorId) {
+    // Un usuario deja de ser asesor_ventas (ej. lo ascienden a coordinador_ventas) sin que
+    // el request haya tocado supervisorId explícitamente — se limpia solo para no dejar un
+    // supervisorId huérfano en un rol donde ya no significa nada.
+    resolvedSupervisorId = null;
   }
 
   // AUDIT-022: el admin principal (ID más bajo) no puede perder el rol de admin ni
@@ -149,13 +173,21 @@ const updateUser = async (req, res) => {
     profilePhoto = result.secure_url;
   }
 
-  const beforeSnapshot = snapshotFields(user, ['name', 'email', 'role', 'isActive', 'profilePhoto']);
+  const beforeSnapshot = snapshotFields(user, [
+    'name',
+    'email',
+    'role',
+    'isActive',
+    'profilePhoto',
+    'supervisorId',
+  ]);
 
   await user.update({
     ...(name && { name }),
     ...(email && { email }),
     ...(role && { role }),
     ...(isActive !== undefined && { isActive }),
+    ...(resolvedSupervisorId !== undefined && { supervisorId: resolvedSupervisorId }),
     ...(isSensitiveChange && { tokenVersion: user.tokenVersion + 1 }),
     profilePhoto,
   });

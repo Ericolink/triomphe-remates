@@ -36,7 +36,7 @@ const VALID_ACQUISITION_STAGES = [
   'firma',
   'entrega',
 ];
-const VALID_LEGAL_PROCESS_TYPES = ['cesion', 'dacion', 'adjudicacion'];
+const VALID_LEGAL_PROCESS_TYPES = ['cesion', 'dacion', 'adjudicacion', 'escritura'];
 
 // Valida solo los campos ENUM que vinieron en el body (`undefined` = no se está tocando ese
 // campo, válido tanto en creación con default como en updates parciales). Devuelve el
@@ -363,16 +363,10 @@ const createProperty = async (req, res) => {
     debtsUpdateDate,
     commercialPrice1,
     commercialPrice1Date,
-    commercialPrice2,
-    commercialPrice2Date,
-    utility,
-    inventoryEntryDate,
-    showBasicInfo,
     showLocationInfo,
     showDetailsInfo,
     showAuctionInfo,
     showLegalInfo,
-    showValuationInfo,
   } = req.body;
 
   if (!title || !city || !type) {
@@ -437,16 +431,10 @@ const createProperty = async (req, res) => {
         debtsUpdateDate: debtsUpdateDate || null,
         commercialPrice1: nullIfEmpty(commercialPrice1),
         commercialPrice1Date: commercialPrice1Date || null,
-        commercialPrice2: nullIfEmpty(commercialPrice2),
-        commercialPrice2Date: commercialPrice2Date || null,
-        utility: nullIfEmpty(utility),
-        inventoryEntryDate: inventoryEntryDate || null,
-        showBasicInfo: showBasicInfo ?? true,
         showLocationInfo: showLocationInfo ?? true,
         showDetailsInfo: showDetailsInfo ?? true,
         showAuctionInfo: showAuctionInfo ?? true,
         showLegalInfo: showLegalInfo ?? true,
-        showValuationInfo: showValuationInfo ?? true,
         slug,
       },
       { transaction }
@@ -527,16 +515,10 @@ const updateProperty = async (req, res) => {
     debtsUpdateDate,
     commercialPrice1,
     commercialPrice1Date,
-    commercialPrice2,
-    commercialPrice2Date,
-    utility,
-    inventoryEntryDate,
-    showBasicInfo,
     showLocationInfo,
     showDetailsInfo,
     showAuctionInfo,
     showLegalInfo,
-    showValuationInfo,
   } = req.body;
 
   const enumError = validatePropertyEnums({
@@ -605,18 +587,10 @@ const updateProperty = async (req, res) => {
   if (commercialPrice1 !== undefined) updates.commercialPrice1 = nullIfEmpty(commercialPrice1);
   if (commercialPrice1Date !== undefined)
     updates.commercialPrice1Date = commercialPrice1Date || null;
-  if (commercialPrice2 !== undefined) updates.commercialPrice2 = nullIfEmpty(commercialPrice2);
-  if (commercialPrice2Date !== undefined)
-    updates.commercialPrice2Date = commercialPrice2Date || null;
-  if (utility !== undefined) updates.utility = nullIfEmpty(utility);
-  if (inventoryEntryDate !== undefined)
-    updates.inventoryEntryDate = inventoryEntryDate || null;
-  if (showBasicInfo !== undefined) updates.showBasicInfo = showBasicInfo;
   if (showLocationInfo !== undefined) updates.showLocationInfo = showLocationInfo;
   if (showDetailsInfo !== undefined) updates.showDetailsInfo = showDetailsInfo;
   if (showAuctionInfo !== undefined) updates.showAuctionInfo = showAuctionInfo;
   if (showLegalInfo !== undefined) updates.showLegalInfo = showLegalInfo;
-  if (showValuationInfo !== undefined) updates.showValuationInfo = showValuationInfo;
   if (req.body.slug) updates.slug = req.body.slug;
 
   const beforeSnapshot = snapshotFields(property, Object.keys(updates));
@@ -914,24 +888,6 @@ const getStatusHistory = async (req, res) => {
   return res.json({ data: history });
 };
 
-// GET /api/properties/:id/price-history (público — sin datos internos)
-const getPublicPriceHistory = async (req, res) => {
-  const history = await PropertyStatusHistory.findAll({
-    where: { propertyId: req.params.id },
-    attributes: [
-      'id',
-      'fromStatus',
-      'toStatus',
-      'changeType',
-      'fromPrice',
-      'toPrice',
-      'createdAt',
-    ],
-    order: [['createdAt', 'DESC']],
-  });
-  return res.json({ data: history });
-};
-
 // POST /api/properties/:id/view — registra una visita real a la ficha pública. Separado
 // del GET para que ese GET (y el de admin) queden libres de efectos secundarios: cacheables,
 // y sin riesgo de que abrir una propiedad para editarla infle el contador de vistas.
@@ -988,7 +944,6 @@ module.exports = {
   getPromotedProperty,
   promoteProperty,
   getStatusHistory,
-  getPublicPriceHistory,
   trackView,
   trackShare,
   getPropertyStats,

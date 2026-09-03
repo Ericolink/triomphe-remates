@@ -174,13 +174,16 @@ export default function AdminPropertiesPage() {
   const [city, setCity] = useState('');
   const [category, setCategory] = useState('');
   const [businessLine, setBusinessLine] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-properties', search, city, category, businessLine, page],
-    queryFn: () => getProperties({ search, city, category, businessLine, page, limit: 15 }),
+    queryKey: ['admin-properties', search, city, category, businessLine, minPrice, maxPrice, page],
+    queryFn: () =>
+      getProperties({ search, city, category, businessLine, minPrice, maxPrice, page, limit: 15 }),
   });
 
   // Selector combinado "Línea": línea de negocio (remate/credito/renta/contado/inversion) y
@@ -406,6 +409,31 @@ export default function AdminPropertiesPage() {
             </optgroup>
           </select>
         </div>
+
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Precio mínimo"
+            value={minPrice ? Number(minPrice).toLocaleString('es-MX') : ''}
+            onChange={(e) => {
+              setMinPrice(e.target.value.replace(/[^0-9]/g, ''));
+              setPage(1);
+            }}
+            className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 dark:placeholder-gray-500 focus:outline-none"
+          />
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="Precio máximo"
+            value={maxPrice ? Number(maxPrice).toLocaleString('es-MX') : ''}
+            onChange={(e) => {
+              setMaxPrice(e.target.value.replace(/[^0-9]/g, ''));
+              setPage(1);
+            }}
+            className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 dark:placeholder-gray-500 focus:outline-none"
+          />
+        </div>
       </motion.div>
 
       {/* Tabla */}
@@ -629,7 +657,7 @@ export default function AdminPropertiesPage() {
               animate="visible"
               className="text-center py-16 text-gray-400 dark:text-gray-500"
             >
-              {search || city || category || businessLine ? (
+              {search || city || category || businessLine || minPrice || maxPrice ? (
                 <>
                   <p>Ningún resultado coincide con los filtros actuales.</p>
                   <button
@@ -639,6 +667,8 @@ export default function AdminPropertiesPage() {
                       setCity('');
                       setCategory('');
                       setBusinessLine('');
+                      setMinPrice('');
+                      setMaxPrice('');
                       setPage(1);
                     }}
                     className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"

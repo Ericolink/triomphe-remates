@@ -19,16 +19,20 @@ const { sequelize, User, Lead } = require('../models/index');
 const { createUser, authToken } = require('./helpers/factories');
 
 describe('POST /api/leads — asesor_ventas puede crear prospectos, auto-asignados a sí mismo', () => {
-  let admin, asesor, otroAsesor;
-  let adminToken, asesorToken;
+  let admin, asesor, otroAsesor, coordinador, asesorDelEquipo, asesorDeOtroEquipo;
+  let adminToken, asesorToken, coordinadorToken;
 
   beforeAll(async () => {
     await sequelize.sync({ alter: false });
     admin = await createUser({ role: 'admin' });
     asesor = await createUser({ role: 'asesor_ventas' });
     otroAsesor = await createUser({ role: 'asesor_ventas' });
+    coordinador = await createUser({ role: 'coordinador_ventas' });
+    asesorDelEquipo = await createUser({ role: 'asesor_ventas', supervisorId: coordinador.id });
+    asesorDeOtroEquipo = await createUser({ role: 'asesor_ventas' });
     adminToken = authToken(admin);
     asesorToken = authToken(asesor);
+    coordinadorToken = authToken(coordinador);
   });
 
   afterEach(async () => {
@@ -36,7 +40,19 @@ describe('POST /api/leads — asesor_ventas puede crear prospectos, auto-asignad
   });
 
   afterAll(async () => {
-    await User.destroy({ where: { id: [admin.id, asesor.id, otroAsesor.id] }, force: true });
+    await User.destroy({
+      where: {
+        id: [
+          admin.id,
+          asesor.id,
+          otroAsesor.id,
+          coordinador.id,
+          asesorDelEquipo.id,
+          asesorDeOtroEquipo.id,
+        ],
+      },
+      force: true,
+    });
     await sequelize.close();
   });
 
@@ -148,5 +164,50 @@ describe('POST /api/leads — asesor_ventas puede crear prospectos, auto-asignad
 
     expect(apptRes.status).toBe(201);
     expect(apptRes.body.data.leadId).toBe(created.body.data.id);
+  });
+
+  describe('coordinador_ventas crea un prospecto y lo asigna de una vez a su equipo', () => {
+    test('el coordinador crea un prospecto y lo asigna directo a un asesor de su equipo', async () => {
+      const created = await request(app)
+        .post('/api/leads')
+        .set('Authorization', `Bearer ${coordinadorToken}`)
+        .send({
+          name: 'Prospecto repartido',
+          phone: '6561112241',
+          assignedToUserId: asesorDelEquipo.id,
+        });
+      expect(created.status).toBe(201);
+
+      const res = await request(app)
+        .get(`/api/leads/${created.body.data.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(res.body.data.assignedToUserId).toBe(asesorDelEquipo.id);
+      expect(res.body.data.createdByUser?.name).toBe(coordinador.name);
+    });
+
+    test('el coordinador puede crear un prospecto sin asignarlo (queda sin dueño, no se auto-asigna)', async () => {
+      const created = await request(app)
+        .post('/api/leads')
+        .set('Authorization', `Bearer ${coordinadorToken}`)
+        .send({ name: 'Prospecto sin repartir', phone: '6561112242' });
+      expect(created.status).toBe(201);
+
+      const res = await request(app)
+        .get(`/api/leads/${created.body.data.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(res.body.data.assignedToUserId).toBeNull();
+    });
+
+    test('el coordinador NO puede asignar de una vez a un asesor fuera de su equipo (403)', async () => {
+      const res = await request(app)
+        .post('/api/leads')
+        .set('Authorization', `Bearer ${coordinadorToken}`)
+        .send({
+          name: 'Prospecto mal asignado',
+          phone: '6561112243',
+          assignedToUserId: asesorDeOtroEquipo.id,
+        });
+      expect(res.status).toBe(403);
+    });
   });
 });

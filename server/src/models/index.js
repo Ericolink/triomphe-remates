@@ -66,6 +66,10 @@ Lead.belongsTo(User, { foreignKey: 'createdByUserId', as: 'createdByUser' });
 User.hasMany(LeadNote, { foreignKey: 'userId', as: 'authoredNotes' });
 LeadNote.belongsTo(User, { foreignKey: 'userId', as: 'author' });
 
+// Jerarquía coordinador_ventas -> asesor_ventas (ver server/src/utils/leadAccess.js).
+User.belongsTo(User, { foreignKey: 'supervisorId', as: 'supervisor' });
+User.hasMany(User, { foreignKey: 'supervisorId', as: 'supervisedAsesores' });
+
 Lead.belongsToMany(Property, {
   through: LeadProperty,
   foreignKey: 'leadId',

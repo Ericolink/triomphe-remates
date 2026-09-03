@@ -160,10 +160,6 @@ const getFilteredProperties = async (query) => {
       'debtsUpdateDate',
       'commercialPrice1',
       'commercialPrice1Date',
-      'commercialPrice2',
-      'commercialPrice2Date',
-      'utility',
-      'inventoryEntryDate',
     ],
     include: [
       {

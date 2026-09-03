@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { getCrmDashboard, getCrmReports, getMyCrmDashboard } = require('../controllers/crmAnalyticsController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
+const { requireCrmAccess } = require('../middleware/crmAccessMiddleware');
 const { apiLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -37,10 +38,21 @@ router.get(
   getCrmReports
 );
 
-// Dashboard personal de asesor_ventas — a diferencia de los dos endpoints de arriba, cada
-// consulta de getMyCrmDashboard SÍ aplica getLeadVisibilityWhere desde el diseño, así que
-// no hace falta (ni tiene sentido) abrirlo a admin/asistente_administrativo: ellos ya tienen
-// su propio dashboard con datos agregados de toda la empresa.
-router.get('/my-dashboard', apiLimiter, authenticate, authorize('asesor_ventas'), getMyCrmDashboard);
+// Dashboard personal de asesor_ventas / de equipo de coordinador_ventas — a diferencia de
+// los dos endpoints de arriba, cada consulta de getMyCrmDashboard SÍ aplica
+// getLeadVisibilityWhere desde el diseño (que para un coordinador agrega automáticamente
+// los leads de todo su equipo, ver leadAccess.js), así que no hace falta (ni tiene sentido)
+// abrirlo a admin/asistente_administrativo: ellos ya tienen su propio dashboard con datos
+// agregados de toda la empresa — de ahí el `authorize` explícito en vez de dejar pasar a
+// cualquiera con `hasCrmAccess`. `requireCrmAccess` después es lo que precalcula
+// `req.user.supervisedUserIds` para el coordinador (siempre pasa, ya filtrado el rol).
+router.get(
+  '/my-dashboard',
+  apiLimiter,
+  authenticate,
+  authorize('asesor_ventas', 'coordinador_ventas'),
+  requireCrmAccess,
+  getMyCrmDashboard
+);
 
 module.exports = router;

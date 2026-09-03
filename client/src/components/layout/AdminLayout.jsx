@@ -38,8 +38,9 @@ const dashboardGroup = {
   links: [{ to: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' }],
 };
 
-// Dashboard personal de asesor_ventas — distinto de dashboardGroup (dashboard admin, datos
-// de toda la empresa). Solo visible para ese rol, ver Sidebar más abajo.
+// Dashboard personal de asesor_ventas / de equipo de coordinador_ventas — distinto de
+// dashboardGroup (dashboard admin, datos de toda la empresa). Solo visible para esos 2
+// roles, ver Sidebar más abajo.
 const asesorDashboardGroup = {
   label: null,
   links: [{ to: '/admin/mi-dashboard', icon: <LayoutDashboard size={18} />, label: 'Mi Dashboard' }],
@@ -90,13 +91,13 @@ const adminOnlyGroup = {
 };
 
 function Sidebar({ user, onClose, onLogout }) {
-  // El CRM se oculta para quien no tiene hasCrmAccess (Coordinador de ventas): sin esto,
-  // el link llevaba a una pantalla que solo mostraba errores 403 en cada request, porque
-  // requireCrmAccess en el backend ya la bloquea por completo. Lo mismo para los módulos
-  // de soporte (Comunicación/Reclutamiento/Contenido/Dashboard) con hasBackofficeAccess.
+  // El CRM se oculta para quien no tiene hasCrmAccess: sin esto, el link llevaba a una
+  // pantalla que solo mostraba errores 403 en cada request, porque requireCrmAccess en el
+  // backend ya la bloquea por completo. Lo mismo para los módulos de soporte
+  // (Comunicación/Reclutamiento/Contenido/Dashboard) con hasBackofficeAccess.
   const groups = [
     ...(hasBackofficeAccess(user) ? [dashboardGroup] : []),
-    ...(user?.role === 'asesor_ventas' ? [asesorDashboardGroup] : []),
+    ...(['asesor_ventas', 'coordinador_ventas'].includes(user?.role) ? [asesorDashboardGroup] : []),
     propertiesGroup,
     ...(hasCrmAccess(user) ? [crmGroup] : []),
     ...(hasBackofficeAccess(user) ? backofficeGroups : []),

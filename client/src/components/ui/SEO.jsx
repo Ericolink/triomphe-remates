@@ -7,8 +7,18 @@ const DEFAULT_DESCRIPTION =
   'Compra casas, departamentos y terrenos en remate bancario en Chihuahua, Ciudad Juárez y Querétaro, del 30% al 70% por debajo del valor comercial.';
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
 
-const cityName = { juarez: 'Ciudad Juárez', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
-const cityRegion = { juarez: 'Chihuahua', chihuahua: 'Chihuahua', queretaro: 'Querétaro' };
+const cityName = {
+  juarez: 'Ciudad Juárez',
+  chihuahua: 'Chihuahua',
+  queretaro: 'Querétaro',
+  otra: 'Otra',
+};
+const cityRegion = {
+  juarez: 'Chihuahua',
+  chihuahua: 'Chihuahua',
+  queretaro: 'Querétaro',
+  otra: 'Otra',
+};
 
 const ORGANIZATION = {
   '@type': 'RealEstateAgent',

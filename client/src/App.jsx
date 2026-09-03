@@ -9,7 +9,7 @@ import {
   hasCrmAccess,
   hasBackofficeAccess,
   canManageInventory,
-  isAsesorVentas,
+  canAccessMyDashboard,
 } from './utils/permissions';
 
 // Páginas públicas — cargadas de forma diferida para no bloquear el primer render
@@ -113,7 +113,7 @@ export default function App() {
               <Route
                 path="mi-dashboard"
                 element={
-                  <RoleRoute allow={isAsesorVentas}>
+                  <RoleRoute allow={canAccessMyDashboard}>
                     <AsesorDashboardPage />
                   </RoleRoute>
                 }

@@ -49,6 +49,7 @@ const LEGAL_PROCESS_TYPE_LABEL = {
   cesion: 'Cesión',
   dacion: 'Dación',
   adjudicacion: 'Adjudicación',
+  escritura: 'Escritura',
 };
 
 // Línea de negocio (Property/Lead/PropertyAlert.businessLine) — debe coincidir con

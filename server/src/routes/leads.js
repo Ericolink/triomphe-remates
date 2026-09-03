@@ -26,7 +26,10 @@ const {
   attachUserIfPresent,
 } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
-const { requireCrmAccess } = require('../middleware/crmAccessMiddleware');
+const {
+  requireCrmAccess,
+  attachSupervisedTeamIfPresent,
+} = require('../middleware/crmAccessMiddleware');
 const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddleware');
 
 /**
@@ -42,7 +45,13 @@ const { apiLimiter, publicFormLimiter } = require('../middleware/rateLimitMiddle
 // cuando hay un token válido es lo que le permite a createLead distinguir un envío del
 // sitio público (teléfono obligatorio) de una captura manual del equipo comercial, y
 // aplicar las reglas de rol de CRM (asesor no puede crear, etc.) cuando corresponde.
-router.post('/', publicFormLimiter, attachUserIfPresent, createLead);
+router.post(
+  '/',
+  publicFormLimiter,
+  attachUserIfPresent,
+  attachSupervisedTeamIfPresent,
+  createLead
+);
 router.get('/stream', apiLimiter, authenticateSSE, requireCrmAccess, streamLeads);
 router.get('/', apiLimiter, authenticate, requireCrmAccess, getLeads);
 router.patch('/batch', apiLimiter, authenticate, requireCrmAccess, batchUpdateLeads);

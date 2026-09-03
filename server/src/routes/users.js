@@ -228,12 +228,19 @@ const { apiLimiter, uploadLimiter } = require('../middleware/rateLimitMiddleware
  *       404: { description: Usuario no encontrado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
  */
 
-// Listar queda abierto también a asistente_administrativo — sin esto, el selector de
-// "responsable" del CRM (CreateLeadModal/LeadDetailPanel/ProspectosSection, ver comentario
-// en usersController.getUsers) le llegaba vacío, aunque canAssignLeads() ya lo autorizaba a
-// asignar/reasignar prospectos (ver leadAccess.js). Alta/edición/baja de cuentas se queda
-// admin-only.
-router.get('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getUsers);
+// Listar queda abierto también a asistente_administrativo y coordinador_ventas — sin esto,
+// el selector de "responsable" del CRM (CreateLeadModal/LeadDetailPanel/ProspectosSection,
+// ver comentario en usersController.getUsers) le llegaba vacío, aunque canAssignLeads() ya
+// los autorizaba a asignar/reasignar prospectos (ver leadAccess.js). Un coordinador recibe
+// solo su propio equipo, no el roster completo — ver el filtro dentro de getUsers.
+// Alta/edición/baja de cuentas se queda admin-only.
+router.get(
+  '/',
+  apiLimiter,
+  authenticate,
+  authorize('admin', 'asistente_administrativo', 'coordinador_ventas'),
+  getUsers
+);
 router.post('/', apiLimiter, authenticate, authorize('admin'), createUser);
 router.put(
   '/:id',

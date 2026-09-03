@@ -116,10 +116,6 @@ const exportExcel = async (req, res) => {
       { header: 'ADEUDOS ACTUALIZADO', key: 'debtsUpdateDate', width: 16 },
       { header: 'Precio comercial 1', key: 'commercialPrice1', width: 16 },
       { header: 'Fecha comercial 1', key: 'commercialPrice1Date', width: 14 },
-      { header: 'Precio comercial 2', key: 'commercialPrice2', width: 16 },
-      { header: 'Fecha comercial 2', key: 'commercialPrice2Date', width: 14 },
-      { header: 'UTILIDAD', key: 'utility', width: 14 },
-      { header: 'INGRESO A INVENTARIO', key: 'inventoryEntryDate', width: 18 },
       { header: 'Ciudad', key: 'city', width: 13 },
       { header: 'Tipo', key: 'type', width: 13 },
       { header: 'Estatus', key: 'status', width: 12 },
@@ -180,10 +176,6 @@ const exportExcel = async (req, res) => {
         debtsUpdateDate: formatDate(p.debtsUpdateDate),
         commercialPrice1: p.commercialPrice1 != null ? formatPrice(p.commercialPrice1) : '—',
         commercialPrice1Date: formatDate(p.commercialPrice1Date),
-        commercialPrice2: p.commercialPrice2 != null ? formatPrice(p.commercialPrice2) : '—',
-        commercialPrice2Date: formatDate(p.commercialPrice2Date),
-        utility: p.utility != null ? formatPrice(p.utility) : '—',
-        inventoryEntryDate: formatDate(p.inventoryEntryDate),
         city: cityLabel[p.city] || p.city,
         type: typeLabel[p.type] || p.type,
         status: statusLabel[p.status] || p.status,
@@ -279,6 +271,18 @@ const PDF_COLS = [
 ];
 const COL_IDX = Object.fromEntries(PDF_COLS.map((c, i) => [c.key, i]));
 
+// pdfkit: `lineBreak: false` NO evita el wrap a una 2ª línea cuando también se pasa
+// `width` (solo afecta si se calcula un width default), y `ellipsis: true` solo trunca si
+// además se pasa `height` (ver LineWrapper.wrap en pdfkit). Sin `height`, una celda con
+// texto más ancho que su columna (ej. una colonia larga) se envuelve a una 2ª línea real;
+// si eso empuja doc.y más allá del margen inferior, pdfkit inserta un salto de página
+// automático A MITAD DE LA FILA (LineWrapper.nextSection → continueOnNewPage), saltándose
+// el control manual de paginación del loop de abajo — así es como una fila terminaba
+// partida entre dos páginas. Pasar `height` de una línea activa el truncado con "…" y hace
+// que nextSection() retorne sin agregar página (pdfkit: `if (this.height != null) return
+// false`), forzando una sola línea real por celda.
+const PDF_CELL_TEXT_HEIGHT = 10;
+
 const drawPDFHeader = async (doc, properties, generatedAt, logoPath) => {
   doc.rect(0, 0, doc.page.width, 72).fill(PRIMARY);
 
@@ -322,7 +326,12 @@ const drawPDFTableHeader = (doc, y) => {
       .fillColor('white')
       .fontSize(7)
       .font('Helvetica-Bold')
-      .text(col.label, x + 3, y + 6, { width: col.width - 6, ellipsis: true, lineBreak: false });
+      .text(col.label, x + 3, y + 6, {
+        width: col.width - 6,
+        height: PDF_CELL_TEXT_HEIGHT,
+        ellipsis: true,
+        lineBreak: false,
+      });
     x += col.width;
   });
   return y + 20;
@@ -338,7 +347,12 @@ const drawPDFFooter = (doc) => {
       '© Triomphe Bienes Raíces — Documento generado automáticamente. Información sujeta a cambios sin previo aviso.',
       40,
       doc.page.height - 18,
-      { width: doc.page.width - 80, align: 'center' }
+      // `y` (page.height - 18) cae dentro del margen inferior del documento (margin: 40),
+      // fuera del maxY implícito de pdfkit (page.height - margins.bottom) — sin `height`,
+      // pdfkit interpreta que ya no hay espacio y agrega una página nueva casi en blanco
+      // solo para este texto (mismo mecanismo que partía las filas, ver PDF_CELL_TEXT_HEIGHT
+      // arriba). `height` evita ese salto de página fantasma.
+      { width: doc.page.width - 80, height: 14, align: 'center' }
     );
 };
 
@@ -446,7 +460,12 @@ const exportPDF = async (req, res) => {
           .fillColor(fillColor)
           .fontSize(7)
           .font(bold || isStatus ? 'Helvetica-Bold' : 'Helvetica')
-          .text(val, xPos, y + 7, { width: wid, ellipsis: true, lineBreak: false });
+          .text(val, xPos, y + 7, {
+            width: wid,
+            height: PDF_CELL_TEXT_HEIGHT,
+            ellipsis: true,
+            lineBreak: false,
+          });
       });
 
       doc
@@ -886,7 +905,12 @@ const drawWaitingListPDFTableHeader = (doc, y) => {
       .fillColor('white')
       .fontSize(7)
       .font('Helvetica-Bold')
-      .text(col.label, x + 3, y + 6, { width: col.width - 6, ellipsis: true, lineBreak: false });
+      .text(col.label, x + 3, y + 6, {
+        width: col.width - 6,
+        height: PDF_CELL_TEXT_HEIGHT,
+        ellipsis: true,
+        lineBreak: false,
+      });
     x += col.width;
   });
   return y + 20;
@@ -950,6 +974,7 @@ const exportWaitingListPDF = async (req, res) => {
           .font('Helvetica')
           .text(stripUnsupported(String(val)), xPositions[i] + 3, y + 6, {
             width: colDef.width - 6,
+            height: PDF_CELL_TEXT_HEIGHT,
             ellipsis: true,
             lineBreak: false,
           });
@@ -1115,7 +1140,12 @@ const drawCatalogPDFTableHeader = (doc, y, cols) => {
       .fillColor('white')
       .fontSize(7)
       .font('Helvetica-Bold')
-      .text(col.label, x + 3, y + 6, { width: col.width - 6, ellipsis: true, lineBreak: false });
+      .text(col.label, x + 3, y + 6, {
+        width: col.width - 6,
+        height: PDF_CELL_TEXT_HEIGHT,
+        ellipsis: true,
+        lineBreak: false,
+      });
     x += col.width;
   });
   return y + 20;
@@ -1179,6 +1209,7 @@ const exportCatalogPDF = async (req, res) => {
           .font('Helvetica')
           .text(stripUnsupported(String(val)), xPositions[colIdx] + 3, y + 6, {
             width: colDef.width - 6,
+            height: PDF_CELL_TEXT_HEIGHT,
             ellipsis: true,
             lineBreak: false,
           });

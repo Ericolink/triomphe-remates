@@ -36,6 +36,7 @@ async function createUser(overrides = {}) {
     role: overrides.role || 'admin',
     isActive: overrides.isActive ?? true,
     tokenVersion: overrides.tokenVersion ?? 0,
+    supervisorId: overrides.supervisorId ?? null,
   });
 }
 

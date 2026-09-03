@@ -15,6 +15,7 @@ const safeUser = (user) => ({
   profilePhoto: user.profilePhoto,
   lastLogin: user.lastLogin,
   createdAt: user.createdAt,
+  supervisorId: user.supervisorId,
 });
 
 /**
@@ -30,7 +31,26 @@ const safeUser = (user) => ({
  * Lanza un Error con `.code` ('INVALID_ROLE' | 'DUPLICATE_EMAIL') en vez de
  * responder HTTP directamente; el caller lo traduce al status code que ya usaba.
  */
-const createUser = async ({ name, email, password, role }, { audit } = {}) => {
+// Jerarquía coordinador_ventas -> asesor_ventas (ver User.supervisorId / leadAccess.js):
+// solo tiene sentido en un usuario asesor_ventas, y solo puede apuntar a un usuario que sea
+// coordinador_ventas. Lanza el mismo tipo de error tipado que el resto de este servicio.
+const resolveSupervisorId = async (supervisorId, resolvedRole) => {
+  if (!supervisorId) return null;
+  if (resolvedRole !== 'asesor_ventas') {
+    const err = new Error('El coordinador asignado solo aplica a usuarios con rol Asesor de ventas');
+    err.code = 'INVALID_SUPERVISOR';
+    throw err;
+  }
+  const supervisor = await User.findByPk(supervisorId);
+  if (!supervisor || supervisor.role !== 'coordinador_ventas') {
+    const err = new Error('El coordinador asignado no existe o no tiene el rol correcto');
+    err.code = 'INVALID_SUPERVISOR';
+    throw err;
+  }
+  return supervisor.id;
+};
+
+const createUser = async ({ name, email, password, role, supervisorId }, { audit } = {}) => {
   if (role && !VALID_ROLES.includes(role)) {
     const err = new Error(`Rol inválido. Valores permitidos: ${VALID_ROLES.join(', ')}`);
     err.code = 'INVALID_ROLE';
@@ -44,12 +64,16 @@ const createUser = async ({ name, email, password, role }, { audit } = {}) => {
     throw err;
   }
 
+  const resolvedRole = role || 'asistente_administrativo';
+  const resolvedSupervisorId = await resolveSupervisorId(supervisorId, resolvedRole);
+
   const hashedPassword = await hashPassword(password);
   const user = await User.create({
     name,
     email,
     password: hashedPassword,
-    role: role || 'asistente_administrativo',
+    role: resolvedRole,
+    supervisorId: resolvedSupervisorId,
   });
 
   if (typeof audit === 'function') audit(user);
@@ -57,4 +81,4 @@ const createUser = async ({ name, email, password, role }, { audit } = {}) => {
   return user;
 };
 
-module.exports = { createUser, safeUser, VALID_ROLES };
+module.exports = { createUser, safeUser, VALID_ROLES, resolveSupervisorId };
