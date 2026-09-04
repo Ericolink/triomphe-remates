@@ -165,6 +165,57 @@ const Property = sequelize.define(
       allowNull: true,
       comment: 'Tipo de proceso legal de adquisición (columna COFINAVIT/VIABILIDAD/TIPO)',
     },
+    // Desglose real de esa misma columna de la hoja de Excel ("COFINAVIT/VIABILIDAD/TIPO")
+    // en 3 campos independientes — ver migración 20260904000009. `legalProcessType` (arriba)
+    // no se toca, sigue existiendo para el Excel y datos ya capturados.
+    cofinavit: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      comment: 'Monto Cofinavit',
+    },
+    viabilidad: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+    },
+    tipo: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+      comment: 'Tipo (proceso legal) — texto libre, distinto de `type` (tipo de inmueble)',
+    },
+    // Re-agregados a pedido del negocio — existieron con este mismo nombre/tipo hasta que la
+    // migración 20260828000000 los quitó por "no usarse en la práctica".
+    template: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Plantilla — texto libre, no booleano',
+    },
+    cadastralPlan: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Plano catastral — texto libre, no booleano',
+    },
+    // Resto de la hoja maestra de Excel — ver migración 20260904000010. technicalSheet/
+    // zoneType/utility también son re-agregados (mismo caso que template/cadastralPlan);
+    // photoType es enteramente nuevo.
+    photoType: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Tipo de foto — texto libre, no booleano',
+    },
+    technicalSheet: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Ficha técnica — texto libre, no booleano',
+    },
+    zoneType: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    utility: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      comment: 'Utilidad — se captura a mano, no se calcula automáticamente',
+    },
     zone: {
       type: DataTypes.STRING(50),
       allowNull: true,

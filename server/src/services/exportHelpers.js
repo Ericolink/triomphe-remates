@@ -129,6 +129,7 @@ const getFilteredProperties = async (query) => {
       'id',
       'title',
       'city',
+      'state',
       'type',
       'status',
       'price',
@@ -160,6 +161,19 @@ const getFilteredProperties = async (query) => {
       'debtsUpdateDate',
       'commercialPrice1',
       'commercialPrice1Date',
+      // Desglose de "COFINAVIT/VIABILIDAD/TIPO" + Plantilla/Plano catastral — usados por el
+      // PDF de inventario (ver PDF_COLS en exportController.js).
+      'cofinavit',
+      'viabilidad',
+      'tipo',
+      'template',
+      'cadastralPlan',
+      // Resto de la hoja maestra de Excel — usados por exportExcel (ver headers en
+      // exportController.js).
+      'photoType',
+      'technicalSheet',
+      'zoneType',
+      'utility',
     ],
     include: [
       {

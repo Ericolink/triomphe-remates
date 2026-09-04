@@ -246,6 +246,33 @@ const FIELDS = [
     col: 1,
     section: 'legal',
   },
+  // Desglose de la columna "COFINAVIT/VIABILIDAD/TIPO" de la hoja de Excel en 3 campos
+  // reales — legalProcessType (arriba) no se toca, se deja como está.
+  { key: 'cofinavit', label: 'Cofinavit (opcional)', type: 'number', col: 1, section: 'legal' },
+  { key: 'viabilidad', label: 'Viabilidad (opcional)', type: 'text', col: 1, section: 'legal' },
+  { key: 'tipo', label: 'Tipo (opcional)', type: 'text', col: 1, section: 'legal' },
+  // Re-agregados a pedido del negocio — existieron antes y se habían quitado por no usarse.
+  { key: 'template', label: 'Plantilla (opcional)', type: 'text', col: 1, section: 'legal' },
+  {
+    key: 'cadastralPlan',
+    label: 'Plano catastral (opcional)',
+    type: 'text',
+    col: 1,
+    section: 'legal',
+  },
+  // Resto de la hoja maestra de Excel del negocio (ver headers de exportExcel en
+  // exportController.js) — technicalSheet/zoneType/utility también son re-agregados (mismo
+  // caso que template/cadastralPlan); photoType es enteramente nuevo.
+  { key: 'photoType', label: 'Tipo de foto (opcional)', type: 'text', col: 1, section: 'legal' },
+  {
+    key: 'technicalSheet',
+    label: 'Ficha técnica (opcional)',
+    type: 'text',
+    col: 1,
+    section: 'legal',
+  },
+  { key: 'zoneType', label: 'Tipo de zona (opcional)', type: 'text', col: 1, section: 'legal' },
+  { key: 'utility', label: 'Utilidad (opcional)', type: 'number', col: 1, section: 'legal' },
 ];
 
 const CITY_CODE_PREFIX = { juarez: 'JRCH-', chihuahua: 'CHCH-', queretaro: 'QRQR-' };
@@ -288,6 +315,15 @@ const emptyForm = {
   debtsUpdateDate: '',
   commercialPrice1: '',
   commercialPrice1Date: '',
+  cofinavit: '',
+  viabilidad: '',
+  tipo: '',
+  template: '',
+  cadastralPlan: '',
+  photoType: '',
+  technicalSheet: '',
+  zoneType: '',
+  utility: '',
   showLocationInfo: true,
   showDetailsInfo: true,
   showAuctionInfo: true,
@@ -336,6 +372,15 @@ const propertyToForm = (p) => ({
   commercialPrice1Date: p.commercialPrice1Date
     ? new Date(p.commercialPrice1Date).toISOString().split('T')[0]
     : '',
+  cofinavit: p.cofinavit ?? '',
+  viabilidad: p.viabilidad || '',
+  tipo: p.tipo || '',
+  template: p.template || '',
+  cadastralPlan: p.cadastralPlan || '',
+  photoType: p.photoType || '',
+  technicalSheet: p.technicalSheet || '',
+  zoneType: p.zoneType || '',
+  utility: p.utility ?? '',
   showLocationInfo: p.showLocationInfo ?? true,
   showDetailsInfo: p.showDetailsInfo ?? true,
   showAuctionInfo: p.showAuctionInfo ?? true,

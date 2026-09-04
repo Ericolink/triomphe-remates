@@ -412,6 +412,15 @@ const createProperty = async (req, res) => {
     debtsUpdateDate,
     commercialPrice1,
     commercialPrice1Date,
+    cofinavit,
+    viabilidad,
+    tipo,
+    template,
+    cadastralPlan,
+    photoType,
+    technicalSheet,
+    zoneType,
+    utility,
     showLocationInfo,
     showDetailsInfo,
     showAuctionInfo,
@@ -480,6 +489,15 @@ const createProperty = async (req, res) => {
         debtsUpdateDate: debtsUpdateDate || null,
         commercialPrice1: nullIfEmpty(commercialPrice1),
         commercialPrice1Date: commercialPrice1Date || null,
+        cofinavit: nullIfEmpty(cofinavit),
+        viabilidad: nullIfEmpty(viabilidad),
+        tipo: nullIfEmpty(tipo),
+        template: nullIfEmpty(template),
+        cadastralPlan: nullIfEmpty(cadastralPlan),
+        photoType: nullIfEmpty(photoType),
+        technicalSheet: nullIfEmpty(technicalSheet),
+        zoneType: nullIfEmpty(zoneType),
+        utility: nullIfEmpty(utility),
         showLocationInfo: showLocationInfo ?? true,
         showDetailsInfo: showDetailsInfo ?? true,
         showAuctionInfo: showAuctionInfo ?? true,
@@ -564,6 +582,15 @@ const updateProperty = async (req, res) => {
     debtsUpdateDate,
     commercialPrice1,
     commercialPrice1Date,
+    cofinavit,
+    viabilidad,
+    tipo,
+    template,
+    cadastralPlan,
+    photoType,
+    technicalSheet,
+    zoneType,
+    utility,
     showLocationInfo,
     showDetailsInfo,
     showAuctionInfo,
@@ -636,6 +663,15 @@ const updateProperty = async (req, res) => {
   if (commercialPrice1 !== undefined) updates.commercialPrice1 = nullIfEmpty(commercialPrice1);
   if (commercialPrice1Date !== undefined)
     updates.commercialPrice1Date = commercialPrice1Date || null;
+  if (cofinavit !== undefined) updates.cofinavit = nullIfEmpty(cofinavit);
+  if (viabilidad !== undefined) updates.viabilidad = nullIfEmpty(viabilidad);
+  if (tipo !== undefined) updates.tipo = nullIfEmpty(tipo);
+  if (template !== undefined) updates.template = nullIfEmpty(template);
+  if (cadastralPlan !== undefined) updates.cadastralPlan = nullIfEmpty(cadastralPlan);
+  if (photoType !== undefined) updates.photoType = nullIfEmpty(photoType);
+  if (technicalSheet !== undefined) updates.technicalSheet = nullIfEmpty(technicalSheet);
+  if (zoneType !== undefined) updates.zoneType = nullIfEmpty(zoneType);
+  if (utility !== undefined) updates.utility = nullIfEmpty(utility);
   if (showLocationInfo !== undefined) updates.showLocationInfo = showLocationInfo;
   if (showDetailsInfo !== undefined) updates.showDetailsInfo = showDetailsInfo;
   if (showAuctionInfo !== undefined) updates.showAuctionInfo = showAuctionInfo;

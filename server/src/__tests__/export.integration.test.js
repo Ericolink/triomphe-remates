@@ -5,7 +5,7 @@ const app = require('../../app');
 const { sequelize, Property, Lead, User, AuditLog } = require('../models/index');
 const { createUser, authToken, createProperty, createLead } = require('./helpers/factories');
 const { formatPrice, formatDate, dash } = require('../services/exportHelpers');
-const { CITY_LABEL, PROPERTY_TYPE_LABEL, STATUS_LABEL } = require('../utils/labels');
+const { CITY_LABEL, PROPERTY_TYPE_LABEL } = require('../utils/labels');
 const { statusArgb } = require('../services/exportBranding');
 
 // supertest/superagent no traen un parser binario por defecto para xlsx/pdf — sin esto,
@@ -59,6 +59,7 @@ describe('exportController', () => {
     test('estructura, encabezados, formato de precio (incl. PENDIENTE) y campos faltantes', async () => {
       const withEverything = await createProperty({
         title: 'Casa completa',
+        code: 'CASA-COMPLETA',
         city: 'chihuahua',
         type: 'casa',
         status: 'disponible',
@@ -71,6 +72,7 @@ describe('exportController', () => {
       });
       const pendingPrice = await createProperty({
         title: 'Terreno en remate',
+        code: 'TERRENO-REMATE',
         city: 'juarez',
         type: 'terreno',
         status: 'apartado',
@@ -92,62 +94,68 @@ describe('exportController', () => {
       const headerRow = sheet.getRow(3).values.filter(Boolean);
       expect(headerRow).toEqual([
         '#',
-        'Título',
-        'CALLE',
-        'NUMERO',
+        'Estado',
+        'Ciudad',
+        'Foto',
+        'Tipo de inmueble',
+        'Calle',
+        'Número',
         'LT',
         'MZ',
-        'COLONIA',
-        'CODIGO POSTAL',
-        'MTS. T',
-        'MTS. C',
-        'PORTAFOLIO',
-        'COFINAVIT/VIABILIDAD/TIPO',
-        'PRECIO VENTA',
-        'CLAVE DE BUSQUEDA',
-        'OBSERVACIONES',
-        'FOTO',
-        'ZONA',
-        'ADEUDO AGUA',
-        'ADEUDO LUZ',
-        'ADEUDO PREDIAL',
-        'ADEUDOS ACTUALIZADO',
-        'Precio comercial 1',
-        'Fecha comercial 1',
-        'Ciudad',
+        'Colonia',
+        'Código Postal',
+        'M²T',
+        'M²C',
+        'Portafolio',
+        'Cofinavit',
+        'Viabilidad',
         'Tipo',
-        'Estatus',
+        'Precio',
+        'Plantilla',
+        'Clave',
+        'Plano Catastral',
+        'Observaciones',
+        'Tipo de Foto',
+        'Ficha Técnica',
+        'Zona',
+        'Tipo de zona',
+        'Precio comercial',
+        'Utilidad',
+        'Adeudo Agua',
+        'Adeudo Luz',
+        'Adeudo Predial',
+        'Adeudos Actualizado',
         'Recámaras',
         'Baños',
-        'Fecha alta',
-        'Última modif.',
+        'Fecha Alta',
+        'Última Modificación',
       ]);
 
       // No asume orden de filas por índice: el ORDER BY city ASC de MySQL ordena por el
       // índice de declaración del ENUM ('juarez','chihuahua','queretaro'), no alfabético —
-      // se busca cada fila por su título en vez de fijar la posición.
-      const findRowByTitle = (title) => {
+      // se busca cada fila por su clave (Título ya no es columna de este export) en vez de
+      // fijar la posición.
+      const findRowByCode = (code) => {
         for (let i = 4; i <= sheet.rowCount; i++) {
           const row = sheet.getRow(i);
-          if (row.values[2] === title) return row.values;
+          if (row.values[20] === code) return row.values; // 20 = Clave
         }
         return null;
       };
 
-      const completa = findRowByTitle('Casa completa');
-      expect(completa[3]).toBe('Av. Siempre Viva 123'); // CALLE
-      expect(completa[9]).toBe('300.00 m²'); // MTS. T — DECIMAL(8,2) vuelve como string desde MySQL
-      expect(completa[13]).toBe(formatPrice(1250000)); // PRECIO VENTA
-      expect(completa[24]).toBe(CITY_LABEL.chihuahua);
-      expect(completa[25]).toBe(PROPERTY_TYPE_LABEL.casa);
-      expect(completa[26]).toBe(STATUS_LABEL.disponible);
-      expect(completa[29]).toBe(formatDate(withEverything.createdAt)); // Fecha alta, dd/mm/aaaa no ISO
+      const completa = findRowByCode('CASA-COMPLETA');
+      expect(completa[6]).toBe('Av. Siempre Viva 123'); // Calle
+      expect(completa[12]).toBe('300.00 m²'); // M²T — DECIMAL(8,2) vuelve como string desde MySQL
+      expect(completa[18]).toBe(formatPrice(1250000)); // Precio
+      expect(completa[3]).toBe(CITY_LABEL.chihuahua);
+      expect(completa[5]).toBe(PROPERTY_TYPE_LABEL.casa);
+      expect(completa[35]).toBe(formatDate(withEverything.createdAt)); // Fecha Alta, dd/mm/aaaa no ISO
 
-      const pendiente = findRowByTitle('Terreno en remate');
-      expect(pendiente[9]).toBe(dash(null)); // '—' cuando no hay MTS. T
-      expect(pendiente[13]).toBe('PENDIENTE'); // price: null — regla de dominio, no un error
-      expect(pendiente[24]).toBe(CITY_LABEL.juarez);
-      expect(pendiente[27]).toBe(dash(null)); // recámaras faltantes
+      const pendiente = findRowByCode('TERRENO-REMATE');
+      expect(pendiente[12]).toBe(dash(null)); // '—' cuando no hay M²T
+      expect(pendiente[18]).toBe('PENDIENTE'); // price: null — regla de dominio, no un error
+      expect(pendiente[3]).toBe(CITY_LABEL.juarez);
+      expect(pendiente[33]).toBe(dash(null)); // recámaras faltantes
 
       const totalRow = sheet.getRow(sheet.rowCount).values;
       expect(totalRow[2]).toBe('TOTAL: 2 propiedades');
@@ -202,16 +210,18 @@ describe('exportController', () => {
       const workbook = await readWorkbook(res.body);
       const sheet = workbook.getWorksheet('Inventario');
       expect(sheet.rowCount - 4).toBe(1);
-      expect(sheet.getRow(4).values[24]).toBe(CITY_LABEL.chihuahua);
+      expect(sheet.getRow(4).values[3]).toBe(CITY_LABEL.chihuahua); // 3 = Ciudad
     });
 
     test('caracteres especiales y acentos se preservan tal cual (Excel no los recorta)', async () => {
-      await createProperty({ title: "Ñoño's Café — Depto. 🏡 <especial>" });
+      // Título ya no es columna de este export — se prueba con Observaciones
+      // (internalNotes), que se vuelca sin transformación.
+      await createProperty({ internalNotes: "Ñoño's Café — Depto. 🏡 <especial>" });
 
       const res = await authed('/api/export/excel');
       const workbook = await readWorkbook(res.body);
       const sheet = workbook.getWorksheet('Inventario');
-      expect(sheet.getRow(4).values[2]).toBe("Ñoño's Café — Depto. 🏡 <especial>");
+      expect(sheet.getRow(4).values[22]).toBe("Ñoño's Café — Depto. 🏡 <especial>"); // 22 = Observaciones
     });
   });
 
@@ -285,8 +295,10 @@ describe('exportController', () => {
 
   describe('GET /api/export/pdf — inventario en PDF', () => {
     test('incluye encabezado de marca, total y precios formateados', async () => {
-      await createProperty({ title: 'Casa con precio', price: 950000 });
-      await createProperty({ title: 'Casa sin precio', price: null });
+      // El PDF de inventario no incluye columna de Título (ver PDF_COLS en
+      // exportController.js) — se distinguen las 2 filas por su clave (`code`).
+      await createProperty({ title: 'Casa con precio', code: 'CODIGO-A', price: 950000 });
+      await createProperty({ title: 'Casa sin precio', code: 'CODIGO-B', price: null });
 
       const res = await authed('/api/export/pdf');
       expect(res.status).toBe(200);
@@ -295,8 +307,8 @@ describe('exportController', () => {
       const { text } = await readPdfText(res.body);
       expect(text).toMatch(/TRIOMPHE BIENES RA[ÍI]CES/);
       expect(text).toMatch(/2 propiedades/);
-      expect(text).toContain('Casa con precio');
-      expect(text).toContain('Casa sin precio');
+      expect(text).toContain('CODIGO-A');
+      expect(text).toContain('CODIGO-B');
       expect(text).toMatch(/PENDIENTE/);
       expect(text).toContain(formatPrice(950000));
     });

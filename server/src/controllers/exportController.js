@@ -5,9 +5,7 @@ const { Property, Feedback, Lead, PropertyAlert } = require('../models/index');
 const {
   CITY_LABEL: cityLabel,
   PROPERTY_TYPE_LABEL: typeLabel,
-  STATUS_LABEL: statusLabel,
   LEAD_TYPE_LABEL: leadTypeLabel,
-  LEGAL_PROCESS_TYPE_LABEL: legalProcessTypeLabel,
   BUSINESS_LINE_LABEL: businessLineLabel,
   LEAD_URGENCY_LABEL: leadUrgencyLabel,
 } = require('../utils/labels');
@@ -32,8 +30,6 @@ const {
   TEXT_ARGB,
   ST_GREEN_ARGB,
   ST_YELLOW_ARGB,
-  statusArgb,
-  statusHex,
 } = require('../services/exportBranding');
 const { formatLongDateTime } = require('../utils/formatters');
 const {
@@ -80,57 +76,53 @@ const exportExcel = async (req, res) => {
       pageSetup: { paperSize: 9, orientation: 'landscape' },
     });
 
-    // Orden: columnas de la hoja maestra de inventario del negocio (ver captura del pedido
-    // original), usando los campos reales donde ya existían (Calle→address, Número→
-    // propertyNumber, etc.), seguidas de las columnas que el export ya tenía y que no
-    // están en esa hoja (Ciudad/Tipo/Estatus/Recámaras/Baños/fechas) — y sin "Visitas".
-    // "Título" se mantiene junto a "#" porque, aunque no es una columna de la hoja
-    // maestra, sigue siendo el identificador principal de cada fila.
-    //
-    // Los encabezados de las columnas que sí vienen de la hoja maestra usan el texto
-    // EXACTO de esa hoja (mayúsculas, sin acentos donde la hoja tampoco los tiene) —
-    // pedido explícito, no una libertad de estilo. "Precio comercial N"/"Fecha comercial
-    // N" son la excepción: en la hoja original ese encabezado trae una fecha fija
-    // ("PRECIO COMERCIAL 16/02/2026"), pero acá la fecha varía por propiedad (columna
-    // aparte), así que un encabezado fijo con una sola fecha sería engañoso para el resto
-    // de las filas.
+    // Orden exacto pedido por el negocio (35 columnas de la hoja maestra de inventario,
+    // este orden específico) — reemplaza el orden anterior en bloques (columnas del Excel
+    // original + "extras" al final); ya no incluye Título ni Estatus, que no están en este
+    // pedido. `legalProcessType` tampoco aparece aquí — sigue existiendo en el modelo pero
+    // esta hoja usa su desglose real (Cofinavit/Viabilidad/Tipo, ver Property.js).
     const headers = [
       { header: '#', key: 'num', width: 5 },
-      { header: 'Título', key: 'title', width: 30 },
-      { header: 'CALLE', key: 'address', width: 26 },
-      { header: 'NUMERO', key: 'propertyNumber', width: 10 },
+      { header: 'Estado', key: 'state', width: 14 },
+      { header: 'Ciudad', key: 'city', width: 13 },
+      { header: 'Foto', key: 'photo', width: 8 },
+      { header: 'Tipo de inmueble', key: 'type', width: 16 },
+      { header: 'Calle', key: 'address', width: 26 },
+      { header: 'Número', key: 'propertyNumber', width: 10 },
       { header: 'LT', key: 'lot', width: 8 },
       { header: 'MZ', key: 'block', width: 8 },
-      { header: 'COLONIA', key: 'colonia', width: 20 },
-      { header: 'CODIGO POSTAL', key: 'postalCode', width: 12 },
-      { header: 'MTS. T', key: 'terrainMeters', width: 12 },
-      { header: 'MTS. C', key: 'constructionMeters', width: 16 },
-      { header: 'PORTAFOLIO', key: 'portfolio', width: 11 },
-      { header: 'COFINAVIT/VIABILIDAD/TIPO', key: 'legalProcessType', width: 20 },
-      { header: 'PRECIO VENTA', key: 'price', width: 16 },
-      { header: 'CLAVE DE BUSQUEDA', key: 'code', width: 14 },
-      { header: 'OBSERVACIONES', key: 'internalNotes', width: 30 },
-      { header: 'FOTO', key: 'photo', width: 8 },
-      { header: 'ZONA', key: 'zone', width: 12 },
-      { header: 'ADEUDO AGUA', key: 'waterDebt', width: 14 },
-      { header: 'ADEUDO LUZ', key: 'electricityDebt', width: 14 },
-      { header: 'ADEUDO PREDIAL', key: 'propertyTaxDebt', width: 14 },
-      { header: 'ADEUDOS ACTUALIZADO', key: 'debtsUpdateDate', width: 16 },
-      { header: 'Precio comercial 1', key: 'commercialPrice1', width: 16 },
-      { header: 'Fecha comercial 1', key: 'commercialPrice1Date', width: 14 },
-      { header: 'Ciudad', key: 'city', width: 13 },
-      { header: 'Tipo', key: 'type', width: 13 },
-      { header: 'Estatus', key: 'status', width: 12 },
+      { header: 'Colonia', key: 'colonia', width: 20 },
+      { header: 'Código Postal', key: 'postalCode', width: 12 },
+      { header: 'M²T', key: 'terrainMeters', width: 12 },
+      { header: 'M²C', key: 'constructionMeters', width: 16 },
+      { header: 'Portafolio', key: 'portfolio', width: 11 },
+      { header: 'Cofinavit', key: 'cofinavit', width: 14 },
+      { header: 'Viabilidad', key: 'viabilidad', width: 18 },
+      { header: 'Tipo', key: 'tipo', width: 16 },
+      { header: 'Precio', key: 'price', width: 16 },
+      { header: 'Plantilla', key: 'template', width: 16 },
+      { header: 'Clave', key: 'code', width: 14 },
+      { header: 'Plano Catastral', key: 'cadastralPlan', width: 16 },
+      { header: 'Observaciones', key: 'internalNotes', width: 30 },
+      { header: 'Tipo de Foto', key: 'photoType', width: 14 },
+      { header: 'Ficha Técnica', key: 'technicalSheet', width: 16 },
+      { header: 'Zona', key: 'zone', width: 12 },
+      { header: 'Tipo de zona', key: 'zoneType', width: 14 },
+      { header: 'Precio comercial', key: 'commercialPrice1', width: 16 },
+      { header: 'Utilidad', key: 'utility', width: 14 },
+      { header: 'Adeudo Agua', key: 'waterDebt', width: 14 },
+      { header: 'Adeudo Luz', key: 'electricityDebt', width: 14 },
+      { header: 'Adeudo Predial', key: 'propertyTaxDebt', width: 14 },
+      { header: 'Adeudos Actualizado', key: 'debtsUpdateDate', width: 16 },
       { header: 'Recámaras', key: 'bedrooms', width: 11 },
       { header: 'Baños', key: 'bathrooms', width: 9 },
-      { header: 'Fecha alta', key: 'createdAt', width: 13 },
-      { header: 'Última modif.', key: 'updatedAt', width: 13 },
+      { header: 'Fecha Alta', key: 'createdAt', width: 13 },
+      { header: 'Última Modificación', key: 'updatedAt', width: 15 },
     ];
     sheet.columns = headers;
     // Posiciones (1-based) usadas por el coloreado de celdas más abajo — recalcular si se
     // vuelve a reordenar `headers`.
     const PRICE_COL = headers.findIndex((h) => h.key === 'price') + 1;
-    const STATUS_COL = headers.findIndex((h) => h.key === 'status') + 1;
     const PHOTO_COL = headers.findIndex((h) => h.key === 'photo'); // 0-based, para addImage
 
     await buildExcelHeader({
@@ -154,7 +146,12 @@ const exportExcel = async (req, res) => {
       const isAlt = i % 2 === 0;
       const row = sheet.addRow({
         num: i + 1,
-        title: dash(p.title),
+        state: dash(p.state),
+        city: cityLabel[p.city] || p.city,
+        // La imagen (si existe) se dibuja aparte, encima de esta celda — texto vacío para
+        // no competir visualmente con ella; "—" solo cuando de verdad no hay foto.
+        photo: coverBuffers[i] ? '' : dash(null),
+        type: typeLabel[p.type] || p.type,
         address: dash(p.address),
         propertyNumber: dash(p.propertyNumber),
         lot: dash(p.lot),
@@ -164,23 +161,24 @@ const exportExcel = async (req, res) => {
         terrainMeters: p.terrainMeters ? `${p.terrainMeters} m²` : '—',
         constructionMeters: p.constructionMeters ? `${p.constructionMeters} m²` : '—',
         portfolio: dash(p.portfolio),
-        legalProcessType: legalProcessTypeLabel[p.legalProcessType] || dash(p.legalProcessType),
+        cofinavit: p.cofinavit != null ? formatPrice(p.cofinavit) : '—',
+        viabilidad: dash(p.viabilidad),
+        tipo: dash(p.tipo),
         price: formatPrice(p.price),
+        template: dash(p.template),
         code: dash(p.code),
+        cadastralPlan: dash(p.cadastralPlan),
         internalNotes: dash(p.internalNotes),
-        // La imagen (si existe) se dibuja aparte, encima de esta celda — texto vacío para
-        // no competir visualmente con ella; "—" solo cuando de verdad no hay foto.
-        photo: coverBuffers[i] ? '' : dash(null),
+        photoType: dash(p.photoType),
+        technicalSheet: dash(p.technicalSheet),
         zone: dash(p.zone),
+        zoneType: dash(p.zoneType),
+        commercialPrice1: p.commercialPrice1 != null ? formatPrice(p.commercialPrice1) : '—',
+        utility: p.utility != null ? formatPrice(p.utility) : '—',
         waterDebt: dash(p.waterDebt),
         electricityDebt: dash(p.electricityDebt),
         propertyTaxDebt: dash(p.propertyTaxDebt),
         debtsUpdateDate: formatDate(p.debtsUpdateDate),
-        commercialPrice1: p.commercialPrice1 != null ? formatPrice(p.commercialPrice1) : '—',
-        commercialPrice1Date: formatDate(p.commercialPrice1Date),
-        city: cityLabel[p.city] || p.city,
-        type: typeLabel[p.type] || p.type,
-        status: statusLabel[p.status] || p.status,
         bedrooms: dash(p.bedrooms),
         bathrooms: dash(p.bathrooms),
         createdAt: formatDate(p.createdAt),
@@ -210,16 +208,12 @@ const exportExcel = async (req, res) => {
         });
       }
 
-      row.getCell(STATUS_COL).font = {
-        bold: true,
-        size: 9,
-        color: { argb: statusArgb[p.status] || TEXT_ARGB },
-      };
       row.getCell(PRICE_COL).font = { bold: true, size: 9, color: { argb: PRIMARY_ARGB } };
     });
 
-    // Fila total
-    const totalRow = sheet.addRow({ num: '', title: `TOTAL: ${properties.length} propiedades` });
+    // Fila total — en la 2ª columna ("Estado", ver headers) porque ya no hay columna
+    // "Título" a la que anclarlo.
+    const totalRow = sheet.addRow({ num: '', state: `TOTAL: ${properties.length} propiedades` });
     totalRow.height = 20;
     totalRow.eachCell((cell) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
@@ -244,32 +238,36 @@ const exportExcel = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // PDF
 // ─────────────────────────────────────────────────────────────────────────────
-// Mismo set de campos que el Excel (ver exportExcel), salvo los que el negocio pidió
-// excluir del PDF explícitamente: Calle, Número, LT, MZ, Observaciones, Zona, adeudos
-// (agua/luz/predial/fecha), Precio/Fecha comercial ×2, Utilidad, Ingreso a inventario — con
-// esos fuera, las 17 columnas restantes sí caben en una página A4 horizontal legible (762pt
-// de ancho útil = page.width 842pt − 40pt de margen a cada lado). `key` liga cada columna a
-// su campo real; `COL_IDX` (más abajo) resuelve la posición por key en vez de un índice
-// fijo, para no repetir el bug de columnas que cambiaban de significado al reordenar (ver
-// exportExcel/PRICE_COL/STATUS_COL).
+// Set de columnas del PDF de inventario pedido explícitamente por el negocio, en este orden
+// exacto — 20 columnas ajustadas para caber en una página A4 horizontal (762pt de ancho útil
+// = page.width 842pt − 40pt de margen a cada lado). Hay 2 columnas con key distinto pero
+// label "Tipo": `type` (tipo de inmueble: casa/departamento/...) y `tipo` (proceso legal,
+// texto libre — ver Property.tipo/cofinavit/viabilidad, desglose de lo que antes era una
+// sola columna combinada "COFINAVIT/VIABILIDAD/TIPO", ver legalProcessType). `key` liga cada
+// columna a su campo real; `COL_IDX` (más abajo) resuelve la posición por key en vez de un
+// índice fijo, para no repetir el bug de columnas que cambiaban de significado al reordenar
+// (ver exportExcel/PRICE_COL/STATUS_COL).
 const PDF_COLS = [
-  { key: 'title', label: 'Título', width: 78 },
-  { key: 'colonia', label: 'Colonia', width: 44 },
-  { key: 'postalCode', label: 'C.P.', width: 30 },
-  { key: 'terrainMeters', label: 'M² Terr.', width: 36 },
-  { key: 'constructionMeters', label: 'M² Constr.', width: 38 },
-  { key: 'portfolio', label: 'Portafolio', width: 36 },
-  { key: 'legalProcessType', label: 'Proceso legal', width: 46 },
-  { key: 'price', label: 'Precio venta', width: 58 },
-  { key: 'code', label: 'Clave búsq.', width: 42 },
-  { key: 'photo', label: 'Foto', width: 34 },
-  { key: 'city', label: 'Ciudad', width: 42 },
-  { key: 'type', label: 'Tipo', width: 36 },
-  { key: 'status', label: 'Estatus', width: 42 },
-  { key: 'bedrooms', label: 'Recám.', width: 26 },
-  { key: 'bathrooms', label: 'Baños', width: 22 },
-  { key: 'createdAt', label: 'Alta', width: 36 },
-  { key: 'updatedAt', label: 'Modif.', width: 36 },
+  { key: 'state', label: 'Estado', width: 32 },
+  { key: 'city', label: 'Ciudad', width: 32 },
+  { key: 'photo', label: 'Foto', width: 30 },
+  { key: 'type', label: 'Tipo', width: 40 },
+  { key: 'address', label: 'Calle', width: 50 },
+  { key: 'propertyNumber', label: 'Número', width: 33 },
+  { key: 'lot', label: 'LT', width: 20 },
+  { key: 'block', label: 'MZ', width: 20 },
+  { key: 'colonia', label: 'Colonia', width: 34 },
+  { key: 'postalCode', label: 'Código Postal', width: 56 },
+  { key: 'terrainMeters', label: 'M²T', width: 34 },
+  { key: 'constructionMeters', label: 'M²C', width: 34 },
+  { key: 'portfolio', label: 'Portafolio', width: 40 },
+  { key: 'cofinavit', label: 'Confinavit', width: 44 },
+  { key: 'viabilidad', label: 'Viabilidad', width: 44 },
+  { key: 'tipo', label: 'Tipo', width: 34 },
+  { key: 'price', label: 'Precio', width: 50 },
+  { key: 'template', label: 'Plantilla', width: 33 },
+  { key: 'code', label: 'Clave', width: 44 },
+  { key: 'cadastralPlan', label: 'Plano Catastral', width: 58 },
 ];
 const COL_IDX = Object.fromEntries(PDF_COLS.map((c, i) => [c.key, i]));
 
@@ -282,7 +280,13 @@ const COL_IDX = Object.fromEntries(PDF_COLS.map((c, i) => [c.key, i]));
 // el control manual de paginación del loop de abajo — así es como una fila terminaba
 // partida entre dos páginas. Pasar `height` de una línea activa el truncado con "…" y hace
 // que nextSection() retorne sin agregar página (pdfkit: `if (this.height != null) return
-// false`), forzando una sola línea real por celda.
+// false`), forzando una sola línea real por celda. Esto sigue aplicando a encabezados de
+// tabla y pie de página (una sola línea, ancho fijo conocido de antemano). Las FILAS de
+// datos del inventario (ver exportPDF más abajo) usan la estrategia inversa a propósito:
+// sin `height`/`ellipsis`, dejando que el texto se envuelva, y calculando el alto real de
+// cada fila ANTES de dibujarla (con `doc.heightOfString`) para que la fila completa —
+// título largo incluido — quepa siempre dentro del margen inferior sin disparar ese salto
+// de página automático ni cortar texto (pedido: "quiero que se vea todo el texto").
 const PDF_CELL_TEXT_HEIGHT = 10;
 
 const drawPDFHeader = async (doc, properties, generatedAt, logoPath) => {
@@ -393,36 +397,23 @@ const exportPDF = async (req, res) => {
     // una adentro del for de abajo sería secuencial y volvería lento un inventario grande.
     const coverBuffers = await Promise.all(properties.map((p) => getCoverThumbnailBuffer(p)));
 
-    const ROW_H = 26; // antes 22 — la miniatura de portada necesita algo más de alto para leerse
+    const MIN_ROW_H = 26; // antes ROW_H fijo — ahora es el piso: alcanza para la miniatura de
+    // portada aunque el texto de la fila quepa en una sola línea.
+    const ROW_V_PADDING = 14; // espacio vertical libre arriba+abajo del texto dentro de la celda
 
     for (let i = 0; i < properties.length; i++) {
       const p = properties.at(i);
 
-      if (y + ROW_H > doc.page.height - 40) {
-        drawPDFFooter(doc);
-        doc.addPage({ layout: 'landscape' });
-        await drawPDFHeader(doc, properties, generatedAt, logoPath);
-        y = drawPDFTableHeader(doc, 80);
-      }
-
-      doc.rect(40, y, doc.page.width - 80, ROW_H).fill(i % 2 === 0 ? BG_ALT : '#ffffff');
-
-      // Foto de portada — ya viene recortada a cuadrado desde Cloudinary (buildThumbnailUrl),
-      // así que solo hace falta centrarla dentro de su columna, sin distorsión ni desborde.
-      const photoBuf = coverBuffers[i];
-      if (photoBuf) {
-        try {
-          const colDef = PDF_COLS[COL_IDX.photo];
-          const thumbSize = ROW_H - 4;
-          const thumbX = xPositions[COL_IDX.photo] + (colDef.width - thumbSize) / 2;
-          doc.image(photoBuf, thumbX, y + 2, { width: thumbSize, height: thumbSize });
-        } catch {
-          /* ignorado */
-        }
-      }
-
       const rowData = [
-        { val: dash(p.title), col: COL_IDX.title },
+        // Sin entrada para "photo": esa columna se llena dibujando la miniatura arriba,
+        // no como texto (si no hay foto, la celda simplemente queda vacía).
+        { val: dash(p.state), col: COL_IDX.state },
+        { val: cityLabel[p.city] || p.city, col: COL_IDX.city },
+        { val: typeLabel[p.type] || p.type, col: COL_IDX.type },
+        { val: dash(p.address), col: COL_IDX.address },
+        { val: dash(p.propertyNumber), col: COL_IDX.propertyNumber },
+        { val: dash(p.lot), col: COL_IDX.lot },
+        { val: dash(p.block), col: COL_IDX.block },
         { val: dash(p.colonia), col: COL_IDX.colonia },
         { val: dash(p.postalCode), col: COL_IDX.postalCode },
         {
@@ -434,40 +425,67 @@ const exportPDF = async (req, res) => {
           col: COL_IDX.constructionMeters,
         },
         { val: dash(p.portfolio), col: COL_IDX.portfolio },
-        {
-          val: legalProcessTypeLabel[p.legalProcessType] || dash(p.legalProcessType),
-          col: COL_IDX.legalProcessType,
-        },
+        { val: p.cofinavit != null ? formatPrice(p.cofinavit) : '—', col: COL_IDX.cofinavit },
+        { val: dash(p.viabilidad), col: COL_IDX.viabilidad },
+        { val: dash(p.tipo), col: COL_IDX.tipo },
         { val: formatPrice(p.price), col: COL_IDX.price, bold: true, color: PRIMARY },
+        { val: dash(p.template), col: COL_IDX.template },
         { val: dash(p.code), col: COL_IDX.code },
-        // Sin entrada para "photo": esa columna se llena dibujando la miniatura arriba,
-        // no como texto (si no hay foto, la celda simplemente queda vacía).
-        { val: cityLabel[p.city] || p.city, col: COL_IDX.city },
-        { val: typeLabel[p.type] || p.type, col: COL_IDX.type },
-        { val: statusLabel[p.status] || p.status, col: COL_IDX.status, isStatus: true },
-        { val: dash(p.bedrooms), col: COL_IDX.bedrooms },
-        { val: dash(p.bathrooms), col: COL_IDX.bathrooms },
-        { val: formatDate(p.createdAt), col: COL_IDX.createdAt },
-        { val: formatDate(p.updatedAt), col: COL_IDX.updatedAt },
+        { val: dash(p.cadastralPlan), col: COL_IDX.cadastralPlan },
       ];
 
-      rowData.forEach(({ val, col, isStatus, bold, color }) => {
+      // Alto real de la fila: en vez de truncar con "…", el texto que no cabe en una línea
+      // se envuelve a varias (ver `doc.text` más abajo, sin `ellipsis`/`lineBreak: false`) y
+      // la fila crece para mostrarlo completo — se mide ANTES de dibujar para (a) decidir el
+      // salto de página con el alto real, no uno fijo que se quedaba corto, y (b) que el
+      // texto dibujado nunca desborde el alto de la fila ni dispare el salto de página
+      // automático de pdfkit descrito arriba (PDF_CELL_TEXT_HEIGHT).
+      let maxTextHeight = 0;
+      rowData.forEach(({ val, col, bold }) => {
+        const colDef = PDF_COLS.at(col);
+        doc.fontSize(7).font(bold ? 'Helvetica-Bold' : 'Helvetica');
+        const h = doc.heightOfString(val, { width: colDef.width - 6 });
+        if (h > maxTextHeight) maxTextHeight = h;
+      });
+      const ROW_H = Math.max(MIN_ROW_H, maxTextHeight + ROW_V_PADDING);
+
+      if (y + ROW_H > doc.page.height - 40) {
+        drawPDFFooter(doc);
+        doc.addPage({ layout: 'landscape' });
+        await drawPDFHeader(doc, properties, generatedAt, logoPath);
+        y = drawPDFTableHeader(doc, 80);
+      }
+
+      doc.rect(40, y, doc.page.width - 80, ROW_H).fill(i % 2 === 0 ? BG_ALT : '#ffffff');
+
+      // Foto de portada — ya viene recortada a cuadrado desde Cloudinary (buildThumbnailUrl),
+      // centrada tanto horizontal como verticalmente dentro de su columna/fila (la fila ya
+      // no tiene un alto fijo, así que el alto fijo previo dejaría la miniatura descentrada
+      // en filas más altas por texto largo en otra celda).
+      const photoBuf = coverBuffers[i];
+      if (photoBuf) {
+        try {
+          const colDef = PDF_COLS[COL_IDX.photo];
+          const thumbSize = Math.min(ROW_H - 4, 48);
+          const thumbX = xPositions[COL_IDX.photo] + (colDef.width - thumbSize) / 2;
+          const thumbY = y + (ROW_H - thumbSize) / 2;
+          doc.image(photoBuf, thumbX, thumbY, { width: thumbSize, height: thumbSize });
+        } catch {
+          /* ignorado */
+        }
+      }
+
+      rowData.forEach(({ val, col, bold, color }) => {
         const colDef = PDF_COLS.at(col);
         const xPos = xPositions.at(col) + 3;
         const wid = colDef.width - 6;
         let fillColor = TEXT;
-        if (isStatus) fillColor = statusHex[p.status] || TEXT;
-        else if (color) fillColor = color;
+        if (color) fillColor = color;
         doc
           .fillColor(fillColor)
           .fontSize(7)
-          .font(bold || isStatus ? 'Helvetica-Bold' : 'Helvetica')
-          .text(val, xPos, y + 7, {
-            width: wid,
-            height: PDF_CELL_TEXT_HEIGHT,
-            ellipsis: true,
-            lineBreak: false,
-          });
+          .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+          .text(val, xPos, y + 7, { width: wid });
       });
 
       doc
