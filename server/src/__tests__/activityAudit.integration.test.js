@@ -5,7 +5,7 @@ const { createUser, authToken, createLead } = require('./helpers/factories');
 
 // AuditLog se escribe en logAudit() sin esperar la promesa (fire-and-forget) — se sondea
 // brevemente en vez de asumir que ya está escrito justo después del response.
-async function waitForAuditLog(where, { retries = 10, delayMs = 20 } = {}) {
+async function waitForAuditLog(where, { retries = 25, delayMs = 40 } = {}) {
   for (let i = 0; i < retries; i++) {
     const row = await AuditLog.findOne({ where, order: [['id', 'DESC']] });
     if (row) return row;

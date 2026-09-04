@@ -4,7 +4,7 @@ const app = require('../../app');
 const { sequelize, AuditLog, Property, Testimonial } = require('../models/index');
 const { createUser, authToken, createProperty } = require('./helpers/factories');
 
-async function waitForAuditLog(where, { retries = 10, delayMs = 20 } = {}) {
+async function waitForAuditLog(where, { retries = 25, delayMs = 40 } = {}) {
   for (let i = 0; i < retries; i++) {
     const row = await AuditLog.findOne({ where, order: [['id', 'DESC']] });
     if (row) return row;

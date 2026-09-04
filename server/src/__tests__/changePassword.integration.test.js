@@ -3,7 +3,7 @@ const app = require('../../app');
 const { sequelize, User, AuditLog } = require('../models/index');
 const { hashPassword } = require('../utils/helpers');
 
-async function waitForAuditLog(where, { retries = 10, delayMs = 20 } = {}) {
+async function waitForAuditLog(where, { retries = 25, delayMs = 40 } = {}) {
   for (let i = 0; i < retries; i++) {
     const row = await AuditLog.findOne({ where, order: [['id', 'DESC']] });
     if (row) return row;

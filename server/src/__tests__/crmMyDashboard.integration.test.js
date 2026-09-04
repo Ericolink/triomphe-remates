@@ -5,13 +5,14 @@
 // obtener datos de otro asesor, ni siquiera indirectamente vía este agregado).
 const request = require('supertest');
 const app = require('../../app');
-const { sequelize, User, Lead, Activity } = require('../models/index');
+const { sequelize, User, Lead, Property, Activity } = require('../models/index');
 const {
   createUser,
   authToken,
   createLead,
   createAppointment,
   createDeal,
+  createProperty,
 } = require('./helpers/factories');
 
 describe('GET /api/crm/my-dashboard', () => {
@@ -34,8 +35,12 @@ describe('GET /api/crm/my-dashboard', () => {
 
   afterEach(async () => {
     // Cascada (onDelete: 'CASCADE' en las asociaciones Lead->Activity/Appointment/Deal, ver
-    // models/index.js) — borrar los Lead ya limpia Appointment/Deal/Activity.
+    // models/index.js) — borrar los Lead ya limpia Appointment/Deal/Activity. Property se
+    // limpia aparte porque un par de tests de "correctitud de métricas" crean una (ver
+    // ventasMes/propiedadesInteres) — sin este destroy quedaban huérfanas y contaminaban el
+    // conteo de otras suites (ej. export.integration.test.js) que corren después.
     await Lead.destroy({ where: {}, force: true });
+    await Property.destroy({ where: {}, force: true });
   });
 
   afterAll(async () => {
@@ -250,7 +255,7 @@ describe('GET /api/crm/my-dashboard', () => {
     });
 
     test('ventasMes suma solo los Deal de leads propios cerrados este mes', async () => {
-      const property = await require('./helpers/factories').createProperty();
+      const property = await createProperty();
       const leadWon = await createLead({ assignedToUserId: asesorA.id, pipelineStage: 'venta_realizada' });
       await createDeal({ leadId: leadWon.id, propertyId: property.id, amount: 500000, closedAt: new Date() });
 
@@ -275,7 +280,7 @@ describe('GET /api/crm/my-dashboard', () => {
     });
 
     test('propiedadesInteres agrupa leads activos por Lead.propertyId', async () => {
-      const property = await require('./helpers/factories').createProperty();
+      const property = await createProperty();
       await createLead({ assignedToUserId: asesorA.id, propertyId: property.id, pipelineStage: 'nuevo' });
       await createLead({ assignedToUserId: asesorA.id, propertyId: property.id, pipelineStage: 'interesado' });
       await createLead({ assignedToUserId: asesorA.id, pipelineStage: 'nuevo' }); // sin propiedad
