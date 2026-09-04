@@ -147,6 +147,7 @@ app.use('/api/campaigns',    require('./src/routes/campaigns'));
 app.use('/api/appointments', require('./src/routes/appointments'));
 app.use('/api/deals',        require('./src/routes/deals'));
 app.use('/api/crm',          require('./src/routes/crm'));
+app.use('/api/settings',     require('./src/routes/settings'));
 
 // Health check
 app.get('/api/health', (req, res) => {

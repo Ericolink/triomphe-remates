@@ -2,11 +2,14 @@ import { useId, useState } from 'react';
 import { FileText, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { downloadCatalogPDF } from '../../services/catalogService';
+import { requestCatalogPDF } from '../../services/catalogService';
 import { fadeInUp } from '../../utils/animations';
 import { downloadBlob } from '../../utils/download';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 import { LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
+
+const DEFAULT_REQUEST_MESSAGE =
+  'Hemos recibido tus datos correctamente. Nuestro equipo se pondrá en contacto contigo para compartirte el inventario.';
 
 // Mismo criterio que LEAD_TYPE_OPTIONS en ContactForm.jsx: excluye 'informacion'/
 // 'propiedades_similares' (valores históricos, ya no seleccionables en formularios nuevos).
@@ -29,7 +32,10 @@ const INIT = { name: '', phone: '', email: '', interest: '' };
 export default function CatalogDownloadForm({ filters }) {
   const [form, setForm] = useState(INIT);
   const [downloading, setDownloading] = useState(false);
-  const [sent, setSent] = useState(false);
+  // null = formulario; 'downloaded' = el PDF se entregó; 'requested' = el prospecto quedó
+  // registrado pero el PDF no se entregó (toggle admin desactivado, ver SettingsPage).
+  const [sent, setSent] = useState(null);
+  const [requestMessage, setRequestMessage] = useState(DEFAULT_REQUEST_MESSAGE);
   const formId = useId();
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -45,11 +51,27 @@ export default function CatalogDownloadForm({ filters }) {
     }
     try {
       setDownloading(true);
-      const blob = await downloadCatalogPDF({ ...form, ...filters });
-      downloadBlob(blob, `triomphe-catalogo-${Date.now()}.pdf`);
-      setSent(true);
+      const response = await requestCatalogPDF({ ...form, ...filters });
+      const contentType = response.headers?.['content-type'] || '';
+
+      if (contentType.includes('application/pdf')) {
+        downloadBlob(response.data, `triomphe-catalogo-${Date.now()}.pdf`);
+        setSent('downloaded');
+      } else {
+        // El toggle admin está desactivado: el backend igual registró el prospecto, pero
+        // respondió JSON (envuelto en Blob por `responseType: 'blob''`) en vez del PDF.
+        let message = DEFAULT_REQUEST_MESSAGE;
+        try {
+          const body = JSON.parse(await response.data.text());
+          if (body?.message) message = body.message;
+        } catch {
+          /* respuesta no era JSON parseable — se usa el mensaje default */
+        }
+        setRequestMessage(message);
+        setSent('requested');
+      }
     } catch (e) {
-      let msg = 'Error al descargar. Verifica tu conexión e intenta de nuevo.';
+      let msg = 'Error al enviar tu solicitud. Verifica tu conexión e intenta de nuevo.';
       if (e.response?.data instanceof Blob) {
         try {
           const body = JSON.parse(await e.response.data.text());
@@ -67,7 +89,7 @@ export default function CatalogDownloadForm({ filters }) {
   const inputCls =
     'w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:placeholder-gray-500';
 
-  if (sent)
+  if (sent === 'downloaded')
     return (
       <motion.div
         variants={fadeInUp}
@@ -85,6 +107,20 @@ export default function CatalogDownloadForm({ filters }) {
         >
           <FileText size={14} /> Descargar de nuevo
         </button>
+      </motion.div>
+    );
+
+  if (sent === 'requested')
+    return (
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col items-center gap-3 py-6 text-center"
+      >
+        <CheckCircle size={36} className="text-green-500" />
+        <p className="font-semibold text-gray-800 dark:text-gray-100">¡Solicitud recibida!</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">{requestMessage}</p>
       </motion.div>
     );
 
@@ -183,7 +219,7 @@ export default function CatalogDownloadForm({ filters }) {
           ) : (
             <FileText size={15} />
           )}
-          {downloading ? 'Generando...' : 'Descargar PDF'}
+          {downloading ? 'Enviando...' : 'Solicitar inventario'}
         </button>
       </div>
     </div>

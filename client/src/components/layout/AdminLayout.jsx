@@ -16,6 +16,7 @@ import {
   KeyRound,
   ChevronDown,
   Clock,
+  Settings,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
@@ -87,6 +88,7 @@ const adminOnlyGroup = {
   links: [
     { to: '/admin/usuarios', icon: <ShieldCheck size={18} />, label: 'Usuarios' },
     { to: '/admin/auditoria', icon: <ClipboardList size={18} />, label: 'Auditoría' },
+    { to: '/admin/configuracion', icon: <Settings size={18} />, label: 'Configuración' },
   ],
 };
 

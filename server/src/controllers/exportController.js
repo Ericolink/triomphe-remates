@@ -15,6 +15,8 @@ const { logAudit } = require('../utils/audit');
 const { getLeadVisibilityWhere } = require('../utils/leadAccess');
 const { validateEmail, validatePhone } = require('../utils/validators');
 const { ApiError } = require('../middleware/errorHandler');
+const { isInventoryDownloadEnabled } = require('../services/settingsService');
+const { logActivity } = require('../utils/pipelineHelpers');
 
 // AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
 // ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
@@ -1082,13 +1084,20 @@ const VALID_INTEREST_TYPES = [
   'otro',
 ];
 
-// Crea el Lead que registra quién descargó el catálogo — mismas reglas de validación que
+// Crea el Lead que registra quién solicitó el catálogo — mismas reglas de validación que
 // el formulario público "Contactar asesor" (leadController.createLead): nombre y teléfono
 // requeridos, email opcional. `interest` (Interés) es obligatorio acá — a diferencia de
 // ContactForm, que trae un default ('contacto'), este formulario no preselecciona nada. Se
 // llama `interest` en el body (no `type`) porque ese nombre ya lo usa el filtro de tipo de
 // propiedad (casa/depto/...) que viaja en el mismo POST — ver CatalogDownloadForm.jsx.
-const createCatalogDownloadLead = async ({ name, phone, email, interest }) => {
+//
+// `downloadEnabled` distingue si este prospecto SÍ recibió el PDF o solo quedó registrado
+// porque el toggle de admin (ver settingsService.isInventoryDownloadEnabled) está
+// desactivado — se refleja tanto en Lead.message (visible en las listas/tarjetas del CRM)
+// como en una Activity tipo 'sistema' en su timeline (mismo mecanismo que usa el resto del
+// CRM para eventos automáticos, ver leadController.createLead). Devuelve el Lead creado
+// porque exportCatalogPDF necesita su id para la Activity.
+const createCatalogDownloadLead = async ({ name, phone, email, interest }, downloadEnabled) => {
   if (!name || !name.trim()) throw new ApiError(400, 'Nombre es requerido');
   if (!phone || !validatePhone(phone))
     throw new ApiError(400, 'Teléfono inválido — usa 10 dígitos, con o sin +52');
@@ -1096,14 +1105,28 @@ const createCatalogDownloadLead = async ({ name, phone, email, interest }) => {
   if (!interest || !VALID_INTEREST_TYPES.includes(interest))
     throw new ApiError(400, 'Interés es requerido');
 
-  await Lead.create({
+  const message = downloadEnabled
+    ? 'Descargó el catálogo de propiedades (PDF)'
+    : 'Solicitó el catálogo de propiedades (descarga automática desactivada)';
+
+  const lead = await Lead.create({
     name: name.trim(),
     phone: phone.trim(),
     email: email ? email.trim() : null,
     type: interest,
     source: 'directo',
-    message: 'Descargó el catálogo de propiedades (PDF)',
+    message,
   });
+
+  await logActivity({
+    leadId: lead.id,
+    type: 'sistema',
+    content: downloadEnabled
+      ? 'Prospecto creado — descargó el catálogo de propiedades (PDF)'
+      : 'Prospecto creado — solicitó el catálogo (descarga automática desactivada por admin)',
+  });
+
+  return lead;
 };
 
 const drawCatalogPDFHeader = async (doc, properties, generatedAt, logoPath) => {
@@ -1151,10 +1174,27 @@ const drawCatalogPDFTableHeader = (doc, y, cols) => {
   return y + 20;
 };
 
-// POST /api/export/catalog/pdf — público, sin auth
+// POST /api/export/catalog/pdf — público, sin auth. Gateado por el flag de admin
+// inventoryDownloadEnabled (ver settingsService/SettingsPage): el prospecto SIEMPRE se
+// registra, pero el PDF solo se genera y entrega si el toggle está activado — cuando está
+// desactivado se responde JSON (nunca el binario) y ni siquiera se consultan las
+// propiedades ni se instancia PDFDocument, para no hacer trabajo innecesario (ver
+// AUDITORIA_INVENTARIO_TOGGLE, punto 8).
 const exportCatalogPDF = async (req, res) => {
   try {
-    await createCatalogDownloadLead(req.body);
+    const downloadEnabled = await isInventoryDownloadEnabled();
+    await createCatalogDownloadLead(req.body, downloadEnabled);
+
+    if (!downloadEnabled) {
+      return res.json({
+        downloadAvailable: false,
+        message:
+          'Hemos recibido tus datos correctamente. El inventario de propiedades no está ' +
+          'disponible para descarga automática en este momento — nuestro equipo se pondrá ' +
+          'en contacto contigo para compartírtelo.',
+      });
+    }
+
     const properties = await getPublicCatalogProperties(req.body);
     const generatedAt = formatLongDateTime();
 

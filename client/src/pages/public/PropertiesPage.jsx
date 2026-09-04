@@ -459,7 +459,7 @@ export default function PropertiesPage() {
           className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 sm:px-8 py-4 border-2 border-accent-400 dark:border-accent-500 text-accent-600 dark:text-accent-400 rounded-2xl text-base sm:text-lg font-bold hover:bg-accent-50 dark:hover:bg-accent-900/20 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-300 dark:focus-visible:ring-accent-900"
         >
           <Download size={22} className="flex-shrink-0" />
-          <span>Descargar catálogo de propiedades</span>
+          <span>Solicitar catálogo de propiedades</span>
           <ChevronDown
             size={20}
             className={`flex-shrink-0 transition-transform ${showDownloadForm ? 'rotate-180' : ''}`}
@@ -476,8 +476,7 @@ export default function PropertiesPage() {
             >
               <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 shadow-sm max-w-lg">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                  Déjanos tus datos y descarga el catálogo completo de propiedades disponibles
-                  en PDF.
+                  Déjanos tus datos y recibe el catálogo completo de propiedades disponibles.
                 </p>
                 <CatalogDownloadForm
                   filters={{

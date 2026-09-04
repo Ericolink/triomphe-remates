@@ -43,6 +43,7 @@ const KNOWN_RESOURCES = [
   'task',
   'deal',
   'testimonial',
+  'setting',
 ];
 
 const ICONS_BY_AREA = {
@@ -76,6 +77,7 @@ const RESOURCE_META = {
   job: { area: AREAS.SISTEMA, subarea: 'Reclutamiento', resourceLabel: 'Vacante' },
   application: { area: AREAS.SISTEMA, subarea: 'Reclutamiento', resourceLabel: 'Postulación' },
   task: { area: AREAS.CRM, subarea: 'Prospectos', resourceLabel: 'Tarea' },
+  setting: { area: AREAS.CONFIGURACION, subarea: 'General', resourceLabel: 'Configuración' },
 };
 
 // Overrides puntuales por action+resource cuando el verbo genérico no calza bien

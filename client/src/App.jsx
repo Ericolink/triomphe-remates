@@ -44,6 +44,7 @@ const AlertsAdminPage = lazy(() => import('./pages/admin/AlertsAdminPage'));
 const WaitingListPage = lazy(() => import('./pages/admin/WaitingListPage'));
 const AuditPage = lazy(() => import('./pages/admin/AuditPage'));
 const TestimonialsAdminPage = lazy(() => import('./pages/admin/TestimonialsAdminPage'));
+const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
 
 import PublicLayout from './components/layout/PublicLayout';
 
@@ -208,6 +209,14 @@ export default function App() {
                 element={
                   <RoleRoute allow={isAdmin}>
                     <AuditPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="configuracion"
+                element={
+                  <RoleRoute allow={isAdmin}>
+                    <SettingsPage />
                   </RoleRoute>
                 }
               />
