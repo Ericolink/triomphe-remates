@@ -1,12 +1,19 @@
 const router = require('express').Router();
 const { Property } = require('../models/index');
+const { isPublicPropertiesEnabled } = require('../services/settingsService');
 
 router.get('/', async (req, res) => {
   try {
-    const properties = await Property.findAll({
-      where: { status: 'disponible' },
-      attributes: ['slug', 'updatedAt'],
-    });
+    // publicPropertiesEnabled=false: no listar URLs de propiedades individuales en el
+    // sitemap mientras la sección pública está oculta (no tiene sentido indexar páginas que
+    // hoy responden 404) — las páginas estáticas se mantienen igual.
+    const publicPropertiesEnabled = await isPublicPropertiesEnabled();
+    const properties = publicPropertiesEnabled
+      ? await Property.findAll({
+          where: { status: 'disponible' },
+          attributes: ['slug', 'updatedAt'],
+        })
+      : [];
 
     const baseUrl = (process.env.CLIENT_URL || 'https://rematesbancarios.net').replace(/\/$/, '');
 

@@ -11,6 +11,7 @@
 const { Setting } = require('../models/index');
 
 const INVENTORY_DOWNLOAD_ENABLED_KEY = 'inventoryDownloadEnabled';
+const PUBLIC_PROPERTIES_ENABLED_KEY = 'publicPropertiesEnabled';
 
 async function getSetting(key, defaultValue = null) {
   const row = await Setting.findByPk(key);
@@ -40,9 +41,20 @@ async function isInventoryDownloadEnabled() {
   return getSetting(INVENTORY_DOWNLOAD_ENABLED_KEY, true);
 }
 
+// true por default, mismo criterio que isInventoryDownloadEnabled — si la fila no existe
+// (BD sin la migración de siembra), el comportamiento actual (propiedades visibles) no debe
+// romperse. Solo gatea la VISIBILIDAD pública (listado/detalle/búsqueda); el catálogo PDF
+// (exportCatalogPDF) se rige exclusivamente por inventoryDownloadEnabled — ambos flags son
+// independientes a propósito, no se combinan.
+async function isPublicPropertiesEnabled() {
+  return getSetting(PUBLIC_PROPERTIES_ENABLED_KEY, true);
+}
+
 module.exports = {
   getSetting,
   setSetting,
   isInventoryDownloadEnabled,
   INVENTORY_DOWNLOAD_ENABLED_KEY,
+  isPublicPropertiesEnabled,
+  PUBLIC_PROPERTIES_ENABLED_KEY,
 };

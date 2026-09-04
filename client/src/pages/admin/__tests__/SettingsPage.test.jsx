@@ -1,16 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SettingsPage from '../SettingsPage';
 import {
   getInventoryDownloadSetting,
   updateInventoryDownloadSetting,
+  getPublicPropertiesSetting,
+  updatePublicPropertiesSetting,
 } from '../../../services/settingsService';
 
 vi.mock('../../../services/settingsService', () => ({
   getInventoryDownloadSetting: vi.fn(),
   updateInventoryDownloadSetting: vi.fn(),
+  getPublicPropertiesSetting: vi.fn(),
+  updatePublicPropertiesSetting: vi.fn(),
 }));
 vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
@@ -28,23 +32,36 @@ function renderPage() {
   );
 }
 
+// Cada tarjeta se identifica por su título (heading) — de ahí se navega al switch/badge
+// dentro de esa misma tarjeta con `within`, para no colisionar con la otra tarjeta que
+// puede mostrar el mismo texto "ACTIVADO"/"DESACTIVADO" al mismo tiempo.
+const cardFor = async (titleText) => {
+  const heading = await screen.findByText(titleText);
+  return within(heading.closest('div').parentElement.parentElement);
+};
+
 describe('SettingsPage — toggle de descarga de inventario', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getPublicPropertiesSetting.mockResolvedValue({ enabled: true });
+  });
 
   it('muestra el estado ACTIVADO cuando el backend responde enabled:true', async () => {
     getInventoryDownloadSetting.mockResolvedValue({ enabled: true });
     renderPage();
 
-    expect(await screen.findByText('ACTIVADO')).toBeInTheDocument();
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    const card = await cardFor('Inventario de propiedades');
+    expect(card.getByText('ACTIVADO')).toBeInTheDocument();
+    expect(card.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
   });
 
   it('muestra el estado DESACTIVADO cuando el backend responde enabled:false', async () => {
     getInventoryDownloadSetting.mockResolvedValue({ enabled: false });
     renderPage();
 
-    expect(await screen.findByText('DESACTIVADO')).toBeInTheDocument();
-    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    const card = await cardFor('Inventario de propiedades');
+    expect(card.getByText('DESACTIVADO')).toBeInTheDocument();
+    expect(card.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
   });
 
   it('al cambiar el toggle, llama al servicio con el nuevo valor y confirma con un toast', async () => {
@@ -53,13 +70,14 @@ describe('SettingsPage — toggle de descarga de inventario', () => {
     updateInventoryDownloadSetting.mockResolvedValue({ enabled: false });
     renderPage();
 
-    await screen.findByText('ACTIVADO');
-    await user.click(screen.getByRole('switch'));
+    const card = await cardFor('Inventario de propiedades');
+    await card.findByText('ACTIVADO');
+    await user.click(card.getByRole('switch'));
 
     await waitFor(() => expect(updateInventoryDownloadSetting).toHaveBeenCalled());
     expect(updateInventoryDownloadSetting.mock.calls[0][0]).toBe(false);
-    await waitFor(() => expect(toast.success).toHaveBeenCalled());
-    expect(await screen.findByText('DESACTIVADO')).toBeInTheDocument();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Descarga de inventario desactivada'));
+    expect(await card.findByText('DESACTIVADO')).toBeInTheDocument();
   });
 
   it('si falla el guardado, muestra un toast de error y no cambia el estado mostrado', async () => {
@@ -68,21 +86,103 @@ describe('SettingsPage — toggle de descarga de inventario', () => {
     updateInventoryDownloadSetting.mockRejectedValue(new Error('network error'));
     renderPage();
 
-    await screen.findByText('ACTIVADO');
-    await user.click(screen.getByRole('switch'));
+    const card = await cardFor('Inventario de propiedades');
+    await card.findByText('ACTIVADO');
+    await user.click(card.getByRole('switch'));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(screen.getByText('ACTIVADO')).toBeInTheDocument();
+    expect(card.getByText('ACTIVADO')).toBeInTheDocument();
   });
 
   it('recarga el estado correcto tras un refetch (simula recargar la página)', async () => {
     getInventoryDownloadSetting.mockResolvedValue({ enabled: false });
     const { unmount } = renderPage();
-    expect(await screen.findByText('DESACTIVADO')).toBeInTheDocument();
+    let card = await cardFor('Inventario de propiedades');
+    expect(await card.findByText('DESACTIVADO')).toBeInTheDocument();
     unmount();
 
     getInventoryDownloadSetting.mockResolvedValue({ enabled: true });
     renderPage();
-    expect(await screen.findByText('ACTIVADO')).toBeInTheDocument();
+    card = await cardFor('Inventario de propiedades');
+    expect(await card.findByText('ACTIVADO')).toBeInTheDocument();
+  });
+});
+
+describe('SettingsPage — toggle de propiedades públicas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getInventoryDownloadSetting.mockResolvedValue({ enabled: true });
+  });
+
+  it('muestra el estado ACTIVADO cuando el backend responde enabled:true', async () => {
+    getPublicPropertiesSetting.mockResolvedValue({ enabled: true });
+    renderPage();
+
+    const card = await cardFor('Propiedades públicas');
+    expect(card.getByText('ACTIVADO')).toBeInTheDocument();
+    expect(card.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('muestra el estado DESACTIVADO cuando el backend responde enabled:false', async () => {
+    getPublicPropertiesSetting.mockResolvedValue({ enabled: false });
+    renderPage();
+
+    const card = await cardFor('Propiedades públicas');
+    expect(card.getByText('DESACTIVADO')).toBeInTheDocument();
+    expect(card.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('al cambiar el toggle, llama al servicio con el nuevo valor y confirma con un toast', async () => {
+    const user = userEvent.setup();
+    getPublicPropertiesSetting.mockResolvedValue({ enabled: true });
+    updatePublicPropertiesSetting.mockResolvedValue({ enabled: false });
+    renderPage();
+
+    const card = await cardFor('Propiedades públicas');
+    await card.findByText('ACTIVADO');
+    await user.click(card.getByRole('switch'));
+
+    await waitFor(() => expect(updatePublicPropertiesSetting).toHaveBeenCalled());
+    expect(updatePublicPropertiesSetting.mock.calls[0][0]).toBe(false);
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith('Propiedades públicas desactivadas')
+    );
+    expect(await card.findByText('DESACTIVADO')).toBeInTheDocument();
+  });
+
+  it('si falla el guardado, muestra un toast de error y no cambia el estado mostrado (revierte visualmente)', async () => {
+    const user = userEvent.setup();
+    getPublicPropertiesSetting.mockResolvedValue({ enabled: true });
+    updatePublicPropertiesSetting.mockRejectedValue(new Error('network error'));
+    renderPage();
+
+    const card = await cardFor('Propiedades públicas');
+    await card.findByText('ACTIVADO');
+    await user.click(card.getByRole('switch'));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(card.getByText('ACTIVADO')).toBeInTheDocument();
+    expect(card.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('el toggle de propiedades públicas y el de inventario son independientes entre sí', async () => {
+    const user = userEvent.setup();
+    getPublicPropertiesSetting.mockResolvedValue({ enabled: true });
+    getInventoryDownloadSetting.mockResolvedValue({ enabled: true });
+    updatePublicPropertiesSetting.mockResolvedValue({ enabled: false });
+    renderPage();
+
+    const publicCard = await cardFor('Propiedades públicas');
+    const inventoryCard = await cardFor('Inventario de propiedades');
+    await publicCard.findByText('ACTIVADO');
+    await inventoryCard.findByText('ACTIVADO');
+
+    await user.click(publicCard.getByRole('switch'));
+
+    await waitFor(() => expect(updatePublicPropertiesSetting).toHaveBeenCalled());
+    expect(updatePublicPropertiesSetting.mock.calls[0][0]).toBe(false);
+    expect(updateInventoryDownloadSetting).not.toHaveBeenCalled();
+    expect(await publicCard.findByText('DESACTIVADO')).toBeInTheDocument();
+    expect(inventoryCard.getByText('ACTIVADO')).toBeInTheDocument();
   });
 });

@@ -13,3 +13,12 @@ import api from './api';
 export const requestCatalogPDF = async (data) => {
   return api.post('/export/catalog/pdf', data, { responseType: 'blob' });
 };
+
+// Lectura pública (sin auth) del mismo flag que SettingsPage — usada por CatalogDownloadForm
+// para decidir el texto del CTA ("Descargar PDF del inventario" vs. "Solicitar inventario")
+// ANTES de que el usuario envíe el formulario. Ver routes/settings.js: expone el mismo
+// booleano por una ruta separada sin authenticate/authorize.
+export const getInventoryDownloadStatus = async () => {
+  const { data } = await api.get('/settings/inventory-download/status');
+  return data;
+};

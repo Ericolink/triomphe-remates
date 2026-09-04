@@ -13,6 +13,7 @@ import {
   KeyRound,
   Banknote,
   TrendingUp,
+  EyeOff,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProperties } from '../../services/propertyService';
@@ -118,6 +119,10 @@ export default function PropertiesPage() {
 
   const properties = data?.pages?.flatMap((p) => p.data) ?? [];
   const total = data?.pages?.[0]?.pagination?.total ?? 0;
+  // Backend responde `propertiesAvailable: false` (en vez de una lista vacía) cuando el
+  // admin desactivó publicPropertiesEnabled — así se distingue "sin resultados para estos
+  // filtros" de "la sección está temporalmente desactivada" (ver propertyController.js).
+  const propertiesUnavailable = data?.pages?.[0]?.propertiesAvailable === false;
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -197,11 +202,17 @@ export default function PropertiesPage() {
       <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
         <h1 className="text-3xl font-bold text-primary-900 dark:text-white">{content.listingTitle}</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          {total || '...'} propiedades disponibles
-          {filters.search && (
-            <span className="ml-2 text-primary-600 font-medium">
-              · Buscando: &quot;{filters.search}&quot;
-            </span>
+          {propertiesUnavailable ? (
+            'Propiedades no disponibles'
+          ) : (
+            <>
+              {total || '...'} propiedades disponibles
+              {filters.search && (
+                <span className="ml-2 text-primary-600 font-medium">
+                  · Buscando: &quot;{filters.search}&quot;
+                </span>
+              )}
+            </>
           )}
         </p>
       </motion.div>
@@ -498,6 +509,24 @@ export default function PropertiesPage() {
           count={6}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         />
+      ) : propertiesUnavailable ? (
+        <motion.div
+          variants={fadeIn}
+          initial="hidden"
+          animate="visible"
+          className="text-center py-20 px-6 max-w-lg mx-auto"
+        >
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-100 dark:bg-[#242938] flex items-center justify-center mb-5">
+            <EyeOff size={26} className="text-gray-400 dark:text-gray-500" />
+          </div>
+          <p className="text-xl font-semibold text-primary-900 dark:text-white">
+            Propiedades no disponibles
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            Actualmente las propiedades no están disponibles. Por favor, vuelve a consultar más
+            tarde.
+          </p>
+        </motion.div>
       ) : properties.length === 0 ? (
         <motion.div
           variants={fadeIn}

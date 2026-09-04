@@ -9,6 +9,7 @@ const logger = require('../utils/logger');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { ApiError } = require('../middleware/errorHandler');
 const { sanitizeOptionalContext, recordEvent } = require('../services/analyticsService');
+const { isPublicPropertiesEnabled } = require('../services/settingsService');
 
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined ? null : val);
@@ -122,6 +123,29 @@ const getProperties = async (req, res) => {
   // roles (admin/coordinador_ventas/asesor_ventas/asistente_administrativo) pueden ver
   // borradores/internalNotes — el detalle de qué puede EDITAR sigue gateado aparte por ruta.
   const isStaff = Boolean(req.user);
+
+  // publicPropertiesEnabled=false: el inventario público queda oculto (Setting.js /
+  // settingsService.isPublicPropertiesEnabled). Solo se consulta el flag para tráfico
+  // no-staff — el panel admin nunca debe verse afectado (AUDITORIA_PUBLIC_PROPERTIES) y así
+  // se evita una query extra en cada listado del CRM/panel. `propertiesAvailable: false` en
+  // vez de `data: []` para que el frontend distinga "sin resultados para estos filtros" de
+  // "la sección está temporalmente desactivada" (PropertiesPage.jsx).
+  if (!isStaff && !(await isPublicPropertiesEnabled())) {
+    const limitNum = Math.min(parseInt(limit, 10) || 12, 100);
+    return res.json({
+      propertiesAvailable: false,
+      message: 'Las propiedades no están disponibles actualmente. Por favor, vuelve a consultar más tarde.',
+      data: [],
+      pagination: {
+        total: 0,
+        page: parseInt(page, 10) || 1,
+        limit: limitNum,
+        totalPages: 0,
+        hasNext: false,
+        hasPrevious: false,
+      },
+    });
+  }
 
   if (city) where.city = city;
   if (type) where.type = type;
@@ -249,6 +273,14 @@ const getPropertiesSync = async (req, res) => {
     throw new ApiError(400, `Máximo ${MAX_SYNC_IDS} propiedades por consulta`);
   }
 
+  // publicPropertiesEnabled=false: ver nota en getProperties. Este endpoint no filtra por
+  // status a propósito (comentario arriba), así que sin este gate seguiría siendo una vía
+  // pública para revalidar precio/status de cualquier propiedad mientras la sección pública
+  // está desactivada.
+  if (!req.user && !(await isPublicPropertiesEnabled())) {
+    return res.json({ data: [] });
+  }
+
   const properties = await Property.findAll({
     where: { id: { [Op.in]: ids } },
     attributes: ['id', 'price', 'status'],
@@ -263,6 +295,12 @@ const getPropertiesSync = async (req, res) => {
 // propia línea (remate); AboutPage lo omite a propósito para mostrar el total combinado.
 const getPropertyStats = async (req, res) => {
   const { businessLine } = req.query;
+
+  // publicPropertiesEnabled=false: ver nota en getProperties.
+  if (!req.user && !(await isPublicPropertiesEnabled())) {
+    return res.json({ propertiesAvailable: false, total: 0, byCity: { juarez: 0, chihuahua: 0, queretaro: 0 } });
+  }
+
   const where = { status: 'disponible' };
   if (businessLine) where.businessLine = businessLine;
 
@@ -290,6 +328,12 @@ const getPropertyById = async (req, res) => {
   // roles (admin/coordinador_ventas/asesor_ventas/asistente_administrativo) pueden ver
   // borradores/internalNotes — el detalle de qué puede EDITAR sigue gateado aparte por ruta.
   const isStaff = Boolean(req.user);
+  // publicPropertiesEnabled=false: ver nota en getProperties. Corre antes del SELECT para
+  // no gastar la consulta si de todos modos se va a rechazar.
+  if (!isStaff && !(await isPublicPropertiesEnabled())) {
+    throw new ApiError(404, 'Propiedad no encontrada');
+  }
+
   const property = await Property.findByPk(req.params.id, {
     attributes: isStaff ? undefined : { exclude: ['internalNotes'] },
     include: [{ model: Image, as: 'images', separate: true, order: [['order', 'ASC']] }],
@@ -311,6 +355,11 @@ const getPropertyBySlug = async (req, res) => {
   // roles (admin/coordinador_ventas/asesor_ventas/asistente_administrativo) pueden ver
   // borradores/internalNotes — el detalle de qué puede EDITAR sigue gateado aparte por ruta.
   const isStaff = Boolean(req.user);
+  // publicPropertiesEnabled=false: ver nota en getProperties.
+  if (!isStaff && !(await isPublicPropertiesEnabled())) {
+    throw new ApiError(404, 'Propiedad no encontrada');
+  }
+
   const property = await Property.findOne({
     where: { slug: req.params.slug },
     attributes: { exclude: ['internalNotes'] },
@@ -839,6 +888,12 @@ const reorderImages = async (req, res) => {
 // aparecer como estrella en otra línea y viceversa).
 const getPromotedProperty = async (req, res) => {
   const { businessLine } = req.query;
+
+  // publicPropertiesEnabled=false: ver nota en getProperties.
+  if (!req.user && !(await isPublicPropertiesEnabled())) {
+    return res.json({ data: null, propertiesAvailable: false });
+  }
+
   const where = { isPromoted: true, status: 'disponible' };
   if (businessLine) where.businessLine = businessLine;
 

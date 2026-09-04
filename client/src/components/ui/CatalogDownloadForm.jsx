@@ -1,8 +1,9 @@
 import { useId, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { FileText, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { requestCatalogPDF } from '../../services/catalogService';
+import { requestCatalogPDF, getInventoryDownloadStatus } from '../../services/catalogService';
 import { fadeInUp } from '../../utils/animations';
 import { downloadBlob } from '../../utils/download';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
@@ -37,6 +38,18 @@ export default function CatalogDownloadForm({ filters }) {
   const [sent, setSent] = useState(null);
   const [requestMessage, setRequestMessage] = useState(DEFAULT_REQUEST_MESSAGE);
   const formId = useId();
+
+  // Solo para el texto del botón (ver JSDoc arriba del componente) — el envío real sigue
+  // siendo autoritativo del lado del backend vía Content-Type de la respuesta, así que un
+  // valor stale/no cargado todavía acá no puede exponer un PDF que el backend no vaya a
+  // entregar (o viceversa). `enabled: true` por default: mismo criterio que SettingsPage.jsx,
+  // preserva el comportamiento actual si la petición aún no resuelve o falla.
+  const { data: statusData } = useQuery({
+    queryKey: ['settings', 'inventory-download-status'],
+    queryFn: getInventoryDownloadStatus,
+    staleTime: 60 * 1000,
+  });
+  const downloadEnabled = statusData?.enabled ?? true;
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
@@ -219,7 +232,11 @@ export default function CatalogDownloadForm({ filters }) {
           ) : (
             <FileText size={15} />
           )}
-          {downloading ? 'Enviando...' : 'Solicitar inventario'}
+          {downloading
+            ? 'Enviando...'
+            : downloadEnabled
+              ? 'Descargar PDF del inventario'
+              : 'Solicitar inventario'}
         </button>
       </div>
     </div>
