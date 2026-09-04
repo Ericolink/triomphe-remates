@@ -6,7 +6,7 @@ jest.mock('../services/emailService', () => ({
 const request = require('supertest');
 const app = require('../../app');
 const { sequelize, Lead, User } = require('../models/index');
-const { createUser, authToken } = require('./helpers/factories');
+const { createUser, authToken, createLead } = require('./helpers/factories');
 
 describe('POST /api/leads', () => {
   let admin, token;
@@ -22,8 +22,10 @@ describe('POST /api/leads', () => {
   });
 
   afterAll(async () => {
+    // sequelize.close() se deja al último describe del archivo (ver más abajo) — dos
+    // describes en el mismo archivo comparten la misma conexión module-level, así que
+    // cerrarla acá rompería el beforeAll del describe siguiente.
     await User.destroy({ where: { id: admin.id }, force: true });
-    await sequelize.close();
   });
 
   test('crea el lead sin nombre con un placeholder (campo opcional)', async () => {
@@ -280,5 +282,60 @@ describe('POST /api/leads', () => {
         jest.useRealTimers();
       }
     });
+  });
+});
+
+describe('GET /api/leads — "Todas las etapas" excluye venta_realizada y lista_espera por default', () => {
+  let admin, token;
+
+  beforeAll(async () => {
+    await sequelize.sync({ alter: false });
+    admin = await createUser({ role: 'admin' });
+    token = authToken(admin);
+  });
+
+  afterEach(async () => {
+    await Lead.destroy({ where: {}, force: true });
+  });
+
+  afterAll(async () => {
+    await User.destroy({ where: { id: admin.id }, force: true });
+    await sequelize.close();
+  });
+
+  const authed = (query = '') =>
+    request(app)
+      .get(`/api/leads${query}`)
+      .set('Authorization', `Bearer ${token}`);
+
+  test('sin filtro de etapa, oculta venta_realizada y lista_espera pero no no_interesado', async () => {
+    await createLead({ name: 'Nuevo', pipelineStage: 'nuevo' });
+    await createLead({ name: 'Ganado', pipelineStage: 'venta_realizada' });
+    await createLead({ name: 'No interesado', pipelineStage: 'no_interesado' });
+    await createLead({ name: 'Espera', pipelineStage: 'lista_espera' });
+
+    const res = await authed();
+    expect(res.status).toBe(200);
+    const names = res.body.data.map((l) => l.name).sort();
+    expect(names).toEqual(['No interesado', 'Nuevo']);
+  });
+
+  test('filtrando explícitamente por pipelineStage=venta_realizada sí los devuelve', async () => {
+    await createLead({ name: 'Ganado', pipelineStage: 'venta_realizada' });
+    await createLead({ name: 'Nuevo', pipelineStage: 'nuevo' });
+
+    const res = await authed('?pipelineStage=venta_realizada');
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((l) => l.name)).toEqual(['Ganado']);
+  });
+
+  test('allStages=true también los devuelve (usado por CampanasSection)', async () => {
+    await createLead({ name: 'Ganado', pipelineStage: 'venta_realizada' });
+    await createLead({ name: 'Espera', pipelineStage: 'lista_espera' });
+    await createLead({ name: 'Nuevo', pipelineStage: 'nuevo' });
+
+    const res = await authed('?allStages=true');
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((l) => l.name).sort()).toEqual(['Espera', 'Ganado', 'Nuevo']);
   });
 });

@@ -585,16 +585,17 @@ const getLeads = async (req, res) => {
 
   Object.assign(where, getLeadVisibilityWhere(req.user) || {});
 
-  // Los prospectos enviados a lista de espera desaparecen de "Todas las etapas" — siguen
-  // accesibles filtrando explícitamente por esa etapa, o en WaitingListPage.
-  // No_interesado NO se toca (decisión explícita: solo se ordena al final, sigue visible,
-  // ver comentario de abajo).
+  // Los prospectos enviados a lista de espera o que ya cerraron como venta realizada
+  // desaparecen de "Todas las etapas" — siguen accesibles filtrando explícitamente por esa
+  // etapa (o, para venta_realizada, también en CasosExitoSection, que lee la tabla `deals`
+  // en vez de Lead). No_interesado NO se toca (decisión explícita: solo se ordena al final,
+  // sigue visible, ver comentario de abajo).
   // ?allStages=true se salta este default — lo usa CampanasSection para listar TODOS los
-  // prospectos de una campaña (incluida lista de espera): ahí el punto es completitud
-  // frente al conteo de "Prospectos generados" de getCampaignById (Lead.count sin filtrar
-  // por etapa), no la vista de triage de "Todas las etapas".
+  // prospectos de una campaña (incluidos lista de espera y venta realizada): ahí el punto es
+  // completitud frente al conteo de "Prospectos generados" de getCampaignById (Lead.count sin
+  // filtrar por etapa), no la vista de triage de "Todas las etapas".
   if (!pipelineStage && allStages !== 'true') {
-    where.pipelineStage = { [Op.ne]: 'lista_espera' };
+    where.pipelineStage = { [Op.notIn]: ['lista_espera', 'venta_realizada'] };
   }
 
   // Un lead en etapa terminal no puede estar "estancado" (un cierre no atendido no es un
