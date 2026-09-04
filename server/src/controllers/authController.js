@@ -6,6 +6,17 @@ const userService = require('../services/userService');
 const { ApiError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const { isOriginAllowed } = require('../utils/corsOrigins');
+const { loginLimiter, loginAccountLimiter, buildLoginComboKey, buildLoginAccountKey } = require('../middleware/rateLimitMiddleware');
+
+// Hash bcrypt fijo, sin contraseña real detrás — nunca se usa para autenticar a nadie, solo
+// como "contraseña" contra la que comparar cuando el email no corresponde a un usuario (o
+// está inactivo). Sin esto, un email inexistente devuelve 401 sin llamar a bcrypt.compare,
+// y esa rama es mucho más rápida que la de "email existe, password incorrecta" (que sí
+// compara contra un hash real) — la diferencia de tiempo permite a un atacante enumerar
+// cuentas midiendo la respuesta, sin ver nunca el mensaje de error. Corriendo bcrypt.compare
+// siempre, con el mismo costo (factor 12, igual que hashPassword), ambas ramas tardan lo
+// mismo. No reemplaza bcryptjs como librería de hashing, solo cierra este canal lateral.
+const DUMMY_PASSWORD_HASH = '$2b$12$t8MVX2RBwBIOpODeFI6m4OkcauKvXsx3z/4FHTv486dgQ5E5IGkRS';
 
 // User-Agents típicos de herramientas de prueba manual de API, no del panel admin
 // (`client/src`). Solo se usa para el log de uso de `register` (ver más abajo) — es
@@ -102,25 +113,35 @@ const login = async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ where: { email } });
-  if (!user || !user.isActive) {
+  const userIsUsable = !!user && user.isActive;
+
+  // Siempre se ejecuta comparePassword, exista o no el usuario (ver DUMMY_PASSWORD_HASH
+  // arriba) — así el tiempo de respuesta no delata si el email corresponde a una cuenta real.
+  const isMatch = await comparePassword(password, userIsUsable ? user.password : DUMMY_PASSWORD_HASH);
+
+  if (!userIsUsable || !isMatch) {
     // No hay `req.user` en un login fallido (nunca se autenticó) — se registra igual
     // pasando { ip: req.ip } directo, mismo patrón que el login exitoso de abajo. Solo se
     // guarda el email intentado, nunca la contraseña.
-    logAudit({ ip: req.ip }, 'login', 'user', null, {
+    logAudit({ ip: req.ip }, 'login', 'user', user?.id ?? null, {
       emailAttempted: email,
-      reason: user ? 'inactive' : 'user_not_found',
+      reason: !user ? 'user_not_found' : !user.isActive ? 'inactive' : 'invalid_password',
     }, 'failed');
-    return res.status(401).json({ error: 'Credenciales inválidas' });
-  }
-
-  const isMatch = await comparePassword(password, user.password);
-  if (!isMatch) {
-    logAudit({ ip: req.ip }, 'login', 'user', user.id, { emailAttempted: email, reason: 'invalid_password' }, 'failed');
+    // Mensaje idéntico sea cual sea la razón real (usuario inexistente, inactivo o password
+    // incorrecta) — no debe ser posible distinguir "el email no existe" de "el email existe
+    // pero la contraseña está mal" a partir de la respuesta.
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
 
   await user.update({ lastLogin: new Date() });
   logAudit({ user, ip: req.ip }, 'login', 'user', user.id, { email: user.email });
+
+  // Login exitoso: limpia el contador de intentos fallidos de ambos limiters de login (ver
+  // rateLimitMiddleware.js) para que no queden intentos previos acumulados contra la cuenta —
+  // buildLoginComboKey/buildLoginAccountKey son las MISMAS funciones que usan esos limiters
+  // como keyGenerator, así se garantiza limpiar exactamente la key correcta.
+  loginLimiter.resetKey(buildLoginComboKey(req));
+  loginAccountLimiter.resetKey(buildLoginAccountKey(req));
 
   const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
 

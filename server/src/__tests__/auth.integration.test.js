@@ -23,6 +23,13 @@ describe('POST /api/auth/login', () => {
       role: 'admin',
       isActive: true,
     });
+    await User.create({
+      name: 'Admin desactivado',
+      email: 'admin-inactivo@triomphe.test',
+      password: await hashPassword('Password123'),
+      role: 'admin',
+      isActive: false,
+    });
   });
 
   afterEach(async () => {
@@ -50,6 +57,47 @@ describe('POST /api/auth/login', () => {
       .send({ email: 'no-existe@triomphe.test', password: 'cualquier-cosa' });
 
     expect(res.status).toBe(401);
+  });
+
+  test('rechaza un usuario desactivado con el mismo status y mensaje que credenciales inválidas', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'admin-inactivo@triomphe.test', password: 'Password123' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('Credenciales inválidas');
+  });
+
+  test('email inexistente, password incorrecta y usuario inactivo devuelven exactamente el mismo body (sin enumeración de cuentas)', async () => {
+    const [noExiste, passwordMala, inactivo] = await Promise.all([
+      request(app).post('/api/auth/login').send({ email: 'otro-no-existe@triomphe.test', password: 'x' }),
+      request(app).post('/api/auth/login').send({ email: 'admin-test@triomphe.test', password: 'wrong-password' }),
+      request(app).post('/api/auth/login').send({ email: 'admin-inactivo@triomphe.test', password: 'Password123' }),
+    ]);
+
+    expect(noExiste.status).toBe(passwordMala.status);
+    expect(passwordMala.status).toBe(inactivo.status);
+    expect(noExiste.body).toEqual(passwordMala.body);
+    expect(passwordMala.body).toEqual(inactivo.body);
+  });
+
+  test('protección contra timing attack: bcrypt.compare corre incluso si el email no existe o el usuario está inactivo', async () => {
+    const bcrypt = require('bcryptjs');
+    const spy = jest.spyOn(bcrypt, 'compare');
+
+    await request(app).post('/api/auth/login').send({ email: 'no-existe-timing@triomphe.test', password: 'x' });
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'admin-inactivo@triomphe.test', password: 'Password123' });
+    expect(spy).toHaveBeenCalledTimes(2);
+
+    // Comparado siempre contra el hash dummy (nunca contra un hash real, no hay usuario) —
+    // confirma que no se está tomando el atajo de "usuario no existe → skip bcrypt".
+    expect(spy.mock.calls[0][1]).toMatch(/^\$2[aby]\$/);
+
+    spy.mockRestore();
   });
 
   test('emite un JWT válido con credenciales correctas', async () => {

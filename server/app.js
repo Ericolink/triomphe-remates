@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
-const { resolveUserKey } = require('./src/middleware/rateLimitMiddleware');
+const { resolveUserKey, resolveClientIp } = require('./src/middleware/rateLimitMiddleware');
 require('dotenv').config();
 
 const app = express();
@@ -81,6 +81,12 @@ app.use(cors({
     }
   },
   credentials: true,
+  // Retry-After no está en la lista de headers "simples" que el navegador expone por
+  // default a fetch/axios en una respuesta cross-origin — sin esto, el frontend en dev
+  // (Vite en :5173 llamando a la API en :3001) no puede leer el valor para el countdown
+  // visual de "demasiados intentos" (ver LoginPage.jsx). En producción es same-origin y no
+  // hace falta, pero declararlo aquí no tiene costo.
+  exposedHeaders: ['Retry-After'],
 }));
 
 // Rate limiting global — solo sobre /api. Antes cubría también los estáticos del build
@@ -102,21 +108,14 @@ const limiter = rateLimit({
   // sea que esté en la misma IP/NAT (ver rateLimitMiddleware.js). Solo el tráfico anónimo
   // cae a IP.
   //
-  // IIS/httpPlatformHandler envía IP:puerto en X-Forwarded-For — quitar el puerto. El
-  // regex viejo (`.replace(/:\d+$/, '')`) también mutilaba direcciones IPv6 crudas (ej.
-  // "::1" → ":", colapsando clientes IPv6 distintos a la misma key) — express-rate-limit
-  // ahora lo detecta en build/arranque (ERR_ERL_KEY_GEN_IPV6) porque el keyGenerator usa
-  // req.ip sin pasar por su helper de normalización. Solo se quita el puerto en los dos
-  // formatos reales que puede mandar el proxy (IPv4:puerto o [IPv6]:puerto); cualquier
-  // otra cosa se deja intacta y siempre se normaliza con ipKeyGenerator.
+  // IIS/httpPlatformHandler envía IP:puerto en X-Forwarded-For — resolveClientIp (ver
+  // rateLimitMiddleware.js) le quita el puerto antes de pasarlo a ipKeyGenerator; el mismo
+  // helper lo usan los limiters de login para construir sus keys, así ambos normalizan la
+  // IP exactamente igual.
   keyGenerator: (req) => {
     const userKey = resolveUserKey(req);
     if (userKey) return userKey;
-    const raw = req.ip || req.socket.remoteAddress || '';
-    const bracketedIpv6 = raw.match(/^\[(.+)\]:\d+$/);
-    const ipv4WithPort = raw.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+$/);
-    const ip = bracketedIpv6?.[1] || ipv4WithPort?.[1] || raw;
-    return ipKeyGenerator(ip);
+    return ipKeyGenerator(resolveClientIp(req));
   },
 });
 app.use(['/api', '/sitemap.xml'], limiter);

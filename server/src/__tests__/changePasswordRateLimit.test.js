@@ -44,13 +44,18 @@ describe('Rate limiting de PUT /api/auth/change-password', () => {
     await sequelize.close();
   });
 
-  test('login sigue anunciando el límite original de authLimiter (20/15min)', async () => {
+  test('login sigue pasando por authLimiter y por los limiters de fuerza bruta (ver loginBruteForce.test.js)', async () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'ratelimit-a@triomphe.test', password: 'wrong-password' });
 
     expect(res.status).toBe(401);
-    expect(res.headers['ratelimit-limit']).toBe('20');
+    // /login corre tres limiters en cadena: authLimiter (20/15min, IP) → loginLimiter
+    // (5/15min, IP+email) → loginAccountLimiter (15/15min, email) — cada uno pisa los
+    // headers RateLimit-* del anterior si no corta la respuesta, así que el valor visible
+    // en la respuesta es el del ÚLTIMO limiter que corrió (loginAccountLimiter). El
+    // comportamiento de authLimiter/loginLimiter en sí se prueba en loginBruteForce.test.js.
+    expect(res.headers['ratelimit-limit']).toBe('15');
   });
 
   test('register sigue usando authLimiter (20/15min), no el nuevo limiter', async () => {

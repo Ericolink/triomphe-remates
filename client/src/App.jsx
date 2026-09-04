@@ -24,6 +24,7 @@ const BuzonPage = lazy(() => import('./pages/public/BuzonPage'));
 const FavoritesPage = lazy(() => import('./pages/public/FavoritesPage'));
 const ComparatorPage = lazy(() => import('./pages/public/ComparatorPage'));
 const UnsubscribeAlertPage = lazy(() => import('./pages/public/UnsubscribeAlertPage'));
+const ManageAlertPage = lazy(() => import('./pages/public/ManageAlertPage'));
 const FAQPage = lazy(() => import('./pages/public/FAQPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/public/PrivacyPolicyPage'));
 
@@ -87,6 +88,7 @@ export default function App() {
               <Route path="/favoritos" element={<FavoritesPage />} />
               <Route path="/comparar" element={<ComparatorPage />} />
               <Route path="/cancelar-alerta" element={<UnsubscribeAlertPage />} />
+              <Route path="/mi-alerta" element={<ManageAlertPage />} />
               <Route path="/preguntas-frecuentes" element={<FAQPage />} />
               <Route path="/aviso-de-privacidad" element={<PrivacyPolicyPage />} />
             </Route>

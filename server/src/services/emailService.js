@@ -274,6 +274,7 @@ const sendFeedbackNotification = async (feedback) => {
 };
 
 const sendPropertyAlertNotification = async (alert, property) => {
+  const manageUrl = `${process.env.CLIENT_URL}/mi-alerta?token=${alert.token}`;
   const unsubscribeUrl = `${process.env.CLIENT_URL}/cancelar-alerta?token=${alert.token}`;
   const propertyUrl = `${process.env.CLIENT_URL}/propiedades/${property.slug}`;
 
@@ -297,7 +298,10 @@ const sendPropertyAlertNotification = async (alert, property) => {
       </table>
     `,
     cta: ctaButton(propertyUrl, 'Ver propiedad →'),
-    footerNote: `Recibiste este correo porque configuraste una alerta en Triomphe Bienes Raíces. <a href="${unsubscribeUrl}" style="color:#6b7280">Cancelar alerta</a>`,
+    footerNote: `Recibiste este correo porque configuraste una alerta en Triomphe Bienes Raíces.
+      ¿Ya no quieres recibir estas alertas?
+      <a href="${manageUrl}" style="color:#6b7280">Modificar mi alerta</a> ·
+      <a href="${unsubscribeUrl}" style="color:#6b7280">Cancelar esta alerta</a>`,
   });
 
   await transporter.sendMail({

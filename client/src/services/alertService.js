@@ -19,3 +19,13 @@ export const unsubscribeAlert = async (token) => {
   const { data } = await api.get('/alerts/unsubscribe', { params: { token } });
   return data;
 };
+
+export const getAlertByToken = async (token) => {
+  const { data } = await api.get('/alerts/manage', { params: { token } });
+  return data;
+};
+
+export const updateAlertByToken = async (token, criteria) => {
+  const { data } = await api.put('/alerts/manage', criteria, { params: { token } });
+  return data;
+};

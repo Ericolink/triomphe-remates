@@ -2,11 +2,19 @@ const router = require('express').Router();
 const { register, login, getMe, changePassword } = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
+const { requestTimeout } = require('../middleware/requestTimeout');
 const {
   authLimiter,
+  loginLimiter,
+  loginAccountLimiter,
   apiLimiter,
   changePasswordLimiter,
 } = require('../middleware/rateLimitMiddleware');
+
+// Timeout del endpoint de login — ver requestTimeout.js. 10s da margen holgado sobre lo que
+// tarda hoy un login normal (bcrypt.compare ~100-300ms + una query indexada por email) sin
+// dejar la conexión abierta indefinidamente si MySQL se cuelga.
+const LOGIN_TIMEOUT_MS = 10_000;
 
 /**
  * @swagger
@@ -90,8 +98,18 @@ router.post('/register', authLimiter, authenticate, authorize('admin'), register
  *     responses:
  *       200: { description: Login exitoso con token JWT }
  *       401: { description: Credenciales inválidas }
+ *       429:
+ *         description: >
+ *           Demasiados intentos fallidos. Tres capas de límite conviven aquí (ver
+ *           rateLimitMiddleware.js): authLimiter (20/15min por IP, anti-scanning general,
+ *           compartido con /register), loginLimiter (5/15min por IP+email, el "bloqueo de
+ *           cuenta" puntual) y loginAccountLimiter (15/15min por email únicamente, red de
+ *           seguridad contra fuerza bruta distribuida entre varias IPs). Incluye
+ *           `Retry-After` en segundos.
+ *         headers:
+ *           Retry-After: { schema: { type: integer } }
  */
-router.post('/login', authLimiter, login);
+router.post('/login', requestTimeout(LOGIN_TIMEOUT_MS), authLimiter, loginLimiter, loginAccountLimiter, login);
 
 /**
  * @swagger

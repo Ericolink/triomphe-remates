@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
@@ -9,27 +9,55 @@ import useAuthStore from '../../store/authStore';
 import WelcomeScreen from '../../components/ui/WelcomeScreen';
 import { defaultRouteFor } from '../../utils/permissions';
 
+// Techo defensivo por si el backend no manda Retry-After (no debería pasar — express-rate-
+// limit siempre lo agrega en un 429, ver rateLimitMiddleware.js) o manda un valor inválido.
+const DEFAULT_RETRY_AFTER_SECONDS = 60;
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user, setAuth } = useAuthStore();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [welcome, setWelcome] = useState(null); // nombre del usuario
+  // Solo cuenta regresiva visual (UX) — el backend es quien realmente sigue rechazando el
+  // login mientras dure el bloqueo, sin importar si el usuario recarga la página o esta
+  // cuenta llega a cero antes de tiempo.
+  const [retryAfter, setRetryAfter] = useState(0);
   const formId = useId();
+
+  useEffect(() => {
+    if (retryAfter <= 0) return undefined;
+    const timer = setTimeout(() => setRetryAfter((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [retryAfter]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: ({ email, password }) => login(email, password),
     onSuccess: ({ token, user }) => {
+      setRetryAfter(0);
       setAuth(user, token);
       setWelcome(user.name);
     },
-    onError: () => toast.error('Credenciales incorrectas'),
+    onError: (error) => {
+      if (error.code === 'ECONNABORTED') {
+        toast.error('La solicitud tardó demasiado. Intenta nuevamente.');
+        return;
+      }
+      if (error.response?.status === 429) {
+        const seconds = Number(error.response.headers?.['retry-after']);
+        setRetryAfter(Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_RETRY_AFTER_SECONDS);
+        toast.error('Demasiados intentos. Intenta nuevamente en unos minutos.');
+        return;
+      }
+      toast.error('Credenciales incorrectas');
+    },
   });
 
   if (isAuthenticated && !welcome) return <Navigate to={defaultRouteFor(user)} replace />;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (retryAfter > 0) return;
     if (!form.email || !form.password) return toast.error('Completa todos los campos');
     mutate(form);
   };
@@ -99,10 +127,14 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || retryAfter > 0}
               className="w-full bg-accent-400 dark:bg-accent-500 text-primary-900 py-3 rounded-xl font-semibold hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors disabled:opacity-50"
             >
-              {isPending ? 'Ingresando...' : 'Ingresar'}
+              {isPending
+                ? 'Ingresando...'
+                : retryAfter > 0
+                  ? `Intenta de nuevo en ${retryAfter}s`
+                  : 'Ingresar'}
             </button>
           </form>
         </div>

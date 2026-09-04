@@ -2,6 +2,8 @@ const router = require('express').Router();
 const {
   subscribe,
   unsubscribe,
+  getAlertByToken,
+  updateAlertByToken,
   getAlerts,
   deleteAlert,
 } = require('../controllers/alertController');
@@ -15,6 +17,8 @@ const {
 
 router.post('/', publicFormLimiter, alertSubscribeLimiter, subscribe);
 router.get('/unsubscribe', apiLimiter, unsubscribe);
+router.get('/manage', apiLimiter, getAlertByToken);
+router.put('/manage', apiLimiter, updateAlertByToken);
 router.get('/', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), getAlerts);
 router.delete('/:id', apiLimiter, authenticate, authorize('admin', 'asistente_administrativo'), deleteAlert);
 
