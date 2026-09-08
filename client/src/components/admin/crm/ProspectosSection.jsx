@@ -42,6 +42,7 @@ import {
   PIPELINE_STAGE_CARD_COLORS,
   NON_TERMINAL_PIPELINE_STAGE_OPTIONS,
   PAYMENT_METHOD_LABELS,
+  BUSINESS_LINE_LABELS,
 } from '../../../utils/constants';
 
 const LEADS_LIST_PAGE_SIZE = 20;
@@ -79,7 +80,21 @@ export default function ProspectosSection() {
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [onlyMine, setOnlyMine] = useState(false);
+  const [businessLine, setBusinessLine] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const assignedToUserId = onlyMine ? currentUserId : '';
+  const hasActiveFilters =
+    !!search || !!stage || !!staleDays || onlyMine || !!businessLine || !!paymentMethod;
+
+  const clearFilters = () => {
+    setSearch('');
+    setStage('');
+    setStaleDays('');
+    setOnlyMine(false);
+    setBusinessLine('');
+    setPaymentMethod('');
+    setChecked([]);
+  };
 
   const leadActions = useLeadDetailActions({ selected, setSelected });
   const { attemptStageChange, setSheetLead } = leadActions;
@@ -94,7 +109,7 @@ export default function ProspectosSection() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['leads', stage, staleDays, search, assignedToUserId],
+    queryKey: ['leads', stage, staleDays, search, assignedToUserId, businessLine, paymentMethod],
     queryFn: ({ pageParam = 1 }) =>
       getLeads({
         pipelineStage: stage,
@@ -103,6 +118,8 @@ export default function ProspectosSection() {
         limit: LEADS_LIST_PAGE_SIZE,
         search: search || undefined,
         assignedToUserId: assignedToUserId || undefined,
+        businessLine: businessLine || undefined,
+        paymentMethod: paymentMethod || undefined,
       }),
     getNextPageParam: (lastPage) =>
       lastPage.pagination.hasNext ? lastPage.pagination.page + 1 : undefined,
@@ -247,6 +264,44 @@ export default function ProspectosSection() {
             <option value="15">Sin actividad 15+ días</option>
             <option value="30">Sin actividad 30+ días</option>
           </select>
+          <select
+            value={businessLine}
+            onChange={(e) => {
+              setBusinessLine(e.target.value);
+              setChecked([]);
+            }}
+            className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
+          >
+            <option value="">Todas las líneas de negocio</option>
+            {Object.entries(BUSINESS_LINE_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+          <select
+            value={paymentMethod}
+            onChange={(e) => {
+              setPaymentMethod(e.target.value);
+              setChecked([]);
+            }}
+            className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
+          >
+            <option value="">Todos los métodos de pago</option>
+            {Object.entries(PAYMENT_METHOD_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-[#242938] hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </div>
       </motion.div>
 
@@ -364,15 +419,15 @@ export default function ProspectosSection() {
                 animate="visible"
                 className="text-center py-16 text-gray-400 dark:text-gray-500"
               >
-                {stage ? (
+                {hasActiveFilters ? (
                   <>
-                    <p>No hay prospectos en esta etapa.</p>
+                    <p>Ningún prospecto coincide con los filtros seleccionados.</p>
                     <button
                       type="button"
-                      onClick={() => setStage('')}
+                      onClick={clearFilters}
                       className="mt-2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
                     >
-                      Ver todos los prospectos
+                      Limpiar filtros
                     </button>
                   </>
                 ) : (

@@ -549,6 +549,8 @@ const getLeads = async (req, res) => {
     pipelineStage,
     campaignId,
     assignedToUserId,
+    businessLine,
+    paymentMethod,
     search,
     staleDays,
     allStages,
@@ -562,6 +564,27 @@ const getLeads = async (req, res) => {
   if (pipelineStage) where.pipelineStage = pipelineStage;
   if (campaignId) where.campaignId = campaignId;
   if (assignedToUserId) where.assignedToUserId = assignedToUserId;
+  // Filtros de búsqueda del CRM (línea de negocio / método de pago) — mismos ENUMs y
+  // arrays de valores válidos que ya usan createLead/updateLead vía parseCommercialFields,
+  // para no duplicar ni divergir de esa lista.
+  if (businessLine) {
+    if (!VALID_BUSINESS_LINES.includes(businessLine)) {
+      throw new ApiError(
+        400,
+        `Línea de negocio inválida. Valores permitidos: ${VALID_BUSINESS_LINES.join(', ')}`
+      );
+    }
+    where.businessLine = businessLine;
+  }
+  if (paymentMethod) {
+    if (!VALID_PAYMENT_METHODS.includes(paymentMethod)) {
+      throw new ApiError(
+        400,
+        `Forma de pago inválida. Valores permitidos: ${VALID_PAYMENT_METHODS.join(', ')}`
+      );
+    }
+    where.paymentMethod = paymentMethod;
+  }
   // Búsqueda instantánea — mismo patrón Op.or/Op.like que propertyController.
   if (search) {
     where[Op.or] = [
