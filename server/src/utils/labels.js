@@ -72,6 +72,33 @@ const LEAD_URGENCY_LABEL = {
   mas_6_meses: 'Más de 6 meses',
 };
 
+// Etapa del pipeline CRM (Lead.pipelineStage) — debe coincidir con PIPELINE_STAGE_LABELS en
+// client/src/utils/constants.js. Usado por el export de Excel de leads (columna "Estado").
+const PIPELINE_STAGE_LABEL = {
+  nuevo: 'Nuevo',
+  contactado: 'Contactado',
+  interesado: 'Interesado',
+  negociacion: 'Negociación/información',
+  cita_agendada: 'Cita agendada',
+  cita_realizada: 'Cita realizada',
+  cita_con_seguimiento: 'Cita con seguimiento',
+  venta_realizada: 'Venta realizada',
+  no_interesado: 'No interesado',
+  lista_espera: 'Lista de espera',
+};
+
+// Motivo de cierre de un Lead (Lead.closeReason) — debe coincidir con CLOSE_REASON_LABELS en
+// client/src/utils/constants.js. Usado por el export de Excel de leads (columna "Motivo").
+const CLOSE_REASON_LABEL = {
+  compro: 'Compró',
+  no_respondio: 'No respondió',
+  sin_presupuesto: 'Sin presupuesto',
+  compro_competencia: 'Compró con otra inmobiliaria',
+  solo_info: 'Solo solicitó información',
+  perdio_interes: 'Perdió interés',
+  otro: 'Otro',
+};
+
 module.exports = {
   CITY_LABEL,
   PROPERTY_TYPE_LABEL,
@@ -80,4 +107,6 @@ module.exports = {
   LEGAL_PROCESS_TYPE_LABEL,
   BUSINESS_LINE_LABEL,
   LEAD_URGENCY_LABEL,
+  PIPELINE_STAGE_LABEL,
+  CLOSE_REASON_LABEL,
 };

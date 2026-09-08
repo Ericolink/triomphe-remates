@@ -19,7 +19,6 @@ import { formatPrice, formatDate } from '../../utils/formatters';
 import Badge from '../../components/ui/Badge';
 import {
   CITY_LABELS,
-  CATEGORY_LABELS,
   STATUS_LABELS,
   STATUS_SELECT_COLORS,
   BUSINESS_LINE_LABELS,
@@ -172,7 +171,6 @@ export default function AdminPropertiesPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
-  const [category, setCategory] = useState('');
   const [businessLine, setBusinessLine] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -181,32 +179,9 @@ export default function AdminPropertiesPage() {
   const [confirm, setConfirm] = useState(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-properties', search, city, category, businessLine, minPrice, maxPrice, page],
-    queryFn: () =>
-      getProperties({ search, city, category, businessLine, minPrice, maxPrice, page, limit: 15 }),
+    queryKey: ['admin-properties', search, city, businessLine, minPrice, maxPrice, page],
+    queryFn: () => getProperties({ search, city, businessLine, minPrice, maxPrice, page, limit: 15 }),
   });
-
-  // Selector combinado "Línea": línea de negocio (remate/credito/renta/contado/inversion) y
-  // categoría (remate/renta/compra_venta, subclasificación solo dentro de la línea remate — ver
-  // BUSINESS_LINE_LABELS/CATEGORY_LABELS en utils/constants.js) viven en dos campos
-  // distintos del modelo, pero antes se filtraban desde dos <select> separados. Se
-  // unificaron en uno solo (a pedido, para no ocupar dos filas en mobile); el prefijo
-  // bl:/cat: en el value de cada <option> es lo único que distingue a qué estado real
-  // escribir, ya que ambos comparten el valor "remate" con significados distintos.
-  const lineFilterValue = businessLine ? `bl:${businessLine}` : category ? `cat:${category}` : '';
-  const handleLineFilterChange = (raw) => {
-    if (raw.startsWith('bl:')) {
-      setBusinessLine(raw.slice(3));
-      setCategory('');
-    } else if (raw.startsWith('cat:')) {
-      setCategory(raw.slice(4));
-      setBusinessLine('');
-    } else {
-      setBusinessLine('');
-      setCategory('');
-    }
-    setPage(1);
-  };
 
   const deleteMutation = useMutation({
     mutationFn: deleteProperty,
@@ -271,7 +246,6 @@ export default function AdminPropertiesPage() {
       setExporting(format);
       const params = new URLSearchParams();
       if (city) params.set('city', city);
-      if (category) params.set('category', category);
       if (businessLine) params.set('businessLine', businessLine);
       const response = await api.get(`/export/${format}?${params.toString()}`, {
         responseType: 'blob',
@@ -388,25 +362,19 @@ export default function AdminPropertiesPage() {
           </select>
 
           <select
-            value={lineFilterValue}
-            onChange={(e) => handleLineFilterChange(e.target.value)}
+            value={businessLine}
+            onChange={(e) => {
+              setBusinessLine(e.target.value);
+              setPage(1);
+            }}
             className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm bg-white dark:bg-[#242938] dark:text-gray-100 focus:outline-none"
           >
             <option value="">Todas las líneas</option>
-            <optgroup label="Línea de negocio">
-              {labelsToOptions(BUSINESS_LINE_LABELS).map((o) => (
-                <option key={`bl:${o.value}`} value={`bl:${o.value}`}>
-                  {o.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Categoría (dentro de Remates)">
-              {labelsToOptions(CATEGORY_LABELS).map((o) => (
-                <option key={`cat:${o.value}`} value={`cat:${o.value}`}>
-                  {o.label}
-                </option>
-              ))}
-            </optgroup>
+            {labelsToOptions(BUSINESS_LINE_LABELS).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -657,7 +625,7 @@ export default function AdminPropertiesPage() {
               animate="visible"
               className="text-center py-16 text-gray-400 dark:text-gray-500"
             >
-              {search || city || category || businessLine || minPrice || maxPrice ? (
+              {search || city || businessLine || minPrice || maxPrice ? (
                 <>
                   <p>Ningún resultado coincide con los filtros actuales.</p>
                   <button
@@ -665,7 +633,6 @@ export default function AdminPropertiesPage() {
                     onClick={() => {
                       setSearch('');
                       setCity('');
-                      setCategory('');
                       setBusinessLine('');
                       setMinPrice('');
                       setMaxPrice('');

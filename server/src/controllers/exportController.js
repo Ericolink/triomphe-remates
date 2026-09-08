@@ -1,13 +1,14 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { Op } = require('sequelize');
-const { Property, Feedback, Lead, PropertyAlert } = require('../models/index');
+const { Property, Feedback, Lead, PropertyAlert, User } = require('../models/index');
 const {
   CITY_LABEL: cityLabel,
   PROPERTY_TYPE_LABEL: typeLabel,
   LEAD_TYPE_LABEL: leadTypeLabel,
   BUSINESS_LINE_LABEL: businessLineLabel,
-  LEAD_URGENCY_LABEL: leadUrgencyLabel,
+  PIPELINE_STAGE_LABEL: pipelineStageLabel,
+  CLOSE_REASON_LABEL: closeReasonLabel,
 } = require('../utils/labels');
 const { logAudit } = require('../utils/audit');
 const { getLeadVisibilityWhere } = require('../utils/leadAccess');
@@ -648,7 +649,10 @@ const exportLeadsExcel = async (req, res) => {
     const leads = await Lead.findAll({
       where,
       order: [['createdAt', 'DESC']],
-      include: [{ model: Property, as: 'property', attributes: ['title'] }],
+      include: [
+        { model: Property, as: 'property', attributes: ['title'] },
+        { model: User, as: 'assignedUser', attributes: ['id', 'name'], required: false },
+      ],
     });
     logAudit(req, 'export', 'lead', null, {
       format: 'excel',
@@ -666,28 +670,31 @@ const exportLeadsExcel = async (req, res) => {
       pageSetup: { paperSize: 9, orientation: 'landscape' },
     });
 
+    // Orden solicitado (issue "Modificar Excel de prospectos"): Estado/Ciudad/Zona vienen del
+    // criterio de búsqueda del lead (searchCity/searchZone/pipelineStage); "Asesor" se agregó
+    // junto a Nombre porque es la info de "quién es el prospecto y quién lo atiende". "Motivo"
+    // (closeReason) es distinto de "Tipo" (motivo de contacto, campo `type`) — ver
+    // CloseLeadModal.jsx, que ya usa "Motivo" para closeReason. La columna de estatus con color
+    // hardcodeado por índice quedó en la posición 12 (ver row.getCell(12) más abajo).
     const headers = [
       { header: '#', key: 'num', width: 5 },
+      { header: 'Estado', key: 'pipelineStage', width: 20 },
+      { header: 'Ciudad', key: 'searchCity', width: 16 },
+      { header: 'Zona', key: 'searchZone', width: 20 },
+      { header: 'Tipo', key: 'type', width: 13 },
       { header: 'Nombre', key: 'name', width: 22 },
+      { header: 'Asesor', key: 'assignedUser', width: 20 },
       { header: 'Email', key: 'email', width: 28 },
       { header: 'Teléfono', key: 'phone', width: 16 },
       { header: 'Propiedad', key: 'property', width: 30 },
-      { header: 'Tipo', key: 'type', width: 13 },
+      { header: 'Motivo', key: 'closeReason', width: 20 },
       { header: 'Estatus', key: 'status', width: 13 },
       { header: 'Forma de pago', key: 'paymentMethod', width: 18 },
       { header: 'Monto disponible', key: 'budgetAmount', width: 18 },
-      { header: 'Primer contacto', key: 'firstContactDate', width: 16 },
-      { header: 'Fecha de cita', key: 'appointmentDate', width: 16 },
-      { header: 'Mensaje', key: 'message', width: 40 },
+      { header: 'Fecha de registro', key: 'createdAt', width: 16 },
+      { header: 'Fecha de primer contacto', key: 'firstContactDate', width: 16 },
+      { header: 'Mensaje de cliente', key: 'message', width: 40 },
       { header: 'Notas', key: 'notes', width: 30 },
-      // Rediseño CRM — criterios de búsqueda estructurados. Van después de "Notas" (columna
-      // 13), no antes de la columna 7 ("Estatus"), que tiene un color hardcodeado por índice
-      // (ver row.getCell(7) más abajo).
-      { header: 'Ciudad buscada', key: 'searchCity', width: 16 },
-      { header: 'Zona buscada', key: 'searchZone', width: 20 },
-      { header: 'Tipo buscado', key: 'desiredType', width: 16 },
-      { header: 'Urgencia', key: 'urgency', width: 14 },
-      { header: 'Fecha', key: 'createdAt', width: 16 },
     ];
     sheet.columns = headers;
 
@@ -703,11 +710,16 @@ const exportLeadsExcel = async (req, res) => {
       const isAlt = i % 2 === 0;
       const row = sheet.addRow({
         num: i + 1,
+        pipelineStage: pipelineStageLabel[lead.pipelineStage] || lead.pipelineStage,
+        searchCity: lead.searchCity ? cityLabel[lead.searchCity] || lead.searchCity : '—',
+        searchZone: dash(lead.searchZone),
+        type: leadTypeLabel[lead.type] || lead.type,
         name: dash(lead.name),
+        assignedUser: lead.assignedUser?.name || 'Sin asignar',
         email: dash(lead.email),
         phone: dash(lead.phone),
         property: dash(lead.property?.title),
-        type: leadTypeLabel[lead.type] || lead.type,
+        closeReason: lead.closeReason ? closeReasonLabel[lead.closeReason] || lead.closeReason : '—',
         status: leadStatusLabel[lead.status] || lead.status,
         paymentMethod: lead.paymentMethod
           ? paymentMethodLabel[lead.paymentMethod] || lead.paymentMethod
@@ -717,15 +729,10 @@ const exportLeadsExcel = async (req, res) => {
           : lead.budgetAmount != null
             ? formatPrice(lead.budgetAmount)
             : '—',
+        createdAt: formatDate(lead.createdAt),
         firstContactDate: lead.firstContactDate ? formatDate(lead.firstContactDate) : '—',
-        appointmentDate: lead.appointmentDate ? formatDate(lead.appointmentDate) : '—',
         message: lead.message ? lead.message.slice(0, 200) : '—',
         notes: dash(lead.notes),
-        searchCity: lead.searchCity ? cityLabel[lead.searchCity] || lead.searchCity : '—',
-        searchZone: dash(lead.searchZone),
-        desiredType: lead.desiredType ? typeLabel[lead.desiredType] || lead.desiredType : '—',
-        urgency: lead.urgency ? leadUrgencyLabel[lead.urgency] || lead.urgency : '—',
-        createdAt: formatDate(lead.createdAt),
       });
 
       row.height = 18;
@@ -737,7 +744,7 @@ const exportLeadsExcel = async (req, res) => {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_ALT_ARGB } };
       });
 
-      row.getCell(7).font = {
+      row.getCell(12).font = {
         bold: true,
         size: 9,
         color: { argb: leadStatusArgb[lead.status] || TEXT_ARGB },
@@ -750,7 +757,7 @@ const exportLeadsExcel = async (req, res) => {
     totalRow.eachCell((cell) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT_ARGB } };
     });
-    totalRow.getCell(2).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
+    totalRow.getCell(6).font = { bold: true, size: 10, color: { argb: PRIMARY_ARGB } };
 
     res.setHeader(
       'Content-Type',

@@ -226,6 +226,59 @@ describe('exportController', () => {
   });
 
   describe('GET /api/export/leads/excel', () => {
+    // Índices de columna (1-based, `row.values`) tras el reordenamiento del issue "Modificar
+    // Excel de prospectos": #, Estado, Ciudad, Zona, Tipo, Nombre, Asesor, Email, Teléfono,
+    // Propiedad, Motivo, Estatus, Forma de pago, Monto disponible, Fecha de registro,
+    // Fecha de primer contacto, Mensaje de cliente, Notas.
+    const COL = {
+      pipelineStage: 2,
+      searchCity: 3,
+      searchZone: 4,
+      type: 5,
+      name: 6,
+      assignedUser: 7,
+      email: 8,
+      phone: 9,
+      property: 10,
+      closeReason: 11,
+      status: 12,
+      paymentMethod: 13,
+      budgetAmount: 14,
+      createdAt: 15,
+      firstContactDate: 16,
+      message: 17,
+      notes: 18,
+    };
+
+    test('encabezados en el orden exacto solicitado', async () => {
+      const res = await authed('/api/export/leads/excel');
+      expect(res.status).toBe(200);
+      const workbook = await readWorkbook(res.body);
+      const sheet = workbook.getWorksheet('Leads');
+
+      const headerRow = sheet.getRow(3).values.filter(Boolean);
+      expect(headerRow).toEqual([
+        '#',
+        'Estado',
+        'Ciudad',
+        'Zona',
+        'Tipo',
+        'Nombre',
+        'Asesor',
+        'Email',
+        'Teléfono',
+        'Propiedad',
+        'Motivo',
+        'Estatus',
+        'Forma de pago',
+        'Monto disponible',
+        'Fecha de registro',
+        'Fecha de primer contacto',
+        'Mensaje de cliente',
+        'Notas',
+      ]);
+    });
+
     test('columnas de presupuesto/pago/propiedad y color por estatus', async () => {
       const property = await createProperty({ title: 'Interesada' });
       await createLead({
@@ -256,29 +309,24 @@ describe('exportController', () => {
       const workbook = await readWorkbook(res.body);
       const sheet = workbook.getWorksheet('Leads');
 
-      const headerRow = sheet.getRow(3).values.filter(Boolean);
-      expect(headerRow).toContain('Forma de pago');
-      expect(headerRow).toContain('Monto disponible');
-      expect(headerRow).toContain('Primer contacto');
-
       const rows = [];
       for (let i = 4; i < 4 + 3; i++) rows.push(sheet.getRow(i));
 
-      const conPresupuesto = rows.find((r) => r.values[2] === 'Con presupuesto');
-      expect(conPresupuesto.values[5]).toBe('Interesada'); // columna Propiedad
-      expect(conPresupuesto.values[8]).toBe('Contado');
-      expect(conPresupuesto.values[9]).toBe(formatPrice(900000));
-      expect(conPresupuesto.getCell(7).font.color.argb).toBe(
-        statusArgb.cerrado ?? conPresupuesto.getCell(7).font.color.argb
+      const conPresupuesto = rows.find((r) => r.values[COL.name] === 'Con presupuesto');
+      expect(conPresupuesto.values[COL.property]).toBe('Interesada');
+      expect(conPresupuesto.values[COL.paymentMethod]).toBe('Contado');
+      expect(conPresupuesto.values[COL.budgetAmount]).toBe(formatPrice(900000));
+      expect(conPresupuesto.getCell(COL.status).font.color.argb).toBe(
+        statusArgb.cerrado ?? conPresupuesto.getCell(COL.status).font.color.argb
       );
 
-      const sinEspecificar = rows.find((r) => r.values[2] === 'Sin especificar');
-      expect(sinEspecificar.values[9]).toBe('No especificó');
+      const sinEspecificar = rows.find((r) => r.values[COL.name] === 'Sin especificar');
+      expect(sinEspecificar.values[COL.budgetAmount]).toBe('No especificó');
 
-      const sinDatos = rows.find((r) => r.values[2] === 'Sin datos comerciales');
-      expect(sinDatos.values[8]).toBe('—'); // forma de pago no capturada
-      expect(sinDatos.values[9]).toBe('—'); // ni presupuesto ni "no especificó"
-      expect(sinDatos.values[5]).toBe('—'); // sin propiedad asociada
+      const sinDatos = rows.find((r) => r.values[COL.name] === 'Sin datos comerciales');
+      expect(sinDatos.values[COL.paymentMethod]).toBe('—'); // forma de pago no capturada
+      expect(sinDatos.values[COL.budgetAmount]).toBe('—'); // ni presupuesto ni "no especificó"
+      expect(sinDatos.values[COL.property]).toBe('—'); // sin propiedad asociada
     });
 
     test('filtra por status y exportación vacía no falla', async () => {
@@ -290,6 +338,79 @@ describe('exportController', () => {
       const workbook = await readWorkbook(res.body);
       const sheet = workbook.getWorksheet('Leads');
       expect(sheet.rowCount - 4).toBe(0); // ningún lead está descartado
+    });
+
+    test('columna Asesor muestra el usuario asignado sin importar su rol, o "Sin asignar"', async () => {
+      const asesor = await createUser({ role: 'asesor_ventas', name: 'Asesor Uno' });
+      const coordinador = await createUser({ role: 'coordinador_ventas', name: 'Coordinador Uno' });
+      const adminUser = await createUser({ role: 'admin', name: 'Admin Uno' });
+      const asistente = await createUser({
+        role: 'asistente_administrativo',
+        name: 'Asistente Uno',
+      });
+
+      await createLead({ name: 'Lead de asesor', assignedToUserId: asesor.id });
+      await createLead({ name: 'Lead de coordinador', assignedToUserId: coordinador.id });
+      await createLead({ name: 'Lead de admin', assignedToUserId: adminUser.id });
+      await createLead({ name: 'Lead de asistente', assignedToUserId: asistente.id });
+      await createLead({ name: 'Lead sin asignar', assignedToUserId: null });
+
+      const res = await authed('/api/export/leads/excel');
+      expect(res.status).toBe(200);
+      const workbook = await readWorkbook(res.body);
+      const sheet = workbook.getWorksheet('Leads');
+
+      const rows = [];
+      for (let i = 4; i < 4 + 5; i++) rows.push(sheet.getRow(i));
+      const asesorOf = (name) => rows.find((r) => r.values[COL.name] === name).values[COL.assignedUser];
+
+      expect(asesorOf('Lead de asesor')).toBe('Asesor Uno');
+      expect(asesorOf('Lead de coordinador')).toBe('Coordinador Uno');
+      expect(asesorOf('Lead de admin')).toBe('Admin Uno');
+      expect(asesorOf('Lead de asistente')).toBe('Asistente Uno');
+      expect(asesorOf('Lead sin asignar')).toBe('Sin asignar');
+
+      await User.destroy({ where: { id: [asesor.id, coordinador.id, adminUser.id, asistente.id] }, force: true });
+    });
+
+    test('Estado, Tipo, Motivo y fechas muestran los datos del lead correspondiente', async () => {
+      await createLead({
+        name: 'Lead cerrado ganado',
+        pipelineStage: 'venta_realizada',
+        type: 'comprar_propiedad',
+        status: 'cerrado',
+        closeReason: 'compro',
+        createdAt: new Date('2026-01-10T12:00:00Z'),
+        firstContactDate: '2026-01-05',
+      });
+      await createLead({
+        name: 'Lead nuevo sin cerrar',
+        pipelineStage: 'nuevo',
+        type: 'contacto',
+        status: 'nuevo',
+        closeReason: null,
+        firstContactDate: null,
+      });
+
+      const res = await authed('/api/export/leads/excel');
+      expect(res.status).toBe(200);
+      const workbook = await readWorkbook(res.body);
+      const sheet = workbook.getWorksheet('Leads');
+
+      const rows = [];
+      for (let i = 4; i < 4 + 2; i++) rows.push(sheet.getRow(i));
+      const cerrado = rows.find((r) => r.values[COL.name] === 'Lead cerrado ganado');
+      const nuevo = rows.find((r) => r.values[COL.name] === 'Lead nuevo sin cerrar');
+
+      expect(cerrado.values[COL.pipelineStage]).toBe('Venta realizada');
+      expect(cerrado.values[COL.type]).toBe('Quiero comprar una propiedad');
+      expect(cerrado.values[COL.closeReason]).toBe('Compró');
+      expect(cerrado.values[COL.createdAt]).toBe(formatDate(new Date('2026-01-10T12:00:00Z')));
+      expect(cerrado.values[COL.firstContactDate]).toBe(formatDate('2026-01-05'));
+
+      expect(nuevo.values[COL.pipelineStage]).toBe('Nuevo');
+      expect(nuevo.values[COL.closeReason]).toBe('—'); // no se ha cerrado, sin motivo de cierre
+      expect(nuevo.values[COL.firstContactDate]).toBe('—'); // sin fecha de primer contacto
     });
   });
 
