@@ -51,7 +51,10 @@ export default function PropertyPicker({
   );
 
   const handleSelect = (property) => {
-    onChange(property.id);
+    // Segundo argumento opcional — ver LeadDetailPanel.jsx (queueChange de "Propiedad de
+    // origen"), que necesita el título para armar el resumen de "cambios sin guardar" sin
+    // tener que resolverlo con una consulta aparte. El resto de los callers lo ignoran.
+    onChange(property.id, property.title);
     setSelectedLabel(property.title);
     setQuery('');
     setOpen(false);
@@ -59,7 +62,7 @@ export default function PropertyPicker({
 
   const handleClear = (e) => {
     e.stopPropagation();
-    onChange('');
+    onChange('', '');
     setSelectedLabel('');
     setQuery('');
   };

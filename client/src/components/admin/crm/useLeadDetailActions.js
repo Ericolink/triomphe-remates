@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
@@ -22,6 +22,21 @@ export default function useLeadDetailActions({ selected, setSelected }) {
   const [reopenTarget, setReopenTarget] = useState(null); // { lead, targetStage }
   const [waitingListTarget, setWaitingListTarget] = useState(null); // lead
   const [sheetLead, setSheetLead] = useState(null);
+  // Campos editados en LeadDetailPanel sin guardar todavía — una entrada por clave de
+  // campo ({ data, label, before, after }), acumuladas mientras el usuario sigue en el
+  // mismo prospecto (ver queueChange/onFieldChange en LeadDetailPanel.jsx). `pendingNav`
+  // guarda qué hacer si el usuario confirma/descarta al intentar salir: cerrar el detalle
+  // o abrir otro prospecto de la lista.
+  const [pendingChanges, setPendingChanges] = useState({});
+  const [pendingNav, setPendingNav] = useState(null); // null | { type: 'deselect' } | { type: 'select', lead }
+  // A qué prospecto pertenecen los `pendingChanges` actuales — normalmente coincide con
+  // `selected?.id`, salvo por una vía que no pasa por requestSelectLead/requestDeselect
+  // (ej. Calendario abre un prospecto distinto directo con su propio setSelected mientras
+  // este panel ya tenía cambios sin guardar de otro). El efecto de abajo es la salvaguarda
+  // contra ESA vía: sin ella, esos campos podrían terminar guardándose sobre el id
+  // equivocado en vez de simplemente perderse (que es lo que ya pasaba antes de este
+  // cambio con cualquier edición sin confirmar).
+  const pendingChangesLeadIdRef = useRef(null);
 
   const { data: closeLeadDetail } = useQuery({
     queryKey: ['lead-detail-for-close', closeTarget?.lead?.id],
@@ -142,6 +157,93 @@ export default function useLeadDetailActions({ selected, setSelected }) {
       },
     });
 
+  // Único punto de entrada para que LeadDetailPanel registre (o borre, con entry=null) un
+  // campo editado sin guardar — ver queueChange ahí. No dispara ningún PUT por sí mismo.
+  const stageFieldChange = (key, entry) => {
+    setPendingChanges((prev) => {
+      const wasEmpty = Object.keys(prev).length === 0;
+      let next;
+      if (!entry) {
+        if (!(key in prev)) return prev;
+        next = { ...prev };
+        delete next[key];
+      } else {
+        next = { ...prev, [key]: entry };
+      }
+      const isEmpty = Object.keys(next).length === 0;
+      if (wasEmpty && !isEmpty) pendingChangesLeadIdRef.current = selected?.id ?? null;
+      if (isEmpty) pendingChangesLeadIdRef.current = null;
+      return next;
+    });
+  };
+
+  // Salvaguarda descrita arriba: si `selected` cambia de prospecto por una vía que no pasó
+  // por requestSelectLead/requestDeselect, los cambios pendientes que quedaron huérfanos se
+  // descartan en vez de arriesgar que se guarden sobre el id equivocado.
+  useEffect(() => {
+    if (pendingChangesLeadIdRef.current != null && selected?.id !== pendingChangesLeadIdRef.current) {
+      setPendingChanges({});
+      setPendingNav(null);
+      pendingChangesLeadIdRef.current = null;
+    }
+  }, [selected?.id]);
+
+  const hasPendingChanges = Object.keys(pendingChanges).length > 0;
+  const pendingChangesList = Object.entries(pendingChanges).map(([key, entry]) => ({
+    key,
+    ...entry,
+  }));
+
+  // Reemplazan a los `setSelected(null)`/`setSelected(lead)` directos de siempre —
+  // interceptan la salida del prospecto actual si quedan campos sin guardar (ver
+  // PendingChangesModal) en vez de descartarlos en silencio. Elegir el mismo prospecto que
+  // ya está abierto no cuenta como "salir".
+  const requestDeselect = () => {
+    if (!hasPendingChanges) {
+      setSelected(null);
+      return;
+    }
+    setPendingNav({ type: 'deselect' });
+  };
+
+  const requestSelectLead = (lead) => {
+    if (!hasPendingChanges || selected?.id === lead.id) {
+      setSelected(lead);
+      return;
+    }
+    setPendingNav({ type: 'select', lead });
+  };
+
+  const resolvePendingNav = (nav) => {
+    if (!nav) return;
+    if (nav.type === 'deselect') setSelected(null);
+    else setSelected(nav.lead);
+  };
+
+  const confirmPendingChanges = async () => {
+    const id = selected.id;
+    const data = Object.assign({}, ...Object.values(pendingChanges).map((c) => c.data));
+    try {
+      await updateMutation.mutateAsync({ id, data });
+      toast.success('Cambios guardados');
+      setPendingChanges({});
+      resolvePendingNav(pendingNav);
+      setPendingNav(null);
+    } catch (e) {
+      // Se deja el modal abierto con los cambios intactos (ni se navega ni se pierden)
+      // para que el usuario pueda corregir y reintentar.
+      toast.error(e?.response?.data?.error || 'No se pudo guardar');
+    }
+  };
+
+  const discardPendingChanges = () => {
+    setPendingChanges({});
+    resolvePendingNav(pendingNav);
+    setPendingNav(null);
+  };
+
+  const cancelPendingNav = () => setPendingNav(null);
+
   return {
     confirm,
     setConfirm,
@@ -162,5 +264,15 @@ export default function useLeadDetailActions({ selected, setSelected }) {
     attemptStageChange,
     handleDelete,
     closeLeadForModal: closeLeadDetail?.data || closeTarget?.lead,
+    pendingChanges,
+    pendingChangesList,
+    hasPendingChanges,
+    pendingNav,
+    stageFieldChange,
+    requestDeselect,
+    requestSelectLead,
+    confirmPendingChanges,
+    discardPendingChanges,
+    cancelPendingNav,
   };
 }

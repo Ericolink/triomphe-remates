@@ -342,7 +342,7 @@ export default function ProspectosSection() {
                         checked={checked.includes(lead.id)}
                         onCheckToggle={(e) => toggleCheck(e, lead.id)}
                         checkLabel={`Seleccionar prospecto ${lead.name}`}
-                        onClick={() => setSelected(lead)}
+                        onClick={() => leadActions.requestSelectLead(lead)}
                         selected={selected?.id === lead.id}
                         gradientClass={colors.gradient}
                       >
@@ -454,11 +454,12 @@ export default function ProspectosSection() {
           <div className="xl:col-span-1">
             <DetailPanelSlot
               selected={selected}
-              updateMutation={leadActions.updateMutation}
+              pendingChanges={leadActions.pendingChanges}
+              onFieldChange={leadActions.stageFieldChange}
               users={users}
               onOpenStagePicker={(lead) => setSheetLead(lead)}
               onChangeStage={attemptStageChange}
-              onDeselect={() => setSelected(null)}
+              onDeselect={leadActions.requestDeselect}
               emptyText="Selecciona un prospecto para ver el detalle"
               onDelete={leadActions.handleDelete}
             />

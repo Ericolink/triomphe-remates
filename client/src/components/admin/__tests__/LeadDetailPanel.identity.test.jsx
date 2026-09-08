@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import LeadDetailWithActions from '../crm/LeadDetailWithActions';
 import { DetailPanelSlot } from '../LeadDetailPanel';
@@ -136,23 +136,19 @@ describe('LeadDetailPanel — identidad ligada al leadId (CRM-001)', () => {
       await waitFor(() => expect(nameInputAfterSwitch).toHaveValue('María López'));
       expect(nameInputAfterSwitch).not.toHaveValue('Juan EDITADO SIN GUARDAR');
 
-      // La sola transición A→B no debe haber disparado ningún guardado por sí misma.
+      // La sola transición A→B no debe haber disparado ningún guardado por sí misma —
+      // tampoco lo hace ya editar y salir del campo (ver LeadDetailPanel.autosave.test.jsx):
+      // los campos se acumulan sin guardar hasta que se confirma al salir del prospecto.
       expect(updateLead).not.toHaveBeenCalled();
 
-      // 5)/6) Cualquier guardado posterior afecta EXCLUSIVAMENTE a B, nunca lleva el texto
-      // obsoleto de A ni se asocia al id de A.
+      // Editar y salir del campo en B solo lo deja en cola ("Cambio sin guardar"), nunca
+      // dispara un PUT por sí mismo ni con datos/id de A.
       await user.clear(nameInputAfterSwitch);
       await user.type(nameInputAfterSwitch, 'María Actualizada');
       nameInputAfterSwitch.blur();
 
-      await waitFor(() =>
-        expect(updateLead).toHaveBeenCalledWith(leadB.id, { name: 'María Actualizada' })
-      );
-      expect(updateLead).not.toHaveBeenCalledWith(leadA.id, expect.anything());
-      expect(updateLead).not.toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ name: 'Juan EDITADO SIN GUARDAR' })
-      );
+      expect(await within(await screen.findByRole('dialog')).findByText('Cambio sin guardar')).toBeInTheDocument();
+      expect(updateLead).not.toHaveBeenCalled();
     });
 
     it('repite el escenario en sentido inverso (B → A) para descartar que el fix dependa del orden', async () => {
@@ -189,13 +185,31 @@ describe('LeadDetailPanel — identidad ligada al leadId (CRM-001)', () => {
   describe('vía DetailPanelSlot — overlay móvil (Prospectos)', () => {
     function MobileHarness() {
       const [selected, setSelected] = useState(leadA);
-      const updateMutation = useMutation({ mutationFn: ({ id, data }) => updateLead(id, data) });
+      const [pendingChanges, setPendingChanges] = useState({});
+      const onFieldChange = (key, entry) =>
+        setPendingChanges((prev) => {
+          if (!entry) {
+            if (!(key in prev)) return prev;
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          }
+          return { ...prev, [key]: entry };
+        });
       return (
         <>
-          <button onClick={() => setSelected(leadB)}>ir a B</button>
+          <button
+            onClick={() => {
+              setSelected(leadB);
+              setPendingChanges({});
+            }}
+          >
+            ir a B
+          </button>
           <DetailPanelSlot
             selected={selected}
-            updateMutation={updateMutation}
+            pendingChanges={pendingChanges}
+            onFieldChange={onFieldChange}
             users={[]}
             onOpenStagePicker={() => {}}
             onChangeStage={() => {}}
@@ -231,14 +245,15 @@ describe('LeadDetailPanel — identidad ligada al leadId (CRM-001)', () => {
       expect(nameInputAfterSwitch).not.toHaveValue('Juan EDITADO SIN GUARDAR');
       expect(updateLead).not.toHaveBeenCalled();
 
+      // Editar y salir del campo en B solo lo deja en cola, nunca dispara un PUT — el
+      // guardado real ahora pasa por PendingChangesModal al salir del prospecto, no por
+      // cada blur (ver LeadDetailPanel.autosave.test.jsx).
       await user.clear(nameInputAfterSwitch);
       await user.type(nameInputAfterSwitch, 'María Actualizada');
       nameInputAfterSwitch.blur();
 
-      await waitFor(() =>
-        expect(updateLead).toHaveBeenCalledWith(leadB.id, { name: 'María Actualizada' })
-      );
-      expect(updateLead).not.toHaveBeenCalledWith(leadA.id, expect.anything());
+      expect(await within(await screen.findByRole('dialog')).findByText('Cambio sin guardar')).toBeInTheDocument();
+      expect(updateLead).not.toHaveBeenCalled();
     });
   });
 });

@@ -3,6 +3,7 @@ import CloseLeadModal from '../CloseLeadModal';
 import ReopenLeadModal from '../ReopenLeadModal';
 import SendToWaitingListModal from '../SendToWaitingListModal';
 import StageBottomSheet from '../StageBottomSheet';
+import PendingChangesModal from './PendingChangesModal';
 
 // Los modales/hojas que acompañan a la tarjeta de detalle de un prospecto — puramente
 // presentacional, toma el estado/mutaciones de useLeadDetailActions. Compartido entre
@@ -25,10 +26,25 @@ export default function LeadDetailModals({ actions }) {
     reopenMutation,
     attemptStageChange,
     closeLeadForModal,
+    pendingNav,
+    pendingChangesList,
+    updateMutation,
+    confirmPendingChanges,
+    discardPendingChanges,
+    cancelPendingNav,
   } = actions;
 
   return (
     <>
+      <PendingChangesModal
+        open={!!pendingNav}
+        changes={pendingChangesList}
+        isSaving={updateMutation.isPending}
+        onSave={confirmPendingChanges}
+        onDiscard={discardPendingChanges}
+        onCancel={cancelPendingNav}
+      />
+
       <ConfirmDialog
         open={!!confirm}
         title={confirm?.title}

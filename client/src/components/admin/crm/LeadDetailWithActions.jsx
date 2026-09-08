@@ -12,7 +12,7 @@ import useModalA11y from '../../../hooks/useModalA11y';
 // mismos modales (LeadDetailModals) que ProspectosSection — nada de esto se reimplementa.
 export default function LeadDetailWithActions({ selected, setSelected, users }) {
   const actions = useLeadDetailActions({ selected, setSelected });
-  const onDeselect = () => setSelected(null);
+  const onDeselect = actions.requestDeselect;
   const panelRef = useModalA11y(Boolean(selected), onDeselect);
 
   return (
@@ -52,7 +52,8 @@ export default function LeadDetailWithActions({ selected, setSelected, users }) 
                 key={selected.id}
                 selected={selected}
                 onDeselect={onDeselect}
-                updateMutation={actions.updateMutation}
+                pendingChanges={actions.pendingChanges}
+                onFieldChange={actions.stageFieldChange}
                 users={users}
                 onOpenStagePicker={(lead) => actions.setSheetLead(lead)}
                 onChangeStage={actions.attemptStageChange}

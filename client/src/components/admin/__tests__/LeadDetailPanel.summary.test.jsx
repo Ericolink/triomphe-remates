@@ -9,7 +9,7 @@
 // tocó al prospecto.
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -153,7 +153,7 @@ describe('LeadDetailPanel — badge "no se ha dado seguimiento" calculado (Fase 
 });
 
 describe('LeadDetailPanel — urgencia editable desde Resumen (Fase 3)', () => {
-  it('cambiar la urgencia en "Qué busca" guarda vía el PUT genérico sin salir de Resumen', async () => {
+  it('cambiar la urgencia en "Qué busca" la deja en cola sin salir de Resumen ni guardar todavía', async () => {
     const lead = { ...baseLead };
     getLeadById.mockResolvedValue({ data: lead });
     const user = userEvent.setup();
@@ -163,9 +163,10 @@ describe('LeadDetailPanel — urgencia editable desde Resumen (Fase 3)', () => {
     const urgencySelect = within(dialog).getByLabelText('Urgencia');
     await user.selectOptions(urgencySelect, 'inmediata');
 
-    await waitFor(() =>
-      expect(updateLead).toHaveBeenCalledWith(lead.id, { urgency: 'inmediata' })
-    );
+    // Ya no se guarda al vuelo (ver LeadDetailPanel.autosave.test.jsx) — el cambio queda
+    // en cola, visible junto al campo, hasta que se confirme al salir del prospecto.
+    expect(await within(dialog).findByText('Cambio sin guardar')).toBeInTheDocument();
+    expect(updateLead).not.toHaveBeenCalled();
   });
 });
 

@@ -1,4 +1,4 @@
-import { useId, useState, useMemo, useRef, useEffect } from 'react';
+import { useId, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,8 +13,7 @@ import {
   Plus,
   Activity,
   AlertTriangle,
-  Check,
-  Loader2,
+  Pencil,
   Landmark,
   Banknote,
   Target,
@@ -160,23 +159,17 @@ const TABS = [
   { key: 'citas', label: 'Citas', icon: <Calendar size={14} /> },
 ];
 
-// Confirmación contextual junto al campo que acaba de cambiar — reemplaza el toast
-// genérico "Prospecto actualizado" (indistinguible entre campos si se editan varios
-// seguidos). "saving"/"saved" son de solo-lectura visual; "saved" desaparece solo después
-// de un rato (ver saveField). "error" se queda hasta el siguiente intento de guardado.
+// Indicador contextual junto al campo que acaba de cambiar. Ya no refleja una petición de
+// red por campo (ver queueChange más abajo: los campos se acumulan sin guardar hasta que
+// el usuario confirma en PendingChangesModal al salir del prospecto) — "pending" señala que
+// ese campo quedó en la lista de cambios sin guardar; "error" es una validación puramente
+// local (nombre requerido, teléfono/monto inválidos) y se queda hasta el siguiente intento.
 function FieldStatus({ status }) {
   if (!status) return null;
-  if (status.state === 'saving') {
+  if (status.state === 'pending') {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
-        <Loader2 size={11} className="animate-spin" /> Guardando…
-      </span>
-    );
-  }
-  if (status.state === 'saved') {
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
-        <Check size={11} /> Guardado
+      <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+        <Pencil size={11} /> Cambio sin guardar
       </span>
     );
   }
@@ -273,7 +266,8 @@ export default function LeadDetailPanel({
   selected,
   onDeselect,
   onDelete,
-  updateMutation,
+  pendingChanges = {},
+  onFieldChange,
   users,
   onOpenStagePicker,
   onChangeStage,
@@ -305,18 +299,14 @@ export default function LeadDetailPanel({
   // pestañas separadas y el asesor tiene que acordarse de volver por su cuenta.
   const [justLoggedInteraction, setJustLoggedInteraction] = useState(false);
 
-  // Confirmación por campo (ver FieldStatus) — una entrada por clave de campo, se limpia
-  // sola un rato después de "saved". `statusTimers` guarda los setTimeout activos para
-  // poder cancelarlos si el campo se vuelve a guardar antes de que termine el anterior.
-  const [fieldStatus, setFieldStatus] = useState({});
-  const statusTimers = useRef({});
-  useEffect(() => () => Object.values(statusTimers.current).forEach(clearTimeout), []);
-  // CRM-006: contador de peticiones en vuelo por campo. Si el usuario edita y confirma
-  // (blur) el mismo campo de nuevo antes de que la petición anterior resuelva, esa
-  // petición anterior queda "obsoleta" — sin esto, si llega a resolver DESPUÉS de la
-  // nueva, su callback (éxito o error) pisaría el indicador de la petición más reciente
-  // con información que ya no corresponde a lo que el usuario ve/espera.
-  const saveRequestSeq = useRef({});
+  // Validación puramente local (nombre requerido, teléfono/monto con formato inválido) —
+  // nunca involucra red, así que no necesita timers ni control de carrera como el viejo
+  // sistema de autoguardado por campo (ver queueChange más abajo, que lo reemplaza).
+  const [validationErrors, setValidationErrors] = useState({});
+  // Error puntual al agregar una nota (addNoteMutation) — separado de validationErrors
+  // porque sí es de red, pero es un flujo aparte (composer de Seguimiento), no un campo
+  // editable del formulario.
+  const [composerError, setComposerError] = useState(null);
 
   const budgetAmountInvalid = isInvalidOptionalAmount(budgetAmountInput);
 
@@ -331,6 +321,35 @@ export default function LeadDetailPanel({
   // incluyen: el backend solo exige `canViewLead` para esos (cualquiera con acceso de
   // lectura puede seguir registrando avance aunque ya no pueda editar el lead).
   const canEdit = canEditLead(currentUser, lead);
+
+  // "Borrador" del prospecto: `lead` (verdad del servidor) con los campos de
+  // `pendingChanges` superpuestos — todo control que lee su valor desde `lead`/`selected`
+  // en vez de tener su propio useState local (los <select>, el picker de propiedad, los
+  // botones de forma de pago...) debe leerlo de aquí para reflejar de inmediato lo que el
+  // usuario acaba de elegir, aunque todavía no se haya mandado ningún PUT (ver queueChange).
+  const pendingData = useMemo(
+    () => Object.assign({}, ...Object.values(pendingChanges).map((c) => c.data)),
+    [pendingChanges]
+  );
+  const draft = useMemo(() => ({ ...lead, ...pendingData }), [lead, pendingData]);
+
+  // Registra (o borra, si el valor vuelve a coincidir con el del servidor) un cambio sin
+  // guardar — reemplaza al viejo saveField, que mandaba el PUT de inmediato. `changed` ya
+  // viene decidido por el caller (cada uno sabe comparar su propio valor contra `lead`);
+  // cuando es `false` se limpia cualquier entrada previa de ese campo en vez de guardar un
+  // cambio "vacío".
+  const queueChange = (key, changed, { data, label, before, after }) => {
+    onFieldChange(key, changed ? { data, label, before, after } : null);
+  };
+
+  // Estado a mostrar junto a un campo: un error de validación local siempre gana sobre el
+  // indicador de "cambio sin guardar" (ver FieldStatus).
+  const fieldState = (key) =>
+    validationErrors[key]
+      ? { state: 'error', message: validationErrors[key] }
+      : pendingChanges[key]
+        ? { state: 'pending' }
+        : null;
 
   const { data: notesData, isLoading: notesLoading } = useQuery({
     queryKey: ['lead-notes', selected?.id],
@@ -398,138 +417,116 @@ export default function LeadDetailPanel({
   // en cada input, igual que se ve en la pestaña "Datos" donde son editables.
   const searchFields = useMemo(() => {
     const rows = [];
-    if (lead.desiredType) {
-      rows.push({ label: 'Tipo de propiedad', value: TYPE_LABELS[lead.desiredType] || lead.desiredType });
+    if (draft.desiredType) {
+      rows.push({ label: 'Tipo de propiedad', value: TYPE_LABELS[draft.desiredType] || draft.desiredType });
     }
-    if (lead.searchCity) {
-      rows.push({ label: 'Ciudad', value: CITY_LABELS[lead.searchCity] || lead.searchCity });
+    if (draft.searchCity) {
+      rows.push({ label: 'Ciudad', value: CITY_LABELS[draft.searchCity] || draft.searchCity });
     }
-    if (lead.searchZone) {
-      rows.push({ label: 'Colonia/zona', value: lead.searchZone });
+    if (draft.searchZone) {
+      rows.push({ label: 'Colonia/zona', value: draft.searchZone });
     }
-    if (lead.minBedrooms) rows.push({ label: 'Recámaras mínimas', value: `${lead.minBedrooms}+` });
-    if (lead.minBathrooms) rows.push({ label: 'Baños mínimos', value: `${lead.minBathrooms}+` });
-    if (lead.budgetNotSpecified) {
+    if (draft.minBedrooms) rows.push({ label: 'Recámaras mínimas', value: `${draft.minBedrooms}+` });
+    if (draft.minBathrooms) rows.push({ label: 'Baños mínimos', value: `${draft.minBathrooms}+` });
+    if (draft.budgetNotSpecified) {
       rows.push({ label: 'Presupuesto', value: 'No especificó' });
-    } else if (lead.budgetAmount != null) {
-      rows.push({ label: 'Presupuesto', value: formatBudget(lead.budgetAmount, false) });
+    } else if (draft.budgetAmount != null) {
+      rows.push({ label: 'Presupuesto', value: formatBudget(draft.budgetAmount, false) });
     }
     return rows;
-  }, [lead]);
+  }, [draft]);
 
-  // Guarda un campo vía el PUT genérico y refleja el resultado junto al campo (ver
-  // FieldStatus) en vez del toast global que usaba todo el panel antes. `updateMutation`
-  // es una única mutation COMPARTIDA por todos los campos del panel (y por
-  // attemptStageChange) — ver useLeadDetailActions.js.
-  //
-  // CRM-006: por eso NO se le pasan callbacks por-llamada (`.mutate(vars, {onSuccess,
-  // onError})`) como antes. React Query guarda esos callbacks en un único campo del
-  // observer de la mutation, que se SOBREESCRIBE en cada `.mutate()` — si el usuario
-  // confirma OTRO campo (o el mismo, dos veces) antes de que la petición anterior
-  // resuelva, esa petición anterior se queda sin observador y su callback nunca se
-  // invoca: el indicador de ESE campo se quedaba en "Guardando…" para siempre, aunque el
-  // PUT sí hubiera terminado en el servidor. `mutateAsync` en cambio devuelve la promesa
-  // real de ESA llamada específica (`.mutate` normal siempre devuelve `undefined` — ver
-  // node_modules/@tanstack/react-query/src/useMutation.ts), que resuelve de forma
-  // independiente sin importar qué otras llamadas se hagan después — por eso se usa
-  // `.then()` sobre ella en vez de las opciones. `isStale()` cubre el caso restante: que
-  // la respuesta de una edición VIEJA del MISMO campo llegue después de una más reciente
-  // (el usuario editó y confirmó el mismo campo dos veces seguidas) — sin esto, esa
-  // respuesta tardía podría pisar el indicador ya actualizado por la petición más nueva.
-  const saveField = (key, data) => {
-    const seq = (saveRequestSeq.current[key] = (saveRequestSeq.current[key] || 0) + 1);
-    const isStale = () => saveRequestSeq.current[key] !== seq;
-
-    setFieldStatus((s) => ({ ...s, [key]: { state: 'saving' } }));
-    clearTimeout(statusTimers.current[key]);
-    updateMutation.mutateAsync({ id: selected.id, data }).then(
-      () => {
-        if (isStale()) return;
-        setFieldStatus((s) => ({ ...s, [key]: { state: 'saved' } }));
-        statusTimers.current[key] = setTimeout(() => {
-          setFieldStatus((s) => {
-            if (s[key]?.state !== 'saved') return s;
-            const next = { ...s };
-            delete next[key];
-            return next;
-          });
-        }, 2500);
-      },
-      (e) => {
-        if (isStale()) return;
-        const message = e?.response?.data?.error || 'No se pudo guardar';
-        // Además del indicador inline (que solo existe mientras la pestaña/prospecto de
-        // este campo sigan montados — ver comentario de FieldStatus más arriba), un toast
-        // global garantiza que el usuario se entere de un guardado fallido aunque ya haya
-        // cambiado de pestaña o de prospecto antes de que la respuesta llegara.
-        toast.error(message);
-        setFieldStatus((s) => ({ ...s, [key]: { state: 'error', message } }));
-      }
-    );
-  };
+  // Formato legible para el resumen de "Presupuesto" en PendingChangesModal — misma lógica
+  // que ya usa searchFields arriba, factorizada porque queueChange la necesita para el
+  // before/after de dos campos distintos (budgetAmount y budgetNotSpecified).
+  const budgetDisplay = (notSpecified, amount) =>
+    notSpecified ? 'No especificó' : amount != null ? formatBudget(amount, false) : 'Sin especificar';
 
   const commitName = () => {
     const trimmed = nameInput.trim();
     if (!trimmed) {
-      setFieldStatus((s) => ({ ...s, name: { state: 'error', message: 'El nombre es requerido' } }));
+      setValidationErrors((s) => ({ ...s, name: 'El nombre es requerido' }));
       setNameInput(lead.name || '');
       return;
     }
-    if (trimmed === lead.name) return;
-    saveField('name', { name: trimmed });
+    setValidationErrors((s) => ({ ...s, name: undefined }));
+    queueChange('name', trimmed !== lead.name, {
+      data: { name: trimmed },
+      label: 'Nombre',
+      before: lead.name || '—',
+      after: trimmed,
+    });
   };
 
   const commitPhone = () => {
     const trimmed = phoneInput.trim();
     if (trimmed && !PHONE_RE.test(trimmed)) {
-      setFieldStatus((s) => ({
+      setValidationErrors((s) => ({
         ...s,
-        phone: { state: 'error', message: `Teléfono inválido — ${PHONE_PATTERN_TITLE}` },
+        phone: `Teléfono inválido — ${PHONE_PATTERN_TITLE}`,
       }));
       return;
     }
-    if (trimmed === (lead.phone || '')) return;
-    saveField('phone', { phone: trimmed || null });
+    setValidationErrors((s) => ({ ...s, phone: undefined }));
+    queueChange('phone', trimmed !== (lead.phone || ''), {
+      data: { phone: trimmed || null },
+      label: 'Teléfono',
+      before: lead.phone || 'Sin teléfono',
+      after: trimmed || 'Sin teléfono',
+    });
   };
 
   const commitEmail = () => {
     const trimmed = emailInput.trim();
-    if (trimmed === (lead.email || '')) return;
-    saveField('email', { email: trimmed || null });
+    queueChange('email', trimmed !== (lead.email || ''), {
+      data: { email: trimmed || null },
+      label: 'Email',
+      before: lead.email || 'Sin email',
+      after: trimmed || 'Sin email',
+    });
   };
 
   const commitBudget = () => {
     if (budgetAmountInvalid || lead.budgetNotSpecified) return;
     const amount = budgetAmountInput.trim() === '' ? null : Number(budgetAmountInput);
-    if (amount === (lead.budgetAmount != null ? Number(lead.budgetAmount) : null)) return;
-    saveField('budgetAmount', { budgetAmount: amount, budgetNotSpecified: false });
+    const previousAmount = lead.budgetAmount != null ? Number(lead.budgetAmount) : null;
+    queueChange('budget', amount !== previousAmount, {
+      data: { budgetAmount: amount, budgetNotSpecified: false },
+      label: 'Presupuesto',
+      before: budgetDisplay(lead.budgetNotSpecified, previousAmount),
+      after: budgetDisplay(false, amount),
+    });
   };
 
   const commitSearchZone = () => {
     const trimmed = searchZoneInput.trim();
-    if (trimmed === (lead.searchZone || '')) return;
-    saveField('searchZone', { searchZone: trimmed || null });
+    queueChange('searchZone', trimmed !== (lead.searchZone || ''), {
+      data: { searchZone: trimmed || null },
+      label: 'Colonia/zona',
+      before: lead.searchZone || 'Sin especificar',
+      after: trimmed || 'Sin especificar',
+    });
   };
 
   const commitDesiredFeatures = () => {
     const trimmed = desiredFeaturesInput.trim();
-    if (trimmed === (lead.desiredFeatures || '')) return;
-    saveField('desiredFeatures', { desiredFeatures: trimmed || null });
+    queueChange('desiredFeatures', trimmed !== (lead.desiredFeatures || ''), {
+      data: { desiredFeatures: trimmed || null },
+      label: 'Características deseadas',
+      before: lead.desiredFeatures || 'Sin especificar',
+      after: trimmed || 'Sin especificar',
+    });
   };
 
   const addNoteMutation = useMutation({
     mutationFn: ({ id, content }) => addLeadNote(id, content),
     onSuccess: () => {
       setComposerText('');
-      setFieldStatus((s) => ({ ...s, composer: undefined }));
+      setComposerError(null);
       setJustLoggedInteraction(true);
       queryClient.invalidateQueries(['lead-notes', selected.id]);
     },
-    onError: (e) =>
-      setFieldStatus((s) => ({
-        ...s,
-        composer: { state: 'error', message: e?.response?.data?.error || 'No se pudo guardar la nota' },
-      })),
+    onError: (e) => setComposerError(e?.response?.data?.error || 'No se pudo guardar la nota'),
   });
 
   const deleteNoteMutation = useMutation({
@@ -582,7 +579,7 @@ export default function LeadDetailPanel({
 
   const interestedProperties = lead.interestedProperties || [];
   const excludePropertyIds = [
-    lead.propertyId,
+    draft.propertyId,
     ...interestedProperties.map((ip) => ip.id),
   ].filter(Boolean);
 
@@ -641,7 +638,7 @@ export default function LeadDetailPanel({
                 className="min-w-0 flex-1 font-bold text-gray-800 dark:text-gray-100 bg-transparent border border-transparent rounded-lg px-1.5 -mx-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:bg-white dark:focus:bg-[#1a1f2e] disabled:opacity-100"
               />
             </div>
-            <FieldStatus status={fieldStatus.name} />
+            <FieldStatus status={fieldState('name')} />
             <div className="flex items-center gap-1.5 mt-1">
               <Phone size={11} className="flex-shrink-0 text-gray-400" />
               <input
@@ -656,7 +653,7 @@ export default function LeadDetailPanel({
                 className="min-w-0 flex-1 text-xs text-gray-500 dark:text-gray-400 bg-transparent border border-transparent rounded-lg px-1.5 -mx-1.5 py-0.5 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:bg-white dark:focus:bg-[#1a1f2e]"
               />
             </div>
-            <FieldStatus status={fieldStatus.phone} />
+            <FieldStatus status={fieldState('phone')} />
             {selected.property?.title && (
               <a
                 href={selected.property.slug ? `/propiedades/${selected.property.slug}` : undefined}
@@ -764,7 +761,7 @@ export default function LeadDetailPanel({
                     placeholder="Sin email"
                     className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                   />
-                  <FieldStatus status={fieldStatus.email} />
+                  <FieldStatus status={fieldState('email')} />
                 </div>
                 <div>
                   <FieldLabel icon={Radio} htmlFor={`${formId}-source`}>
@@ -772,8 +769,16 @@ export default function LeadDetailPanel({
                   </FieldLabel>
                   <select
                     id={`${formId}-source`}
-                    value={selected.source || 'directo'}
-                    onChange={(e) => saveField('source', { source: e.target.value })}
+                    value={draft.source || 'directo'}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      queueChange('source', value !== (lead.source || 'directo'), {
+                        data: { source: value },
+                        label: 'Fuente',
+                        before: SOURCE_LABELS[lead.source] || lead.source,
+                        after: SOURCE_LABELS[value] || value,
+                      });
+                    }}
                     disabled={!canEdit}
                     className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
@@ -783,7 +788,7 @@ export default function LeadDetailPanel({
                       </option>
                     ))}
                   </select>
-                  <FieldStatus status={fieldStatus.source} />
+                  <FieldStatus status={fieldState('source')} />
                 </div>
                 {canAssign && (
                   <div>
@@ -792,12 +797,17 @@ export default function LeadDetailPanel({
                     </FieldLabel>
                     <select
                       id={`${formId}-campaignId`}
-                      value={lead.campaignId || ''}
-                      onChange={(e) =>
-                        saveField('campaignId', {
-                          campaignId: e.target.value ? Number(e.target.value) : null,
-                        })
-                      }
+                      value={draft.campaignId || ''}
+                      onChange={(e) => {
+                        const value = e.target.value ? Number(e.target.value) : null;
+                        const nameFor = (id) => campaignOptions.find((c) => c.id === id)?.name || 'Sin campaña';
+                        queueChange('campaignId', value !== (lead.campaignId || null), {
+                          data: { campaignId: value },
+                          label: 'Campaña',
+                          before: nameFor(lead.campaignId || null),
+                          after: nameFor(value),
+                        });
+                      }}
                       disabled={!canEdit}
                       className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
@@ -808,7 +818,7 @@ export default function LeadDetailPanel({
                         </option>
                       ))}
                     </select>
-                    <FieldStatus status={fieldStatus.campaignId} />
+                    <FieldStatus status={fieldState('campaignId')} />
                   </div>
                 )}
                 <div>
@@ -819,14 +829,21 @@ export default function LeadDetailPanel({
                     id={`${formId}-firstContactDate`}
                     type="date"
                     max={todayISODate()}
-                    value={lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : ''}
-                    onChange={(e) =>
-                      saveField('firstContactDate', { firstContactDate: e.target.value || null })
-                    }
+                    value={draft.firstContactDate ? draft.firstContactDate.slice(0, 10) : ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      const previous = lead.firstContactDate ? lead.firstContactDate.slice(0, 10) : null;
+                      queueChange('firstContactDate', value !== previous, {
+                        data: { firstContactDate: value },
+                        label: 'Fecha de primer contacto',
+                        before: previous || 'Sin especificar',
+                        after: value || 'Sin especificar',
+                      });
+                    }}
                     disabled={!canEdit}
                     className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                   />
-                  <FieldStatus status={fieldStatus.firstContactDate} />
+                  <FieldStatus status={fieldState('firstContactDate')} />
                 </div>
               </div>
               {(lead.createdByUser ||
@@ -885,8 +902,16 @@ export default function LeadDetailPanel({
               <div className="flex items-center gap-2 mt-2">
                 <select
                   aria-label="Urgencia"
-                  value={lead.urgency || ''}
-                  onChange={(e) => saveField('urgency', { urgency: e.target.value || null })}
+                  value={draft.urgency || ''}
+                  onChange={(e) => {
+                    const value = e.target.value || null;
+                    queueChange('urgency', value !== (lead.urgency || null), {
+                      data: { urgency: value },
+                      label: 'Urgencia',
+                      before: LEAD_URGENCY_LABELS[lead.urgency] || 'Sin especificar',
+                      after: LEAD_URGENCY_LABELS[value] || 'Sin especificar',
+                    });
+                  }}
                   disabled={!canEdit}
                   className="px-2 py-1 border border-gray-200 dark:border-[#2e3650] rounded-lg text-xs bg-white dark:bg-[#1a1f2e] dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -897,7 +922,7 @@ export default function LeadDetailPanel({
                     </option>
                   ))}
                 </select>
-                <FieldStatus status={fieldStatus.urgency} />
+                <FieldStatus status={fieldState('urgency')} />
               </div>
             </div>
 
@@ -933,8 +958,16 @@ export default function LeadDetailPanel({
                 </FieldLabel>
                 <select
                   id={`${formId}-type`}
-                  value={lead.type}
-                  onChange={(e) => saveField('type', { type: e.target.value })}
+                  value={draft.type}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    queueChange('type', value !== lead.type, {
+                      data: { type: value },
+                      label: 'Motivo de contacto',
+                      before: LEAD_TYPE_LABELS[lead.type] || lead.type,
+                      after: LEAD_TYPE_LABELS[value] || value,
+                    });
+                  }}
                   disabled={!canEdit}
                   className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
@@ -949,7 +982,7 @@ export default function LeadDetailPanel({
                     </option>
                   ))}
                 </select>
-                <FieldStatus status={fieldStatus.type} />
+                <FieldStatus status={fieldState('type')} />
               </div>
               <div>
                 <FieldLabel icon={Briefcase} htmlFor={`${formId}-businessLine`}>
@@ -957,8 +990,16 @@ export default function LeadDetailPanel({
                 </FieldLabel>
                 <select
                   id={`${formId}-businessLine`}
-                  value={lead.businessLine || ''}
-                  onChange={(e) => saveField('businessLine', { businessLine: e.target.value || null })}
+                  value={draft.businessLine || ''}
+                  onChange={(e) => {
+                    const value = e.target.value || null;
+                    queueChange('businessLine', value !== (lead.businessLine || null), {
+                      data: { businessLine: value },
+                      label: 'Línea de negocio',
+                      before: BUSINESS_LINE_LABELS[lead.businessLine] || 'Sin especificar',
+                      after: BUSINESS_LINE_LABELS[value] || 'Sin especificar',
+                    });
+                  }}
                   disabled={!canEdit}
                   className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
@@ -969,7 +1010,7 @@ export default function LeadDetailPanel({
                     </option>
                   ))}
                 </select>
-                <FieldStatus status={fieldStatus.businessLine} />
+                <FieldStatus status={fieldState('businessLine')} />
               </div>
 
               {/* Forma de pago: 2 opciones nada más, así que son 2 botones visibles en vez
@@ -979,14 +1020,20 @@ export default function LeadDetailPanel({
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => {
                     const Icon = value === 'credito_hipotecario' ? Landmark : Banknote;
-                    const active = lead.paymentMethod === value;
+                    const active = draft.paymentMethod === value;
                     return (
                       <button
                         key={value}
                         type="button"
-                        onClick={() =>
-                          saveField('paymentMethod', { paymentMethod: active ? null : value })
-                        }
+                        onClick={() => {
+                          const newValue = active ? null : value;
+                          queueChange('paymentMethod', newValue !== (lead.paymentMethod || null), {
+                            data: { paymentMethod: newValue },
+                            label: 'Forma de pago',
+                            before: PAYMENT_METHOD_LABELS[lead.paymentMethod] || 'Sin especificar',
+                            after: PAYMENT_METHOD_LABELS[newValue] || 'Sin especificar',
+                          });
+                        }}
                         disabled={!canEdit}
                         className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                           active
@@ -1000,7 +1047,7 @@ export default function LeadDetailPanel({
                     );
                   })}
                 </div>
-                <FieldStatus status={fieldStatus.paymentMethod} />
+                <FieldStatus status={fieldState('paymentMethod')} />
               </div>
 
               {/* Presupuesto: un input + "No especificó" nada más. Se guarda solo al salir
@@ -1013,12 +1060,16 @@ export default function LeadDetailPanel({
                   <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={!!lead.budgetNotSpecified}
+                      checked={!!draft.budgetNotSpecified}
                       onChange={(e) => {
+                        const checked = e.target.checked;
                         setBudgetAmountInput('');
-                        saveField('budgetNotSpecified', {
-                          budgetNotSpecified: e.target.checked,
-                          budgetAmount: e.target.checked ? null : undefined,
+                        const previousAmount = lead.budgetAmount != null ? Number(lead.budgetAmount) : null;
+                        queueChange('budget', checked !== !!lead.budgetNotSpecified, {
+                          data: { budgetNotSpecified: checked, budgetAmount: checked ? null : undefined },
+                          label: 'Presupuesto',
+                          before: budgetDisplay(lead.budgetNotSpecified, previousAmount),
+                          after: budgetDisplay(checked, checked ? null : previousAmount),
                         });
                       }}
                       disabled={!canEdit}
@@ -1034,7 +1085,7 @@ export default function LeadDetailPanel({
                     type="text"
                     inputMode="numeric"
                     value={budgetAmountFocused ? budgetAmountInput : formatBudgetInput(budgetAmountInput)}
-                    disabled={!canEdit || lead.budgetNotSpecified}
+                    disabled={!canEdit || draft.budgetNotSpecified}
                     onFocus={() => setBudgetAmountFocused(true)}
                     onChange={(e) => setBudgetAmountInput(e.target.value.replace(/\D/g, ''))}
                     onBlur={() => {
@@ -1049,11 +1100,11 @@ export default function LeadDetailPanel({
                 {budgetAmountInvalid ? (
                   <p className="text-xs text-red-500 mt-1">Ingresa un monto válido</p>
                 ) : (
-                  <FieldStatus status={fieldStatus.budgetAmount || fieldStatus.budgetNotSpecified} />
+                  <FieldStatus status={fieldState('budget')} />
                 )}
-                {!lead.budgetNotSpecified && lead.budgetAmount != null && (
+                {!draft.budgetNotSpecified && draft.budgetAmount != null && (
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    {formatBudget(lead.budgetAmount, false)}
+                    {formatBudget(draft.budgetAmount, false)}
                   </p>
                 )}
               </div>
@@ -1068,8 +1119,16 @@ export default function LeadDetailPanel({
                   </FieldLabel>
                   <select
                     id={`${formId}-searchCity`}
-                    value={lead.searchCity || ''}
-                    onChange={(e) => saveField('searchCity', { searchCity: e.target.value || null })}
+                    value={draft.searchCity || ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      queueChange('searchCity', value !== (lead.searchCity || null), {
+                        data: { searchCity: value },
+                        label: 'Ciudad de búsqueda',
+                        before: CITY_LABELS[lead.searchCity] || 'Sin especificar',
+                        after: CITY_LABELS[value] || 'Sin especificar',
+                      });
+                    }}
                     disabled={!canEdit}
                     className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
@@ -1080,7 +1139,7 @@ export default function LeadDetailPanel({
                       </option>
                     ))}
                   </select>
-                  <FieldStatus status={fieldStatus.searchCity} />
+                  <FieldStatus status={fieldState('searchCity')} />
                 </div>
                 <div>
                   <FieldLabel icon={Home} htmlFor={`${formId}-desiredType`}>
@@ -1088,8 +1147,16 @@ export default function LeadDetailPanel({
                   </FieldLabel>
                   <select
                     id={`${formId}-desiredType`}
-                    value={lead.desiredType || ''}
-                    onChange={(e) => saveField('desiredType', { desiredType: e.target.value || null })}
+                    value={draft.desiredType || ''}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      queueChange('desiredType', value !== (lead.desiredType || null), {
+                        data: { desiredType: value },
+                        label: 'Tipo de propiedad buscado',
+                        before: TYPE_LABELS[lead.desiredType] || 'Sin especificar',
+                        after: TYPE_LABELS[value] || 'Sin especificar',
+                      });
+                    }}
                     disabled={!canEdit}
                     className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
@@ -1100,7 +1167,7 @@ export default function LeadDetailPanel({
                       </option>
                     ))}
                   </select>
-                  <FieldStatus status={fieldStatus.desiredType} />
+                  <FieldStatus status={fieldState('desiredType')} />
                 </div>
               </div>
               <div>
@@ -1118,7 +1185,7 @@ export default function LeadDetailPanel({
                   placeholder="Ej. Campestre, Las Águilas..."
                   className={`${FIELD_CONTROL_CLASS} disabled:opacity-50 disabled:cursor-not-allowed`}
                 />
-                <FieldStatus status={fieldStatus.searchZone} />
+                <FieldStatus status={fieldState('searchZone')} />
               </div>
               <div>
                 <FieldLabel icon={ListChecks} htmlFor={`${formId}-desiredFeatures`}>
@@ -1134,7 +1201,7 @@ export default function LeadDetailPanel({
                   placeholder="Ej. con cochera, una planta, cerca de escuelas..."
                   className={`${FIELD_CONTROL_CLASS} resize-none disabled:opacity-50 disabled:cursor-not-allowed`}
                 />
-                <FieldStatus status={fieldStatus.desiredFeatures} />
+                <FieldStatus status={fieldState('desiredFeatures')} />
               </div>
             </div>
 
@@ -1148,11 +1215,17 @@ export default function LeadDetailPanel({
                   <div className="flex items-center gap-1.5">
                     <div className="flex-1 min-w-0">
                       <PropertyPicker
-                        value={lead.propertyId || ''}
+                        value={draft.propertyId || ''}
                         initialLabel={lead.property?.title || ''}
-                        onChange={(id) =>
-                          saveField('propertyId', { propertyId: id ? Number(id) : null })
-                        }
+                        onChange={(id, title) => {
+                          const newId = id ? Number(id) : null;
+                          queueChange('propertyId', newId !== (lead.propertyId || null), {
+                            data: { propertyId: newId },
+                            label: 'Propiedad de origen',
+                            before: lead.property?.title || 'Sin propiedad vinculada',
+                            after: newId ? title || 'Nueva propiedad seleccionada' : 'Sin propiedad vinculada',
+                          });
+                        }}
                         placeholder="Sin propiedad vinculada"
                         className="flex items-center gap-2 min-w-0 px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-xl text-xs focus-within:ring-2 focus-within:ring-accent-500 bg-white dark:bg-[#242938]"
                       />
@@ -1185,7 +1258,7 @@ export default function LeadDetailPanel({
                     {lead.property?.title || 'Sin propiedad vinculada'}
                   </p>
                 )}
-                <FieldStatus status={fieldStatus.propertyId} />
+                <FieldStatus status={fieldState('propertyId')} />
               </div>
 
               {/* Propiedades de interés — ver/buscar/agregar/quitar. */}
@@ -1266,12 +1339,17 @@ export default function LeadDetailPanel({
                 </FieldLabel>
                 <select
                   id={`${formId}-assignedToUserId`}
-                  value={lead.assignedToUserId || ''}
-                  onChange={(e) =>
-                    saveField('assignedToUserId', {
-                      assignedToUserId: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
+                  value={draft.assignedToUserId || ''}
+                  onChange={(e) => {
+                    const value = e.target.value ? Number(e.target.value) : null;
+                    const nameFor = (id) => users.find((u) => u.id === id)?.name || 'Sin asignar';
+                    queueChange('assignedToUserId', value !== (lead.assignedToUserId || null), {
+                      data: { assignedToUserId: value },
+                      label: 'Responsable',
+                      before: nameFor(lead.assignedToUserId || null),
+                      after: nameFor(value),
+                    });
+                  }}
                   className={FIELD_CONTROL_CLASS}
                 >
                   <option value="">Sin asignar</option>
@@ -1283,7 +1361,7 @@ export default function LeadDetailPanel({
                       </option>
                     ))}
                 </select>
-                <FieldStatus status={fieldStatus.assignedToUserId} />
+                <FieldStatus status={fieldState('assignedToUserId')} />
               </div>
             )}
 
@@ -1308,7 +1386,7 @@ export default function LeadDetailPanel({
                   {composerPending ? '...' : 'Agregar'}
                 </button>
               </div>
-              <FieldStatus status={fieldStatus.composer} />
+              <FieldStatus status={composerError ? { state: 'error', message: composerError } : null} />
               {/* Fase 3 del rediseño del CRM: cierra el ciclo "registrar → agendar" sin
                   obligar al asesor a acordarse de cambiar de pestaña por su cuenta. */}
               {justLoggedInteraction && (
