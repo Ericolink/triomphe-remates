@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   Plus,
   Search,
+  User,
   UserCheck,
   Wallet,
 } from 'lucide-react';
@@ -29,6 +30,7 @@ import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import BatchActionBar from '../../ui/BatchActionBar';
 import GradientListCard from '../../ui/GradientListCard';
+import Badge from '../../ui/Badge';
 import CreateLeadModal from '../CreateLeadModal';
 import { DetailPanelSlot } from '../LeadDetailPanel';
 import useLeadDetailActions from './useLeadDetailActions';
@@ -43,6 +45,7 @@ import {
   NON_TERMINAL_PIPELINE_STAGE_OPTIONS,
   PAYMENT_METHOD_LABELS,
   BUSINESS_LINE_LABELS,
+  BUSINESS_LINE_VARIANTS,
 } from '../../../utils/constants';
 
 const LEADS_LIST_PAGE_SIZE = 20;
@@ -355,13 +358,23 @@ export default function ProspectosSection() {
                                 : ''}
                             </p>
                           </div>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}
-                          >
-                            {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
-                          </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}
+                            >
+                              {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
+                            </span>
+                            {lead.businessLine && (
+                              <Badge variant={BUSINESS_LINE_VARIANTS[lead.businessLine]}>
+                                {BUSINESS_LINE_LABELS[lead.businessLine]}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center gap-1">
+                            <User size={12} /> {lead.assignedUser?.name || 'Sin asignar'}
+                          </span>
                           {lead.email && (
                             <span className="flex items-center gap-1">
                               <Mail size={12} /> {lead.email}

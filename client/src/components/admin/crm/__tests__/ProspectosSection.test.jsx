@@ -3,7 +3,7 @@
 // de backend. Cubre: render de los selects, cambio de cada filtro, "Limpiar filtros", los
 // parámetros exactos que se mandan a getLeads, y los estados de loading/sin resultados.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -173,5 +173,54 @@ describe('ProspectosSection — filtros de línea de negocio / método de pago',
     expect(
       await screen.findByText('Ningún prospecto coincide con los filtros seleccionados.')
     ).toBeInTheDocument();
+  });
+});
+
+describe('ProspectosSection — tarjeta de prospecto: línea de negocio y responsable asignado', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUsers.mockResolvedValue({ data: [{ id: 1, name: 'Admin Triomphe' }], pagination: {} });
+  });
+
+  // El label de línea de negocio ("Remates Bancarios") también aparece como <option> del
+  // select de filtro — se escopa la búsqueda a la tarjeta del prospecto (role="button" de
+  // GradientListCard) para no confundirla con esa opción del filtro.
+  const findCard = async (name) => (await screen.findByText(name)).closest('[role="button"]');
+
+  it('muestra la línea de negocio del prospecto en la tarjeta', async () => {
+    getLeads.mockResolvedValue(makePage({ data: [leadA], pagination: { ...makePage().pagination, total: 1 } }));
+    renderSection();
+
+    const card = await findCard('Juan Pérez');
+    expect(within(card).getByText('Remates Bancarios')).toBeInTheDocument();
+  });
+
+  it('muestra el nombre del usuario responsable cuando el prospecto está asignado', async () => {
+    const assigned = { ...leadA, assignedUser: { id: 2, name: 'Carlos Asesor' } };
+    getLeads.mockResolvedValue(makePage({ data: [assigned], pagination: { ...makePage().pagination, total: 1 } }));
+    renderSection();
+
+    const card = await findCard('Juan Pérez');
+    expect(within(card).getByText('Carlos Asesor')).toBeInTheDocument();
+  });
+
+  it('muestra "Sin asignar" cuando el prospecto no tiene responsable', async () => {
+    const unassigned = { ...leadA, assignedUser: null };
+    getLeads.mockResolvedValue(
+      makePage({ data: [unassigned], pagination: { ...makePage().pagination, total: 1 } })
+    );
+    renderSection();
+
+    const card = await findCard('Juan Pérez');
+    expect(within(card).getByText('Sin asignar')).toBeInTheDocument();
+  });
+
+  it('no muestra ningún badge de línea de negocio si el prospecto no tiene una asignada', async () => {
+    const noLine = { ...leadA, businessLine: null };
+    getLeads.mockResolvedValue(makePage({ data: [noLine], pagination: { ...makePage().pagination, total: 1 } }));
+    renderSection();
+
+    const card = await findCard('Juan Pérez');
+    expect(within(card).queryByText('Remates Bancarios')).not.toBeInTheDocument();
   });
 });
