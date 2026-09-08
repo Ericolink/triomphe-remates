@@ -18,7 +18,7 @@ import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { fadeIn, fadeInUp, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import { formatPrice, formatDate } from '../../utils/formatters';
 import { CITY_LABELS, TYPE_LABELS, BUSINESS_LINE_LABELS, labelsToOptions } from '../../utils/constants';
-import { downloadBlob } from '../../utils/download';
+import { downloadBlob, fileTimestamp } from '../../utils/download';
 
 const EMPTY_FORM = {
   name: '',
@@ -145,7 +145,7 @@ export default function WaitingListPage() {
       });
       downloadBlob(
         response.data,
-        `triomphe-lista-espera-${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`
+        `triomphe-lista-espera-${fileTimestamp()}.${format === 'excel' ? 'xlsx' : 'pdf'}`
       );
       toast.success(`Exportado a ${format === 'excel' ? 'Excel' : 'PDF'}`);
     } catch {

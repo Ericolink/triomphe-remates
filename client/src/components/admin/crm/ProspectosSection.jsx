@@ -25,7 +25,7 @@ import {
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
 import { canCreateLeads, canDeleteLeads } from '../../../utils/permissions';
-import { downloadBlob } from '../../../utils/download';
+import { downloadBlob, fileTimestamp } from '../../../utils/download';
 import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import BatchActionBar from '../../ui/BatchActionBar';
@@ -182,7 +182,7 @@ export default function ProspectosSection() {
       const params = new URLSearchParams();
       if (stage) params.append('status', stage);
       const response = await api.get(`/export/leads/excel?${params}`, { responseType: 'blob' });
-      downloadBlob(response.data, `triomphe-prospectos-${Date.now()}.xlsx`);
+      downloadBlob(response.data, `triomphe-prospectos-${fileTimestamp()}.xlsx`);
     } catch {
       toast.error('Error al exportar');
     }

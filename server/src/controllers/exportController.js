@@ -37,6 +37,7 @@ const {
   formatPrice,
   formatDate,
   dash,
+  fileTimestamp,
   getLogoPath,
   getWhiteLogoBuffer,
   buildExcelHeader,
@@ -227,7 +228,7 @@ const exportExcel = async (req, res) => {
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=triomphe-inventario-${Date.now()}.xlsx`
+      `attachment; filename=triomphe-inventario-${fileTimestamp()}.xlsx`
     );
     await workbook.xlsx.write(res);
     res.end();
@@ -377,7 +378,7 @@ const exportPDF = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=triomphe-inventario-${Date.now()}.pdf`
+      `attachment; filename=triomphe-inventario-${fileTimestamp()}.pdf`
     );
     doc.pipe(res);
 
@@ -611,7 +612,7 @@ const exportFeedbackExcel = async (req, res) => {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
-    res.setHeader('Content-Disposition', `attachment; filename=triomphe-buzon-${Date.now()}.xlsx`);
+    res.setHeader('Content-Disposition', `attachment; filename=triomphe-buzon-${fileTimestamp()}.xlsx`);
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
@@ -763,7 +764,7 @@ const exportLeadsExcel = async (req, res) => {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
-    res.setHeader('Content-Disposition', `attachment; filename=triomphe-leads-${Date.now()}.xlsx`);
+    res.setHeader('Content-Disposition', `attachment; filename=triomphe-leads-${fileTimestamp()}.xlsx`);
     await workbook.xlsx.write(res);
     res.end();
   } catch (error) {
@@ -882,7 +883,7 @@ const exportWaitingListExcel = async (req, res) => {
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=triomphe-lista-espera-${Date.now()}.xlsx`
+      `attachment; filename=triomphe-lista-espera-${fileTimestamp()}.xlsx`
     );
     await workbook.xlsx.write(res);
     res.end();
@@ -957,7 +958,7 @@ const exportWaitingListPDF = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=triomphe-lista-espera-${Date.now()}.pdf`
+      `attachment; filename=triomphe-lista-espera-${fileTimestamp()}.pdf`
     );
     doc.pipe(res);
 
@@ -1225,7 +1226,7 @@ const exportCatalogPDF = async (req, res) => {
 
     const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=triomphe-catalogo-${Date.now()}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=triomphe-catalogo-${fileTimestamp()}.pdf`);
     doc.pipe(res);
 
     const logoPath = getLogoPath();

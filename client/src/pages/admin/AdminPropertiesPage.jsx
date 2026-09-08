@@ -25,7 +25,7 @@ import {
   BUSINESS_LINE_VARIANTS,
   labelsToOptions,
 } from '../../utils/constants';
-import { downloadBlob } from '../../utils/download';
+import { downloadBlob, fileTimestamp } from '../../utils/download';
 import useAuthStore from '../../store/authStore';
 import {
   canManageInventory,
@@ -252,7 +252,7 @@ export default function AdminPropertiesPage() {
       });
       downloadBlob(
         response.data,
-        `triomphe-inventario-${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`
+        `triomphe-inventario-${fileTimestamp()}.${format === 'excel' ? 'xlsx' : 'pdf'}`
       );
       toast.success(`Exportado a ${format === 'excel' ? 'Excel' : 'PDF'}`);
     } catch (err) {

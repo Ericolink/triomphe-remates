@@ -11,6 +11,17 @@ const logger = require('../utils/logger');
 
 const dash = (val) => (val !== null && val !== undefined && val !== '' ? String(val) : '—');
 
+// AAAA-MM-DD_HH-mm-ss en hora local — usado para nombrar los archivos de Excel/PDF
+// descargados (antes usaban Date.now(), un timestamp en ms ilegible para el usuario).
+// Sin ":" ni espacios para que el nombre sea válido en cualquier SO.
+const fileTimestamp = (date = new Date()) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `_${pad(date.getHours())}-${pad(date.getMinutes())}-${pad(date.getSeconds())}`
+  );
+};
+
 // Convierte un índice de columna (1-based) a su letra de Excel (1→A, 26→Z, 27→AA...).
 // buildExcelHeader antes calculaba esto con `String.fromCharCode(64 + n)`, que solo es
 // correcto hasta 26 columnas — con más (ver exportExcel de propiedades, que pasó a tener
@@ -283,6 +294,7 @@ module.exports = {
   formatPrice,
   formatDate,
   dash,
+  fileTimestamp,
   getLogoPath,
   getWhiteLogoBuffer,
   buildExcelHeader,

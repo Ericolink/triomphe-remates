@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { requestCatalogPDF, getInventoryDownloadStatus } from '../../services/catalogService';
 import { fadeInUp } from '../../utils/animations';
-import { downloadBlob } from '../../utils/download';
+import { downloadBlob, fileTimestamp } from '../../utils/download';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 import { LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
 
@@ -68,7 +68,7 @@ export default function CatalogDownloadForm({ filters }) {
       const contentType = response.headers?.['content-type'] || '';
 
       if (contentType.includes('application/pdf')) {
-        downloadBlob(response.data, `triomphe-catalogo-${Date.now()}.pdf`);
+        downloadBlob(response.data, `triomphe-catalogo-${fileTimestamp()}.pdf`);
         setSent('downloaded');
       } else {
         // El toggle admin está desactivado: el backend igual registró el prospecto, pero

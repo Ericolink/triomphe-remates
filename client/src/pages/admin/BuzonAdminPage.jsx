@@ -25,7 +25,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { fadeIn, fadeInUp, fadeInRight, staggerContainer } from '../../utils/animations';
 import { formatDate } from '../../utils/formatters';
-import { downloadBlob } from '../../utils/download';
+import { downloadBlob, fileTimestamp } from '../../utils/download';
 import {
   FEEDBACK_CATEGORY_LABELS,
   FEEDBACK_CATEGORY_COLORS,
@@ -146,7 +146,7 @@ export default function BuzonAdminPage() {
       if (statusFilter) params.append('status', statusFilter);
       if (categoryFilter) params.append('category', categoryFilter);
       const response = await api.get(`/export/feedback/excel?${params}`, { responseType: 'blob' });
-      downloadBlob(response.data, `triomphe-buzon-${Date.now()}.xlsx`);
+      downloadBlob(response.data, `triomphe-buzon-${fileTimestamp()}.xlsx`);
     } catch {
       toast.error('Error al exportar');
     }

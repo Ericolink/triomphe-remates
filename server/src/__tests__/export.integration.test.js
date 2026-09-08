@@ -329,6 +329,14 @@ describe('exportController', () => {
       expect(sinDatos.values[COL.property]).toBe('—'); // sin propiedad asociada
     });
 
+    test('nombre de archivo incluye la fecha, no un timestamp en ms', async () => {
+      const res = await authed('/api/export/leads/excel');
+      expect(res.status).toBe(200);
+      expect(res.headers['content-disposition']).toMatch(
+        /filename=triomphe-leads-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.xlsx/
+      );
+    });
+
     test('filtra por status y exportación vacía no falla', async () => {
       await createLead({ name: 'Nuevo', status: 'nuevo' });
       await createLead({ name: 'Cerrado', status: 'cerrado' });
