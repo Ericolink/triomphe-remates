@@ -495,6 +495,15 @@ export default function PropertiesPage() {
                     city: filters.city || undefined,
                     type: filters.type || undefined,
                     category: filters.category || undefined,
+                    search: filters.search || undefined,
+                    minPrice: filters.minPrice || undefined,
+                    maxPrice: filters.maxPrice || undefined,
+                    minBedrooms: filters.minBedrooms || undefined,
+                    minBathrooms: filters.minBathrooms || undefined,
+                    minTerrainM2: filters.minTerrainM2 || undefined,
+                    maxTerrainM2: filters.maxTerrainM2 || undefined,
+                    minConstructionM2: filters.minConstructionM2 || undefined,
+                    maxConstructionM2: filters.maxConstructionM2 || undefined,
                   }}
                 />
               </div>

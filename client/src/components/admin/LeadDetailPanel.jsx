@@ -1601,7 +1601,11 @@ export function DetailPanelSlot({ selected, emptyText, onDeselect, ...panelProps
         )}
       </AnimatePresence>
 
-      <div className="hidden xl:block">
+      {/* h-full es necesario: sin esto el div solo mide lo que mide su contenido
+          (el propio panel sticky), dejando cero margen de recorrido para el
+          sticky — así, con listas largas, el detalle no acompaña el scroll y
+          queda anclado en su posición original arriba de la página. */}
+      <div className="hidden xl:block h-full">
         <AnimatePresence mode="wait">
           {selected ? (
             <LeadDetailPanel

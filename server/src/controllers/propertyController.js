@@ -10,6 +10,7 @@ const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { ApiError } = require('../middleware/errorHandler');
 const { sanitizeOptionalContext, recordEvent } = require('../services/analyticsService');
 const { isPublicPropertiesEnabled } = require('../services/settingsService');
+const { buildPropertyWhereClause } = require('../services/propertyFilters');
 
 // Convierte string vacío a null para campos numéricos
 const nullIfEmpty = (val) => (val === '' || val === undefined ? null : val);
@@ -76,45 +77,9 @@ function validatePropertyEnums({ city, type, category, businessLine, status, acq
   return null;
 }
 
-// Arma el query en IN BOOLEAN MODE para el índice FULLTEXT de properties (title, address,
-// description). Tokens <3 caracteres se descartan porque innodb_ft_min_token_size (default 3)
-// nunca los indexa — incluirlos con '+' forzaría el AND a fallar siempre. Se despojan los
-// operadores propios de BOOLEAN MODE (+ - > < ( ) ~ * ") del texto del usuario antes de
-// envolver cada token con '+' (requerido) y '*' (prefijo), para que un search como "casa-remate"
-// no se interprete como sintaxis de MySQL. Devuelve null si no queda ningún token indexable,
-// señal para que el caller use directamente el fallback LIKE.
-const buildFulltextBooleanQuery = (search) => {
-  const tokens = search
-    .split(/\s+/)
-    .map((t) => t.replace(/[+\-><()~*"@]/g, ''))
-    .filter((t) => t.length >= 3);
-  if (tokens.length === 0) return null;
-  return tokens.map((t) => `+${t}*`).join(' ');
-};
-
 // GET /api/properties
 const getProperties = async (req, res) => {
-  const {
-    page = 1,
-    limit = 12,
-    city,
-    type,
-    category,
-    businessLine,
-    status,
-    minPrice,
-    maxPrice,
-    minTerrainM2,
-    maxTerrainM2,
-    minConstructionM2,
-    maxConstructionM2,
-    minBedrooms,
-    minBathrooms,
-    featured,
-    search,
-  } = req.query;
-
-  const where = {};
+  const { page = 1, limit = 12 } = req.query;
 
   // El inventario público solo muestra "disponible": apartado/vendido salen de circulación
   // y de ahí en adelante solo son visibles desde el panel admin (getPropertyById/By Slug ya
@@ -147,91 +112,10 @@ const getProperties = async (req, res) => {
     });
   }
 
-  if (city) where.city = city;
-  if (type) where.type = type;
-  if (category) where.category = category;
-  if (businessLine) where.businessLine = businessLine;
-  if (isStaff) {
-    if (status) where.status = status;
-  } else {
-    where.status = 'disponible';
-  }
-  if (featured) where.isFeatured = featured === 'true';
-
-  if (minPrice || maxPrice) {
-    where.price = {};
-    if (minPrice) where.price[Op.gte] = parseFloat(minPrice);
-    if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
-  }
-
-  if (minTerrainM2 || maxTerrainM2) {
-    where.terrainMeters = {};
-    if (minTerrainM2) where.terrainMeters[Op.gte] = parseFloat(minTerrainM2);
-    if (maxTerrainM2) where.terrainMeters[Op.lte] = parseFloat(maxTerrainM2);
-  }
-
-  if (minConstructionM2 || maxConstructionM2) {
-    where.constructionMeters = {};
-    if (minConstructionM2) where.constructionMeters[Op.gte] = parseFloat(minConstructionM2);
-    if (maxConstructionM2) where.constructionMeters[Op.lte] = parseFloat(maxConstructionM2);
-  }
-
-  const andConditions = [];
-
-  if (minBedrooms) where.bedrooms = { [Op.gte]: parseInt(minBedrooms) };
-  if (minBathrooms) where.bathrooms = { [Op.gte]: parseInt(minBathrooms) };
-
-  if (search) {
-    // Camino rápido: FULLTEXT usa el índice invertido idx_properties_fulltext_search en
-    // vez de escanear la tabla completa. Solo cuando no encuentra nada (término corto,
-    // código con guion, substring a mitad de palabra) se cae al LIKE '%search%' original
-    // como red de seguridad — así nunca se pierden resultados que antes sí aparecían.
-    const booleanQuery = buildFulltextBooleanQuery(search);
-    let matchedIds = null;
-
-    if (booleanQuery) {
-      // HOTFIX: si el índice FULLTEXT (idx_properties_fulltext_search, migración
-      // 20260721000000) falta en esta base de datos por cualquier razón — se confirmó que
-      // el bootstrap de una BD nueva puede omitirlo en silencio, ver
-      // checkPendingMigrations.js/checkSchemaSync.js —, MATCH/AGAINST lanza
-      // "Can't find FULLTEXT index matching the column list" y esto tumbaba TODA la
-      // petición con un 500, en cada tecleo del buscador (sin debounce, ver comentario de
-      // esa migración). Se degrada al fallback LIKE que ya existía para "sin resultados",
-      // en vez de dejar que una consulta rota reviente el listado completo.
-      try {
-        const matches = await sequelize.query(
-          'SELECT id FROM properties WHERE MATCH(title, address, description) AGAINST(:query IN BOOLEAN MODE)',
-          { replacements: { query: booleanQuery }, type: sequelize.QueryTypes.SELECT }
-        );
-        if (matches.length > 0) matchedIds = matches.map((m) => m.id);
-      } catch (error) {
-        logger.error('Búsqueda FULLTEXT de propiedades falló, usando fallback LIKE', {
-          message: error.message,
-          search,
-        });
-      }
-    }
-
-    // `code` (ej. JRCH-0227) no forma parte del índice FULLTEXT y su guion lo rompe como
-    // token de una sola palabra, así que se busca aparte con LIKE siempre, sin importar si
-    // el camino rápido de FULLTEXT ya encontró algo por título/dirección/descripción.
-    if (matchedIds) {
-      andConditions.push({
-        [Op.or]: [{ id: { [Op.in]: matchedIds } }, { code: { [Op.like]: `%${search}%` } }],
-      });
-    } else {
-      andConditions.push({
-        [Op.or]: [
-          { title: { [Op.like]: `%${search}%` } },
-          { address: { [Op.like]: `%${search}%` } },
-          { description: { [Op.like]: `%${search}%` } },
-          { code: { [Op.like]: `%${search}%` } },
-        ],
-      });
-    }
-  }
-
-  if (andConditions.length > 0) where[Op.and] = andConditions;
+  // Compartido con las exportaciones (Excel/PDF admin y catálogo público) — ver
+  // services/propertyFilters.js — así el listado y las exportaciones nunca interpretan un
+  // mismo filtro de forma distinta.
+  const where = await buildPropertyWhereClause(req.query, { isStaff });
 
   const result = await paginate(Property, {
     page,

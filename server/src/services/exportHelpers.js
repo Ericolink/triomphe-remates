@@ -8,6 +8,7 @@ const { PRIMARY_ARGB, ACCENT_ARGB, WHITE_ARGB } = require('./exportBranding');
 const { formatPrice, formatDate } = require('../utils/formatters');
 const { ApiError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
+const { buildPropertyWhereClause } = require('./propertyFilters');
 
 const dash = (val) => (val !== null && val !== undefined && val !== '' ? String(val) : '—');
 
@@ -122,13 +123,13 @@ const buildExcelHeader = async ({ workbook, sheet, headers, title, subtitle }) =
   });
 };
 
+// `isStaff: true` — este helper solo lo llaman exportExcel/exportPDF (exportController.js),
+// ambas rutas ya protegidas por authenticate/authorize (ver routes/export.js), así que el
+// caller siempre es staff y puede filtrar por cualquier `status`. Mismos nombres/filtros que
+// GET /api/properties (ver services/propertyFilters.js) — sin `page`/`limit`: la exportación
+// siempre trae el conjunto completo que cumple los filtros, nunca solo la página visible.
 const getFilteredProperties = async (query) => {
-  const { city, type, category, status } = query;
-  const where = {};
-  if (city) where.city = city;
-  if (type) where.type = type;
-  if (category) where.category = category;
-  if (status) where.status = status;
+  const where = await buildPropertyWhereClause(query, { isStaff: true });
 
   return Property.findAll({
     where,

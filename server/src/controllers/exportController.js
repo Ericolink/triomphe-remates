@@ -16,6 +16,7 @@ const { validateEmail, validatePhone } = require('../utils/validators');
 const { ApiError } = require('../middleware/errorHandler');
 const { isInventoryDownloadEnabled } = require('../services/settingsService');
 const { logActivity } = require('../utils/pipelineHelpers');
+const { buildPropertyWhereClause } = require('../services/propertyFilters');
 
 // AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
 // ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
@@ -1065,13 +1066,13 @@ const catalogPdfCols = (doc) => {
 // Solo inventario público (`status: 'disponible'`, sin `internalNotes` ni columnas de uso
 // interno como visitas/fechas de alta) — a diferencia de `getFilteredProperties`
 // (exportHelpers.js), que un visitante público nunca debe poder invocar directamente.
+// `isStaff: false` en buildPropertyWhereClause fuerza `status: 'disponible'` sin importar lo
+// que venga en `query` — ver services/propertyFilters.js —, así un valor manipulado en el
+// body de este POST público nunca puede ampliar el acceso más allá del inventario disponible.
+// Mismos nombres/transformaciones de filtro que GET /api/properties y que la exportación
+// admin, sin `page`/`limit`: el catálogo siempre trae el conjunto completo filtrado.
 const getPublicCatalogProperties = async (query) => {
-  const { city, type, category, businessLine } = query;
-  const where = { status: 'disponible' };
-  if (city) where.city = city;
-  if (type) where.type = type;
-  if (category) where.category = category;
-  if (businessLine) where.businessLine = businessLine;
+  const where = await buildPropertyWhereClause(query, { isStaff: false });
 
   return Property.findAll({
     where,

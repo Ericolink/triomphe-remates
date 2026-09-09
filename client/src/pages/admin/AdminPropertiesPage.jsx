@@ -61,28 +61,24 @@ function AdminPropertyCardRow({
             {property.code ? ` · ${property.code}` : ''}
           </p>
         </div>
-        <motion.button
-          type="button"
-          onClick={canManage ? onPromote : undefined}
-          disabled={!canManage || promotePending}
-          whileHover={canManage ? { scale: 1.2 } : undefined}
-          whileTap={canManage ? { scale: 0.85 } : undefined}
-          title={
-            canManage
-              ? property.isPromoted
-                ? 'Quitar promoción'
-                : 'Promover como estrella'
-              : undefined
-          }
-          className={`flex-shrink-0 p-1.5 -m-1.5 rounded-lg transition-colors ${canManage ? 'hover:bg-accent-50 dark:hover:bg-accent-900/20' : ''}`}
-        >
-          <Star
-            size={18}
-            className={
-              property.isPromoted ? 'text-accent-400 fill-accent-400' : 'text-gray-300 dark:text-gray-600'
-            }
-          />
-        </motion.button>
+        {canManage && (
+          <motion.button
+            type="button"
+            onClick={onPromote}
+            disabled={promotePending}
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.85 }}
+            title={property.isPromoted ? 'Quitar promoción' : 'Promover como estrella'}
+            className="flex-shrink-0 p-1.5 -m-1.5 rounded-lg transition-colors hover:bg-accent-50 dark:hover:bg-accent-900/20"
+          >
+            <Star
+              size={18}
+              className={
+                property.isPromoted ? 'text-accent-400 fill-accent-400' : 'text-gray-300 dark:text-gray-600'
+              }
+            />
+          </motion.button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 text-xs text-gray-500 dark:text-gray-400">
@@ -90,9 +86,8 @@ function AdminPropertyCardRow({
           {BUSINESS_LINE_LABELS[property.businessLine] || property.businessLine}
         </Badge>
         <span>{CITY_LABELS[property.city]}</span>
-        <span title={`Alta: ${formatDate(property.createdAt)}`}>
-          · Act. {formatDate(property.updatedAt)}
-        </span>
+        <span>· Creada {formatDate(property.createdAt)}</span>
+        <span>· Act. {formatDate(property.updatedAt)}</span>
       </div>
 
       {canManage ? (
@@ -245,8 +240,11 @@ export default function AdminPropertiesPage() {
     try {
       setExporting(format);
       const params = new URLSearchParams();
+      if (search) params.set('search', search);
       if (city) params.set('city', city);
       if (businessLine) params.set('businessLine', businessLine);
+      if (minPrice) params.set('minPrice', minPrice);
+      if (maxPrice) params.set('maxPrice', maxPrice);
       const response = await api.get(`/export/${format}?${params.toString()}`, {
         responseType: 'blob',
       });
@@ -429,8 +427,9 @@ export default function AdminPropertiesPage() {
                     'Ciudad',
                     'Precio',
                     'Estatus',
+                    'Creado',
                     'Actualizado',
-                    'Destacada',
+                    ...(canManage ? ['Destacada'] : []),
                     'Acciones',
                   ].map((h) => (
                     <th
@@ -502,14 +501,14 @@ export default function AdminPropertiesPage() {
                           </span>
                         )}
                       </td>
-                      <td
-                        className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs"
-                        title={`Alta: ${formatDate(property.createdAt)}`}
-                      >
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
+                        {formatDate(property.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs">
                         {formatDate(property.updatedAt)}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        {canManage ? (
+                      {canManage && (
+                        <td className="px-4 py-3 text-center">
                           <motion.button
                             onClick={() => promoteMutation.mutate(property.id)}
                             disabled={promoteMutation.isPending}
@@ -529,17 +528,8 @@ export default function AdminPropertiesPage() {
                               }
                             />
                           </motion.button>
-                        ) : (
-                          <Star
-                            size={18}
-                            className={
-                              property.isPromoted
-                                ? 'text-accent-400 fill-accent-400 mx-auto'
-                                : 'text-gray-300 dark:text-gray-600 mx-auto'
-                            }
-                          />
-                        )}
-                      </td>
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           {[

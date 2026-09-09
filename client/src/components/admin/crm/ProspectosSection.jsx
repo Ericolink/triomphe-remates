@@ -308,8 +308,8 @@ export default function ProspectosSection() {
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-3">
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+        <div className="xl:col-span-3 space-y-3">
             {leads.length > 0 && (
               <div className="flex items-center gap-2 px-1">
                 <input
@@ -451,7 +451,7 @@ export default function ProspectosSection() {
           </div>
 
           {/* Detalle */}
-          <div className="xl:col-span-1">
+          <div className="xl:col-span-2">
             <DetailPanelSlot
               selected={selected}
               pendingChanges={leadActions.pendingChanges}
