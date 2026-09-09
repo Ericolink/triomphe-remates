@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, Building2, TrendingDown, Shield, ChevronRight, MapPin, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  getProperties,
+  getPublicProperties,
   getPromotedProperty,
   getPropertyStats,
 } from '../../services/propertyService';
@@ -32,7 +32,7 @@ export default function HomePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['properties', 'featured', businessLine],
-    queryFn: () => getProperties({ featured: true, limit: 6, businessLine }),
+    queryFn: () => getPublicProperties({ featured: true, limit: 6, businessLine }),
   });
 
   const { data: promotedData } = useQuery({

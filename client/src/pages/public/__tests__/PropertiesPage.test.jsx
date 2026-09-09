@@ -3,10 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import PropertiesPage from '../PropertiesPage';
-import { getProperties } from '../../../services/propertyService';
+import { getPublicProperties } from '../../../services/propertyService';
 
 vi.mock('../../../services/propertyService', () => ({
-  getProperties: vi.fn(),
+  getPublicProperties: vi.fn(),
 }));
 vi.mock('../../../components/ui/SEO', () => ({ default: () => null }));
 
@@ -43,7 +43,7 @@ describe('PropertiesPage — respuesta propertiesAvailable', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('con propiedades disponibles, muestra el listado normalmente', async () => {
-    getProperties.mockResolvedValue(AVAILABLE_RESPONSE);
+    getPublicProperties.mockResolvedValue(AVAILABLE_RESPONSE);
     renderPage();
 
     expect(await screen.findByText('Casa en Juárez')).toBeInTheDocument();
@@ -51,17 +51,23 @@ describe('PropertiesPage — respuesta propertiesAvailable', () => {
   });
 
   it('con propertiesAvailable:false, muestra el aviso de no disponibilidad y no las cards', async () => {
-    getProperties.mockResolvedValue(UNAVAILABLE_RESPONSE);
+    getPublicProperties.mockResolvedValue(UNAVAILABLE_RESPONSE);
     renderPage();
 
-    expect(await screen.findByText('Actualmente las propiedades no están disponibles. Por favor, vuelve a consultar más tarde.')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Actualmente el listado no está disponible en línea, pero cuéntanos qué buscas y un asesor te contacta directamente.'
+      )
+    ).toBeInTheDocument();
     // El encabezado también refleja el estado, en vez de "0 propiedades disponibles"
     expect(screen.getAllByText('Propiedades no disponibles').length).toBeGreaterThan(0);
     expect(screen.queryByText('No se encontraron propiedades')).not.toBeInTheDocument();
+    // El aviso viene acompañado del formulario de contacto, no solo un mensaje sin salida.
+    expect(screen.getByPlaceholderText('Tu nombre *')).toBeInTheDocument();
   });
 
   it('con propertiesAvailable:false, no se queda cargando indefinidamente (sale del skeleton)', async () => {
-    getProperties.mockResolvedValue(UNAVAILABLE_RESPONSE);
+    getPublicProperties.mockResolvedValue(UNAVAILABLE_RESPONSE);
     renderPage();
 
     await waitFor(() =>
@@ -70,7 +76,7 @@ describe('PropertiesPage — respuesta propertiesAvailable', () => {
   });
 
   it('sin resultados por filtros (propertiesAvailable ausente, data vacía), muestra el mensaje de "sin resultados", no el de no-disponibilidad', async () => {
-    getProperties.mockResolvedValue({
+    getPublicProperties.mockResolvedValue({
       data: [],
       pagination: { total: 0, page: 1, limit: 12, totalPages: 0, hasNext: false, hasPrevious: false },
     });

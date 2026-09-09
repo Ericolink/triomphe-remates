@@ -108,77 +108,89 @@ export default function SessionsModal({ open, onClose }) {
   const otherSessionsCount = (sessions || []).filter((s) => !s.isCurrent).length;
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={onClose}
-        >
+    <>
+      {/* AnimatePresence de este modal solo envuelve SU panel — los ConfirmDialog de abajo
+          manejan su propio AnimatePresence internamente. Meterlos como hermanos dentro del
+          mismo AnimatePresence (sin `key`) hacía que framer-motion los tratara como hijos
+          indistinguibles entre sí, disparando el warning de React de "same key ``". */}
+      <AnimatePresence>
+        {open && (
           <motion.div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            tabIndex={-1}
-            initial={{ scale: 0.95, opacity: 0, y: 12 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 12 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-md p-6 max-h-[85vh] overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={onClose}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 id={titleId} className="text-base font-bold text-gray-800 dark:text-gray-100">
-                Sesiones activas
-              </h3>
-              <button
+            <motion.div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={titleId}
+              tabIndex={-1}
+              initial={{ scale: 0.95, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 12 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-[#242938] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#2e3650] w-full max-w-md p-6 max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 id={titleId} className="text-base font-bold text-gray-800 dark:text-gray-100">
+                  Sesiones activas
+                </h3>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Cerrar"
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">Cargando…</p>}
+              {isError && (
+                <p className="text-sm text-red-500 py-6 text-center">No se pudieron cargar tus sesiones.</p>
+              )}
+
+              {sessions && sessions.length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">
+                  No hay sesiones activas registradas.
+                </p>
+              )}
+
+              {sessions && sessions.length > 0 && (
+                <div className="space-y-3">
+                  {sessions.map((session) => (
+                    <SessionCard key={session.id} session={session} onRequestRevoke={setSessionToRevoke} />
+                  ))}
+                </div>
+              )}
+
+              {otherSessionsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmRevokeOthers(true)}
+                  className="mt-5 w-full py-2.5 rounded-xl text-sm font-medium text-red-500 border border-red-200 dark:border-red-900/40 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                >
+                  Cerrar todas las demás sesiones
+                </button>
+              )}
+
+              <motion.button
                 type="button"
                 onClick={onClose}
-                aria-label="Cerrar"
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg"
+                whileHover={buttonHover}
+                whileTap={buttonTap}
+                className="mt-3 w-full py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
               >
-                <X size={18} />
-              </button>
-            </div>
-
-            {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">Cargando…</p>}
-            {isError && (
-              <p className="text-sm text-red-500 py-6 text-center">No se pudieron cargar tus sesiones.</p>
-            )}
-
-            {sessions && (
-              <div className="space-y-3">
-                {sessions.map((session) => (
-                  <SessionCard key={session.id} session={session} onRequestRevoke={setSessionToRevoke} />
-                ))}
-              </div>
-            )}
-
-            {otherSessionsCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setConfirmRevokeOthers(true)}
-                className="mt-5 w-full py-2.5 rounded-xl text-sm font-medium text-red-500 border border-red-200 dark:border-red-900/40 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
-              >
-                Cerrar todas las demás sesiones
-              </button>
-            )}
-
-            <motion.button
-              type="button"
-              onClick={onClose}
-              whileHover={buttonHover}
-              whileTap={buttonTap}
-              className="mt-3 w-full py-2.5 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
-            >
-              Cerrar
-            </motion.button>
+                Cerrar
+              </motion.button>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
+      </AnimatePresence>
 
       <ConfirmDialog
         open={!!sessionToRevoke}
@@ -197,6 +209,6 @@ export default function SessionsModal({ open, onClose }) {
         onConfirm={() => revokeOthersMutation.mutate()}
         onCancel={() => setConfirmRevokeOthers(false)}
       />
-    </AnimatePresence>
+    </>
   );
 }

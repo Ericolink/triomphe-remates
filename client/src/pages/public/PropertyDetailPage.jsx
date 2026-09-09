@@ -15,7 +15,7 @@ import {
   Clock,
   CheckCircle2,
 } from 'lucide-react';
-import { getPropertyBySlug, getProperties, trackView } from '../../services/propertyService';
+import { getPropertyBySlug, getPublicProperties, trackView } from '../../services/propertyService';
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import ContactForm from '../../components/ui/ContactForm';
@@ -101,7 +101,7 @@ export default function PropertyDetailPage() {
   const { data: similarData } = useQuery({
     queryKey: ['similar', property?.city, property?.type, property?.businessLine],
     queryFn: () =>
-      getProperties({
+      getPublicProperties({
         city: property.city,
         type: property.type,
         businessLine: property.businessLine,

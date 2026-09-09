@@ -16,13 +16,14 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getProperties } from '../../services/propertyService';
+import { getPublicProperties } from '../../services/propertyService';
 import PropertyCard from '../../components/ui/PropertyCard';
 import { PropertyCardSkeletonGrid } from '../../components/ui/PropertyCardSkeleton';
 import SEO from '../../components/ui/SEO';
 import TabBar from '../../components/ui/TabBar';
 import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import CatalogDownloadForm from '../../components/ui/CatalogDownloadForm';
+import ContactForm from '../../components/ui/ContactForm';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
 import {
   CITY_LABELS,
@@ -109,7 +110,7 @@ export default function PropertiesPage() {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['properties', businessLine, filters],
     queryFn: ({ pageParam }) =>
-      getProperties({ ...filters, businessLine, page: pageParam, limit: 12 }),
+      getPublicProperties({ ...filters, businessLine, page: pageParam, limit: 12 }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const { page, hasNext } = lastPage.pagination;
@@ -523,7 +524,7 @@ export default function PropertiesPage() {
           variants={fadeIn}
           initial="hidden"
           animate="visible"
-          className="text-center py-20 px-6 max-w-lg mx-auto"
+          className="text-center py-16 px-6 max-w-lg mx-auto"
         >
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-100 dark:bg-[#242938] flex items-center justify-center mb-5">
             <EyeOff size={26} className="text-gray-400 dark:text-gray-500" />
@@ -531,10 +532,18 @@ export default function PropertiesPage() {
           <p className="text-xl font-semibold text-primary-900 dark:text-white">
             Propiedades no disponibles
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Actualmente las propiedades no están disponibles. Por favor, vuelve a consultar más
-            tarde.
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 mb-8">
+            Actualmente el listado no está disponible en línea, pero cuéntanos qué buscas y un
+            asesor te contacta directamente.
           </p>
+          {/* Con publicPropertiesEnabled=false el listado se oculta, pero el negocio sigue
+              activo — este formulario mantiene abierto el único canal de contacto público de
+              la sección, y llega al CRM como cualquier otro prospecto (createPublicLead). */}
+          <div className="text-left bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-6 shadow-md">
+            {/* 'otro': Lead.source es un ENUM de MySQL (ver Lead.js) — no admite un valor
+                libre como 'propiedades-no-disponibles'. */}
+            <ContactForm defaultSource="otro" />
+          </div>
         </motion.div>
       ) : properties.length === 0 ? (
         <motion.div

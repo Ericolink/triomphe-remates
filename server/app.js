@@ -35,7 +35,21 @@ app.use(require('./src/middleware/requestContext'));
 // propiedades se sirven desde Cloudinary (res.cloudinary.com), que NO envía la cabecera
 // Cross-Origin-Resource-Policy (verificado contra su CDN). Si se activara COEP, todas las
 // fotos del sitio dejarían de cargar.
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false, hsts: false }));
+//
+// crossOriginResourcePolicy se relaja a 'cross-origin' por el mismo motivo: el default de
+// helmet ('same-origin') hace que Firefox bloquee las respuestas de la API cuando el
+// frontend de Vite en dev (http://localhost:5173) las consulta desde otro origen
+// (http://localhost:3001) — un origen que CORS (más abajo, isOriginAllowed) ya autoriza
+// explícitamente. En producción API y frontend son same-origin (mismo Express sirve
+// ambos), así que esto no relaja nada ahí; solo evita que CORP contradiga a CORS en dev.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    hsts: false,
+  })
+);
 
 const publicCsp = helmet.contentSecurityPolicy({
   useDefaults: false,

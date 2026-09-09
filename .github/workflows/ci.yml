@@ -47,6 +47,22 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
         working-directory: server
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+      # propertyOgMeta.integration.test.js ejercita GET /propiedades/:slug contra el
+      # index.html compilado real (server/client/, gitignorado — ver propertyOgMeta.js),
+      # igual que en producción. Sin este build, fs.readFileSync revienta con ENOENT y
+      # ese suite entero devuelve 500 en vez de 200.
+      - run: npm run build
+        working-directory: client
+        env:
+          VITE_API_URL: http://localhost:3001/api
+      - run: mkdir -p server/client && cp -r client/dist/. server/client/
       - run: npm test
         working-directory: server
         env:
