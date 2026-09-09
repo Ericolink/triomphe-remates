@@ -6,6 +6,9 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { resolveUserKey, resolveClientIp } = require('./src/middleware/rateLimitMiddleware');
+const { isBotUserAgent } = require('./src/utils/botDetection');
+const { renderPropertyOgHtml } = require('./src/utils/propertyOgMeta');
+const logger = require('./src/utils/logger');
 require('dotenv').config();
 
 const app = express();
@@ -156,6 +159,28 @@ app.get('/api/health', (req, res) => {
 
 // Servir el frontend compilado
 const clientBuildPath = path.join(__dirname, 'client');
+
+// Crawlers de redes sociales (facebookexternalhit, WhatsApp, LinkedInBot, Twitterbot — ver
+// botDetection.js) no ejecutan JS: reciben siempre este index.html tal cual, así que nunca ven
+// el <Helmet> dinámico de SEO.jsx y la tarjeta de previsualización salía genérica ("Triomphe
+// Remates Bancarios", sin foto) sin importar qué propiedad se compartiera. Solo se intercepta
+// para bots conocidos — usuarios reales siguen recibiendo el index.html normal y la SPA de
+// siempre; esto no es una migración a SSR, solo un render puntual de metadata para crawlers.
+app.get('/propiedades/:slug', async (req, res, next) => {
+  if (!isBotUserAgent(req.headers['user-agent'])) return next();
+  try {
+    const html = await renderPropertyOgHtml(req.params.slug, clientBuildPath);
+    if (!html) return next();
+    res.send(html);
+  } catch (error) {
+    logger.error('Error generando metadata OG de propiedad', {
+      slug: req.params.slug,
+      error: error.message,
+    });
+    next();
+  }
+});
+
 app.use(express.static(clientBuildPath));
 app.get('*path', (req, res) => {
   res.sendFile(path.join(clientBuildPath, 'index.html'));
