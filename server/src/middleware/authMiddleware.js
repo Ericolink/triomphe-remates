@@ -1,6 +1,12 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models/index');
+const sessionService = require('../services/sessionService');
 
+// Valida sesión por-dispositivo (claim `sid`, ver sessionService.js) ADEMÁS de tokenVersion
+// (invalidación global, sin cambios). `decoded.sid == null` (tokens emitidos antes de esta
+// feature) se trata como "sin sesión que validar" — mismo criterio de compatibilidad que
+// `decoded.tokenVersion ?? 0` de más abajo, para no cerrar sesión a todo el mundo en el
+// momento del deploy.
 const authenticate = async (req, res, next) => {
   try {
     // Extraer token directamente — jwt.verify es la única validación de seguridad
@@ -12,15 +18,16 @@ const authenticate = async (req, res, next) => {
       algorithms: ['HS256'],
     });
 
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] },
-    });
+    const [user, sessionResult] = await Promise.all([
+      User.findByPk(decoded.id, { attributes: { exclude: ['password'] } }),
+      sessionService.resolveActiveSession(decoded),
+    ]);
 
     // AUDIT-023: tokens emitidos antes de un cambio de password/rol/desactivación
     // quedan invalidados aunque no hayan expirado — decoded.tokenVersion ausente
     // (tokens emitidos antes de este cambio) se trata como 0 para no cerrar sesión
     // a todos los usuarios ya logueados en el momento del deploy.
-    if (!user || !user.isActive || (decoded.tokenVersion ?? 0) !== user.tokenVersion) {
+    if (!user || !user.isActive || (decoded.tokenVersion ?? 0) !== user.tokenVersion || sessionResult.invalid) {
       // `code: 'INVALID_SESSION'` marca este 401 como "sesión inválida/expirada" para el
       // interceptor global de axios (client/src/services/api.js) — es el único statusCode+code
       // que dispara logout automático. Cualquier controlador que quiera devolver 401 sin
@@ -29,6 +36,11 @@ const authenticate = async (req, res, next) => {
     }
 
     req.user = user;
+    // null para tokens legacy sin `sid` — los controllers de sesiones (authController.js)
+    // ya manejan ese caso sin fallar.
+    req.sessionId = sessionResult.session?.id ?? null;
+    // Fire-and-forget: no debe agregar latencia a este request (ver sessionService.js).
+    sessionService.touchActivity(sessionResult.session, req);
     return next();
   } catch {
     return res.status(401).json({ error: 'No autorizado', code: 'INVALID_SESSION' });
@@ -47,11 +59,12 @@ const authenticateSSE = async (req, res, next) => {
       algorithms: ['HS256'],
     });
 
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] },
-    });
+    const [user, sessionResult] = await Promise.all([
+      User.findByPk(decoded.id, { attributes: { exclude: ['password'] } }),
+      sessionService.resolveActiveSession(decoded),
+    ]);
 
-    if (!user || !user.isActive || (decoded.tokenVersion ?? 0) !== user.tokenVersion) {
+    if (!user || !user.isActive || (decoded.tokenVersion ?? 0) !== user.tokenVersion || sessionResult.invalid) {
       return res.status(401).json({ error: 'Usuario no autorizado' });
     }
 
@@ -73,11 +86,14 @@ const attachUserIfPresent = async (req, res, next) => {
       algorithms: ['HS256'],
     });
 
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] },
-    });
+    const [user, sessionResult] = await Promise.all([
+      User.findByPk(decoded.id, { attributes: { exclude: ['password'] } }),
+      sessionService.resolveActiveSession(decoded),
+    ]);
 
-    if (user && user.isActive && (decoded.tokenVersion ?? 0) === user.tokenVersion) req.user = user;
+    if (user && user.isActive && (decoded.tokenVersion ?? 0) === user.tokenVersion && !sessionResult.invalid) {
+      req.user = user;
+    }
     return next();
   } catch {
     return next();

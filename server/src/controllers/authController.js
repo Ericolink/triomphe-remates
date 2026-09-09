@@ -3,6 +3,7 @@ const { generateToken, hashPassword, comparePassword } = require('../utils/helpe
 const { validateRegister, validateLogin } = require('../utils/validators');
 const { logAudit } = require('../utils/audit');
 const userService = require('../services/userService');
+const sessionService = require('../services/sessionService');
 const { ApiError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const { isOriginAllowed } = require('../utils/corsOrigins');
@@ -91,7 +92,8 @@ const register = async (req, res) => {
     throw err;
   }
 
-  const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+  const session = await sessionService.createSession({ userId: user.id, req });
+  const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion, sid: session.id });
 
   return res.status(201).json({
     message: 'Usuario creado exitosamente',
@@ -143,7 +145,8 @@ const login = async (req, res) => {
   loginLimiter.resetKey(buildLoginComboKey(req));
   loginAccountLimiter.resetKey(buildLoginAccountKey(req));
 
-  const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+  const session = await sessionService.createSession({ userId: user.id, req });
+  const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion, sid: session.id });
 
   return res.json({
     message: 'Login exitoso',
@@ -187,11 +190,88 @@ const changePassword = async (req, res) => {
   await user.update({ password: hashedPassword, tokenVersion: user.tokenVersion + 1 });
   logAudit(req, 'update', 'user', user.id, { event: 'change_password' });
 
+  // tokenVersion ya invalidó (a nivel JWT) los tokens de cualquier OTRO dispositivo — esto
+  // solo mantiene la lista de "sesiones activas" honesta, marcándolas revocadas también ahí.
+  // La sesión de ESTE dispositivo (req.sessionId) se preserva: sigue siendo el mismo login,
+  // solo se le reemite un token nuevo más abajo.
+  await sessionService.revokeOtherSessions({ userId: user.id, exceptSessionId: req.sessionId });
+
   // El token actual quedó invalidado por el cambio de tokenVersion — se reemite uno
   // nuevo en la respuesta para que el usuario no se quede sin sesión tras el cambio.
-  const token = generateToken({ id: user.id, role: user.role, tokenVersion: user.tokenVersion });
+  const token = generateToken({
+    id: user.id,
+    role: user.role,
+    tokenVersion: user.tokenVersion,
+    sid: req.sessionId,
+  });
 
   return res.json({ message: 'Contraseña actualizada exitosamente', token });
 };
 
-module.exports = { register, login, getMe, changePassword };
+// GET /api/auth/sessions
+const getSessions = async (req, res) => {
+  const sessions = await sessionService.listActiveSessions(req.user.id);
+
+  return res.json({
+    sessions: sessions.map((s) => ({
+      id: s.id,
+      device: s.device,
+      browser: s.browser,
+      ip: s.ip,
+      lastActivity: s.lastActivity,
+      createdAt: s.createdAt,
+      isCurrent: s.id === req.sessionId,
+    })),
+  });
+};
+
+// DELETE /api/auth/sessions/:sessionId
+const revokeSessionById = async (req, res) => {
+  const sessionId = parseInt(req.params.sessionId, 10);
+  if (!Number.isInteger(sessionId)) throw new ApiError(400, 'Identificador de sesión inválido');
+
+  // La sesión actual solo se cierra vía POST /auth/logout — evita el estado confuso de
+  // revocar-mientras-se-usa desde este endpoint (la UI tampoco ofrece este botón sobre la
+  // sesión actual, ver SessionsModal.jsx).
+  if (sessionId === req.sessionId) {
+    throw new ApiError(400, 'No puedes cerrar tu sesión actual desde aquí, usa "Cerrar sesión"');
+  }
+
+  const result = await sessionService.revokeSession({ userId: req.user.id, sessionId });
+  if (result === 'not_found') throw new ApiError(404, 'Sesión no encontrada');
+  if (result === 'forbidden') throw new ApiError(403, 'No tienes acceso a esta sesión');
+
+  logAudit(req, 'update', 'user', req.user.id, { event: 'session_revoked', sessionId });
+  return res.json({ message: 'Sesión cerrada exitosamente' });
+};
+
+// POST /api/auth/sessions/revoke-others
+const revokeOtherSessionsHandler = async (req, res) => {
+  const revoked = await sessionService.revokeOtherSessions({
+    userId: req.user.id,
+    exceptSessionId: req.sessionId,
+  });
+
+  logAudit(req, 'update', 'user', req.user.id, { event: 'sessions_revoked_others', revoked });
+  return res.json({ revoked });
+};
+
+// POST /api/auth/logout
+const logout = async (req, res) => {
+  if (req.sessionId != null) {
+    await sessionService.revokeSession({ userId: req.user.id, sessionId: req.sessionId });
+  }
+  logAudit(req, 'logout', 'user', req.user.id, { email: req.user.email });
+  return res.json({ message: 'Sesión cerrada exitosamente' });
+};
+
+module.exports = {
+  register,
+  login,
+  getMe,
+  changePassword,
+  getSessions,
+  revokeSessionById,
+  revokeOtherSessionsHandler,
+  logout,
+};

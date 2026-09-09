@@ -1,5 +1,14 @@
 const router = require('express').Router();
-const { register, login, getMe, changePassword } = require('../controllers/authController');
+const {
+  register,
+  login,
+  getMe,
+  changePassword,
+  getSessions,
+  revokeSessionById,
+  revokeOtherSessionsHandler,
+  logout,
+} = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const { requestTimeout } = require('../middleware/requestTimeout');
@@ -170,5 +179,103 @@ router.get('/me', apiLimiter, authenticate, getMe);
  *                 code: { type: string, enum: [INVALID_CURRENT_PASSWORD, INVALID_SESSION] }
  */
 router.put('/change-password', changePasswordLimiter, authenticate, changePassword);
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Cerrar sesión actual
+ *     description: >
+ *       Revoca la sesión asociada al token con el que se llama (ver `Sesiones activas`,
+ *       `GET /api/auth/sessions`). Un token emitido antes de esta feature (sin `sid`) no
+ *       tiene sesión que revocar y el logout simplemente no hace nada del lado servidor —
+ *       el frontend limpia su almacenamiento local de todas formas.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200: { description: Sesión cerrada }
+ *       401: { description: No autenticado }
+ */
+router.post('/logout', apiLimiter, authenticate, logout);
+
+/**
+ * @swagger
+ * /api/auth/sessions:
+ *   get:
+ *     summary: Listar sesiones activas del usuario autenticado
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Sesiones no revocadas y no vencidas del usuario, más reciente actividad primero.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 sessions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: integer }
+ *                       device: { type: string, nullable: true }
+ *                       browser: { type: string, nullable: true }
+ *                       ip: { type: string, nullable: true }
+ *                       lastActivity: { type: string, format: date-time }
+ *                       createdAt: { type: string, format: date-time }
+ *                       isCurrent: { type: boolean }
+ *       401: { description: No autenticado }
+ */
+router.get('/sessions', apiLimiter, authenticate, getSessions);
+
+/**
+ * @swagger
+ * /api/auth/sessions/revoke-others:
+ *   post:
+ *     summary: Cerrar todas las sesiones del usuario excepto la actual
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cantidad de sesiones revocadas.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 revoked: { type: integer }
+ *       401: { description: No autenticado }
+ */
+router.post('/sessions/revoke-others', apiLimiter, authenticate, revokeOtherSessionsHandler);
+
+/**
+ * @swagger
+ * /api/auth/sessions/{sessionId}:
+ *   delete:
+ *     summary: Cerrar una sesión específica del usuario autenticado
+ *     description: >
+ *       Solo puede cerrar sesiones propias — un `sessionId` de otro usuario responde 403 (o
+ *       404 si el id no existe). La sesión actual (la del propio token con el que se llama)
+ *       no puede cerrarse aquí; para eso existe `POST /api/auth/logout`.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200: { description: Sesión cerrada }
+ *       400: { description: sessionId inválido o es la sesión actual }
+ *       401: { description: No autenticado }
+ *       403: { description: La sesión pertenece a otro usuario }
+ *       404: { description: Sesión no encontrada }
+ */
+router.delete('/sessions/:sessionId', apiLimiter, authenticate, revokeSessionById);
 
 module.exports = router;

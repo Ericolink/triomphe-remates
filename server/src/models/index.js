@@ -18,6 +18,7 @@ const Activity = require('./Activity');
 const Appointment = require('./Appointment');
 const Deal = require('./Deal');
 const Setting = require('./Setting');
+const UserSession = require('./UserSession');
 
 // Propiedades
 Property.hasMany(Image, { foreignKey: 'propertyId', as: 'images', onDelete: 'CASCADE' });
@@ -105,6 +106,9 @@ Deal.belongsTo(Property, { foreignKey: 'propertyId', as: 'property' });
 User.hasMany(Setting, { foreignKey: 'updatedByUserId', as: 'settingUpdates' });
 Setting.belongsTo(User, { foreignKey: 'updatedByUserId', as: 'updatedByUser' });
 
+User.hasMany(UserSession, { foreignKey: 'userId', as: 'sessions', onDelete: 'CASCADE' });
+UserSession.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 module.exports = {
   sequelize,
   User,
@@ -126,4 +130,5 @@ module.exports = {
   Appointment,
   Deal,
   Setting,
+  UserSession,
 };

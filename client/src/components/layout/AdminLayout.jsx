@@ -17,11 +17,13 @@ import {
   ChevronDown,
   Clock,
   Settings,
+  Monitor,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
 import ChangePasswordModal from '../admin/ChangePasswordModal';
+import SessionsModal from '../admin/SessionsModal';
 import { buildImageUrl } from '../../utils/images';
 import toast from 'react-hot-toast';
 import useModalA11y from '../../hooks/useModalA11y';
@@ -162,6 +164,7 @@ function Sidebar({ user, onClose, onLogout }) {
 function UserMenu({ user, onLogout }) {
   const [open, setOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
   const titleId = useId();
   const { panelRef, triggerRef } = usePopoverA11y(open, () => setOpen(false));
 
@@ -217,6 +220,16 @@ function UserMenu({ user, onLogout }) {
               type="button"
               onClick={() => {
                 setOpen(false);
+                setSessionsModalOpen(true);
+              }}
+              className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
+            >
+              <Monitor size={15} aria-hidden="true" /> Sesiones activas
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
                 onLogout();
               }}
               className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650] transition-colors"
@@ -228,6 +241,7 @@ function UserMenu({ user, onLogout }) {
       )}
 
       <ChangePasswordModal open={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
+      <SessionsModal open={sessionsModalOpen} onClose={() => setSessionsModalOpen(false)} />
     </div>
   );
 }

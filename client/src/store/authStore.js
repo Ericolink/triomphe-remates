@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logoutRequest } from '../services/authService';
 
 const useAuthStore = create((set) => ({
   user: JSON.parse(localStorage.getItem('user')) || null,
@@ -25,7 +26,12 @@ const useAuthStore = create((set) => ({
       return { user };
     }),
 
+  // Revoca la sesión del lado servidor (ver server/src/services/sessionService.js) sin
+  // bloquear el logout en la UI por ello — si la llamada falla (sin red, token ya vencido),
+  // el comportamiento visible es idéntico al de antes: se limpia el estado local igual y el
+  // token, en el peor caso, simplemente expira solo más tarde.
   logout: () => {
+    logoutRequest().catch(() => {});
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     set({ user: null, token: null, isAuthenticated: false });

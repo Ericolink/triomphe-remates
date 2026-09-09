@@ -20,3 +20,23 @@ export const changePassword = async (currentPassword, newPassword) => {
   const { data } = await api.put('/auth/change-password', { currentPassword, newPassword });
   return data;
 };
+
+export const logoutRequest = async () => {
+  const { data } = await api.post('/auth/logout');
+  return data;
+};
+
+export const getSessions = async () => {
+  const { data } = await api.get('/auth/sessions');
+  return data.sessions;
+};
+
+export const revokeSession = async (sessionId) => {
+  const { data } = await api.delete(`/auth/sessions/${sessionId}`);
+  return data;
+};
+
+export const revokeOtherSessions = async () => {
+  const { data } = await api.post('/auth/sessions/revoke-others');
+  return data;
+};

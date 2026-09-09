@@ -6,6 +6,7 @@ const { logAudit, snapshotFields, buildChanges } = require('../utils/audit');
 const { destroyCloudinaryAsset } = require('../utils/cloudinaryCleanup');
 const { paginate } = require('../utils/pagination');
 const userService = require('../services/userService');
+const sessionService = require('../services/sessionService');
 const { ApiError } = require('../middleware/errorHandler');
 
 // Reexportados desde userService para no duplicar la lista/función — updateUser
@@ -197,15 +198,29 @@ const updateUser = async (req, res) => {
     ...(newPassword && { passwordChanged: true }),
   });
 
-  // Si el propio usuario cambió su contraseña/rol, su token actual quedó invalidado
-  // por el incremento de tokenVersion — se reemite uno nuevo para no cerrarle la sesión.
+  // Mismo criterio que authController.changePassword: tokenVersion ya invalidó (a nivel
+  // JWT) los tokens de cualquier otro dispositivo de este usuario — esto solo mantiene la
+  // lista de "sesiones activas" honesta. Si quien hace el cambio es el propio usuario
+  // (self-service), se preserva SU sesión actual (mismo login, se reemite token abajo); si
+  // es un admin editando a otro usuario, no hay "sesión actual" que preservar.
   const response = { message: 'Usuario actualizado exitosamente', data: safeUser(user) };
-  if (isSensitiveChange && req.user.id === user.id) {
-    response.token = generateToken({
-      id: user.id,
-      role: user.role,
-      tokenVersion: user.tokenVersion,
+  if (isSensitiveChange) {
+    const isSelfService = req.user.id === user.id;
+    await sessionService.revokeAllSessions({
+      userId: user.id,
+      exceptSessionId: isSelfService ? req.sessionId : null,
     });
+
+    // Si el propio usuario cambió su contraseña/rol, su token actual quedó invalidado
+    // por el incremento de tokenVersion — se reemite uno nuevo para no cerrarle la sesión.
+    if (isSelfService) {
+      response.token = generateToken({
+        id: user.id,
+        role: user.role,
+        tokenVersion: user.tokenVersion,
+        sid: req.sessionId,
+      });
+    }
   }
 
   return res.json(response);
@@ -226,6 +241,7 @@ const deactivateUser = async (req, res) => {
   if (!user) throw new ApiError(404, 'Usuario no encontrado');
 
   await user.update({ isActive: false, tokenVersion: user.tokenVersion + 1 });
+  await sessionService.revokeAllSessions({ userId: user.id });
   logAudit(req, 'update', 'user', user.id, { isActive: false });
   return res.json({ message: 'Usuario desactivado exitosamente' });
 };

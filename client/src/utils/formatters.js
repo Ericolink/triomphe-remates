@@ -65,3 +65,25 @@ export const daysSince = (date) => {
   if (!date) return null;
   return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24));
 };
+
+// "Ahora" / "Hace N minutos" / "Hace N horas" / "Ayer" / "Hace N días" — usado por la lista
+// de sesiones activas para `lastActivity`. Más allá de una semana cae a formatDate(), donde
+// una fecha relativa deja de ser útil. El valor completo (formatDateTime) va en el `title`
+// del elemento que use esto, para consultarlo al pasar el cursor.
+export const formatRelativeTime = (date, fallback = '—') => {
+  if (!date) return fallback;
+  const diffMs = Date.now() - new Date(date).getTime();
+  const minutes = Math.floor(diffMs / (1000 * 60));
+
+  if (minutes < 1) return 'Ahora';
+  if (minutes < 60) return `Hace ${minutes} minuto${minutes === 1 ? '' : 's'}`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Hace ${hours} hora${hours === 1 ? '' : 's'}`;
+
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Ayer';
+  if (days < 7) return `Hace ${days} días`;
+
+  return formatDate(date, fallback);
+};
