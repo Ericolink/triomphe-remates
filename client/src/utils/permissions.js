@@ -30,6 +30,15 @@ export const hasCrmAccess = (user) => crmAccessLevel(user) !== null;
 export const canAssignLeads = (user) =>
   ['admin', 'asistente_administrativo', 'coordinador_ventas'].includes(user?.role);
 
+// Filtro/resumen "Responsable" de ProspectosSection — a propósito más restrictivo que
+// canAssignLeads: exclusivo de los dos únicos roles para los que getLeadVisibilityWhere no
+// restringe nada (ver leadAccess.js), o sea los únicos que de por sí ya pueden ver los
+// prospectos de cualquier usuario. Un coordinador_ventas SÍ puede reasignar (canAssignLeads),
+// pero solo dentro de su propio equipo — mostrarle este selector global sería sugerir un
+// alcance que no tiene; sigue usando "Mis prospectos" para su propio filtro rápido.
+export const canFilterLeadsByResponsible = (user) =>
+  ['admin', 'asistente_administrativo'].includes(user?.role);
+
 // Eliminar leads (individual o en lote) — espejo exacto de routes/leads.js.
 export const canDeleteLeads = (user) =>
   ['admin', 'asistente_administrativo'].includes(user?.role);

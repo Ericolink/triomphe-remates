@@ -18,13 +18,18 @@ import api from '../../../services/api';
 import {
   createLead,
   getLeads,
+  getLeadsCountByResponsible,
   getLeadById,
   batchUpdateLeads,
   batchDeleteLeads,
 } from '../../../services/leadService';
 import { getUsers } from '../../../services/usersService';
 import useAuthStore from '../../../store/authStore';
-import { canCreateLeads, canDeleteLeads } from '../../../utils/permissions';
+import {
+  canCreateLeads,
+  canDeleteLeads,
+  canFilterLeadsByResponsible,
+} from '../../../utils/permissions';
 import { downloadBlob, fileTimestamp } from '../../../utils/download';
 import Spinner from '../../ui/Spinner';
 import ConfirmDialog from '../../ui/ConfirmDialog';
@@ -85,9 +90,24 @@ export default function ProspectosSection() {
   const [onlyMine, setOnlyMine] = useState(false);
   const [businessLine, setBusinessLine] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
-  const assignedToUserId = onlyMine ? currentUserId : '';
+  // Filtro "Responsable" — exclusivo de admin/asistente_administrativo (los únicos roles
+  // para los que ver/filtrar por CUALQUIER responsable tiene sentido, ver
+  // canFilterLeadsByResponsible). '' = Todos, 'unassigned' = sin responsable, o el id de un
+  // usuario. Mutuamente excluyente con "Mis prospectos" (activar uno resetea el otro) para
+  // que ambos controles no compitan por el mismo parámetro `assignedToUserId`.
+  const canFilterResponsible = canFilterLeadsByResponsible(currentUser);
+  const [responsibleFilter, setResponsibleFilter] = useState('');
+  const assignedToUserId = onlyMine
+    ? currentUserId
+    : (canFilterResponsible && responsibleFilter) || '';
   const hasActiveFilters =
-    !!search || !!stage || !!staleDays || onlyMine || !!businessLine || !!paymentMethod;
+    !!search ||
+    !!stage ||
+    !!staleDays ||
+    onlyMine ||
+    !!businessLine ||
+    !!paymentMethod ||
+    (canFilterResponsible && !!responsibleFilter);
 
   const clearFilters = () => {
     setSearch('');
@@ -96,6 +116,7 @@ export default function ProspectosSection() {
     setOnlyMine(false);
     setBusinessLine('');
     setPaymentMethod('');
+    setResponsibleFilter('');
     setChecked([]);
   };
 
@@ -133,6 +154,26 @@ export default function ProspectosSection() {
 
   const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: getUsers });
   const users = usersData?.data ?? [];
+  const assignableUsers = users.filter((u) => u.isActive);
+
+  // Resumen "prospectos por responsable" — mismos filtros que la lista (menos el propio
+  // responsable, que aquí se agrupa en vez de filtrarse a un valor puntual) para que refleje
+  // exactamente lo que el admin/asistente tiene filtrado en pantalla. Solo se pide si el rol
+  // puede ver el selector — evita una llamada de red que el backend rechazaría con 403 para
+  // coordinador/asesor.
+  const { data: countsData } = useQuery({
+    queryKey: ['leads-counts-by-responsible', stage, staleDays, search, businessLine, paymentMethod],
+    queryFn: () =>
+      getLeadsCountByResponsible({
+        pipelineStage: stage,
+        staleDays: staleDays || undefined,
+        search: search || undefined,
+        businessLine: businessLine || undefined,
+        paymentMethod: paymentMethod || undefined,
+      }),
+    enabled: canFilterResponsible,
+  });
+  const responsibleCounts = countsData?.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: createLead,
@@ -200,6 +241,17 @@ export default function ProspectosSection() {
       >
         <p className="text-gray-500 dark:text-gray-400 text-sm">
           {leadsTotal} prospectos registrados
+          {canFilterResponsible && responsibleFilter && (
+            <>
+              {' · Responsable: '}
+              <span className="font-medium text-gray-700 dark:text-gray-200">
+                {responsibleFilter === 'unassigned'
+                  ? 'Sin asignar'
+                  : assignableUsers.find((u) => String(u.id) === responsibleFilter)?.name ||
+                    'Sin asignar'}
+              </span>
+            </>
+          )}
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2 bg-white dark:bg-[#242938] border border-gray-200 dark:border-[#2e3650] rounded-xl px-3 py-2 w-full sm:w-auto">
@@ -214,7 +266,10 @@ export default function ProspectosSection() {
           </div>
           {currentUserId && (
             <button
-              onClick={() => setOnlyMine((v) => !v)}
+              onClick={() => {
+                setOnlyMine((v) => !v);
+                setResponsibleFilter('');
+              }}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
                 onlyMine
                   ? 'bg-primary-600 border-primary-600 text-white'
@@ -223,6 +278,30 @@ export default function ProspectosSection() {
             >
               <UserCheck size={15} /> Mis prospectos
             </button>
+          )}
+          {canFilterResponsible && (
+            <select
+              aria-label="Filtrar por responsable"
+              value={responsibleFilter}
+              onChange={(e) => {
+                setResponsibleFilter(e.target.value);
+                setOnlyMine(false);
+                setChecked([]);
+              }}
+              className={`px-3 py-2 border rounded-xl text-sm focus:outline-none ${
+                responsibleFilter
+                  ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
+                  : 'border-gray-200 dark:border-[#2e3650] bg-white dark:bg-[#242938] dark:text-gray-100'
+              }`}
+            >
+              <option value="">Responsable: todos</option>
+              <option value="unassigned">Sin asignar</option>
+              {assignableUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
           )}
           {canCreateLeads(currentUser) && (
             <button
@@ -307,6 +386,47 @@ export default function ProspectosSection() {
           )}
         </div>
       </motion.div>
+
+      {/* Resumen de supervisión "prospectos por responsable" — exclusivo de
+          admin/asistente_administrativo (ver canFilterLeadsByResponsible). Cada pastilla es
+          también un atajo: clic para filtrar la lista a ese responsable (clic de nuevo para
+          quitarlo). Los conteos respetan los mismos filtros activos arriba (ciudad vía
+          `search`, línea de negocio, forma de pago, etapa, actividad). */}
+      {canFilterResponsible && responsibleCounts.length > 0 && (
+        <motion.div
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          className="flex flex-wrap items-center gap-2 mb-6 -mt-3"
+        >
+          <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">
+            Prospectos por responsable:
+          </span>
+          {responsibleCounts.map(({ userId, user, count }) => {
+            const value = userId === null ? 'unassigned' : String(userId);
+            const label = userId === null ? 'Sin asignar' : user?.name || 'Sin asignar';
+            const active = responsibleFilter === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setResponsibleFilter(active ? '' : value);
+                  setOnlyMine(false);
+                  setChecked([]);
+                }}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  active
+                    ? 'bg-primary-600 border-primary-600 text-white'
+                    : 'bg-white dark:bg-[#242938] border-gray-200 dark:border-[#2e3650] text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2e3650]'
+                }`}
+              >
+                {label} — {count}
+              </button>
+            );
+          })}
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
         <div className="xl:col-span-3 space-y-3">

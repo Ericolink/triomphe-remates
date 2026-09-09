@@ -22,6 +22,15 @@ export const getLeads = async (params = {}) => {
   return data;
 };
 
+// Resumen "prospectos por responsable" — GET /leads/counts-by-responsible, exclusivo de
+// admin/asistente_administrativo (ver leadController.getLeadsCountByResponsible). Acepta
+// los mismos filtros de búsqueda que getLeads (menos assignedToUserId, que aquí se agrupa
+// en vez de filtrarse).
+export const getLeadsCountByResponsible = async (params = {}) => {
+  const { data } = await api.get('/leads/counts-by-responsible', { params });
+  return data;
+};
+
 export const getLeadById = async (id) => {
   const { data } = await api.get(`/leads/${id}`);
   return data;

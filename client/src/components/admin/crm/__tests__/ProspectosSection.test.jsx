@@ -8,11 +8,12 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProspectosSection from '../ProspectosSection';
-import { getLeads } from '../../../../services/leadService';
+import { getLeads, getLeadsCountByResponsible } from '../../../../services/leadService';
 import { getUsers } from '../../../../services/usersService';
 
 vi.mock('../../../../services/leadService', () => ({
   getLeads: vi.fn(),
+  getLeadsCountByResponsible: vi.fn(),
   getLeadById: vi.fn(),
   createLead: vi.fn(),
   updateLead: vi.fn(),
@@ -27,8 +28,12 @@ vi.mock('../../../../services/leadService', () => ({
 vi.mock('../../../../services/usersService', () => ({
   getUsers: vi.fn(),
 }));
+// mockUserRole permite que los tests del nuevo bloque "Responsable" (más abajo) simulen
+// coordinador_ventas/asesor_ventas sin duplicar el mock completo del store — por defecto
+// admin, igual que antes de agregar el filtro de responsable.
+let mockUserRole = 'admin';
 vi.mock('../../../../store/authStore', () => ({
-  default: (selector) => selector({ user: { id: 1, role: 'admin' } }),
+  default: (selector) => selector({ user: { id: 1, role: mockUserRole } }),
 }));
 vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
@@ -70,6 +75,7 @@ describe('ProspectosSection — filtros de línea de negocio / método de pago',
   beforeEach(() => {
     vi.clearAllMocks();
     getUsers.mockResolvedValue({ data: [{ id: 1, name: 'Admin Triomphe' }], pagination: {} });
+    getLeadsCountByResponsible.mockResolvedValue({ data: [] });
     getLeads.mockResolvedValue(makePage());
   });
 
@@ -180,6 +186,7 @@ describe('ProspectosSection — tarjeta de prospecto: línea de negocio y respon
   beforeEach(() => {
     vi.clearAllMocks();
     getUsers.mockResolvedValue({ data: [{ id: 1, name: 'Admin Triomphe' }], pagination: {} });
+    getLeadsCountByResponsible.mockResolvedValue({ data: [] });
   });
 
   // El label de línea de negocio ("Remates Bancarios") también aparece como <option> del
@@ -222,5 +229,129 @@ describe('ProspectosSection — tarjeta de prospecto: línea de negocio y respon
 
     const card = await findCard('Juan Pérez');
     expect(within(card).queryByText('Remates Bancarios')).not.toBeInTheDocument();
+  });
+});
+
+// Filtro/resumen "Responsable" — ver server/src/__tests__/leadResponsibleFilter.integration.test.js
+// para la cobertura equivalente de backend (autorización/filtro/combinaciones/paginación/
+// seguridad). Aquí solo se cubre el cableado de UI: que el selector exista y mande el
+// parámetro correcto, que sea mutuamente excluyente con "Mis prospectos", que el resumen por
+// responsable pinte y funcione como atajo, y que ambos estén ocultos para roles que no deben
+// verlos (el backend es quien realmente hace cumplir esto — canFilterLeadsByResponsible en el
+// frontend es solo gating de UI, ver utils/permissions.js).
+describe('ProspectosSection — filtro y resumen por Responsable (admin/asistente_administrativo)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUserRole = 'admin';
+    getUsers.mockResolvedValue({
+      data: [
+        { id: 1, name: 'Admin Triomphe', isActive: true },
+        { id: 2, name: 'Asesor Uno', isActive: true },
+        { id: 3, name: 'Asesor Dos', isActive: true },
+      ],
+      pagination: {},
+    });
+    getLeadsCountByResponsible.mockResolvedValue({ data: [] });
+    getLeads.mockResolvedValue(makePage());
+  });
+
+  it('admin ve el selector de Responsable con "Todos", "Sin asignar" y los usuarios activos', async () => {
+    renderSection();
+    const select = await screen.findByLabelText('Filtrar por responsable');
+    await waitFor(() => expect(within(select).getByText('Asesor Uno')).toBeInTheDocument());
+
+    expect(within(select).getByText('Responsable: todos')).toBeInTheDocument();
+    expect(within(select).getByText('Sin asignar')).toBeInTheDocument();
+    expect(within(select).getByText('Asesor Dos')).toBeInTheDocument();
+  });
+
+  it('seleccionar un usuario en el filtro manda ese id como assignedToUserId', async () => {
+    const user = userEvent.setup();
+    renderSection();
+    const select = await screen.findByLabelText('Filtrar por responsable');
+    await waitFor(() => expect(within(select).getByText('Asesor Uno')).toBeInTheDocument());
+    await waitFor(() => expect(getLeads).toHaveBeenCalled());
+    getLeads.mockClear();
+
+    await user.selectOptions(select, '2');
+
+    await waitFor(() =>
+      expect(getLeads).toHaveBeenCalledWith(expect.objectContaining({ assignedToUserId: '2' }))
+    );
+  });
+
+  it('seleccionar "Sin asignar" manda assignedToUserId=unassigned', async () => {
+    const user = userEvent.setup();
+    renderSection();
+    await waitFor(() => expect(getLeads).toHaveBeenCalled());
+    getLeads.mockClear();
+
+    await user.selectOptions(screen.getByLabelText('Filtrar por responsable'), 'unassigned');
+
+    await waitFor(() =>
+      expect(getLeads).toHaveBeenCalledWith(
+        expect.objectContaining({ assignedToUserId: 'unassigned' })
+      )
+    );
+  });
+
+  it('elegir un responsable y "Mis prospectos" son mutuamente excluyentes', async () => {
+    const user = userEvent.setup();
+    renderSection();
+    const select = await screen.findByLabelText('Filtrar por responsable');
+    await waitFor(() => expect(within(select).getByText('Asesor Uno')).toBeInTheDocument());
+    await waitFor(() => expect(getLeads).toHaveBeenCalled());
+
+    await user.click(screen.getByText('Mis prospectos'));
+    await waitFor(() =>
+      expect(getLeads).toHaveBeenLastCalledWith(expect.objectContaining({ assignedToUserId: 1 }))
+    );
+
+    await user.selectOptions(select, '2');
+    await waitFor(() =>
+      expect(getLeads).toHaveBeenLastCalledWith(expect.objectContaining({ assignedToUserId: '2' }))
+    );
+    expect(screen.getByText('Mis prospectos').closest('button')).not.toHaveClass('bg-primary-600');
+  });
+
+  it('muestra el resumen "Prospectos por responsable" con conteos, y un clic filtra la lista', async () => {
+    getLeadsCountByResponsible.mockResolvedValue({
+      data: [
+        { userId: 2, user: { id: 2, name: 'Asesor Uno' }, count: 5 },
+        { userId: null, user: null, count: 2 },
+      ],
+    });
+    const user = userEvent.setup();
+    renderSection();
+    await waitFor(() => expect(getLeadsCountByResponsible).toHaveBeenCalled());
+
+    expect(await screen.findByText('Asesor Uno — 5')).toBeInTheDocument();
+    expect(screen.getByText('Sin asignar — 2')).toBeInTheDocument();
+
+    getLeads.mockClear();
+    await user.click(screen.getByText('Asesor Uno — 5'));
+    await waitFor(() =>
+      expect(getLeads).toHaveBeenCalledWith(expect.objectContaining({ assignedToUserId: '2' }))
+    );
+  });
+
+  it('coordinador_ventas no ve el selector de Responsable ni el resumen', async () => {
+    mockUserRole = 'coordinador_ventas';
+    renderSection();
+    await waitFor(() => expect(getLeads).toHaveBeenCalled());
+
+    expect(screen.queryByLabelText('Filtrar por responsable')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Prospectos por responsable/)).not.toBeInTheDocument();
+    expect(getLeadsCountByResponsible).not.toHaveBeenCalled();
+  });
+
+  it('asesor_ventas no ve el selector de Responsable ni el resumen', async () => {
+    mockUserRole = 'asesor_ventas';
+    renderSection();
+    await waitFor(() => expect(getLeads).toHaveBeenCalled());
+
+    expect(screen.queryByLabelText('Filtrar por responsable')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Prospectos por responsable/)).not.toBeInTheDocument();
+    expect(getLeadsCountByResponsible).not.toHaveBeenCalled();
   });
 });

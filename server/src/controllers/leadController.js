@@ -538,23 +538,24 @@ const createLead = async (req, res) => {
 };
 
 // GET /api/leads
-const getLeads = async (req, res) => {
+// Construye el `where` base compartido por getLeads y getLeadsCountByResponsible — todos
+// los filtros de búsqueda del CRM excepto el de responsable (assignedToUserId) y la
+// visibilidad por rol, que cada caller aplica distinto: getLeads lo fija a un valor puntual,
+// getLeadsCountByResponsible en cambio agrupa por esa misma columna.
+function buildLeadListBaseWhere(query) {
   const {
-    page = 1,
-    limit = 20,
     status,
     type,
     propertyId,
     source,
     pipelineStage,
     campaignId,
-    assignedToUserId,
     businessLine,
     paymentMethod,
     search,
     staleDays,
     allStages,
-  } = req.query;
+  } = query;
   const where = {};
 
   if (status) where.status = status;
@@ -563,7 +564,6 @@ const getLeads = async (req, res) => {
   if (propertyId) where.propertyId = propertyId;
   if (pipelineStage) where.pipelineStage = pipelineStage;
   if (campaignId) where.campaignId = campaignId;
-  if (assignedToUserId) where.assignedToUserId = assignedToUserId;
   // Filtros de búsqueda del CRM (línea de negocio / método de pago) — mismos ENUMs y
   // arrays de valores válidos que ya usan createLead/updateLead vía parseCommercialFields,
   // para no duplicar ni divergir de esa lista.
@@ -606,8 +606,6 @@ const getLeads = async (req, res) => {
     staleCutoff = new Date(Date.now() - staleDaysNum * 24 * 60 * 60 * 1000);
   }
 
-  Object.assign(where, getLeadVisibilityWhere(req.user) || {});
-
   // Los prospectos enviados a lista de espera o que ya cerraron como venta realizada
   // desaparecen de "Todas las etapas" — siguen accesibles filtrando explícitamente por esa
   // etapa (o, para venta_realizada, también en CasosExitoSection, que lee la tabla `deals`
@@ -633,6 +631,30 @@ const getLeads = async (req, res) => {
       sequelize.where(sequelize.literal(staleSinceExpr()), Op.lt, staleCutoff),
     ];
   }
+
+  return { where, staleCutoff };
+}
+
+const getLeads = async (req, res) => {
+  const { page = 1, limit = 20, assignedToUserId, pipelineStage } = req.query;
+  const { where, staleCutoff } = buildLeadListBaseWhere(req.query);
+
+  // Filtro "Responsable" — además del valor puntual (un id de usuario), 'unassigned' es un
+  // valor especial para "prospectos sin responsable" (Sequelize lo traduce a `IS NULL`).
+  // Se aplica ANTES de mezclar la visibilidad por rol (justo debajo) a propósito: para
+  // admin/asistente_administrativo getLeadVisibilityWhere devuelve null y este filtro queda
+  // tal cual, pero para coordinador_ventas/asesor_ventas siempre trae una restricción sobre
+  // esta misma columna que sobrescribe cualquier valor recibido aquí — así un asesor no
+  // puede usar este parámetro para ver los prospectos de otro usuario ni los "sin asignar"
+  // de todo el sistema, solo termina viendo, como siempre, únicamente lo suyo (o lo de su
+  // equipo si es coordinador). Ver leadAccess.getLeadVisibilityWhere.
+  if (assignedToUserId === 'unassigned') {
+    where.assignedToUserId = null;
+  } else if (assignedToUserId) {
+    where.assignedToUserId = assignedToUserId;
+  }
+
+  Object.assign(where, getLeadVisibilityWhere(req.user) || {});
 
   // Pedido del dueño del negocio: en la vista "Todas las etapas" (sin filtro explícito de
   // pipelineStage) los prospectos "No interesado" quedaban mezclados por fecha con los
@@ -672,6 +694,46 @@ const getLeads = async (req, res) => {
   });
 
   return res.json(result);
+};
+
+// GET /api/leads/counts-by-responsible — resumen de supervisión ("¿cuántos prospectos
+// tiene cada usuario?"), exclusivo de admin/asistente_administrativo (los únicos roles
+// para los que getLeadVisibilityWhere no restringe nada — ver el comentario de esa función
+// y routes/leads.js). Reutiliza los mismos filtros de búsqueda que getLeads (ciudad vía
+// `search`, businessLine, paymentMethod, pipelineStage, staleDays, etc.) para que el
+// resumen refleje exactamente la vista que el admin/asistente tiene filtrada en pantalla —
+// solo excluye assignedToUserId, ya que este endpoint agrupa por esa misma columna en vez
+// de filtrar a un valor puntual. Una sola consulta agregada (GROUP BY) + una sola consulta
+// de usuarios por id: nunca N+1 sin importar cuántos usuarios existan.
+const getLeadsCountByResponsible = async (req, res) => {
+  const { where } = buildLeadListBaseWhere(req.query);
+
+  const rows = await Lead.findAll({
+    where,
+    attributes: ['assignedToUserId', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+    group: ['assignedToUserId'],
+    raw: true,
+  });
+
+  const userIds = rows.map((r) => r.assignedToUserId).filter((id) => id !== null);
+  const users = userIds.length
+    ? await User.findAll({
+        where: { id: userIds },
+        attributes: ['id', 'name', 'role', 'isActive'],
+        raw: true,
+      })
+    : [];
+  const userById = new Map(users.map((u) => [u.id, u]));
+
+  const data = rows
+    .map((r) => ({
+      userId: r.assignedToUserId,
+      user: r.assignedToUserId === null ? null : userById.get(r.assignedToUserId) || null,
+      count: Number(r.count),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return res.json({ data });
 };
 
 // GET /api/leads/:id
@@ -1455,6 +1517,7 @@ const sendLeadWhatsApp = async (req, res) => {
 module.exports = {
   createLead,
   getLeads,
+  getLeadsCountByResponsible,
   getLeadById,
   updateLead,
   deleteLead,

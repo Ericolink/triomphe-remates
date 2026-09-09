@@ -2,6 +2,7 @@ const router = require('express').Router();
 const {
   createLead,
   getLeads,
+  getLeadsCountByResponsible,
   getLeadById,
   updateLead,
   deleteLead,
@@ -54,6 +55,20 @@ router.post(
 );
 router.get('/stream', apiLimiter, authenticateSSE, requireCrmAccess, streamLeads);
 router.get('/', apiLimiter, authenticate, requireCrmAccess, getLeads);
+// Resumen "prospectos por responsable" — antes de '/:id' (si no, Express intentaría leer
+// esta ruta como un lead con id literal "counts-by-responsible"). Exclusivo de
+// admin/asistente_administrativo: son los únicos roles cuya visibilidad de leads no está
+// restringida (ver comentario en leadController.getLeadsCountByResponsible), así que son
+// los únicos para quienes un conteo "por responsable" tiene sentido como herramienta de
+// supervisión — un coordinador/asesor no gana acceso nuevo con esta ruta, simplemente no
+// puede llamarla.
+router.get(
+  '/counts-by-responsible',
+  apiLimiter,
+  authenticate,
+  authorize('admin', 'asistente_administrativo'),
+  getLeadsCountByResponsible
+);
 router.patch('/batch', apiLimiter, authenticate, requireCrmAccess, batchUpdateLeads);
 router.delete(
   '/batch',
