@@ -23,7 +23,7 @@ import {
 const PAGE_WIDTH = 1000;
 const HERO_HEIGHT = 560;
 const THUMB_STRIP_HEIGHT = 84;
-const FOOTER_HEIGHT = 130;
+const FOOTER_HEIGHT = 200;
 const TITLE_MAX_CHARS = 88;
 
 function truncateText(text, maxChars) {
@@ -38,18 +38,18 @@ function truncateText(text, maxChars) {
 function InfoRow({ label, value }) {
   return (
     <div>
-      <p className="text-gray-400 text-[11px] font-bold tracking-wide uppercase">{label}</p>
-      <p className="text-gray-800 text-[13px] mt-0.5 leading-snug">{value}</p>
+      <p className="text-gray-400 text-sm font-bold tracking-wide uppercase">{label}</p>
+      <p className="text-gray-800 text-lg mt-1 leading-snug">{value}</p>
     </div>
   );
 }
 
 function FeatureChip({ icon: Icon, value, label }) {
   return (
-    <div className="flex items-center gap-1.5 text-gray-700">
-      <Icon size={17} className="text-accent-500 shrink-0 mt-[3px]" />
-      <span className="text-sm font-semibold whitespace-nowrap">{value}</span>
-      <span className="text-[10px] text-gray-400 whitespace-nowrap">{label}</span>
+    <div className="flex items-center gap-2 text-gray-700">
+      <Icon size={22} className="text-accent-500 shrink-0 mt-[3px]" />
+      <span className="text-lg font-semibold whitespace-nowrap">{value}</span>
+      <span className="text-sm text-gray-400 whitespace-nowrap">{label}</span>
     </div>
   );
 }
@@ -60,12 +60,11 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
   const coverUrl = buildImageUrl(coverImage?.url, 1400);
   const thumbnails = images.filter((img) => img.id !== coverImage?.id).slice(0, 5);
 
-  const heroLocation = [CITY_LABELS[property.city] || property.city, property.colonia]
-    .filter(Boolean)
-    .join(' · ');
+  const cityLabel = CITY_LABELS[property.city] || property.city;
+  const cityState = [cityLabel, property.state].filter(Boolean).join(', ');
 
   const panelLocationRows = [
-    property.state && { label: 'Estado', value: property.state },
+    cityState && { label: 'Ciudad, Estado', value: cityState },
     property.colonia && { label: 'Colonia / Fraccionamiento', value: property.colonia },
     property.address && { label: 'Calle', value: property.address },
   ].filter(Boolean);
@@ -96,7 +95,7 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
   const title = truncateText(property.title, TITLE_MAX_CHARS);
   const description = (property.description || '').trim();
   const hasDescription = description.length > 0;
-  const hasInfoPanel = panelLocationRows.length > 0 || Boolean(property.category) || Boolean(property.code);
+  const hasInfoPanel = panelLocationRows.length > 0 || Boolean(property.code);
 
   const typeCategoryLabel = [TYPE_LABELS[property.type], CATEGORY_LABELS[property.category]]
     .filter(Boolean)
@@ -160,40 +159,37 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
         </div>
       )}
 
-      {/* Recuadro gris único: título, ubicación, precio, características, tipo/categoría y
-          fecha de generación. El badge de estatus se eliminó. */}
-      <div className="shrink-0 bg-gray-50 px-8 pt-6 pb-4 border-b border-gray-100">
-        <h1 className="text-primary-900 text-[32px] font-bold leading-snug">{title}</h1>
-        {heroLocation && (
-          <p className="text-gray-500 text-sm mt-3">{heroLocation}</p>
-        )}
-        <div className="flex items-center justify-between gap-6 mt-4">
+      {/* Recuadro gris único: título, precio, características y tipo/categoría. La ubicación
+          (ciudad, estado, colonia, calle) vive únicamente en el panel de UBICACIÓN de abajo,
+          para no duplicarla. El badge de estatus se eliminó. */}
+      <div className="shrink-0 bg-gray-50 px-8 pt-8 pb-6 border-b border-gray-100">
+        <h1 className="text-primary-900 text-[42px] font-bold leading-snug">{title}</h1>
+        <div className="flex items-start justify-between gap-6 mt-6">
           <div>
-            <p className="text-gray-400 text-[13px] font-bold tracking-wide uppercase">Precio</p>
+            <p className="text-gray-400 text-base font-bold tracking-wide uppercase">Precio</p>
             <p
-              className={`text-[28px] font-bold leading-tight ${
+              className={`text-[38px] font-bold leading-tight ${
                 property.price ? 'text-accent-500' : 'text-accent-300'
               }`}
             >
               {formatPrice(property.price)}
             </p>
           </div>
-          {featureChips.length > 0 && (
-            <div className="flex items-center gap-5">
-              {featureChips.map((chip) => (
-                <FeatureChip key={chip.label} {...chip} />
-              ))}
-            </div>
-          )}
           {typeCategoryLabel && (
             <div className="text-right shrink-0">
-              <p className="text-primary-900 text-[13px] font-bold tracking-widest uppercase">
+              <p className="text-primary-900 text-lg font-bold tracking-widest uppercase">
                 {typeCategoryLabel}
               </p>
-              <p className="text-gray-400 text-[11px] mt-1">Generado el {generatedAt}</p>
             </div>
           )}
         </div>
+        {featureChips.length > 0 && (
+          <div className="flex items-center flex-wrap gap-x-6 gap-y-3 mt-5">
+            {featureChips.map((chip) => (
+              <FeatureChip key={chip.label} {...chip} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Descripción + información adicional — alto natural (no `flex-1`, sin límite de alto):
@@ -201,23 +197,23 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
           con descripción larga simplemente hace la ficha más alta — nunca se recorta. */}
       {(hasDescription || hasInfoPanel) && (
         <div
-          className={`px-8 py-6 grid gap-8 ${
-            hasDescription && hasInfoPanel ? 'grid-cols-[1fr_280px]' : 'grid-cols-1'
+          className={`px-8 py-8 grid gap-8 ${
+            hasDescription && hasInfoPanel ? 'grid-cols-[1fr_340px]' : 'grid-cols-1'
           }`}
         >
           {hasDescription && (
             <div>
-              <p className="text-primary-900 font-bold text-lg mb-2">Descripción</p>
-              <p className="text-gray-600 text-[13.5px] leading-relaxed whitespace-pre-wrap">
+              <p className="text-primary-900 font-bold text-xl mb-3">Descripción</p>
+              <p className="text-gray-600 text-base leading-relaxed whitespace-pre-wrap">
                 {description}
               </p>
             </div>
           )}
           {hasInfoPanel && (
-            <div className="bg-gray-50 rounded-xl p-4 flex flex-col gap-4">
+            <div className="bg-gray-50 rounded-xl p-5 flex flex-col gap-5">
               {panelLocationRows.length > 0 && (
-                <div className="space-y-2.5">
-                  <p className="text-accent-600 text-[13px] font-bold tracking-wide mb-1">
+                <div className="space-y-3.5">
+                  <p className="text-accent-600 text-base font-bold tracking-wide mb-1">
                     UBICACIÓN
                   </p>
                   {panelLocationRows.map((row) => (
@@ -225,15 +221,9 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
                   ))}
                 </div>
               )}
-              {(property.category || property.code) && (
-                <div className="pt-3 border-t border-gray-200 space-y-2.5">
-                  {property.category && (
-                    <InfoRow
-                      label="Categoría"
-                      value={CATEGORY_LABELS[property.category] || property.category}
-                    />
-                  )}
-                  {property.code && <InfoRow label="Código" value={property.code} />}
+              {property.code && (
+                <div className="pt-4 border-t border-gray-200">
+                  <InfoRow label="Código" value={property.code} />
                 </div>
               )}
             </div>
@@ -248,25 +238,25 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
       >
         <div className="grid grid-cols-2 gap-8">
           <div>
-            <p className="text-accent-400 text-xs font-bold mb-1.5">
+            <p className="text-accent-400 text-sm font-bold mb-2">
               ¿Te interesa esta propiedad? Contáctanos:
             </p>
-            <p className="text-white text-xs">Tel / WhatsApp: {OFFICES[0].phone}</p>
-            <p className="text-white text-xs mt-0.5">{OFFICES[0].email}</p>
-            <p className="text-white text-xs mt-0.5">wa.me/{WHATSAPP_NUMBER}</p>
+            <p className="text-white text-sm">Tel / WhatsApp: {OFFICES[0].phone}</p>
+            <p className="text-white text-sm mt-1">{OFFICES[0].email}</p>
+            <p className="text-white text-sm mt-1">wa.me/{WHATSAPP_NUMBER}</p>
           </div>
           <div>
-            <p className="text-accent-400 text-[11px] font-bold mb-1.5">Oficinas</p>
+            <p className="text-accent-400 text-sm font-bold mb-2">Oficinas</p>
             {OFFICES.map((office) => (
-              <p key={office.city} className="text-white text-[11px] mb-0.5">
+              <p key={office.city} className="text-white text-xs mb-1 leading-snug">
                 {office.cityLabel}: {office.street}, {office.location}
               </p>
             ))}
           </div>
         </div>
-        <p className="text-gray-400 text-[9px] text-center">
+        <p className="text-gray-400 text-xs text-center pt-1">
           © Triomphe Bienes Raíces — Documento informativo. Precio e información sujetos a cambios
-          sin previo aviso.
+          sin previo aviso. · Generado el {generatedAt}
         </p>
       </div>
     </div>
