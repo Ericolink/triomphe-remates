@@ -46,10 +46,10 @@ function InfoRow({ label, value }) {
 
 function FeatureChip({ icon: Icon, value, label }) {
   return (
-    <div className="flex items-center gap-2 text-gray-700">
-      <Icon size={22} className="text-accent-500 shrink-0 mt-[3px]" />
-      <span className="text-lg font-semibold whitespace-nowrap">{value}</span>
-      <span className="text-sm text-gray-400 whitespace-nowrap">{label}</span>
+    <div className="flex items-center gap-2.5 text-gray-700">
+      <Icon size={28} className="text-accent-500 shrink-0 mt-[3px]" />
+      <span className="text-2xl font-semibold whitespace-nowrap">{value}</span>
+      <span className="text-lg text-gray-400 whitespace-nowrap">{label}</span>
     </div>
   );
 }
@@ -187,7 +187,7 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
           )}
         </div>
         {featureChips.length > 0 && (
-          <div className="flex items-center flex-wrap gap-x-6 gap-y-3 mt-5">
+          <div className="flex items-center flex-wrap gap-x-8 gap-y-4 mt-6">
             {featureChips.map((chip) => (
               <FeatureChip key={chip.label} {...chip} />
             ))}
