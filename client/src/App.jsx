@@ -27,6 +27,7 @@ const UnsubscribeAlertPage = lazy(() => import('./pages/public/UnsubscribeAlertP
 const ManageAlertPage = lazy(() => import('./pages/public/ManageAlertPage'));
 const FAQPage = lazy(() => import('./pages/public/FAQPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/public/PrivacyPolicyPage'));
+const NotFoundPage = lazy(() => import('./pages/public/NotFoundPage'));
 
 // Panel admin — en un chunk separado para que nunca llegue a visitantes anónimos
 const LoginPage = lazy(() => import('./pages/admin/LoginPage'));
@@ -92,6 +93,10 @@ export default function App() {
               <Route path="/mi-alerta" element={<ManageAlertPage />} />
               <Route path="/preguntas-frecuentes" element={<FAQPage />} />
               <Route path="/aviso-de-privacidad" element={<PrivacyPolicyPage />} />
+              {/* Cualquier ruta pública desconocida ahora responde 404 real desde el servidor
+                  (ver server/app.js) — este catch-all evita que, además, quede en blanco
+                  dentro del layout para quien la abra con JS ya cargado. */}
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
 
             <Route path="/admin/login" element={<LoginPage />} />

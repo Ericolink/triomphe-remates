@@ -20,7 +20,11 @@ router.get('/', async (req, res) => {
     const staticPages = [
       { url: '/', priority: '1.0', changefreq: 'weekly' },
       { url: '/propiedades', priority: '0.9', changefreq: 'daily' },
+      { url: '/preguntas-frecuentes', priority: '0.7', changefreq: 'monthly' },
+      { url: '/proceso-adquisicion', priority: '0.6', changefreq: 'monthly' },
+      { url: '/nosotros', priority: '0.6', changefreq: 'monthly' },
       { url: '/contacto', priority: '0.7', changefreq: 'monthly' },
+      { url: '/trabaja-con-nosotros', priority: '0.3', changefreq: 'monthly' },
     ];
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>

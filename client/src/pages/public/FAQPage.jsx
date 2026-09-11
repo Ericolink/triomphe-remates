@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { ChevronDown, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SEO from '../../components/ui/SEO';
@@ -107,6 +108,21 @@ function FAQItem({ q, a, isOpen, onToggle }) {
   );
 }
 
+// JSON-LD FAQPage a partir de las mismas preguntas/respuestas que ya se muestran arriba —
+// nunca se inventa contenido para el schema, se reusa faqGroups tal cual (ver AUDITORIA_SEO
+// punto 10). Habilita la posibilidad de rich snippet en resultados de búsqueda.
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqGroups.flatMap((group) =>
+    group.items.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    }))
+  ),
+};
+
 export default function FAQPage() {
   const [openKey, setOpenKey] = useState(null);
 
@@ -117,6 +133,9 @@ export default function FAQPage() {
         description="Respuestas a las preguntas más comunes sobre remates bancarios, cesión de derechos, el proceso de compra y los costos legales en Triomphe Bienes Raíces."
         url="/preguntas-frecuentes"
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+      </Helmet>
 
       <section className="bg-gradient-to-br from-primary-900 to-primary-700 dark:from-primary-950 dark:to-[#1a1f2e] text-white py-20">
         <motion.div

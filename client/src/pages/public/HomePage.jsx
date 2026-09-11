@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Building2, TrendingDown, Shield, ChevronRight, MapPin, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -213,14 +213,14 @@ export default function HomePage() {
               Las mejores oportunidades del momento
             </p>
           </div>
-          <motion.button
-            onClick={() => navigate(content.listingPath)}
-            className="hidden md:flex items-center gap-2 text-primary-700 dark:text-primary-400 font-medium"
-            whileHover={{ x: 4 }}
-            transition={{ duration: 0.2 }}
-          >
-            Ver todas las propiedades <ChevronRight size={18} />
-          </motion.button>
+          <motion.div whileHover={{ x: 4 }} transition={{ duration: 0.2 }} className="hidden md:block">
+            <Link
+              to={content.listingPath}
+              className="flex items-center gap-2 text-primary-700 dark:text-primary-400 font-medium"
+            >
+              Ver todas las propiedades en remate bancario <ChevronRight size={18} />
+            </Link>
+          </motion.div>
         </AnimatedSection>
 
         {isLoading ? (

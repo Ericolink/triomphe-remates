@@ -77,7 +77,7 @@ const buildImageUrl = (images, baseUrl) => {
   return cover.url.replace('/upload/', '/upload/f_auto,q_auto,c_fill,w_1200,h_630/');
 };
 
-const injectMeta = (template, { title, description, image, url }) => {
+const injectMeta = (template, { title, description, image, url, type = 'article', jsonLd = [] }) => {
   const safeTitle = escapeHtml(title);
   const safeDescription = escapeHtml(description);
   const safeImage = escapeHtml(image);
@@ -86,7 +86,7 @@ const injectMeta = (template, { title, description, image, url }) => {
   const metaTags = `
     <meta name="description" content="${safeDescription}" />
     <link rel="canonical" href="${safeUrl}" />
-    <meta property="og:type" content="article" />
+    <meta property="og:type" content="${type}" />
     <meta property="og:site_name" content="${SITE_NAME}" />
     <meta property="og:title" content="${safeTitle}" />
     <meta property="og:description" content="${safeDescription}" />
@@ -97,12 +97,78 @@ const injectMeta = (template, { title, description, image, url }) => {
     <meta name="twitter:title" content="${safeTitle}" />
     <meta name="twitter:description" content="${safeDescription}" />
     <meta name="twitter:image" content="${safeImage}" />
+    ${jsonLd.map((obj) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`).join('\n    ')}
   </head>`;
 
   return template
     .replace(/<title>.*?<\/title>/, `<title>${safeTitle}</title>`)
     .replace('</head>', metaTags);
 };
+
+// Mismos datos que ORGANIZATION en client/src/components/ui/SEO.jsx — duplicados aquí por el
+// mismo motivo que CITY_LABELS/TYPE_LABELS arriba: este archivo corre en el server (CommonJS)
+// y no puede importar el bundle de Vite del cliente.
+const DEFAULT_DESCRIPTION =
+  'Compra casas, departamentos y terrenos en remate bancario en Chihuahua, Ciudad Juárez y Querétaro, del 30% al 70% por debajo del valor comercial.';
+
+const buildOrganizationSchema = (baseUrl) => ({
+  '@context': 'https://schema.org',
+  '@type': 'RealEstateAgent',
+  '@id': `${baseUrl}/#organization`,
+  name: 'Triomphe Bienes Raíces',
+  url: baseUrl,
+  logo: `${baseUrl}/logo.png`,
+  description: DEFAULT_DESCRIPTION,
+  areaServed: ['Ciudad Juárez', 'Chihuahua', 'Querétaro'],
+  sameAs: ['https://www.facebook.com/TriomphePagOficial', 'https://www.instagram.com/triomphejrz'],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    telephone: '+52-656-579-2750',
+    contactType: 'customer service',
+    availableLanguage: 'Spanish',
+  },
+});
+
+// Mismos textos que BUSINESS_LINE_CONTENT.remate en client/src/utils/constants.js (home) y el
+// título/descripción por default de PropertiesPage.jsx (listado, tab "remate" — la que ven
+// los usuarios reales al entrar directo a /propiedades). Ver comentario de CITY_LABELS arriba:
+// no se puede importar ese archivo (ESM/Vite) desde este módulo (CommonJS/server).
+const STATIC_PAGES = {
+  home: {
+    title: 'Comprar Casas en Remate Bancario en México | Triomphe Remates Bancarios',
+    description:
+      'Encuentra propiedades en remate bancario en Chihuahua, Ciudad Juárez y Querétaro. Casas, departamentos y terrenos del 30% al 70% por debajo del valor comercial.',
+    path: '/',
+  },
+  propiedades: {
+    title: 'Propiedades en Remate | Triomphe Remates Bancarios',
+    description:
+      'Compra casas, departamentos y terrenos en remate bancario a precios por debajo del mercado en Chihuahua, Ciudad Juárez y Querétaro.',
+    path: '/propiedades',
+  },
+};
+
+// Igual que renderPropertyOgHtml, pero para las dos páginas estáticas que más necesitan
+// competir por "remates bancarios" (home y listado) y que, al no depender de una fila de la
+// base de datos, no tienen ningún manejador propio hoy — solo reciben el index.html genérico
+// sin title/description/JSON-LD para cualquier crawler que no ejecute JS (ver AUDITORIA_SEO).
+function renderStaticPageOgHtml(pageKey, clientBuildPath) {
+  const page = STATIC_PAGES[pageKey];
+  if (!page) return null;
+
+  const baseUrl = (process.env.CLIENT_URL || 'https://rematesbancarios.net').replace(/\/$/, '');
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
+  const template = fs.readFileSync(path.join(clientBuildPath, 'index.html'), 'utf-8');
+
+  return injectMeta(template, {
+    title: page.title,
+    description: page.description,
+    image: `${baseUrl}/logo.png`,
+    url: `${baseUrl}${page.path}`,
+    type: 'website',
+    jsonLd: [buildOrganizationSchema(baseUrl)],
+  });
+}
 
 // Renderiza el index.html compilado con metadata Open Graph específica de una propiedad, para
 // crawlers de redes sociales que no ejecutan JS (ver botDetection.js) y por lo tanto nunca ven
@@ -143,4 +209,14 @@ async function renderPropertyOgHtml(slug, clientBuildPath) {
   });
 }
 
-module.exports = { renderPropertyOgHtml };
+// Usado por app.js para decidir el código de estado HTTP de /propiedades/:slug para
+// visitantes normales (no bots) — antes cualquier slug (inexistente, apartado, borrado)
+// devolvía 200 con el shell de la SPA ("soft 404", ver AUDITORIA_SEO). Mismas reglas de
+// visibilidad que renderPropertyOgHtml/GET /api/properties/slug/:slug.
+async function isPublicPropertySlug(slug) {
+  if (!(await isPublicPropertiesEnabled())) return false;
+  const count = await Property.count({ where: { slug, status: 'disponible' } });
+  return count > 0;
+}
+
+module.exports = { renderPropertyOgHtml, renderStaticPageOgHtml, isPublicPropertySlug };

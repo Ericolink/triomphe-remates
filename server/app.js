@@ -7,7 +7,11 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const { resolveUserKey, resolveClientIp } = require('./src/middleware/rateLimitMiddleware');
 const { isBotUserAgent } = require('./src/utils/botDetection');
-const { renderPropertyOgHtml } = require('./src/utils/propertyOgMeta');
+const {
+  renderPropertyOgHtml,
+  renderStaticPageOgHtml,
+  isPublicPropertySlug,
+} = require('./src/utils/propertyOgMeta');
 const logger = require('./src/utils/logger');
 require('dotenv').config();
 
@@ -173,21 +177,76 @@ app.get('/api/health', (req, res) => {
 
 // Servir el frontend compilado
 const clientBuildPath = path.join(__dirname, 'client');
+const indexHtmlPath = path.join(clientBuildPath, 'index.html');
 
-// Crawlers de redes sociales (facebookexternalhit, WhatsApp, LinkedInBot, Twitterbot — ver
-// botDetection.js) no ejecutan JS: reciben siempre este index.html tal cual, así que nunca ven
-// el <Helmet> dinámico de SEO.jsx y la tarjeta de previsualización salía genérica ("Triomphe
-// Remates Bancarios", sin foto) sin importar qué propiedad se compartiera. Solo se intercepta
-// para bots conocidos — usuarios reales siguen recibiendo el index.html normal y la SPA de
-// siempre; esto no es una migración a SSR, solo un render puntual de metadata para crawlers.
-app.get('/propiedades/:slug', async (req, res, next) => {
+// Rutas públicas reales de la SPA (ver <Route> públicas en client/src/App.jsx) — duplicadas
+// aquí a propósito, mismo motivo que CITY_LABELS en propertyOgMeta.js: este archivo no puede
+// importar App.jsx (bundle de Vite). Se usan abajo para distinguir una URL pública real de una
+// inexistente/typo y devolver 404 en vez del "soft 404" (200 con el shell de la SPA) que tenía
+// el catch-all anterior — Search Console clasifica esto último como error de indexación.
+const KNOWN_PUBLIC_PATHS = new Set([
+  '/',
+  '/propiedades',
+  '/contacto',
+  '/nosotros',
+  '/proceso-adquisicion',
+  '/trabaja-con-nosotros',
+  '/buzon',
+  '/favoritos',
+  '/comparar',
+  '/cancelar-alerta',
+  '/mi-alerta',
+  '/preguntas-frecuentes',
+  '/aviso-de-privacidad',
+]);
+// Cualquier ruta que empiece así es el panel admin (SPA propia autenticada, ver App.jsx) —
+// siempre debe recibir el shell con 200 sin importar el sufijo, aunque no aparezca en
+// KNOWN_PUBLIC_PATHS: es una app cliente completa con sus propias sub-rutas dinámicas
+// (/admin/propiedades/:id/editar, etc.) y ya está fuera del índice vía robots.txt.
+const isAdminPath = (p) => p === '/admin' || p.startsWith('/admin/');
+// Una petición a algo con extensión (.jpg, .js, .css, .xml, .ico...) que express.static no
+// encontró es un asset roto, no una ruta de la SPA — ninguna ruta real de App.jsx lleva punto.
+const looksLikeStaticAsset = (p) => /\.[a-zA-Z0-9]+$/.test(p);
+
+// Crawlers de redes sociales y buscadores (facebookexternalhit, WhatsApp, LinkedInBot,
+// Googlebot... ver botDetection.js) no ejecutan JS en su primera pasada: reciben siempre este
+// index.html tal cual, así que nunca ven el <Helmet> dinámico de SEO.jsx. Home y /propiedades
+// son las páginas que más necesitan competir por "remates bancarios" (ver AUDITORIA_SEO), así
+// que reciben el mismo tratamiento puntual que ya existía solo para fichas de propiedad — no
+// es una migración a SSR, es un render de metadata para crawlers; usuarios reales (UA normal)
+// siguen recibiendo el index.html genérico y la SPA de siempre.
+app.get(['/', '/propiedades'], (req, res, next) => {
   if (!isBotUserAgent(req.headers['user-agent'])) return next();
+  const pageKey = req.path === '/' ? 'home' : 'propiedades';
   try {
-    const html = await renderPropertyOgHtml(req.params.slug, clientBuildPath);
+    const html = renderStaticPageOgHtml(pageKey, clientBuildPath);
     if (!html) return next();
     res.send(html);
   } catch (error) {
-    logger.error('Error generando metadata OG de propiedad', {
+    logger.error('Error generando metadata OG estática', { path: req.path, error: error.message });
+    next();
+  }
+});
+
+app.get('/propiedades/:slug', async (req, res, next) => {
+  try {
+    if (isBotUserAgent(req.headers['user-agent'])) {
+      const html = await renderPropertyOgHtml(req.params.slug, clientBuildPath);
+      if (html) return res.send(html);
+      // Slug inexistente/no público para un bot: mismo estatus 404 que un visitante normal
+      // (ver rama de abajo), en vez de servir el shell genérico con 200 (soft 404).
+      return res.status(404).sendFile(indexHtmlPath);
+    }
+    // Visitante normal: no se le inyecta metadata (la arma su propio <Helmet> al cargar), pero
+    // si el slug no existe o no es público, el estatus HTTP debe reflejarlo — antes esta ruta
+    // devolvía 200 sin importar nada, cayendo al catch-all genérico (ver AUDITORIA_SEO punto 1).
+    const exists = await isPublicPropertySlug(req.params.slug);
+    // Se responde aquí mismo en vez de next(): el catch-all de abajo ya no asume 200 para
+    // cualquier ruta (ver AUDITORIA_SEO punto 1) y no reconoce slugs dinámicos como "públicos
+    // conocidos" — dejar que cayera ahí devolvería 404 también para una propiedad que sí existe.
+    return res.status(exists ? 200 : 404).sendFile(indexHtmlPath);
+  } catch (error) {
+    logger.error('Error resolviendo /propiedades/:slug', {
       slug: req.params.slug,
       error: error.message,
     });
@@ -196,8 +255,18 @@ app.get('/propiedades/:slug', async (req, res, next) => {
 });
 
 app.use(express.static(clientBuildPath));
+
+// Todo lo que llega aquí no fue resuelto por ninguna ruta de arriba ni por un archivo estático
+// real. Antes esto devolvía siempre 200 con el shell de la SPA sin importar la URL — cualquier
+// typo, asset borrado o link viejo se indexaba como si fuera contenido válido ("soft 404", ver
+// AUDITORIA_SEO punto 1). Ahora: un asset con extensión que no se encontró es un 404 real: y
+// una ruta desconocida (no está en KNOWN_PUBLIC_PATHS ni es del panel admin) sigue sirviendo el
+// shell para que el router de React pueda renderizar su propia página "no encontrada" (ver
+// App.jsx), pero con el código de estado 404 correcto en vez de 200.
 app.get('*path', (req, res) => {
-  res.sendFile(path.join(clientBuildPath, 'index.html'));
+  if (looksLikeStaticAsset(req.path)) return res.status(404).end();
+  const status = isAdminPath(req.path) || KNOWN_PUBLIC_PATHS.has(req.path) ? 200 : 404;
+  res.status(status).sendFile(indexHtmlPath);
 });
 
 // Middleware de error centralizado — debe ir al final. Todos los controllers usan

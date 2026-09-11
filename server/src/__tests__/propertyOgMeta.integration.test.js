@@ -128,16 +128,27 @@ describe('Metadata Open Graph server-side de propiedades (/propiedades/:slug)', 
       .get(`/propiedades/${property.slug}`)
       .set('User-Agent', FACEBOOK_UA);
 
-    expect(res.status).toBe(200);
+    // No pública = no existe de cara al visitante anónimo: 404 real, no el shell con 200
+    // ("soft 404", ver AUDITORIA_SEO punto 1) — y de cualquier forma nunca expone su título.
+    expect(res.status).toBe(404);
     expect(res.text).not.toContain('Casa apartada no pública');
   });
 
-  test('un slug inexistente cae al index.html genérico en vez de fallar', async () => {
+  test('un slug inexistente responde 404 (no un "soft 404" con 200)', async () => {
     const res = await request(app)
       .get('/propiedades/este-slug-no-existe')
       .set('User-Agent', FACEBOOK_UA);
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
     expect(res.text).not.toContain('og:title');
+  });
+
+  test('un navegador real también recibe 404 para un slug inexistente', async () => {
+    const res = await request(app)
+      .get('/propiedades/este-slug-no-existe')
+      .set('User-Agent', REAL_BROWSER_UA);
+
+    expect(res.status).toBe(404);
+    expect(res.text).toContain('<title>Triomphe Remates Bancarios</title>');
   });
 });

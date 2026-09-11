@@ -5,7 +5,12 @@ const SITE_NAME = 'Triomphe Remates Bancarios';
 const SITE_URL = import.meta.env.VITE_SITE_URL || window.location.origin;
 const DEFAULT_DESCRIPTION =
   'Compra casas, departamentos y terrenos en remate bancario en Chihuahua, Ciudad Juárez y Querétaro, del 30% al 70% por debajo del valor comercial.';
-const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
+// `/og-image.jpg` nunca existió en client/public — el fallback apuntaba a un archivo
+// inexistente y el catch-all de la SPA lo interceptaba devolviendo el shell HTML en vez de una
+// imagen (ver AUDITORIA_SEO punto 11). Se usa el logo real (mismo fallback que ya usa
+// server/src/utils/propertyOgMeta.js para fichas sin fotos) hasta que exista una imagen social
+// dedicada de 1200x630.
+const DEFAULT_IMAGE = `${SITE_URL}/logo.png`;
 
 const cityName = {
   juarez: 'Ciudad Juárez',
