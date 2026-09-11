@@ -190,9 +190,15 @@ describe('ProspectosSection — tarjeta de prospecto: línea de negocio y respon
   });
 
   // El label de línea de negocio ("Remates Bancarios") también aparece como <option> del
-  // select de filtro — se escopa la búsqueda a la tarjeta del prospecto (role="button" de
-  // GradientListCard) para no confundirla con esa opción del filtro.
-  const findCard = async (name) => (await screen.findByText(name)).closest('[role="button"]');
+  // select de filtro — se escopa la búsqueda al primer role="button" que envuelve el nombre
+  // del prospecto (la tarjeta móvil de GradientListCard; jsdom no evalúa media queries, así
+  // que la fila de la tabla desktop con el mismo dato también está en el DOM y hace que
+  // findByText/queryByText fallen por ambigüedad — de ahí getAllByText) para no confundirla
+  // con esa opción del filtro.
+  const findCard = async (name) => {
+    const [match] = await screen.findAllByText(name);
+    return match.closest('[role="button"]');
+  };
 
   it('muestra la línea de negocio del prospecto en la tarjeta', async () => {
     getLeads.mockResolvedValue(makePage({ data: [leadA], pagination: { ...makePage().pagination, total: 1 } }));

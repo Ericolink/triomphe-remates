@@ -428,111 +428,331 @@ export default function ProspectosSection() {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-        <div className="xl:col-span-3 space-y-3">
-            {leads.length > 0 && (
-              <div className="flex items-center gap-2 px-1">
-                <input
-                  type="checkbox"
-                  checked={allChecked}
-                  onChange={toggleAll}
-                  className="w-4 h-4 rounded accent-accent-400 cursor-pointer"
-                />
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {allChecked ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                </span>
-              </div>
-            )}
-
+      {/* xl:grid-cols-5 (60/40) solo se activa con un prospecto seleccionado — sin eso, el
+          panel de detalle (columna derecha) reservaba 40% del ancho todo el tiempo, incluso
+          vacío, dejando la tabla/lista comprimida en 60% de forma innecesaria. Sin selección
+          la lista usa el ancho completo; DetailPanelSlot sigue montado siempre (solo se le
+          quita la columna con `xl:hidden`, nunca se desmonta) para no interferir con sus
+          transiciones de entrada/salida (AnimatePresence, overlay <xl y fade en xl+). */}
+      <div className={`grid grid-cols-1 gap-6 ${selected ? 'xl:grid-cols-5' : ''}`}>
+        <div className={`${selected ? 'xl:col-span-3' : ''} space-y-3`}>
             {isLoading ? (
               <Spinner size="lg" className="py-16" />
             ) : (
-              <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                animate="visible"
-                className="space-y-3"
-              >
-                <AnimatePresence>
-                  {leads.map((lead) => {
-                    const colors = PIPELINE_STAGE_CARD_COLORS[lead.pipelineStage];
-                    return (
-                      <GradientListCard
-                        key={lead.id}
-                        checked={checked.includes(lead.id)}
-                        onCheckToggle={(e) => toggleCheck(e, lead.id)}
-                        checkLabel={`Seleccionar prospecto ${lead.name}`}
-                        onClick={() => leadActions.requestSelectLead(lead)}
-                        selected={selected?.id === lead.id}
-                        gradientClass={colors.gradient}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="font-semibold text-gray-800 dark:text-gray-100">
-                              {lead.name}
-                            </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500">
-                              {formatDate(lead.createdAt)} · {typeLabel[lead.type]}
-                              {lead.source && lead.source !== 'directo'
-                                ? ` · ${SOURCE_LABELS[lead.source]}`
-                                : ''}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}
-                            >
-                              {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
-                            </span>
-                            {lead.businessLine && (
-                              <Badge variant={BUSINESS_LINE_VARIANTS[lead.businessLine]}>
-                                {BUSINESS_LINE_LABELS[lead.businessLine]}
-                              </Badge>
+              <>
+                {/* Mobile/tablet (<lg): tarjetas apiladas — una tabla no cabría sin scroll
+                    horizontal en estos anchos, así que se conserva el patrón original. */}
+                <div className="lg:hidden space-y-3">
+                  {leads.length > 0 && (
+                    <div className="flex items-center gap-2 px-1">
+                      <input
+                        type="checkbox"
+                        checked={allChecked}
+                        onChange={toggleAll}
+                        className="w-4 h-4 rounded accent-accent-400 cursor-pointer"
+                      />
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                        {allChecked ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                      </span>
+                    </div>
+                  )}
+                  <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-3"
+                  >
+                    <AnimatePresence>
+                      {leads.map((lead) => {
+                        const colors = PIPELINE_STAGE_CARD_COLORS[lead.pipelineStage];
+                        return (
+                          <GradientListCard
+                            key={lead.id}
+                            checked={checked.includes(lead.id)}
+                            onCheckToggle={(e) => toggleCheck(e, lead.id)}
+                            checkLabel={`Seleccionar prospecto ${lead.name}`}
+                            onClick={() => leadActions.requestSelectLead(lead)}
+                            selected={selected?.id === lead.id}
+                            gradientClass={colors.gradient}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <p className="font-semibold text-gray-800 dark:text-gray-100">
+                                  {lead.name}
+                                </p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">
+                                  {formatDate(lead.createdAt)} · {typeLabel[lead.type]}
+                                  {lead.source && lead.source !== 'directo'
+                                    ? ` · ${SOURCE_LABELS[lead.source]}`
+                                    : ''}
+                                </p>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}
+                                >
+                                  {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
+                                </span>
+                                {lead.businessLine && (
+                                  <Badge variant={BUSINESS_LINE_VARIANTS[lead.businessLine]}>
+                                    {BUSINESS_LINE_LABELS[lead.businessLine]}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+                              <span className="flex items-center gap-1">
+                                <User size={12} /> {lead.assignedUser?.name || 'Sin asignar'}
+                              </span>
+                              {lead.email && (
+                                <span className="flex items-center gap-1">
+                                  <Mail size={12} /> {lead.email}
+                                </span>
+                              )}
+                              {lead.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone size={12} /> {lead.phone}
+                                </span>
+                              )}
+                              {lead.property && (
+                                <span className="flex items-center gap-1">
+                                  <Building2 size={12} /> {lead.property.title}
+                                </span>
+                              )}
+                              {lead.paymentMethod && (
+                                <span className="flex items-center gap-1">
+                                  <Wallet size={12} /> {PAYMENT_METHOD_LABELS[lead.paymentMethod]}{' '}
+                                  · {formatBudget(lead.budgetAmount, lead.budgetNotSpecified)}
+                                </span>
+                              )}
+                            </div>
+                            {staleDays && lead.lastTouchedAt && (
+                              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                Sin actividad hace {daysSince(lead.lastTouchedAt)} día
+                                {daysSince(lead.lastTouchedAt) !== 1 ? 's' : ''}
+                              </p>
                             )}
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center gap-1">
-                            <User size={12} /> {lead.assignedUser?.name || 'Sin asignar'}
-                          </span>
-                          {lead.email && (
-                            <span className="flex items-center gap-1">
-                              <Mail size={12} /> {lead.email}
-                            </span>
-                          )}
-                          {lead.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone size={12} /> {lead.phone}
-                            </span>
-                          )}
-                          {lead.property && (
-                            <span className="flex items-center gap-1">
-                              <Building2 size={12} /> {lead.property.title}
-                            </span>
-                          )}
-                          {lead.paymentMethod && (
-                            <span className="flex items-center gap-1">
-                              <Wallet size={12} /> {PAYMENT_METHOD_LABELS[lead.paymentMethod]} ·{' '}
-                              {formatBudget(lead.budgetAmount, lead.budgetNotSpecified)}
-                            </span>
-                          )}
-                        </div>
-                        {staleDays && lead.lastTouchedAt && (
-                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                            Sin actividad hace {daysSince(lead.lastTouchedAt)} día
-                            {daysSince(lead.lastTouchedAt) !== 1 ? 's' : ''}
-                          </p>
-                        )}
-                        {lead.message && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 line-clamp-2">
-                            {lead.message}
-                          </p>
-                        )}
-                      </GradientListCard>
-                    );
-                  })}
-                </AnimatePresence>
-              </motion.div>
+                            {lead.message && (
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 line-clamp-2">
+                                {lead.message}
+                              </p>
+                            )}
+                          </GradientListCard>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </motion.div>
+                </div>
+
+                {/* Desktop (lg+): tabla real, con encabezado sticky (top-0 relativo al
+                    scroll de <main> en AdminLayout — mismo contenedor de scroll que ya usa
+                    el panel de detalle con `sticky top-6`, ver LeadDetailPanel). No lleva
+                    wrapper con overflow-x/overflow-hidden: cualquier ancestro con overflow
+                    != visible rompe el `position: sticky` de los <th> porque se vuelve su
+                    nuevo contenedor de scroll (uno que nunca se desplaza, porque su altura
+                    es auto). table-fixed + <colgroup> (en vez de table-auto) es igual de
+                    importante: con table-auto, `width:100%` en <table> es solo una sugerencia
+                    — si el contenido no cabe (ej. con el panel de detalle abierto, 60% del
+                    ancho) el navegador igual expande la tabla más allá de su contenedor en
+                    vez de encogerla, y las columnas terminan solapadas con el panel. Con
+                    table-fixed las columnas SÍ respetan el ancho asignado y el contenido que
+                    no entra se trunca (truncate/line-clamp) o hace wrap, nunca desborda. */}
+                {leads.length > 0 && (
+                  <div className="hidden lg:block bg-white dark:bg-[#242938] rounded-2xl border border-gray-100 dark:border-[#2e3650]">
+                    <table className="w-full text-sm border-collapse table-fixed">
+                      <colgroup>
+                        <col style={{ width: '3.5%' }} />
+                        <col style={{ width: '15%' }} />
+                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '10.5%' }} />
+                        <col style={{ width: '11%' }} />
+                        <col style={{ width: '14%' }} />
+                        <col style={{ width: '11%' }} />
+                        <col style={{ width: '12.5%' }} />
+                        <col style={{ width: '13.5%' }} />
+                        {staleDays && <col style={{ width: '8%' }} />}
+                      </colgroup>
+                      <thead>
+                        <tr>
+                          <th className="sticky top-0 z-10 bg-gray-50 dark:bg-[#1f2432] border-b border-gray-100 dark:border-[#2e3650] rounded-tl-2xl px-3 py-3 text-left w-10">
+                            <input
+                              type="checkbox"
+                              checked={allChecked}
+                              onChange={toggleAll}
+                              aria-label={allChecked ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                              className="w-4 h-4 rounded accent-accent-400 cursor-pointer"
+                            />
+                          </th>
+                          {(staleDays
+                            ? [
+                                'Prospecto',
+                                'Etapa',
+                                'Línea de negocio',
+                                'Responsable',
+                                'Contacto',
+                                'Propiedad',
+                                'Pago',
+                                'Notas',
+                                'Actividad',
+                              ]
+                            : [
+                                'Prospecto',
+                                'Etapa',
+                                'Línea de negocio',
+                                'Responsable',
+                                'Contacto',
+                                'Propiedad',
+                                'Pago',
+                                'Notas',
+                              ]
+                          ).map((label, i, arr) => (
+                            <th
+                              key={label}
+                              className={`sticky top-0 z-10 bg-gray-50 dark:bg-[#1f2432] border-b border-gray-100 dark:border-[#2e3650] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 break-words ${
+                                i === arr.length - 1 ? 'rounded-tr-2xl' : ''
+                              }`}
+                            >
+                              {label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leads.map((lead) => {
+                          const colors = PIPELINE_STAGE_CARD_COLORS[lead.pipelineStage];
+                          const isSelected = selected?.id === lead.id;
+                          return (
+                            <tr
+                              key={lead.id}
+                              onClick={() => leadActions.requestSelectLead(lead)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  leadActions.requestSelectLead(lead);
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
+                              className={`border-b border-gray-50 dark:border-[#2e3650]/60 last:border-0 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-500 ${
+                                isSelected
+                                  ? 'bg-accent-50 dark:bg-accent-900/10'
+                                  : 'hover:bg-gray-50 dark:hover:bg-[#2e3650]/40'
+                              }`}
+                            >
+                              <td className="px-3 py-3 align-top" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked.includes(lead.id)}
+                                  onChange={(e) => toggleCheck(e, lead.id)}
+                                  aria-label={`Seleccionar prospecto ${lead.name}`}
+                                  className="w-4 h-4 rounded accent-accent-400 cursor-pointer"
+                                />
+                              </td>
+                              <td className="px-3 py-3 align-top">
+                                <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">
+                                  {lead.name}
+                                </p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                  {formatDate(lead.createdAt)} · {typeLabel[lead.type]}
+                                  {lead.source && lead.source !== 'directo'
+                                    ? ` · ${SOURCE_LABELS[lead.source]}`
+                                    : ''}
+                                </p>
+                              </td>
+                              <td className="px-3 py-3 align-top">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors.badge}`}
+                                >
+                                  {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 align-top">
+                                {lead.businessLine ? (
+                                  <Badge variant={BUSINESS_LINE_VARIANTS[lead.businessLine]}>
+                                    {BUSINESS_LINE_LABELS[lead.businessLine]}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-gray-300 dark:text-gray-600">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 align-top text-gray-600 dark:text-gray-300">
+                                <span className="flex items-center gap-1 min-w-0">
+                                  <User size={12} className="text-gray-400 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {lead.assignedUser?.name || 'Sin asignar'}
+                                  </span>
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 align-top text-gray-600 dark:text-gray-300">
+                                {lead.email && (
+                                  <p className="flex items-center gap-1 min-w-0" title={lead.email}>
+                                    <Mail size={12} className="text-gray-400 flex-shrink-0" />
+                                    <span className="truncate">{lead.email}</span>
+                                  </p>
+                                )}
+                                {lead.phone && (
+                                  <p className="flex items-center gap-1 mt-0.5">
+                                    <Phone size={12} className="text-gray-400 flex-shrink-0" />
+                                    {lead.phone}
+                                  </p>
+                                )}
+                                {!lead.email && !lead.phone && (
+                                  <span className="text-gray-300 dark:text-gray-600">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 align-top text-gray-600 dark:text-gray-300">
+                                {lead.property ? (
+                                  <span
+                                    className="flex items-center gap-1 min-w-0"
+                                    title={lead.property.title}
+                                  >
+                                    <Building2 size={12} className="text-gray-400 flex-shrink-0" />
+                                    <span className="truncate">{lead.property.title}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300 dark:text-gray-600">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 align-top text-gray-600 dark:text-gray-300">
+                                {lead.paymentMethod ? (
+                                  <span className="flex items-center gap-1">
+                                    <Wallet size={12} className="text-gray-400 flex-shrink-0" />
+                                    {PAYMENT_METHOD_LABELS[lead.paymentMethod]} ·{' '}
+                                    {formatBudget(lead.budgetAmount, lead.budgetNotSpecified)}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300 dark:text-gray-600">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 align-top text-gray-500 dark:text-gray-400">
+                                {lead.message ? (
+                                  <span className="line-clamp-2" title={lead.message}>
+                                    {lead.message}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300 dark:text-gray-600">—</span>
+                                )}
+                              </td>
+                              {staleDays && (
+                                <td className="px-3 py-3 align-top">
+                                  {lead.lastTouchedAt ? (
+                                    <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">
+                                      {daysSince(lead.lastTouchedAt)} día
+                                      {daysSince(lead.lastTouchedAt) !== 1 ? 's' : ''}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-300 dark:text-gray-600">—</span>
+                                  )}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
             {hasNextPage && (
               <div className="flex justify-center pt-1">
@@ -570,8 +790,11 @@ export default function ProspectosSection() {
             )}
           </div>
 
-          {/* Detalle */}
-          <div className="xl:col-span-2">
+          {/* Detalle — `xl:hidden` (no `hidden` a secas) cuando no hay selección: por debajo
+              de xl ya era invisible por su propio "hidden xl:block" interno para la rama de
+              escritorio, y el overlay móvil (fixed inset-0, con su propio `xl:hidden`) sigue
+              intacto porque nunca se desmonta este wrapper. */}
+          <div className={selected ? 'xl:col-span-2' : 'xl:hidden'}>
             <DetailPanelSlot
               selected={selected}
               pendingChanges={leadActions.pendingChanges}
