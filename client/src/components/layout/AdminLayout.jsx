@@ -22,6 +22,7 @@ import {
 import useAuthStore from '../../store/authStore';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
+import TextSizeControl from '../ui/TextSizeControl';
 import ChangePasswordModal from '../admin/ChangePasswordModal';
 import SessionsModal from '../admin/SessionsModal';
 import { buildImageUrl } from '../../utils/images';
@@ -305,6 +306,10 @@ export default function AdminLayout() {
 
           <div className="flex items-center gap-2">
             <ThemeToggle className="hover:bg-gray-100 dark:hover:bg-[#2e3650] text-gray-600 dark:text-gray-300" />
+            <TextSizeControl
+              className="hover:bg-gray-100 dark:hover:bg-[#2e3650] text-gray-600 dark:text-gray-300"
+              iconClassName="text-gray-600 dark:text-gray-300"
+            />
             <NotificationBell />
             <UserMenu user={user} onLogout={handleLogout} />
           </div>

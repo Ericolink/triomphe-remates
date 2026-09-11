@@ -31,14 +31,14 @@ function Tooltip({ x, y, label, value, color }) {
         stroke="#e5e7eb"
         strokeWidth={1}
       />
-      <text x={tx + bw / 2} y={ty + 15} textAnchor="middle" fontSize={13} fill="#6b7280">
+      <text x={tx + bw / 2} y={ty + 15} textAnchor="middle" fontSize={14} fill="#6b7280">
         {label}
       </text>
       <text
         x={tx + bw / 2}
         y={ty + 31}
         textAnchor="middle"
-        fontSize={16}
+        fontSize={17}
         fontWeight="700"
         fill={color}
       >
@@ -64,7 +64,7 @@ export function BarChart({ data = [], color = '#22273A' }) {
         return (
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y} y2={y} stroke="#f3f4f6" strokeWidth={1} />
-            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={12} fill="#9ca3af">
+            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={13} fill="#9ca3af">
               {t}
             </text>
           </g>
@@ -97,7 +97,7 @@ export function BarChart({ data = [], color = '#22273A' }) {
               x={x + barW / 2}
               y={H - PAD.bottom + 11}
               textAnchor="middle"
-              fontSize={12}
+              fontSize={13}
               fill="#9ca3af"
             >
               {d.label}
@@ -159,7 +159,7 @@ export function AreaChart({ data = [], color = '#7c3aed', compareData = null }) 
         return (
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y} y2={y} stroke="#f3f4f6" strokeWidth={1} />
-            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={12} fill="#9ca3af">
+            <text x={PAD.left - 4} y={y + 4} textAnchor="end" fontSize={13} fill="#9ca3af">
               {t}
             </text>
           </g>
@@ -225,7 +225,7 @@ export function AreaChart({ data = [], color = '#7c3aed', compareData = null }) 
               x={labelX}
               y={H - PAD.bottom + 11}
               textAnchor={anchor}
-              fontSize={12}
+              fontSize={13}
               fill="#9ca3af"
             >
               {d.label}

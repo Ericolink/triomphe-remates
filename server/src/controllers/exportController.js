@@ -316,13 +316,13 @@ const drawPDFHeader = async (doc, properties, generatedAt, logoPath) => {
     .fontSize(15)
     .font('Helvetica-Bold')
     .text('TRIOMPHE BIENES RAÍCES', 168, 16);
-  doc.fontSize(9).font('Helvetica').text('Inventario de Remates Bancarios', 168, 35);
-  doc.fontSize(7.5).text(`Generado: ${generatedAt}`, 168, 51);
+  doc.fontSize(9.5).font('Helvetica').text('Inventario de Remates Bancarios', 168, 35);
+  doc.fontSize(8).text(`Generado: ${generatedAt}`, 168, 51);
 
   doc.roundedRect(doc.page.width - 152, 20, 112, 32, 5).fill(ACCENT);
   doc
     .fillColor(PRIMARY)
-    .fontSize(9)
+    .fontSize(9.5)
     .font('Helvetica-Bold')
     .text(`${properties.length} propiedades`, doc.page.width - 148, 30, {
       width: 104,
@@ -337,7 +337,7 @@ const drawPDFTableHeader = (doc, y) => {
   PDF_COLS.forEach((col) => {
     doc
       .fillColor('white')
-      .fontSize(7)
+      .fontSize(7.5)
       .font('Helvetica-Bold')
       .text(col.label, x + 3, y + 6, {
         width: col.width - 6,
@@ -354,7 +354,7 @@ const drawPDFFooter = (doc) => {
   doc.rect(0, doc.page.height - 32, doc.page.width, 32).fill(PRIMARY);
   doc
     .fillColor(ACCENT)
-    .fontSize(7)
+    .fontSize(7.5)
     .font('Helvetica')
     .text(
       '© Triomphe Bienes Raíces — Documento generado automáticamente. Información sujeta a cambios sin previo aviso.',
@@ -450,7 +450,7 @@ const exportPDF = async (req, res) => {
       let maxTextHeight = 0;
       rowData.forEach(({ val, col, bold }) => {
         const colDef = PDF_COLS.at(col);
-        doc.fontSize(7).font(bold ? 'Helvetica-Bold' : 'Helvetica');
+        doc.fontSize(7.5).font(bold ? 'Helvetica-Bold' : 'Helvetica');
         const h = doc.heightOfString(val, { width: colDef.width - 6 });
         if (h > maxTextHeight) maxTextHeight = h;
       });
@@ -499,7 +499,7 @@ const exportPDF = async (req, res) => {
         if (color) fillColor = color;
         doc
           .fillColor(fillColor)
-          .fontSize(7)
+          .fontSize(7.5)
           .font(bold ? 'Helvetica-Bold' : 'Helvetica')
           .text(val, xPos, y + 7, { width: wid });
       });
@@ -927,13 +927,13 @@ const drawWaitingListPDFHeader = async (doc, entries, generatedAt, logoPath) => 
     }
   }
   doc.fillColor('white').fontSize(15).font('Helvetica-Bold').text('TRIOMPHE BIENES RAÍCES', 168, 16);
-  doc.fontSize(9).font('Helvetica').text('Lista de espera de clientes', 168, 35);
-  doc.fontSize(7.5).text(`Generado: ${generatedAt}`, 168, 51);
+  doc.fontSize(9.5).font('Helvetica').text('Lista de espera de clientes', 168, 35);
+  doc.fontSize(8).text(`Generado: ${generatedAt}`, 168, 51);
 
   doc.roundedRect(doc.page.width - 152, 20, 112, 32, 5).fill(ACCENT);
   doc
     .fillColor(PRIMARY)
-    .fontSize(9)
+    .fontSize(9.5)
     .font('Helvetica-Bold')
     .text(`${entries.length} clientes`, doc.page.width - 148, 30, { width: 104, align: 'center' });
 };
@@ -945,7 +945,7 @@ const drawWaitingListPDFTableHeader = (doc, y) => {
   WAITING_LIST_PDF_COLS.forEach((col) => {
     doc
       .fillColor('white')
-      .fontSize(7)
+      .fontSize(7.5)
       .font('Helvetica-Bold')
       .text(col.label, x + 3, y + 6, {
         width: col.width - 6,
@@ -1015,7 +1015,7 @@ const exportWaitingListPDF = async (req, res) => {
         const colDef = WAITING_LIST_PDF_COLS[i];
         doc
           .fillColor(TEXT)
-          .fontSize(7)
+          .fontSize(7.5)
           .font('Helvetica')
           .text(stripUnsupported(String(val)), xPositions[i] + 3, y + 6, {
             width: colDef.width - 6,
@@ -1238,13 +1238,13 @@ const drawCatalogPDFHeader = async (doc, properties, generatedAt, logoPath) => {
     }
   }
   doc.fillColor('white').fontSize(15).font('Helvetica-Bold').text('TRIOMPHE BIENES RAÍCES', 168, 16);
-  doc.fontSize(9).font('Helvetica').text('Catálogo de Propiedades', 168, 35);
-  doc.fontSize(7.5).text(`Generado: ${generatedAt}`, 168, 51);
+  doc.fontSize(9.5).font('Helvetica').text('Catálogo de Propiedades', 168, 35);
+  doc.fontSize(8).text(`Generado: ${generatedAt}`, 168, 51);
 
   doc.roundedRect(doc.page.width - 152, 20, 112, 32, 5).fill(ACCENT);
   doc
     .fillColor(PRIMARY)
-    .fontSize(9)
+    .fontSize(9.5)
     .font('Helvetica-Bold')
     .text(`${properties.length} propiedades`, doc.page.width - 148, 30, {
       width: 104,
@@ -1259,7 +1259,7 @@ const drawCatalogPDFTableHeader = (doc, y, cols) => {
   cols.forEach((col) => {
     doc
       .fillColor('white')
-      .fontSize(7)
+      .fontSize(7.5)
       .font('Helvetica-Bold')
       .text(col.label, x + 3, y + 6, {
         width: col.width - 6,
@@ -1347,7 +1347,7 @@ const exportCatalogPDF = async (req, res) => {
         const colDef = cols[colIdx];
         doc
           .fillColor(TEXT)
-          .fontSize(7)
+          .fontSize(7.5)
           .font('Helvetica')
           .text(stripUnsupported(String(val)), xPositions[colIdx] + 3, y + 6, {
             width: colDef.width - 6,

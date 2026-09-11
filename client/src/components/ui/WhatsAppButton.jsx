@@ -69,7 +69,12 @@ function FloatingWhatsApp({ href, label, className, onClick }) {
         initial={{ opacity: 0, scale: 0.9, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.25 }}
-        className="relative whitespace-nowrap bg-white dark:bg-dark-surface text-gray-800 dark:text-gray-100 text-sm font-semibold px-4 py-2.5 rounded-2xl shadow-lg"
+        // Sin whitespace-nowrap: con Grande/Muy grande esta burbuja (anclada por la
+        // derecha junto al botón circular) crecía hacia la izquierda hasta salirse
+        // del viewport en pantallas angostas (320px) — max-w-[50vw] + wrap deja que
+        // el texto baje de línea en vez de desbordar. Ver auditoría de responsive
+        // 2026-09-10.
+        className="relative max-w-[50vw] sm:max-w-none bg-white dark:bg-dark-surface text-gray-800 dark:text-gray-100 text-sm font-semibold px-4 py-2.5 rounded-2xl shadow-lg"
       >
         ¿Cómo puedo ayudarte?
         <span className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white dark:bg-dark-surface rotate-45" />

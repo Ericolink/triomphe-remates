@@ -110,7 +110,10 @@ const FichaTecnica = forwardRef(function FichaTecnica({ property }, ref) {
   return (
     <div
       ref={ref}
-      style={{ width: PAGE_WIDTH }}
+      // --app-text-scale fijo en 1: la ficha es un documento exportado para el cliente
+      // final, no debe variar según la preferencia de accesibilidad de texto del
+      // usuario admin que la genera (ver tailwind.config.js / textSizeStore.js).
+      style={{ width: PAGE_WIDTH, '--app-text-scale': 1 }}
       className="relative flex flex-col bg-white text-gray-800"
     >
       {/* Hero: fotografía principal a toda anchura, sin texto encima — solo el logo como marca

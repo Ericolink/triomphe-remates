@@ -10,6 +10,11 @@ const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 const theme = savedTheme || (prefersDark ? 'dark' : 'light');
 if (theme === 'dark') document.documentElement.classList.add('dark');
 
+const savedTextSize = localStorage.getItem('textSize');
+if (savedTextSize === 'large' || savedTextSize === 'xlarge') {
+  document.documentElement.setAttribute('data-text-size', savedTextSize);
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 5 * 60 * 1000 },

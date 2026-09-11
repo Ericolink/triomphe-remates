@@ -117,7 +117,13 @@ export default function HomePage() {
             <motion.form
               variants={fadeInUp}
               onSubmit={handleSearch}
-              className="bg-white dark:bg-[#242938] rounded-2xl p-3 max-w-2xl mx-auto flex flex-col sm:flex-row gap-3 shadow-2xl border border-transparent dark:border-[#2e3650]"
+              // sm:flex-wrap + shrink-0/min-w-0 abajo: a ~640-750px con Grande/Muy
+              // grande, select+input+botón ya no cabían en una sola fila y el botón
+              // "Buscar" (sin protección de encogido) terminaba recortado por el
+              // overflow-hidden decorativo de la sección hero. Permitir que la fila
+              // baje el input a una 2ª línea es preferible a cortar el botón. Ver
+              // auditoría de responsive 2026-09-10.
+              className="bg-white dark:bg-[#242938] rounded-2xl p-3 max-w-2xl mx-auto flex flex-col sm:flex-row sm:flex-wrap gap-3 shadow-2xl border border-transparent dark:border-[#2e3650]"
             >
               <select
                 value={city}
@@ -134,13 +140,13 @@ export default function HomePage() {
                 placeholder="Buscar por colonia, dirección..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="flex-1 px-4 py-2.5 text-gray-700 dark:text-gray-200 text-sm focus:outline-none bg-transparent dark:placeholder-gray-500"
+                className="flex-1 min-w-[140px] px-4 py-2.5 text-gray-700 dark:text-gray-200 text-sm focus:outline-none bg-transparent dark:placeholder-gray-500"
               />
               <motion.button
                 type="submit"
                 whileHover={buttonHover}
                 whileTap={buttonTap}
-                className="bg-accent-400 dark:bg-accent-500 text-primary-900 px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
+                className="shrink-0 bg-accent-400 dark:bg-accent-500 text-primary-900 px-6 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-accent-300 dark:hover:bg-accent-400 transition-colors"
               >
                 <Search size={18} /> Buscar
               </motion.button>
@@ -158,7 +164,12 @@ export default function HomePage() {
         transition={{ duration: 0.5 }}
       >
         <motion.div
-          className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center"
+          // grid-cols-1 en mobile (no grid-cols-2): con textos como "Nacional" en una
+          // sola palabra no partible, dos columnas ya no cabían a 320-375px con Grande/
+          // Muy grande — mismo patrón mobile-first que ya usan los tiles del dashboard
+          // admin (ver OverviewSection.jsx) en vez de forzar columnas desde el ancho
+          // más angosto. Ver auditoría de responsive 2026-09-10.
+          className="max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-center"
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
@@ -170,8 +181,12 @@ export default function HomePage() {
             { label: 'Inventario disponible en todo México.', value: 'Nacional' },
             { label: 'Clientes satisfechos', value: '500+' },
           ].map(({ label, value }) => (
-            <motion.div key={label} variants={fadeInUp} className="text-primary-900">
-              <p className="text-3xl font-bold">{value}</p>
+            <motion.div key={label} variants={fadeInUp} className="text-primary-900 min-w-0">
+              {/* text-2xl (no text-3xl fijo) en la columna base del grid-cols-2: con
+                  Grande/Muy grande, valores cortos pero no partibles como "Nacional"
+                  forzaban esa columna del grid a expandirse y encimarse con la
+                  siguiente ("500+") — ver auditoría de responsive 2026-09-10. */}
+              <p className="text-2xl sm:text-3xl font-bold">{value}</p>
               <p className="text-sm font-medium opacity-80">{label}</p>
             </motion.div>
           ))}

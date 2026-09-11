@@ -31,7 +31,12 @@ export default function PromotedPropertyBanner({ property }) {
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-10">
-      <div className="flex items-center gap-3 mb-6">
+      {/* flex-wrap: a 320px con Muy grande, "Propiedad Estrella" + el badge "Oferta
+          especial" ya no cabían en una sola línea y el badge se salía de pantalla
+          (ninguno de los 3 hijos tenía cómo ceder espacio) — permitir que el badge baje
+          a una 2ª línea es preferible a que se corte. Ver auditoría de responsive
+          2026-09-10. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
         <motion.div
           animate={{ rotate: [0, 15, -15, 0] }}
           transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}

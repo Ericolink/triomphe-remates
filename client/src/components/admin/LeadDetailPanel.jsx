@@ -101,7 +101,7 @@ const ROW_BUTTON_CLASS =
 const SECTION_LABEL_CLASS =
   'text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5';
 const SUBSECTION_LABEL_CLASS =
-  'text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 mt-4 first:mt-0';
+  'text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 mt-4 first:mt-0';
 const CARD_CLASS = 'rounded-xl bg-gray-50 dark:bg-[#1a1f2e] p-3';
 
 // Tipos de Activity que representan una interacción humana real. 'sistema' (creación del
@@ -168,13 +168,13 @@ function FieldStatus({ status }) {
   if (!status) return null;
   if (status.state === 'pending') {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+      <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
         <Pencil size={11} /> Cambio sin guardar
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-red-600 dark:text-red-400">
+    <span className="inline-flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
       <AlertTriangle size={11} /> {status.message || 'No se pudo guardar'}
     </span>
   );
@@ -221,7 +221,7 @@ function StageProgress({ lead, canEdit, onOpen }) {
             </span>
           )}
         </span>
-        {canEdit && <span className="text-[11px] text-gray-400 dark:text-gray-500">Reabrir</span>}
+        {canEdit && <span className="text-xs text-gray-400 dark:text-gray-500">Reabrir</span>}
       </button>
     );
   }
@@ -240,7 +240,7 @@ function StageProgress({ lead, canEdit, onOpen }) {
           {PIPELINE_STAGE_LABELS[lead.pipelineStage]}
         </span>
         {canEdit && (
-          <span className="text-[11px] text-gray-400 group-hover:text-accent-500 transition-colors">
+          <span className="text-xs text-gray-400 group-hover:text-accent-500 transition-colors">
             Cambiar
           </span>
         )}
@@ -620,7 +620,7 @@ export default function LeadDetailPanel({
               {needsFollowUp && (
                 <span
                   title="Sin llamada, whatsapp, email, visita ni nota registrada"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 flex-shrink-0"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 flex-shrink-0"
                 >
                   <UserX size={11} /> No se ha dado seguimiento
                 </span>
@@ -937,7 +937,7 @@ export default function LeadDetailPanel({
               </div>
             )}
 
-            <p className="text-[11px] text-gray-400 dark:text-gray-500">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               Registrado el {formatDateTime(lead.createdAt)}
             </p>
           </div>

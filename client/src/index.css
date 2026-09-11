@@ -3,6 +3,20 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Multiplicador global de tipografía — ver tailwind.config.js (theme.extend.fontSize)
+       y textSizeStore.js. 1 = "Normal" (la nueva base legible por defecto). */
+    --app-text-scale: 1;
+  }
+
+  :root[data-text-size='large'] {
+    --app-text-scale: 1.125;
+  }
+
+  :root[data-text-size='xlarge'] {
+    --app-text-scale: 1.25;
+  }
+
   body {
     font-family:
       'Inter',
@@ -11,6 +25,20 @@
       'Segoe UI',
       sans-serif;
     @apply bg-gray-50 dark:bg-[#1a1f2e] text-gray-900 dark:text-gray-100 transition-colors duration-200;
+  }
+
+  /* Placeholders con contraste insuficiente eran difíciles de leer (auditoría de
+     accesibilidad 2026-09-10) — gray-400 sobre fondo blanco no cumplía contraste
+     cómodo para texto pequeño. */
+  ::placeholder {
+    @apply text-gray-500 dark:text-gray-400 opacity-100;
+  }
+
+  /* Focus visible consistente en toda la app — antes dependía únicamente del outline
+     por defecto del navegador, poco visible sobre fondos oscuros/de marca. */
+  :focus-visible {
+    outline: 2px solid theme('colors.accent.400');
+    outline-offset: 2px;
   }
 
   ::-webkit-scrollbar {
@@ -35,5 +63,71 @@
 
   .dark-surface {
     @apply dark:bg-[#242938] dark:border-[#2e3650];
+  }
+}
+
+/* Navbar — auditoría de responsive + accesibilidad 2026-09-11 (ver Navbar.jsx). Fuera
+   de cualquier @layer a propósito: una regla sin layer siempre gana sobre las
+   utilidades de Tailwind (que sí viven en @layer utilities) sin importar el orden de
+   origen.
+
+   El piso menú-hamburguesa-vs-escritorio es SIEMPRE "lg" (1024px, ver Navbar.jsx) sin
+   importar el tamaño de texto — esa fila solo tiene logo + iconos, contenido que ya se
+   midió estable incluso en Muy grande muy por debajo de 1024px. Lo que SÍ depende del
+   tamaño de texto es si, dentro de la fila de escritorio (≥1024px), el menú de 6 links
+   (.nav-links) va en la misma línea que logo/acciones o baja a su propia línea:
+   flex-basis:100% + order:3 lo empuja siempre a una línea nueva (el header crece de
+   alto en vez de desbordar), y flex-basis:0/flex-grow:1 + order:0 lo pone en línea
+   junto a logo/acciones, centrado en el espacio libre (equivalente al viejo
+   grid-cols minmax(0,1fr), pero sin la mecánica de "exprimir columnas" que causaba el
+   solapamiento). El punto exacto donde cada tamaño de texto puede pasar a una sola
+   línea se midió con Playwright variando el ancho de viewport (no es un valor
+   adivinado): a más tamaño de texto, más ancho hace falta para que los 6 links quepan
+   junto a logo y acciones sin envolver. */
+.nav-links {
+  flex-basis: 100%;
+  order: 3;
+}
+
+/* Umbrales medidos con Playwright forzando .nav-links a modo "en línea" y buscando
+   con búsqueda binaria el ancho mínimo donde los 6 links caben en una sola línea sin
+   envolver dentro de su propia columna (no solo "sin solaparse" — .nav-links tiene su
+   propio flex-wrap interno, así que "no se solapa" no es suficiente: por debajo del
+   umbral, los 6 links igual caben sin overlap pero se apilan en 2-3 líneas dentro de
+   una columna angosta entre logo y acciones, que se ve mal aunque no rompa nada).
+   Normal necesita más que los históricos 1280px porque la escala base de Tailwind ya
+   no es la de fábrica (ver auditoría de tipografía 2026-09-10): 1346px medido + margen.
+   Large: 1449px medido + margen. Xlarge: 1557px medido + margen. */
+@media (min-width: 1360px) {
+  .nav-links {
+    flex-basis: 0;
+    flex-grow: 1;
+    order: 0;
+  }
+}
+
+:root[data-text-size='large'] .nav-links {
+  flex-basis: 100%;
+  flex-grow: 0;
+  order: 3;
+}
+@media (min-width: 1470px) {
+  :root[data-text-size='large'] .nav-links {
+    flex-basis: 0;
+    flex-grow: 1;
+    order: 0;
+  }
+}
+
+:root[data-text-size='xlarge'] .nav-links {
+  flex-basis: 100%;
+  flex-grow: 0;
+  order: 3;
+}
+@media (min-width: 1580px) {
+  :root[data-text-size='xlarge'] .nav-links {
+    flex-basis: 0;
+    flex-grow: 1;
+    order: 0;
   }
 }

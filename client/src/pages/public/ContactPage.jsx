@@ -82,7 +82,7 @@ export default function ContactPage() {
                     <a
                       href={`mailto:${office.email}`}
                       onClick={() => trackEvent(ANALYTICS_EVENTS.EMAIL_CLICK)}
-                      className="text-base text-gray-600 dark:text-gray-300 hover:text-accent-500 transition-colors break-words"
+                      className="text-base text-gray-600 dark:text-gray-300 hover:text-accent-500 transition-colors break-words min-w-0"
                     >
                       {office.email}
                     </a>

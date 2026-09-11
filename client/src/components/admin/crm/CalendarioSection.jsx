@@ -573,7 +573,7 @@ export default function CalendarioSection() {
                                         setOpenAppointment(a);
                                       }
                                     }}
-                                    className={`block w-full truncate text-[11px] px-1 py-0.5 rounded cursor-pointer hover:opacity-80 ${CHIP_VARIANT_CLASSES[APPOINTMENT_STATUS_VARIANTS[a.status]]}`}
+                                    className={`block w-full truncate text-xs px-1 py-0.5 rounded cursor-pointer hover:opacity-80 ${CHIP_VARIANT_CLASSES[APPOINTMENT_STATUS_VARIANTS[a.status]]}`}
                                   >
                                     {new Date(a.scheduledAt).toLocaleTimeString('es-MX', {
                                       hour: '2-digit',
@@ -583,7 +583,7 @@ export default function CalendarioSection() {
                                   </span>
                                 ))}
                                 {dayAppointments.length > 3 && (
-                                  <span className="text-[11px] text-gray-400">
+                                  <span className="text-xs text-gray-400">
                                     +{dayAppointments.length - 3}
                                   </span>
                                 )}

@@ -100,7 +100,7 @@ export default function Footer() {
                   <a
                     href={`mailto:${email}`}
                     onClick={() => trackEvent(ANALYTICS_EVENTS.EMAIL_CLICK)}
-                    className="hover:text-accent-400 transition-colors break-words"
+                    className="hover:text-accent-400 transition-colors break-words min-w-0"
                   >
                     {email}
                   </a>

@@ -3,13 +3,17 @@ import { Link, NavLink } from 'react-router-dom';
 import { Menu, X, Heart, GitCompare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThemeToggle from '../ui/ThemeToggle';
+import TextSizeControl from '../ui/TextSizeControl';
 import useFavorites from '../../hooks/useFavorites';
 import useComparator from '../../hooks/useComparator';
+import useTextSizeStore, { TEXT_SIZES, TEXT_SIZE_LABELS } from '../../store/textSizeStore';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const { count } = useFavorites();
   const { count: compareCount } = useComparator();
+  const textSize = useTextSizeStore((state) => state.textSize);
+  const setTextSize = useTextSizeStore((state) => state.setTextSize);
 
   const links = [
     { to: '/', label: 'Inicio' },
@@ -28,11 +32,22 @@ export default function Navbar() {
       className="bg-primary-900 text-white sticky top-0 z-50 shadow-lg"
     >
       <div className="max-w-[1920px] mx-auto px-6 sm:px-8 dk:px-16">
-        {/* grid en vez de flex+justify-between: así el menú queda centrado en el
-            espacio disponible entre logo y acciones sin importar que ambos extremos
-            tengan anchos distintos (justify-between solo reparte el hueco sobrante,
-            no centra el contenido intermedio de verdad). */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 h-20 dk:h-28">
+        {/* Fila de escritorio — visible siempre desde "lg" (1024px, ver comentario en
+            nav-mobile-row más abajo sobre por qué ese piso es constante). flex-wrap (no
+            CSS Grid de 3 columnas) a propósito: con Grid, las columnas externas (logo,
+            acciones) crecían con el texto sin límite y exprimían la columna central del
+            menú hasta solaparla — el bug que motivó este rediseño (ver git history de
+            este archivo, auditoría 2026-09-10/11). Con flexbox, .nav-links usa
+            flex-basis:0/flex-grow:1 para ocupar el espacio libre entre logo y acciones
+            (equivalente al viejo grid-cols minmax(0,1fr), pero sin la mecánica de
+            "exprimir columnas") CUANDO cabe en una sola línea, y flex-basis:100% para
+            forzar su propia línea completa cuando no cabe — ver `.nav-links` en
+            index.css: el punto exacto donde cambia de un modo a otro depende del
+            tamaño de texto activo (Normal/Grande/Muy grande tienen distinto ancho de
+            contenido) y se determinó midiendo, no adivinando. min-h en vez de h fija:
+            si el menú va en su propia línea, el header debe poder crecer de alto en
+            vez de recortar contenido. */}
+        <div className="hidden lg:flex flex-wrap items-center justify-between gap-x-4 gap-y-2 min-h-20 dk:min-h-28 py-3">
           <Link to="/" className="flex items-center gap-3 shrink-0">
             <motion.img
               src="/logo.png"
@@ -43,17 +58,7 @@ export default function Navbar() {
             />
           </Link>
 
-          {/* Desktop — columna central, se centra dentro del espacio libre entre
-              logo y acciones. minmax(0,1fr) arriba + min-w-0 aquí evitan que el
-              ancho mínimo de los links (whitespace-nowrap) fuerce el desborde del
-              grid o aplaste la columna del logo — gotcha clásico de CSS Grid.
-              "xl" (1280px, estándar de Tailwind) es el corte real laptop/celular:
-              por debajo de eso se usa el menú hamburguesa. Entre 1280-1799px el
-              texto y los gaps van compactos para que los 6 links quepan sin salto
-              de línea; a partir de "dk" (1800px, ver tailwind.config.js) hay de
-              sobra y se agrandan (texto, gaps, ver también el logo y los botones
-              de Favoritos/Comparar más abajo). */}
-          <div className="hidden xl:flex items-center justify-center gap-4 dk:gap-12 min-w-0">
+          <div className="nav-links flex flex-wrap items-center justify-center gap-x-4 gap-y-1 dk:gap-x-12 min-w-0">
             {links.map(({ to, label }, i) => (
               <motion.div
                 key={to}
@@ -74,62 +79,77 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* col-start-3 explícito: si el menú central no se renderiza (mobile,
-              hidden), evita que este bloque caiga en la columna 1fr del centro */}
-          <div className="col-start-3 flex items-center gap-2">
-            <div className="hidden xl:flex items-center gap-2">
-              <ThemeToggle className="hover:bg-primary-800" moonClassName="text-gray-200" />
+          <div className="flex items-center gap-2 shrink-0">
+            <ThemeToggle className="hover:bg-primary-800" moonClassName="text-gray-200" />
+            <TextSizeControl className="hover:bg-primary-800" iconClassName="text-gray-200" />
+            <Link
+              to="/favoritos"
+              title="Mis favoritos"
+              className="flex items-center gap-1.5 h-11 px-2 rounded-lg hover:bg-primary-800 transition-colors"
+            >
+              <span className="relative flex items-center justify-center w-[22px] h-[22px]">
+                <Heart size={22} className="text-gray-200" />
+                {count > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    {count > 9 ? '9+' : count}
+                  </span>
+                )}
+              </span>
+              <span className="hidden dk:inline text-base font-bold text-gray-200">
+                Favoritos
+              </span>
+            </Link>
+            <Link
+              to="/comparar"
+              title="Comparar propiedades"
+              className="flex items-center gap-1.5 h-11 px-2 rounded-lg hover:bg-primary-800 transition-colors"
+            >
+              <span className="relative flex items-center justify-center w-[22px] h-[22px]">
+                <GitCompare size={22} className="text-gray-200" />
+                {compareCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-5 h-5 px-1 bg-accent-400 text-primary-900 text-xs rounded-full flex items-center justify-center font-bold">
+                    {compareCount}
+                  </span>
+                )}
+              </span>
+              <span className="hidden dk:inline text-base font-bold text-gray-200">
+                Comparar
+              </span>
+            </Link>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+            >
               <Link
-                to="/favoritos"
-                title="Mis favoritos"
-                className="flex items-center gap-1.5 h-11 px-2 rounded-lg hover:bg-primary-800 transition-colors"
+                to="/admin/login"
+                className="text-base font-bold bg-accent-400 text-primary-900 px-4 py-1.5 rounded-lg hover:bg-accent-300 transition-colors whitespace-nowrap"
               >
-                <span className="relative flex items-center justify-center w-[22px] h-[22px]">
-                  <Heart size={22} className="text-gray-200" />
-                  {count > 0 && (
-                    <span className="absolute -top-1.5 -right-2 min-w-5 h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                      {count > 9 ? '9+' : count}
-                    </span>
-                  )}
-                </span>
-                <span className="hidden dk:inline text-base font-bold text-gray-200">
-                  Favoritos
-                </span>
+                Acceso Admin
               </Link>
-              <Link
-                to="/comparar"
-                title="Comparar propiedades"
-                className="flex items-center gap-1.5 h-11 px-2 rounded-lg hover:bg-primary-800 transition-colors"
-              >
-                <span className="relative flex items-center justify-center w-[22px] h-[22px]">
-                  <GitCompare size={22} className="text-gray-200" />
-                  {compareCount > 0 && (
-                    <span className="absolute -top-1.5 -right-2 min-w-5 h-5 px-1 bg-accent-400 text-primary-900 text-xs rounded-full flex items-center justify-center font-bold">
-                      {compareCount}
-                    </span>
-                  )}
-                </span>
-                <span className="hidden dk:inline text-base font-bold text-gray-200">
-                  Comparar
-                </span>
-              </Link>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <Link
-                  to="/admin/login"
-                  className="text-base font-bold bg-accent-400 text-primary-900 px-4 py-1.5 rounded-lg hover:bg-accent-300 transition-colors whitespace-nowrap"
-                >
-                  Acceso Admin
-                </Link>
-              </motion.div>
-            </div>
+            </motion.div>
+          </div>
+        </div>
 
-            <div className="flex items-center gap-2 xl:hidden">
+        {/* Fila móvil — visible por debajo de "lg" (1024px) SIEMPRE, sin importar el
+            tamaño de texto: a diferencia del menú central de arriba (cuyo contenido
+            crece mucho con el texto), esta fila solo tiene logo + iconos + hamburguesa,
+            un contenido que ya se midió estable incluso en Muy grande muy por debajo de
+            1024px (ver auditoría 2026-09-11) — por eso este piso puede ser constante en
+            vez de depender también del tamaño de texto. */}
+        <div className="flex lg:hidden items-center justify-between gap-2 h-20">
+          <Link to="/" className="flex items-center gap-3 shrink-0">
+            <motion.img
+              src="/logo.png"
+              alt="Triomphe Bienes Raíces"
+              className="h-14 w-auto brightness-0 invert"
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.2 }}
+            />
+          </Link>
+          <div className="flex items-center gap-2">
               <ThemeToggle className="hover:bg-primary-800" moonClassName="text-gray-200" />
               <Link
                 to="/favoritos"
@@ -195,7 +215,6 @@ export default function Navbar() {
                   )}
                 </AnimatePresence>
               </button>
-            </div>
           </div>
         </div>
       </div>
@@ -208,7 +227,7 @@ export default function Navbar() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="xl:hidden bg-primary-800 overflow-hidden"
+            className="lg:hidden bg-primary-800 overflow-hidden"
           >
             <div className="px-4 pb-4 flex flex-col gap-3">
               {links.map(({ to, label }, i) => (
@@ -234,6 +253,35 @@ export default function Navbar() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.25 }}
+                className="pt-1 pb-2 border-b border-primary-700"
+              >
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                  Tamaño del texto
+                </p>
+                <div className="flex items-center gap-2" role="radiogroup" aria-label="Tamaño del texto">
+                  {TEXT_SIZES.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      role="radio"
+                      aria-checked={textSize === size}
+                      onClick={() => setTextSize(size)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        textSize === size
+                          ? 'bg-accent-400 text-primary-900'
+                          : 'bg-primary-800 text-gray-200 hover:bg-primary-700'
+                      }`}
+                    >
+                      {TEXT_SIZE_LABELS[size]}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
               >
                 <Link
                   to="/admin/login"
