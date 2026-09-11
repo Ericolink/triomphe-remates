@@ -17,6 +17,10 @@ const { ApiError } = require('../middleware/errorHandler');
 const { isInventoryDownloadEnabled } = require('../services/settingsService');
 const { logActivity } = require('../utils/pipelineHelpers');
 const { buildPropertyWhereClause } = require('../services/propertyFilters');
+const {
+  findDuplicatePhoneLead,
+  isDuplicatePhoneConstraintError,
+} = require('../utils/leadDuplicates');
 
 // AUDIT-017: paleta de marca y helpers compartidos extraídos a services/ — este archivo
 // ahora solo contiene las 5 rutas/handlers que routes/export.js espera (mismo shape de
@@ -454,7 +458,16 @@ const exportPDF = async (req, res) => {
 
       if (y + ROW_H > doc.page.height - 40) {
         drawPDFFooter(doc);
-        doc.addPage({ layout: 'landscape' });
+        // `size`/`margin` deben repetirse acá: a diferencia de `new PDFDocument(...)` (que sí
+        // aplica sus opciones como default para todo el documento), PDFPage (pdfkit)
+        // solo usa lo que recibe en ESTA llamada — sin `size`, cae a su propio default
+        // ('letter', 612×792) en vez de heredar el 'A4' de la página inicial. Eso hacía que la
+        // página 1 fuera A4 landscape (841.89×595.28) y la 2ª en adelante Letter landscape
+        // (792×612, más angosta) — mismos xPositions/columnas fijos calculados para el ancho
+        // de A4 quedaban entonces más allá del borde real de esas páginas más angostas,
+        // cortando la última columna (Baños). Ver mismo patrón en exportWaitingListPDF y
+        // exportCatalogPDF más abajo.
+        doc.addPage({ margin: 40, size: 'A4', layout: 'landscape' });
         await drawPDFHeader(doc, properties, generatedAt, logoPath);
         y = drawPDFTableHeader(doc, 80);
       }
@@ -979,7 +992,10 @@ const exportWaitingListPDF = async (req, res) => {
       const ROW_H = 20;
       if (y + ROW_H > doc.page.height - 40) {
         drawPDFFooter(doc);
-        doc.addPage({ layout: 'landscape' });
+        // Ver comentario en exportPDF: sin `size`/`margin` acá, pdfkit usa 'letter' como
+        // default para esta página en vez de heredar el 'A4' de la primera — deja páginas 2+
+        // más angostas que la 1ª y corta contenido posicionado con los xPositions fijos.
+        doc.addPage({ margin: 40, size: 'A4', layout: 'landscape' });
         await drawWaitingListPDFHeader(doc, entries, generatedAt, logoPath);
         y = drawWaitingListPDFTableHeader(doc, 80);
       }
@@ -1111,18 +1127,43 @@ const VALID_INTEREST_TYPES = [
   'otro',
 ];
 
-// Crea el Lead que registra quién solicitó el catálogo — mismas reglas de validación que
-// el formulario público "Contactar asesor" (leadController.createLead): nombre y teléfono
-// requeridos, email opcional. `interest` (Interés) es obligatorio acá — a diferencia de
-// ContactForm, que trae un default ('contacto'), este formulario no preselecciona nada. Se
-// llama `interest` en el body (no `type`) porque ese nombre ya lo usa el filtro de tipo de
-// propiedad (casa/depto/...) que viaja en el mismo POST — ver CatalogDownloadForm.jsx.
+// Crea (o reutiliza) el Lead que registra quién solicitó el catálogo — mismas reglas de
+// validación que el formulario público "Contactar asesor" (leadController.createLead):
+// nombre y teléfono requeridos, email opcional. `interest` (Interés) es obligatorio acá — a
+// diferencia de ContactForm, que trae un default ('contacto'), este formulario no
+// preselecciona nada. Se llama `interest` en el body (no `type`) porque ese nombre ya lo
+// usa el filtro de tipo de propiedad (casa/depto/...) que viaja en el mismo POST — ver
+// CatalogDownloadForm.jsx.
+//
+// BUG real: esta función hacía `Lead.create` a ciegas. `leads.phoneNormalized` tiene un
+// índice único (migración 20260901000000, ver models/Lead.js) porque el negocio no quiere
+// prospectos duplicados por teléfono — pero a diferencia de leadController.createLead (que
+// SÍ chequea con findDuplicatePhoneLead antes de crear y traduce el conflicto a un 409),
+// aquí no había ningún chequeo. Alguien que ya era prospecto (por cualquier otro canal:
+// ContactForm, WhatsApp, captura manual del CRM) y volvía a pedir el catálogo con el mismo
+// teléfono disparaba un SequelizeUniqueConstraintError sin capturar, que no es un ApiError
+// → handleExportError lo trataba como error genérico → 500 crudo, y el PDF nunca se
+// generaba. No era un problema del teléfono en sí (el formato ya se valida arriba con
+// validatePhone) sino la ausencia total de manejo de duplicados en este flujo.
+//
+// A diferencia de createLead (que rechaza con 409 porque ahí un humano del equipo comercial
+// está decidiendo si crear un prospecto nuevo), aquí el pedido de negocio es reutilizar: si
+// el teléfono ya es un prospecto conocido, es la misma persona pidiendo el catálogo de
+// nuevo, no un prospecto nuevo — se reutiliza el Lead existente (sin tocar campos que ya
+// gestiona el CRM como pipelineStage/assignedToUserId/notes) y solo se completa el email si
+// antes no lo tenía, dejando además una Activity para que quede visible en su timeline.
+//
+// Condición de carrera: el chequeo previo (findDuplicatePhoneLead) es check-then-insert, así
+// que dos descargas casi simultáneas con el mismo teléfono podrían pasarlo ambas antes de
+// que cualquiera cree el Lead. El respaldo real es el índice único de la base de datos: si
+// el INSERT de todos modos choca, se captura con isDuplicatePhoneConstraintError y se
+// reutiliza el Lead que ganó la carrera, en vez de dejar propagar el 500.
 //
 // `downloadEnabled` distingue si este prospecto SÍ recibió el PDF o solo quedó registrado
 // porque el toggle de admin (ver settingsService.isInventoryDownloadEnabled) está
-// desactivado — se refleja tanto en Lead.message (visible en las listas/tarjetas del CRM)
-// como en una Activity tipo 'sistema' en su timeline (mismo mecanismo que usa el resto del
-// CRM para eventos automáticos, ver leadController.createLead). Devuelve el Lead creado
+// desactivado — se refleja tanto en Lead.message (solo al crear) como en una Activity tipo
+// 'sistema' en su timeline (mismo mecanismo que usa el resto del CRM para eventos
+// automáticos, ver leadController.createLead). Devuelve el Lead (creado o reutilizado)
 // porque exportCatalogPDF necesita su id para la Activity.
 const createCatalogDownloadLead = async ({ name, phone, email, interest }, downloadEnabled) => {
   if (!name || !name.trim()) throw new ApiError(400, 'Nombre es requerido');
@@ -1132,28 +1173,58 @@ const createCatalogDownloadLead = async ({ name, phone, email, interest }, downl
   if (!interest || !VALID_INTEREST_TYPES.includes(interest))
     throw new ApiError(400, 'Interés es requerido');
 
+  const trimmedPhone = phone.trim();
+  const trimmedEmail = email ? email.trim() : null;
+
+  const reuseExistingLead = async (existingLead) => {
+    if (trimmedEmail && !existingLead.email) {
+      await existingLead.update({ email: trimmedEmail });
+    }
+    await logActivity({
+      leadId: existingLead.id,
+      type: 'sistema',
+      content: downloadEnabled
+        ? 'Volvió a descargar el catálogo de propiedades (PDF) — prospecto ya existente'
+        : 'Volvió a solicitar el catálogo (descarga automática desactivada) — prospecto ya existente',
+    });
+    return existingLead;
+  };
+
+  const existingLead = await findDuplicatePhoneLead(trimmedPhone);
+  if (existingLead) return reuseExistingLead(existingLead);
+
   const message = downloadEnabled
     ? 'Descargó el catálogo de propiedades (PDF)'
     : 'Solicitó el catálogo de propiedades (descarga automática desactivada)';
 
-  const lead = await Lead.create({
-    name: name.trim(),
-    phone: phone.trim(),
-    email: email ? email.trim() : null,
-    type: interest,
-    source: 'directo',
-    message,
-  });
+  try {
+    const lead = await Lead.create({
+      name: name.trim(),
+      phone: trimmedPhone,
+      email: trimmedEmail,
+      type: interest,
+      source: 'directo',
+      message,
+    });
 
-  await logActivity({
-    leadId: lead.id,
-    type: 'sistema',
-    content: downloadEnabled
-      ? 'Prospecto creado — descargó el catálogo de propiedades (PDF)'
-      : 'Prospecto creado — solicitó el catálogo (descarga automática desactivada por admin)',
-  });
+    await logActivity({
+      leadId: lead.id,
+      type: 'sistema',
+      content: downloadEnabled
+        ? 'Prospecto creado — descargó el catálogo de propiedades (PDF)'
+        : 'Prospecto creado — solicitó el catálogo (descarga automática desactivada por admin)',
+    });
 
-  return lead;
+    return lead;
+  } catch (error) {
+    if (!isDuplicatePhoneConstraintError(error)) throw error;
+
+    const wonTheRace = await findDuplicatePhoneLead(trimmedPhone);
+    // El índice único garantiza que, si el INSERT chocó por phoneNormalized, ya existe una
+    // fila con ese teléfono normalizado — este findOne no debería poder volver null aquí.
+    if (!wonTheRace) throw error;
+    return reuseExistingLead(wonTheRace);
+  }
 };
 
 const drawCatalogPDFHeader = async (doc, properties, generatedAt, logoPath) => {
@@ -1247,7 +1318,11 @@ const exportCatalogPDF = async (req, res) => {
       const ROW_H = 20;
       if (y + ROW_H > doc.page.height - 40) {
         drawPDFFooter(doc);
-        doc.addPage({ layout: 'landscape' });
+        // Ver comentario en exportPDF: sin `size`/`margin` acá, pdfkit usa 'letter' como
+        // default para esta página en vez de heredar el 'A4' de la primera — deja páginas 2+
+        // más angostas que la 1ª y corta la última columna (Baños), calculada con `cols`
+        // (fijo, calculado una sola vez sobre el ancho A4 de la página 1).
+        doc.addPage({ margin: 40, size: 'A4', layout: 'landscape' });
         await drawCatalogPDFHeader(doc, properties, generatedAt, logoPath);
         y = drawCatalogPDFTableHeader(doc, 80, cols);
       }
