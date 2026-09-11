@@ -12,6 +12,7 @@ vi.mock('../../../services/catalogService', () => ({
 }));
 vi.mock('../../../utils/download', () => ({
   downloadBlob: vi.fn(),
+  fileTimestamp: vi.fn(() => '2026-01-01_00-00-00'),
 }));
 vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
@@ -112,6 +113,43 @@ describe('CatalogDownloadForm — modo descarga (inventoryDownloadEnabled: true)
     expect(payload.phone).toBe('6561234567');
     expect(payload.interest).toBe('comprar_propiedad');
     expect(payload.city).toBe('juarez');
+  });
+});
+
+describe('CatalogDownloadForm — filtros de descarga independientes de la búsqueda', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getInventoryDownloadStatus.mockResolvedValue({ enabled: true });
+  });
+
+  it('precarga los filtros con la búsqueda actual, pero editarlos no muta el objeto original', async () => {
+    const user = userEvent.setup();
+    const pdfBlob = new Blob(['%PDF-1.4 contenido falso'], { type: 'application/pdf' });
+    requestCatalogPDF.mockResolvedValue({
+      data: pdfBlob,
+      headers: { 'content-type': 'application/pdf' },
+    });
+    const pageFilters = { city: 'juarez', maxPrice: '500000' };
+    renderForm(pageFilters);
+
+    // Precargado: el select de Ciudad ya trae "juarez" seleccionado al abrir el formulario.
+    expect(await screen.findByLabelText('Ciudad')).toHaveValue('juarez');
+
+    // El usuario cambia la ciudad dentro del formulario de descarga...
+    await user.selectOptions(screen.getByLabelText('Ciudad'), ['chihuahua']);
+
+    // ...y eso no debe alterar el objeto de filtros de la página (mismo objeto que
+    // seguiría usando el listado si este formulario se cierra sin confirmar nada).
+    expect(pageFilters.city).toBe('juarez');
+
+    await fillRequired(user);
+    await user.click(await screen.findByRole('button', { name: /descargar pdf del inventario/i }));
+
+    await waitFor(() => expect(requestCatalogPDF).toHaveBeenCalled());
+    const payload = requestCatalogPDF.mock.calls[0][0];
+    // La descarga usa el valor editado dentro del formulario, no el de la página.
+    expect(payload.city).toBe('chihuahua');
+    expect(payload.maxPrice).toBe('500000');
   });
 });
 

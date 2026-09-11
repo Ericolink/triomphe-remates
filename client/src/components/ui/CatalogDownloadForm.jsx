@@ -8,6 +8,26 @@ import { fadeInUp } from '../../utils/animations';
 import { downloadBlob, fileTimestamp } from '../../utils/download';
 import { PHONE_PATTERN, PHONE_PATTERN_TITLE } from '../../utils/phone';
 import { LEAD_TYPE_LABELS, labelsToOptions } from '../../utils/constants';
+import PropertyFilterFields from './PropertyFilterFields';
+
+// Claves de filtro editables dentro de este formulario — mismas que usa PropertiesPage y que
+// entiende buildPropertyWhereClause en el backend (ver services/propertyFilters.js). No
+// incluye `businessLine`: la descarga siempre respeta la línea de negocio activa en la
+// página al momento de abrir el formulario, no es un campo editable aquí.
+const FILTER_KEYS = [
+  'search',
+  'city',
+  'type',
+  'category',
+  'minPrice',
+  'maxPrice',
+  'minBedrooms',
+  'minBathrooms',
+  'minTerrainM2',
+  'maxTerrainM2',
+  'minConstructionM2',
+  'maxConstructionM2',
+];
 
 const DEFAULT_REQUEST_MESSAGE =
   'Hemos recibido tus datos correctamente. Nuestro equipo se pondrá en contacto contigo para compartirte el inventario.';
@@ -32,12 +52,24 @@ const INIT = { name: '', phone: '', email: '', interest: '' };
 // del negocio.
 export default function CatalogDownloadForm({ filters }) {
   const [form, setForm] = useState(INIT);
+  // Copia local de `filters`, tomada una sola vez al montar (inicializador perezoso de
+  // useState) — precarga con la búsqueda actual de la página (PARTE 3 del pedido) pero
+  // queda desconectada de ella a partir de ahí: si el usuario sigue cambiando los filtros
+  // de la página mientras este formulario está abierto, o edita los de acá, ninguno de los
+  // dos estados vuelve a sincronizarse con el otro. Como este componente se desmonta al
+  // cerrar el CTA "Solicitar catálogo" (ver PropertiesPage), cada apertura vuelve a
+  // precargar desde la búsqueda vigente en ese momento.
+  const [downloadFilters, setDownloadFilters] = useState(() =>
+    Object.fromEntries(FILTER_KEYS.map((key) => [key, filters?.[key] || '']))
+  );
   const [downloading, setDownloading] = useState(false);
   // null = formulario; 'downloaded' = el PDF se entregó; 'requested' = el prospecto quedó
   // registrado pero el PDF no se entregó (toggle admin desactivado, ver SettingsPage).
   const [sent, setSent] = useState(null);
   const [requestMessage, setRequestMessage] = useState(DEFAULT_REQUEST_MESSAGE);
   const formId = useId();
+
+  const handleFilterChange = (key, value) => setDownloadFilters((f) => ({ ...f, [key]: value }));
 
   // Solo para el texto del botón (ver JSDoc arriba del componente) — el envío real sigue
   // siendo autoritativo del lado del backend vía Content-Type de la respuesta, así que un
@@ -64,7 +96,14 @@ export default function CatalogDownloadForm({ filters }) {
     }
     try {
       setDownloading(true);
-      const response = await requestCatalogPDF({ ...form, ...filters });
+      const payloadFilters = Object.fromEntries(
+        Object.entries(downloadFilters).filter(([, value]) => value !== '')
+      );
+      const response = await requestCatalogPDF({
+        ...form,
+        businessLine: filters?.businessLine,
+        ...payloadFilters,
+      });
       const contentType = response.headers?.['content-type'] || '';
 
       if (contentType.includes('application/pdf')) {
@@ -138,7 +177,19 @@ export default function CatalogDownloadForm({ filters }) {
     );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      <div>
+        <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2">
+          Filtros del inventario
+        </p>
+        <PropertyFilterFields
+          filters={downloadFilters}
+          onChange={handleFilterChange}
+          showCategory={filters?.businessLine === 'remate'}
+          showSearch
+          idPrefix={`${formId}-filters`}
+        />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label

@@ -1,8 +1,7 @@
-import { useId, useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
-  SlidersHorizontal,
   X,
   Bell,
   Download,
@@ -24,14 +23,9 @@ import TabBar from '../../components/ui/TabBar';
 import AlertSubscriptionForm from '../../components/ui/AlertSubscriptionForm';
 import CatalogDownloadForm from '../../components/ui/CatalogDownloadForm';
 import ContactForm from '../../components/ui/ContactForm';
+import PropertyFilterFields from '../../components/ui/PropertyFilterFields';
 import { fadeInUp, fadeIn, staggerContainer, buttonHover, buttonTap } from '../../utils/animations';
-import {
-  CITY_LABELS,
-  TYPE_LABELS,
-  CATEGORY_LABELS,
-  BUSINESS_LINE_CONTENT,
-  labelsToOptions,
-} from '../../utils/constants';
+import { BUSINESS_LINE_CONTENT } from '../../utils/constants';
 
 // Selector de inventario dentro del mismo módulo de propiedades — las 5 líneas de negocio
 // conviven en /propiedades sin landing separada; el cambio de tab solo actualiza qué
@@ -45,37 +39,12 @@ const PROPERTY_LINE_TABS = [
   { key: 'inversion', label: 'Inversiones', icon: <TrendingUp size={16} /> },
 ];
 
-const CITIES = [
-  { value: '', label: 'Todas las ciudades' },
-  ...labelsToOptions(CITY_LABELS, ['otra']),
-];
-const TYPES = [{ value: '', label: 'Todos los tipos' }, ...labelsToOptions(TYPE_LABELS)];
-const CATEGORIES = [
-  { value: '', label: 'Todas las categorías' },
-  ...labelsToOptions(CATEGORY_LABELS),
-];
-const BEDROOMS = [
-  { value: '', label: 'Cualquier cantidad' },
-  { value: '1', label: '1+ recámara' },
-  { value: '2', label: '2+ recámaras' },
-  { value: '3', label: '3+ recámaras' },
-  { value: '4', label: '4+ recámaras' },
-];
-const BATHROOMS = [
-  { value: '', label: 'Cualquier cantidad' },
-  { value: '1', label: '1+ baño' },
-  { value: '2', label: '2+ baños' },
-  { value: '3', label: '3+ baños' },
-];
-
 export default function PropertiesPage() {
   const [businessLine, setBusinessLine] = useState('remate');
   const content = BUSINESS_LINE_CONTENT[businessLine];
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showFilters, setShowFilters] = useState(false);
   const [showAlertForm, setShowAlertForm] = useState(false);
   const [showDownloadForm, setShowDownloadForm] = useState(false);
-  const filtersFormId = useId();
   const [localFilters, setLocalFilters] = useState({
     city: '',
     type: '',
@@ -232,24 +201,6 @@ export default function PropertiesPage() {
           onChange={(e) => setFilter('search', e.target.value)}
           className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#242938] dark:text-white dark:placeholder-gray-500"
         />
-        <motion.button
-          whileHover={buttonHover}
-          whileTap={buttonTap}
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-[#2e3650] rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-[#242938] transition-colors dark:text-gray-200"
-        >
-          <SlidersHorizontal size={16} />
-          Filtros
-          {hasFilters && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
-            >
-              !
-            </motion.span>
-          )}
-        </motion.button>
         <AnimatePresence>
           {hasFilters && (
             <motion.button
@@ -261,168 +212,25 @@ export default function PropertiesPage() {
               whileTap={buttonTap}
               className="flex items-center gap-2 px-4 py-2.5 text-red-500 border border-red-200 rounded-xl text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
-              <X size={16} /> Limpiar
+              <X size={16} /> Limpiar filtros
             </motion.button>
           )}
         </AnimatePresence>
       </motion.div>
 
-      {/* Filtros expandibles */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden"
-          >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 dark:bg-[#242938] rounded-xl border border-transparent dark:border-[#2e3650]">
-              {[
-                { key: 'city', options: CITIES, label: 'Ciudad' },
-                { key: 'type', options: TYPES, label: 'Tipo' },
-                ...(businessLine === 'remate'
-                  ? [{ key: 'category', options: CATEGORIES, label: 'Categoría de propiedad' }]
-                  : []),
-              ].map(({ key, options, label }) => (
-                <div key={key}>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    {label}
-                  </label>
-                  <select
-                    value={filters[key]}
-                    onChange={(e) => setFilter(key, e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
-                  >
-                    {options.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-              <div className="col-span-2 md:col-span-1">
-                <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Precio
-                </span>
-                <div className="flex gap-2">
-                  <div className="w-1/2">
-                    <label htmlFor={`${filtersFormId}-minPrice`} className="sr-only">
-                      Precio mínimo
-                    </label>
-                    <input
-                      id={`${filtersFormId}-minPrice`}
-                      type="text"
-                      placeholder="Mín."
-                      value={filters.minPrice ? Number(filters.minPrice).toLocaleString('es-MX') : ''}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/[^0-9]/g, '');
-                        setFilter('minPrice', raw);
-                      }}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                    />
-                  </div>
-                  <div className="w-1/2">
-                    <label htmlFor={`${filtersFormId}-maxPrice`} className="sr-only">
-                      Precio máximo
-                    </label>
-                    <input
-                      id={`${filtersFormId}-maxPrice`}
-                      type="text"
-                      placeholder="Máx."
-                      value={filters.maxPrice ? Number(filters.maxPrice).toLocaleString('es-MX') : ''}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/[^0-9]/g, '');
-                        setFilter('maxPrice', raw);
-                      }}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                    />
-                  </div>
-                </div>
-                {(filters.minPrice || filters.maxPrice) && (
-                  <p className="text-xs text-primary-600 mt-1">
-                    {filters.minPrice ? `$${Number(filters.minPrice).toLocaleString('es-MX')}` : '$0'}
-                    {' – '}
-                    {filters.maxPrice
-                      ? `$${Number(filters.maxPrice).toLocaleString('es-MX')} MXN`
-                      : 'sin máximo'}
-                  </p>
-                )}
-              </div>
-              {[
-                { key: 'minBedrooms', options: BEDROOMS, label: 'Recámaras' },
-                { key: 'minBathrooms', options: BATHROOMS, label: 'Baños' },
-              ].map(({ key, options, label }) => (
-                <div key={key}>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    {label}
-                  </label>
-                  <select
-                    value={filters[key]}
-                    onChange={(e) => setFilter(key, e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white"
-                  >
-                    {options.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-              {[
-                {
-                  groupLabel: 'Terreno m²',
-                  minKey: 'minTerrainM2',
-                  maxKey: 'maxTerrainM2',
-                },
-                {
-                  groupLabel: 'Construcción m²',
-                  minKey: 'minConstructionM2',
-                  maxKey: 'maxConstructionM2',
-                },
-              ].map(({ groupLabel, minKey, maxKey }) => (
-                <div key={minKey} className="col-span-2 md:col-span-1">
-                  <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    {groupLabel}
-                  </span>
-                  <div className="flex gap-2">
-                    <div className="w-1/2">
-                      <label htmlFor={`${filtersFormId}-${minKey}`} className="sr-only">
-                        {groupLabel} mínimo
-                      </label>
-                      <input
-                        id={`${filtersFormId}-${minKey}`}
-                        type="number"
-                        placeholder="Mín."
-                        min="0"
-                        value={filters[minKey]}
-                        onChange={(e) => setFilter(minKey, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                      />
-                    </div>
-                    <div className="w-1/2">
-                      <label htmlFor={`${filtersFormId}-${maxKey}`} className="sr-only">
-                        {groupLabel} máximo
-                      </label>
-                      <input
-                        id={`${filtersFormId}-${maxKey}`}
-                        type="number"
-                        placeholder="Máx."
-                        min="0"
-                        value={filters[maxKey]}
-                        onChange={(e) => setFilter(maxKey, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-[#2e3650] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 bg-white dark:bg-[#1a1f2e] dark:text-white dark:placeholder-gray-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Filtros — siempre visibles */}
+      <motion.div
+        variants={fadeInUp}
+        initial="hidden"
+        animate="visible"
+        className="mb-6 p-4 bg-gray-50 dark:bg-[#242938] rounded-xl border border-transparent dark:border-[#2e3650]"
+      >
+        <PropertyFilterFields
+          filters={filters}
+          onChange={setFilter}
+          showCategory={businessLine === 'remate'}
+        />
+      </motion.div>
 
       {/* Alertas por email */}
       <motion.div variants={fadeInUp} initial="hidden" animate="visible" className="mb-8">
@@ -486,9 +294,10 @@ export default function PropertiesPage() {
               transition={{ duration: 0.3 }}
               className="overflow-hidden mt-4"
             >
-              <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 shadow-sm max-w-lg">
+              <div className="bg-white dark:bg-[#242938] border border-gray-100 dark:border-[#2e3650] rounded-2xl p-5 shadow-sm max-w-2xl">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                  Déjanos tus datos y recibe el catálogo completo de propiedades disponibles.
+                  Elige los filtros del inventario que quieres recibir y déjanos tus datos de
+                  contacto.
                 </p>
                 <CatalogDownloadForm
                   filters={{

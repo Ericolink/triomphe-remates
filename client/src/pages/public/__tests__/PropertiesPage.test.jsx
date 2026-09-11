@@ -86,3 +86,19 @@ describe('PropertiesPage — respuesta propertiesAvailable', () => {
     expect(screen.queryByText('Propiedades no disponibles')).not.toBeInTheDocument();
   });
 });
+
+describe('PropertiesPage — filtros siempre visibles', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('el panel de filtros se ve sin necesidad de abrir nada (ya no hay botón toggle)', async () => {
+    getPublicProperties.mockResolvedValue(AVAILABLE_RESPONSE);
+    renderPage();
+
+    await screen.findByText('Casa en Juárez');
+    // El campo "Ciudad" (uno de los filtros) está en el DOM desde el primer render, no
+    // detrás de un botón "Filtros" que haya que presionar primero.
+    expect(screen.getByText('Ciudad')).toBeInTheDocument();
+    expect(screen.getByText('Categoría de propiedad')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^filtros$/i })).not.toBeInTheDocument();
+  });
+});
